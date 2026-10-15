@@ -83,6 +83,10 @@ export {
   categoryColors,
   darkColors,
   deriveMuted,
+  iosColors,
+  iosFonts,
+  iosRadii,
+  phoneSecondaryLabel,
   systemColors,
   type Category,
 } from './design';

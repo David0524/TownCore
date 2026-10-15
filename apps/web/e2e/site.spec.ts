@@ -4,12 +4,15 @@ const boca = 'http://bocatownsquare.com';
 
 test.describe('multi-tenant routing', () => {
   for (const host of ['bocatownsquare.com', 'www.bocatownsquare.com']) {
-    test(`${host} renders Boca Town Square`, async ({ page }) => {
+    test(`${host} renders Boca Town Square`, async ({ page, isMobile }) => {
       const response = await page.goto(`http://${host}/`);
       expect(response?.status()).toBe(200);
       await expect(page).toHaveTitle('Boca Town Square');
+      // Phones show the wordmark in the iOS navigation bar instead of the town's header.
       await expect(
-        page.getByRole('banner').getByRole('link', { name: 'Boca Town Square' }),
+        isMobile
+          ? page.getByTestId('phone-masthead')
+          : page.getByRole('banner').getByRole('link', { name: 'Boca Town Square' }),
       ).toBeVisible();
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
         'Boca Town Square: local news for Boca Raton, FL',
@@ -54,7 +57,7 @@ test('a draft town is not indexable', async ({ page }) => {
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
 });
 
-test('the Boca theme is applied (palette, type pairing, corners)', async ({ page }) => {
+test('the Boca theme is applied (palette, type pairing, corners)', async ({ page, isMobile }) => {
   await page.goto(`${boca}/`);
   const styles = await page.evaluate(() => {
     const css = (el: Element | null) => (el ? getComputedStyle(el) : null);
@@ -67,6 +70,17 @@ test('the Boca theme is applied (palette, type pairing, corners)', async ({ page
       radius: getComputedStyle(document.documentElement).getPropertyValue('--radius').trim(),
     };
   });
+  if (isMobile) {
+    // Phones: iOS label black and system fonts (docs/plans/M4b.md revision 5).
+    expect(styles).toMatchObject({
+      background: 'rgb(255, 255, 255)',
+      text: 'rgb(0, 0, 0)',
+      radius: '10px',
+    });
+    expect(styles.bodyFont).toContain('-apple-system');
+    expect(styles.h1Font).toContain('New York');
+    return;
+  }
   expect(styles).toMatchObject({
     background: 'rgb(255, 255, 255)', // palette.background #FFFFFF
     text: 'rgb(17, 20, 24)', // palette.ink #111418
