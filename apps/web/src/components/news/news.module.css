@@ -262,3 +262,60 @@
 .share:hover {
   border-color: var(--ink);
 }
+
+/* Phones: iOS section headers (Title 2, SF Display, no rule) with the "See all" link in the
+   tint; list rows are Headline-sized New York over Footnote metadata. */
+@media (max-width: 599.98px) {
+  .sectionHeader {
+    border-bottom: 0;
+    padding-bottom: 0.25rem;
+    margin-bottom: 0;
+  }
+
+  .sectionHeader h1,
+  .sectionHeader h2 {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .more {
+    font-size: 1.0625rem;
+  }
+
+  .lead .headline {
+    line-height: 1.15;
+    letter-spacing: 0;
+  }
+
+  .list {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+  }
+
+  .list .headline {
+    font-family: var(--font-headline);
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .secondary {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .card {
+    border-radius: var(--radius-widget);
+  }
+
+  .share {
+    min-height: 44px;
+    border: 0;
+    border-radius: var(--radius-capsule);
+    background: var(--ios-fill);
+    color: var(--accent);
+    font-weight: 500;
+  }
+}

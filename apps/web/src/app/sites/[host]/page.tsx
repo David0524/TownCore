@@ -4,6 +4,8 @@ import { bandNeedsCta, homeModules, homeOrder } from '@/modules/registry';
 import { themeFor } from '@/lib/theme';
 import { requireTown } from '@/lib/town';
 import { ListBeacon } from '@/components/Beacon';
+import { LargeTitle } from '@/components/phone/LargeTitle';
+import { greeting } from '@/modules/front';
 import { Slot } from '@/slots/Slot';
 import { TownGrid } from '@/layout/TownGrid';
 import styles from './home.module.css';
@@ -24,7 +26,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
     if (node !== null)
       rendered.push({ key: `${module}${mobileOnly ? '-mobile' : ''}`, node, mobileOnly });
   }
-  const greeting = top.includes('good-morning') ? await render('good-morning') : null;
+  const hello = top.includes('good-morning') ? await render('good-morning') : null;
   const split = top.filter((m) => m !== 'good-morning');
   const topNodes = (await Promise.all(split.map(render))).map((node, i) => ({
     key: split[i]!,
@@ -36,10 +38,26 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
     rendered.some(({ key }) => !key.startsWith('newsletter-cta')) ||
     topNodes.some(({ node }) => node !== null);
 
+  // Phones open on a large "Today" title with the greeting and a search field, on every town.
+  const now = new Date();
+  const phoneTitle = (
+    <LargeTitle
+      title="Today"
+      overline={`${greeting(now, town.timezone)} · ${new Intl.DateTimeFormat('en-US', {
+        timeZone: town.timezone,
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+      }).format(now)}`}
+      search={{}}
+    />
+  );
+
   const band =
     top.length > 0 ? (
       <>
-        {greeting}
+        {phoneTitle}
+        {hello}
         <Slot town={town} name="home.top" />
         <div className={styles.band}>
           {topNodes.map(({ key, node }, i) =>
@@ -58,7 +76,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
     <TownGrid
       town={town}
       kind={theme.layout.grid}
-      top={band}
+      top={band ?? phoneTitle}
       railModules={railNodes.length > 0 ? railNodes : null}
     >
       <ListBeacon />

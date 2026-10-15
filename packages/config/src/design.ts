@@ -77,3 +77,47 @@ export function deriveMuted(palette: {
   }
   return palette.ink;
 }
+
+/**
+ * Phone chrome (below 600px, every town; docs/plans/M4b.md revision 5): iOS system colors and
+ * Apple's system font stacks. The town's brand stays the tint. Secondary label is iOS's
+ * #6E6E73 (it passes AA on white and grouped gray), darkened per town when a tint needs it.
+ */
+export const iosColors = {
+  label: '#000000',
+  secondaryLabel: '#6E6E73',
+  separator: '#C6C6C8',
+  grouped: '#F2F2F7',
+  /** Text-field and capsule fill. */
+  fill: 'rgba(118, 118, 128, 0.12)',
+  /** Tab bar: translucent over content, solid when the reader asks for less transparency. */
+  chrome: 'rgba(249, 249, 249, 0.94)',
+  chromeSolid: '#F9F9F9',
+} as const;
+
+/** System stacks only: Apple devices get San Francisco and New York; we never ship their files. */
+export const iosFonts = {
+  text: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif",
+  display:
+    "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif",
+  serif: "ui-serif, 'New York', 'Iowan Old Style', Georgia, serif",
+} as const;
+
+/** Corner radii of the iOS shapes (canvas HomePhone): fields, grouped lists, buttons, widgets. */
+export const iosRadii = {
+  field: '10px',
+  button: '12px',
+  group: '14px',
+  widget: '22px',
+  capsule: '999px',
+} as const;
+
+/** Secondary label on phones: iOS gray, darkened toward black where a town's tint needs it. */
+export function phoneSecondaryLabel(palette: { tint: string; background: string }): string {
+  const surfaces = [palette.background, palette.tint, iosColors.grouped, systemColors.sand];
+  for (let t = 0; t <= 1; t += 0.05) {
+    const candidate = mix(iosColors.secondaryLabel, iosColors.label, t);
+    if (surfaces.every((bg) => contrastRatio(candidate, bg) >= AA)) return candidate;
+  }
+  return iosColors.label;
+}

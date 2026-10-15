@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, inArray, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, ilike, inArray, or, sql } from 'drizzle-orm';
 import type { Db } from './client';
 import { articles, articleStatsDaily, pins, storyCandidates } from './schema';
 
@@ -14,7 +14,7 @@ export type RankableArticle = typeof articles.$inferSelect & {
 export async function listRankableArticles(
   db: Db,
   townId: string,
-  opts: { beat?: string; limit?: number } = {},
+  opts: { beat?: string; limit?: number; search?: string } = {},
 ): Promise<RankableArticle[]> {
   const rows = await db
     .select({ article: articles, newsworthiness: storyCandidates.newsworthiness })
@@ -25,6 +25,9 @@ export async function listRankableArticles(
         eq(articles.townId, townId),
         or(eq(articles.status, 'published'), eq(articles.status, 'corrected')),
         opts.beat ? eq(articles.beat, opts.beat) : undefined,
+        ...searchTerms(opts.search).map((term) =>
+          or(ilike(articles.headline, term), ilike(articles.dek, term)),
+        ),
       ),
     )
     .orderBy(desc(articles.publishedAt))
@@ -37,6 +40,16 @@ export async function listRankableArticles(
       newsworthiness: r.newsworthiness,
       reviewed: r.article.reviewerId !== null,
     }));
+}
+
+/** Reader search: every word must appear in the headline or dek (case-insensitive, literal). */
+function searchTerms(search: string | undefined): string[] {
+  return (search ?? '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 8)
+    .map((word) => `%${word.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
 }
 
 /** IDs of articles pinned right now. */

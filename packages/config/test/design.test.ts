@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { contrastRatio } from '../src/brand';
-import { categoryColors, darkColors, deriveMuted, systemColors } from '../src/design';
+import {
+  categoryColors,
+  darkColors,
+  deriveMuted,
+  iosColors,
+  phoneSecondaryLabel,
+  systemColors,
+} from '../src/design';
 import { checkThemeContrast, defaultTheme, typePairings } from '../src/theme';
 
 // Network-wide design tokens (docs/plans/M4b.md): every pair that renders text passes WCAG AA;
@@ -48,5 +55,16 @@ describe('network design tokens', () => {
   it('single-weight display faces never ask for a faked bold', () => {
     expect(typePairings['instrumentserif-geist'].headlineWeight).toBe(400);
     expect(typePairings['librecaslondisplay-publicsans'].headlineWeight).toBe(400);
+  });
+
+  it('phone secondary labels pass AA on every phone surface, darkening only when needed', () => {
+    expect(phoneSecondaryLabel({ background: '#FFFFFF', tint: '#EAF3FA' })).toBe(
+      iosColors.secondaryLabel,
+    );
+    const harbor = { background: '#FFFFFF', tint: '#CCD6DD' };
+    const label = phoneSecondaryLabel(harbor);
+    for (const bg of [harbor.background, harbor.tint, iosColors.grouped, systemColors.sand]) {
+      expect(contrastRatio(label, bg)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

@@ -48,17 +48,20 @@ test('Harbor Point renders its own name and layout parts', async ({ page }) => {
   );
 });
 
-test('the two towns differ in look and layout', async ({ page }) => {
+test('the two towns differ in look and layout', async ({ page, isMobile }) => {
   await page.goto(`${towns.boca.url}/`);
   const boca = await look(page);
   await page.goto(`${towns.harbor.url}/`);
   const harbor = await look(page);
 
-  expect(harbor.ink).not.toBe(boca.ink);
   expect(harbor.accent).not.toBe(boca.accent);
-  expect(harbor.radius).not.toBe(boca.radius);
-  expect(harbor.headlineFont).not.toBe(boca.headlineFont);
-  expect(harbor.bodyFont).not.toBe(boca.bodyFont);
+  // Phones share Apple-native fonts, ink and shapes on every town; they differ by tint.
+  if (!isMobile) {
+    expect(harbor.ink).not.toBe(boca.ink);
+    expect(harbor.radius).not.toBe(boca.radius);
+    expect(harbor.headlineFont).not.toBe(boca.headlineFont);
+    expect(harbor.bodyFont).not.toBe(boca.bodyFont);
+  }
   expect(boca.parts).toEqual(towns.boca.parts);
   expect(harbor.parts).toEqual(towns.harbor.parts);
 });
@@ -73,7 +76,8 @@ test('neither town mentions the publisher or links to the other', async ({ page 
   }
 });
 
-test('the hamburger menu opens and links work', async ({ page }) => {
+test('the hamburger menu opens and links work', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'phones navigate with the tab bar');
   await page.goto(`${towns.harbor.url}/`);
   const nav = page.locator('[data-part="nav:hamburger-only"]');
   await nav.getByText('Menu').click();

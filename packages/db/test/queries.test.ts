@@ -13,6 +13,7 @@ import {
   listPublishedArticles,
   normalizeHost,
 } from '../src/queries';
+import { listRankableArticles } from '../src/ranking-queries';
 import { articles, campaigns, corrections, records, sources, towns } from '../src/schema';
 import { createTestDb } from '../src/testing';
 import { syncTowns } from '../src/towns';
@@ -117,6 +118,14 @@ describe('town and article queries', () => {
     expect((await listPublishedArticles(db, townId, { limit: 1 })).map((a) => a.slug)).toEqual([
       'new',
     ]);
+    // Reader search: published only, every word, case-insensitive, % taken literally.
+    const search = async (q: string) =>
+      (await listRankableArticles(db, townId, { search: q })).map((a) => a.slug);
+    expect(await search('OLD')).toEqual(['old']);
+    expect(await search('  ')).toEqual(['new', 'old']);
+    expect(await search('old new')).toEqual([]);
+    expect(await search('draft')).toEqual([]);
+    expect(await search('%')).toEqual([]);
   });
 
   it('picks the active, in-window, highest-priority campaign for a slot', async () => {

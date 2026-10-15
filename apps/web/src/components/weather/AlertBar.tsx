@@ -1,11 +1,15 @@
 import type { Town } from '@towncore/db';
 import type { TownWeather } from '@/modules/data';
+import { RowChevron, WarningIcon } from '@/components/phone/icons';
 import { untilLabel } from './format';
 import styles from './weather.module.css';
 
 const severityOrder = ['Extreme', 'Severe', 'Moderate', 'Minor', 'Unknown'];
 
-/** The amber bar: only while an NWS alert is active (amber means a real warning, nothing else). */
+/**
+ * The amber bar: only while an NWS alert is active (amber means a real warning, nothing else).
+ * On phones it becomes a grouped banner with an amber warning glyph.
+ */
 export function AlertBar({ town, weather }: { town: Town; weather: TownWeather | null }) {
   if (weather?.kind !== 'snapshot' || weather.snapshot.alerts.length === 0) return null;
   const [alert] = [...weather.snapshot.alerts].sort(
@@ -15,12 +19,22 @@ export function AlertBar({ town, weather }: { town: Town; weather: TownWeather |
   return (
     <a className={styles.alert} href={alert!.url} data-testid="alert-bar">
       <span className={styles.alertInner}>
-        <strong>{alert!.event}</strong>
-        <span>
-          {alert!.until ? untilLabel(alert!.until, town.timezone) : 'in effect'}
-          {more > 0 ? ` · ${more} more ${more === 1 ? 'alert' : 'alerts'}` : ''}
+        <span className={`${styles.alertIcon} phone-only`}>
+          <WarningIcon />
         </span>
-        <span className={styles.alertSource}>National Weather Service →</span>
+        <span className={styles.alertText}>
+          <strong>{alert!.event}</strong>
+          <span>
+            {alert!.until ? untilLabel(alert!.until, town.timezone) : 'in effect'}
+            {more > 0 ? ` · ${more} more ${more === 1 ? 'alert' : 'alerts'}` : ''}
+          </span>
+        </span>
+        <span className={styles.alertSource}>
+          National Weather Service<span className="not-phone"> →</span>
+        </span>
+        <span className={`${styles.alertChevron} phone-only`}>
+          <RowChevron />
+        </span>
       </span>
     </a>
   );

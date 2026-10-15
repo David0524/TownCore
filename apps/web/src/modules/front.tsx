@@ -11,7 +11,7 @@ import styles from './front.module.css';
 // Front-page modules from docs/plans/M4b.md (revisions 2–4): the greeting, the section buttons
 // with live counts, and the meetings coming up. Each hides itself when it has nothing to show.
 
-function greeting(now: Date, timeZone: string): string {
+export function greeting(now: Date, timeZone: string): string {
   const hour = Number(
     new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', hourCycle: 'h23' }).format(now),
   );
@@ -30,7 +30,7 @@ export const GoodMorning: HomeModuleComponent = async ({ town }) => {
     weekday: 'long',
   }).format(now);
   return (
-    <div className={styles.greeting} data-module="good-morning">
+    <div className={`${styles.greeting} not-phone`} data-module="good-morning">
       <p className={styles.hello}>
         {greeting(now, town.timezone)}, {town.name}
       </p>

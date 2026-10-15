@@ -50,3 +50,9 @@
 .aside {
   min-width: 0;
 }
+
+@media (max-width: 599.98px) {
+  .top {
+    padding-top: 0.5rem;
+  }
+}

@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { PhoneBar } from '@/components/phone/PhoneBar';
+import { TabBar } from '@/components/phone/TabBar';
 import { AlertBar } from '@/components/weather/AlertBar';
+import { PhoneWordmark } from '@/components/phone/PhoneWordmark';
 import { WeatherLine } from '@/components/weather/WeatherLine';
 import { footers, headers, headersWithWeather, navs } from '@/layout/registry';
 import { townWeather } from '@/modules/data';
@@ -31,17 +34,46 @@ export default async function TownLayout({ children, params }: Props) {
   const Nav = navs[theme.layout.nav];
   const Footer = footers[theme.layout.footer];
   const weather = await townWeather(town.id);
+  const snapshot = weather?.kind === 'snapshot' ? weather.snapshot : null;
+  const lineOn = {
+    desktop: !(snapshot && headersWithWeather.has(theme.layout.header)),
+    phone: !snapshot,
+  };
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: themeCssVariables(theme) }} />
+      {/* Phones get iOS chrome instead of the town's header (docs/plans/M4b.md revision 5). */}
+      <PhoneBar
+        weather={
+          snapshot
+            ? {
+                value: `${snapshot.now.temperature}°`,
+                href: snapshot.sourceUrl,
+                label: `${town.name} weather: ${snapshot.now.temperature}° this hour, National Weather Service`,
+              }
+            : null
+        }
+        wordmark={<PhoneWordmark town={town} theme={theme} />}
+      />
       <AlertBar town={town} weather={weather} />
-      <Header town={town} theme={theme} nav={<Nav />} weather={weather} />
-      {headersWithWeather.has(theme.layout.header) ? null : (
-        <WeatherLine town={town} weather={weather} />
-      )}
+      <div className="not-phone">
+        <Header town={town} theme={theme} nav={<Nav />} weather={weather} />
+      </div>
+      {/* Weather above the fold everywhere (§11a): the header or the phone bar shows this
+          hour's temperature; otherwise the weather line does. */}
+      {lineOn.desktop || lineOn.phone ? (
+        <div
+          className={
+            lineOn.desktop && lineOn.phone ? undefined : lineOn.phone ? 'phone-only' : 'not-phone'
+          }
+        >
+          <WeatherLine town={town} weather={weather} />
+        </div>
+      ) : null}
       {children}
       <Footer town={town} theme={theme} />
+      <TabBar />
     </>
   );
 }

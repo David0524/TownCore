@@ -5,6 +5,10 @@ import {
   cornerRadii,
   darkColors,
   deriveMuted,
+  iosColors,
+  iosFonts,
+  iosRadii,
+  phoneSecondaryLabel,
   systemColors,
   defaultTheme,
   themeSchema,
@@ -67,6 +71,17 @@ export function themeCssVariables(theme: Theme): string {
     '--headline-weight': String(fonts.headlineWeight),
     '--radius': cornerRadii[theme.corners],
     '--radius-tile': tileRadii[theme.corners],
+    // iOS chrome (phones only; see phoneCssVariables). Set everywhere so the tokens resolve.
+    '--font-display': `'${fonts.headline}', ${serifFallback}`,
+    '--ios-grouped': iosColors.grouped,
+    '--ios-fill': iosColors.fill,
+    '--ios-chrome': iosColors.chrome,
+    '--ios-separator': iosColors.separator,
+    '--radius-field': iosRadii.field,
+    '--radius-button': iosRadii.button,
+    '--radius-group': iosRadii.group,
+    '--radius-widget': iosRadii.widget,
+    '--radius-capsule': iosRadii.capsule,
   };
   // Dark mode: the same roles on a near-black page. Built now, switched on later.
   const dark: Record<string, string> = {
@@ -78,7 +93,36 @@ export function themeCssVariables(theme: Theme): string {
     '--rule': darkColors.rule,
     '--sand': darkColors.sand,
   };
-  return css(':root', vars) + css(':root[data-color-scheme="dark"]', dark);
+  return (
+    css(':root', vars) +
+    css(':root[data-color-scheme="dark"]', dark) +
+    `@media (max-width: 599.98px){${css(':root', phoneCssVariables(theme))}}` +
+    `@media (prefers-reduced-transparency: reduce){${css(':root', { '--ios-chrome': iosColors.chromeSolid })}}`
+  );
+}
+
+/**
+ * Phones (below 600px) wear Apple-native chrome on every town (docs/plans/M4b.md revision 5):
+ * system fonts (San Francisco for text, New York for headlines and the wordmark, no mono), iOS
+ * system colors and shapes, with the town's brand as the tint. Towns still differ by tint,
+ * wordmark and modules.
+ */
+function phoneCssVariables(theme: Theme): Record<string, string> {
+  const { palette } = theme;
+  return {
+    '--ink': iosColors.label,
+    '--muted': phoneSecondaryLabel(palette),
+    '--rule': iosColors.separator,
+    '--surface': iosColors.grouped,
+    '--font-headline': iosFonts.serif,
+    '--font-body': iosFonts.text,
+    '--font-display': iosFonts.display,
+    '--font-meta': iosFonts.text,
+    '--meta-style': 'normal',
+    '--headline-weight': '700',
+    '--radius': iosRadii.field,
+    '--radius-tile': iosRadii.widget,
+  };
 }
 
 /**

@@ -83,3 +83,46 @@ a.meetingTitle:hover {
   font-size: 0.875rem;
   color: var(--muted);
 }
+
+/* Phones: filled capsules in one horizontal row (canvas HomePhone). */
+@media (max-width: 599.98px) {
+  .buttons {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 calc(-1 * var(--gutter)) 1.5rem;
+    padding: 0 var(--gutter);
+    scrollbar-width: none;
+  }
+
+  .buttons::-webkit-scrollbar {
+    display: none;
+  }
+
+  .buttons li {
+    flex: none;
+  }
+
+  .button {
+    min-height: 44px;
+    padding: 0 0.9rem;
+    border: 0;
+    border-radius: var(--radius-capsule);
+    background: var(--ios-fill);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .button:hover {
+    border-color: transparent;
+  }
+
+  .button :global(.meta) {
+    font-size: 0.8125rem;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+  }
+}
