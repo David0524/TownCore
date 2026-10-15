@@ -43,6 +43,12 @@
   font-size: 0.9375rem;
 }
 
+/* Wide tables scroll sideways on a phone instead of overlapping. */
+.scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

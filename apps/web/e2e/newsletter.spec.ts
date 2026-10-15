@@ -56,6 +56,10 @@ const subscriber = async (email: string) =>
 
 test('sign up, confirm by button, unsubscribe from the footer page', async ({ page }, info) => {
   const email = `reader-${info.project.name}-${Date.now()}@example.com`;
+  // Signups are limited per IP; give each run its own so reruns don't trip the limit.
+  await page.setExtraHTTPHeaders({
+    'x-forwarded-for': `198.51.100.${Math.floor(Math.random() * 250) + 1}`,
+  });
   await page.goto(`${site}/`);
   const cta = page.locator('[data-module="newsletter-cta"]').first();
   await cta.getByLabel('Email address').fill(email);
@@ -63,6 +67,7 @@ test('sign up, confirm by button, unsubscribe from the footer page', async ({ pa
   await expect(page.getByRole('status')).toContainText('Check your inbox');
   const pending = await subscriber(email);
   expect(pending).toMatchObject({ status: 'pending', consentSource: 'https://lettertown.test/' });
+  expect(pending!.consentIp).toMatch(/^198\.51\.100\./);
   expect(pending!.confirmSentAt).not.toBeNull();
 
   // Opening the link confirms nothing; the button does.
@@ -117,6 +122,9 @@ test('the honeypot drops bots and a bad address is explained', async ({ request,
   expect(res.headers()['location']).toBe('/newsletter?s=ok#signup');
   expect(await subscriber(bot)).toBeUndefined();
 
+  await page.setExtraHTTPHeaders({
+    'x-forwarded-for': `203.0.113.${Math.floor(Math.random() * 250) + 1}`,
+  });
   await page.goto(`${site}/newsletter`);
   await page.getByLabel('Email address').fill('not-an-address@');
   await page.evaluate(() =>

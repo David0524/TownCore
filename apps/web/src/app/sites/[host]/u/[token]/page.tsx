@@ -26,7 +26,7 @@ export default async function SubscriptionPage({
   const subscribed = sub.status === 'active' || sub.status === 'pending';
   return (
     <StandardPage town={town}>
-      <h1>Your {town.siteName} newsletter</h1>
+      <h1>Your newsletter subscription</h1>
       {done && (
         <p className={styles.notice} role="status">
           {sub.email} is unsubscribed. You won’t get the newsletter again.
