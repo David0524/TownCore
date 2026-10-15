@@ -39,6 +39,7 @@ describe('town config', () => {
     expect(boca.sources.map((s) => `${s.kind}/${s.platform}`)).toEqual([
       'agenda/civicplus',
       'city_news/civicplus',
+      'business_filings/fl-dbpr',
       'weather/nws',
     ]);
   });

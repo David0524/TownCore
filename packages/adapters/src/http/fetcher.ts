@@ -6,6 +6,9 @@ import { documentedApi, isBlockedUrl, MIN_INTERVAL_MS, USER_AGENT } from './poli
 
 export class FetchPolicyError extends Error {}
 
+/** Thrown by an adapter when its source hasn't changed since the last run (e.g. HTTP 304). */
+export class NotModified extends Error {}
+
 export type FetchFn = (input: string, init?: RequestInit) => Promise<Response>;
 
 /** The platform fetch. Only ever passed into a Fetcher (directly or via the fixture recorder). */

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { SourceKind } from '@towncore/config';
 import { and, desc, eq, inArray, records, sourceRuns, sources, sql, type Db } from '@towncore/db';
-import { FetchPolicyError, type Fetcher } from './http/fetcher';
+import { FetchPolicyError, NotModified, type Fetcher } from './http/fetcher';
 import type { RawRecord, SourceAdapter, SourceConfig } from './types';
 
 // Ingest (CLAUDE.md §6 step 1): fetch new items, upsert records deduped by
@@ -53,9 +53,18 @@ export async function ingestSource(
     .returning();
 
   try {
-    const fetched = await adapter.fetch(toSourceConfig(source), source.lastOkAt, { fetcher, now });
+    let fetched: RawRecord[];
+    let notModified = false;
+    try {
+      fetched = await adapter.fetch(toSourceConfig(source), source.lastOkAt, { fetcher, now });
+    } catch (error) {
+      if (!(error instanceof NotModified)) throw error;
+      fetched = [];
+      notModified = true;
+    }
     const { newItems, changedItems } = await upsertRecords(db, source, fetched, now);
-    const zeroWhenUsuallyFull = fetched.length === 0 && (await usuallyHasItems(db, source.id));
+    const zeroWhenUsuallyFull =
+      !notModified && fetched.length === 0 && (await usuallyHasItems(db, source.id));
 
     await db
       .update(sourceRuns)
