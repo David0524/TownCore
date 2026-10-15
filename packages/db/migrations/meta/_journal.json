@@ -50,6 +50,13 @@
       "when": 1792082955924,
       "tag": "0006_ai_usage_details",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792083495668,
+      "tag": "0007_story_finder",
+      "breakpoints": true
     }
   ]
 }

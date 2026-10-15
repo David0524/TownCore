@@ -70,6 +70,9 @@ export const townConfigSchema = z.strictObject({
   same_name_elsewhere: z.array(z.string().min(1)).default([]),
   agencies: z.array(z.string().min(1)).min(1),
   sources: z.array(sourceSchema).default([]),
+  // Editorial overrides (CLAUDE.md §6a); defaults in editorial.ts.
+  story_budget: z.number().int().positive().optional(),
+  score_threshold: z.number().min(0).max(100).default(40),
   // Daily AI spend cap (CLAUDE.md §8) and a call cap that also protects free-tier quotas.
   ai_daily_cap_usd: z.number().positive().default(5),
   ai_daily_call_cap: z.number().int().positive().default(400),

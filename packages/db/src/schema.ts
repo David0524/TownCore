@@ -33,12 +33,19 @@ export const townStatus = pgEnum('town_status', ['draft', 'live', 'paused']);
 export const townTier = pgEnum('town_tier', townTiers);
 export const sourceKind = pgEnum('source_kind', sourceKinds);
 export const sourceHealth = pgEnum('source_health', ['ok', 'degraded', 'broken']);
+// pending → accepted (to be written) | skipped (logged in skipped_candidates) | dropped (Tier 4)
+// accepted → writing → written
 export const candidateStatus = pgEnum('candidate_status', [
   'pending',
+  'accepted',
+  'skipped',
   'writing',
   'written',
   'dropped',
 ]);
+// story: one source item written by the writer; roundup / template: built in code from
+// structured records; update: a follow-up note on a published article (CLAUDE.md §6a).
+export const candidateKind = pgEnum('candidate_kind', ['story', 'roundup', 'template', 'update']);
 export const articleStatus = pgEnum('article_status', [
   'draft',
   'in_review',
@@ -175,13 +182,67 @@ export const storyCandidates = pgTable(
     proposedTier: smallint('proposed_tier').notNull(),
     newsworthiness: real('newsworthiness'),
     status: candidateStatus('status').notNull().default('pending'),
+    kind: candidateKind('kind').notNull().default('story'),
+    // Dedupe key per town, e.g. "record:<id>" or "roundup:new-businesses:2026-10-12".
+    key: text('key').notNull(),
+    title: text('title'),
+    // Classifier answer and the tier router's reasons (CLAUDE.md §7).
+    classification: jsonb('classification'),
+    tierReasons: text('tier_reasons').array(),
+    articleId: uuid('article_id'),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     index('story_candidates_town_status_idx').on(t.townId, t.status),
+    uniqueIndex('story_candidates_town_key_uq').on(t.townId, t.key),
     check('story_candidates_tier_range', sql`${t.proposedTier} between 1 and 4`),
   ],
+);
+
+// Newsworthiness and its components for each candidate (CLAUDE.md §6a), kept so the weights in
+// packages/pipeline/src/scoring.ts can be tuned from data.
+export const articleScores = pgTable(
+  'article_scores',
+  {
+    id: id(),
+    candidateId: uuid('candidate_id')
+      .notNull()
+      .references(() => storyCandidates.id),
+    articleId: uuid('article_id'),
+    newsworthiness: real('newsworthiness').notNull(),
+    components: jsonb('components').notNull(),
+    computedAt: timestamp('computed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('article_scores_candidate_idx').on(t.candidateId)],
+);
+
+// Why a candidate wasn't written (CLAUDE.md §6a skip log), for review in /admin/skipped.
+export const skipReason = pgEnum('skip_reason', [
+  'below_threshold',
+  'budget_full',
+  'public_safety_cap',
+  'duplicate',
+  'wrong_town',
+  'thin_source',
+  'tier4',
+  'other_outlet',
+  // The classifier refused or returned unusable output; a reviewer can still write it.
+  'model_error',
+]);
+export const skippedCandidates = pgTable(
+  'skipped_candidates',
+  {
+    id: id(),
+    candidateId: uuid('candidate_id')
+      .notNull()
+      .references(() => storyCandidates.id),
+    reason: skipReason('reason').notNull(),
+    detail: text('detail'),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('skipped_candidates_candidate_uq').on(t.candidateId)],
 );
 
 export const articles = pgTable(

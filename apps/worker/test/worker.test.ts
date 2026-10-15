@@ -24,6 +24,7 @@ beforeAll(async () => {
     logger: pino({ level: 'silent' }),
     workerId: 'test-worker',
     fetcher: offlineFetcher(),
+    llmProvider: null,
   });
 });
 
@@ -72,6 +73,7 @@ describe('worker', () => {
       logger: pino({ level: 'silent' }),
       workerId: 'second-worker',
       fetcher: offlineFetcher(),
+      llmProvider: null,
     });
     await expect(second.stop()).resolves.toBeUndefined();
     await expect(second.stop()).resolves.toBeUndefined();
@@ -120,5 +122,36 @@ describe('ingest', () => {
     expect(stored[0]).toMatchObject({ externalId: 'e1', title: 'Test event' });
     const [after] = await testDb.db.select().from(sources).where(eq(sources.id, source!.id));
     expect(after).toMatchObject({ health: 'ok' });
+  });
+});
+
+describe('story finder', () => {
+  it('a tick runs the finder per town; templated items need no model', async () => {
+    const { getTownBySlug, records, sources, storyCandidates } = await import('@towncore/db');
+    const town = await getTownBySlug(testDb.db, 'boca-raton');
+    const [source] = await testDb.db
+      .insert(sources)
+      .values({ townId: town!.id, kind: 'weather', platform: 'nws', adapter: 'nws', key: 'wx' })
+      .returning();
+    await testDb.db.insert(records).values({
+      sourceId: source!.id,
+      townId: town!.id,
+      externalId: 'alert-1',
+      type: 'alert',
+      title: 'Flood Watch',
+      contentHash: 'h',
+      occurredAt: new Date(),
+      raw: { severity: 'Moderate', event: 'Flood Watch' },
+    });
+
+    await worker.boss.send(queues.storyFinderTick);
+    const candidate = await waitFor(async () => {
+      const [row] = await testDb.db
+        .select()
+        .from(storyCandidates)
+        .where(eq(storyCandidates.townId, town!.id));
+      return row;
+    });
+    expect(candidate).toMatchObject({ kind: 'template', status: 'accepted', title: 'Flood Watch' });
   });
 });

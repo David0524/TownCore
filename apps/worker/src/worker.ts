@@ -1,17 +1,29 @@
 import { hostname } from 'node:os';
 import { Fetcher } from '@towncore/adapters';
 import { createDb, type Db } from '@towncore/db';
+import {
+  providerFromEnv,
+  resolveProviderName,
+  type Llm,
+  type LlmProvider,
+} from '@towncore/pipeline';
 import { PgBoss } from 'pg-boss';
 import type { Logger } from 'pino';
 import { recordHeartbeat } from './heartbeat';
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
 import { queues, schedules } from './queues';
+import { enqueueStoryFinders, runStoryFinderJob, type StoryFinderJob } from './stories';
 
 export type WorkerOptions = {
   databaseUrl: string;
   logger: Logger;
   workerId?: string;
   fetcher?: Fetcher;
+  /**
+   * Model provider for the pipeline. Default: from the environment (LLM_PROVIDER, or whichever
+   * key is set). null runs without a model: candidates wait as pending.
+   */
+  llmProvider?: { name: Llm['providerName']; provider: LlmProvider } | null;
 };
 
 export type RunningWorker = {
@@ -30,9 +42,13 @@ export async function startWorker({
   logger,
   workerId = `${hostname()}-${process.pid}`,
   fetcher = new Fetcher(),
+  llmProvider = resolveProviderName() ? providerFromEnv() : null,
 }: WorkerOptions): Promise<RunningWorker> {
   const startedAt = new Date();
   const db = createDb(databaseUrl, { max: 5 });
+  const llm: Llm | undefined = llmProvider
+    ? { db, provider: llmProvider.provider, providerName: llmProvider.name }
+    : undefined;
   const boss = new PgBoss({ connectionString: databaseUrl, application_name: 'towncore-worker' });
   boss.on('error', (error) => logger.error({ err: error }, 'pg-boss error'));
 
@@ -54,11 +70,22 @@ export async function startWorker({
     for (const job of jobs) await runIngestJob(db, fetcher, logger, job.data);
   });
 
+  await boss.work(queues.storyFinderTick, async () => {
+    await enqueueStoryFinders(db, boss, logger);
+  });
+
+  await boss.work<StoryFinderJob>(queues.storyFinder, async (jobs) => {
+    for (const job of jobs) await runStoryFinderJob(db, llm, logger, job.data);
+  });
+
   for (const { queue, cron } of schedules) {
     await boss.schedule(queue, cron);
   }
 
-  logger.info({ workerId, queues: Object.values(queues) }, 'worker started');
+  logger.info(
+    { workerId, queues: Object.values(queues), llm: llmProvider?.name ?? 'none' },
+    'worker started',
+  );
 
   let stopping: Promise<void> | undefined;
   const stop = () => {
