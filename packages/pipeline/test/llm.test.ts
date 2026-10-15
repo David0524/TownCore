@@ -285,10 +285,51 @@ describe('providers', () => {
       Response.json({ status: 'incomplete', steps: [] }),
     );
     expect((await incomplete.generate(request)).stop).toBe('max_tokens');
-    const failing = geminiProvider('k', async () =>
-      Response.json({ error: { message: 'quota' } }, { status: 429 }),
+    const failing = geminiProvider(
+      'k',
+      async () => Response.json({ error: { message: 'quota' } }, { status: 400 }),
+      { sleep: async () => {} },
     );
-    await expect(failing.generate(request)).rejects.toThrow('Gemini HTTP 429: quota');
+    await expect(failing.generate(request)).rejects.toThrow('Gemini HTTP 400: quota');
+  });
+
+  it('gemini: retries "high demand" 503s and short rate limits, but not daily quotas', async () => {
+    const waits: number[] = [];
+    const sleep = async (ms: number) => void waits.push(ms);
+    const ok = Response.json({
+      status: 'completed',
+      steps: [{ type: 'model_output', content: [{ type: 'text', text: '{}' }] }],
+    });
+    const sequence = (...responses: Response[]) => {
+      let calls = 0;
+      return { fetch: async () => responses[calls++]!, calls: () => calls };
+    };
+
+    const busy = sequence(
+      Response.json({ error: { message: 'high demand' } }, { status: 503 }),
+      Response.json({}, { status: 429, headers: { 'retry-after': '30' } }),
+      ok,
+    );
+    await expect(
+      geminiProvider('k', busy.fetch, { sleep }).generate(request),
+    ).resolves.toMatchObject({
+      text: '{}',
+    });
+    expect(waits).toEqual([5_000, 30_000]);
+
+    const daily = sequence(
+      Response.json({ error: { message: 'Quota exceeded: requests per day' } }, { status: 429 }),
+    );
+    await expect(geminiProvider('k', daily.fetch, { sleep }).generate(request)).rejects.toThrow(
+      /per day/,
+    );
+    expect(daily.calls()).toBe(1);
+
+    const down = sequence(...[1, 2, 3].map(() => Response.json({}, { status: 503 })));
+    await expect(geminiProvider('k', down.fetch, { sleep }).generate(request)).rejects.toThrow(
+      'Gemini HTTP 503',
+    );
+    expect(down.calls()).toBe(3); // first try + 2 retries
   });
 
   it('anthropic: sends structured-output params and maps usage and stop reasons', async () => {
