@@ -83,3 +83,9 @@
 .signoff .copyright {
   margin: 0;
 }
+
+/* heritage: the paper closes on a double rule. */
+:global([data-family='heritage']) .footer {
+  background: var(--background);
+  border-top: 4px double var(--ink);
+}

@@ -54,22 +54,57 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
     />
   );
 
+  // heritage: lead in the center, the modules before it on the left and after it on the right,
+  // divided by column rules. Other families: the first module wide, the rest beside it.
+  const leadAt = split.indexOf('lead-story');
+  const threeColumn = theme.family === 'heritage' && leadAt > 0;
+  const nodeList = (items: typeof topNodes, ctaAfterFirst: boolean) =>
+    items.map(({ key, node }, i) =>
+      node === null ? null : (
+        <Fragment key={key}>
+          {node}
+          {i === 0 && ctaAfterFirst && bandCta ? (
+            <div className="mobile-only">{bandCta}</div>
+          ) : null}
+        </Fragment>
+      ),
+    );
+
   const band =
     top.length > 0 ? (
       <>
         {phoneTitle}
         {hello}
         <Slot town={town} name="home.top" />
-        <div className={styles.band}>
-          {topNodes.map(({ key, node }, i) =>
-            node === null ? null : (
-              <Fragment key={key}>
-                <div className={i === 0 ? styles.bandMain : styles.bandSide}>{node}</div>
-                {i === 0 && bandCta ? <div className="mobile-only">{bandCta}</div> : null}
-              </Fragment>
-            ),
-          )}
-        </div>
+        {threeColumn ? (
+          <div className={styles.band3} data-band="three-column">
+            <div className={styles.bandCol} data-band-col="side">
+              {nodeList(topNodes.slice(0, leadAt), true)}
+            </div>
+            <div className={styles.bandCol} data-band-col="main">
+              {topNodes[leadAt]!.node}
+            </div>
+            <div className={styles.bandCol} data-band-col="side">
+              {nodeList(topNodes.slice(leadAt + 1), false)}
+            </div>
+          </div>
+        ) : (
+          <div className={styles.band}>
+            {topNodes.map(({ key, node }, i) =>
+              node === null ? null : (
+                <Fragment key={key}>
+                  <div
+                    className={i === 0 ? styles.bandMain : styles.bandSide}
+                    data-band-col={i === 0 ? 'main' : 'side'}
+                  >
+                    {node}
+                  </div>
+                  {i === 0 && bandCta ? <div className="mobile-only">{bandCta}</div> : null}
+                </Fragment>
+              ),
+            )}
+          </div>
+        )}
       </>
     ) : null;
 

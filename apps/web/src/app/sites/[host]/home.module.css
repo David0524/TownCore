@@ -15,3 +15,35 @@
 .bandSide {
   min-width: 0;
 }
+
+/* heritage: Today, lead and briefs in 3 / 6 / 3 columns with column rules (canvas HarborHome). */
+.band3 {
+  display: grid;
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+  margin-bottom: 2rem;
+}
+
+.bandCol {
+  min-width: 0;
+}
+
+@media (min-width: 64rem) {
+  .band3 {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 6fr) minmax(0, 3fr);
+  }
+
+  .band3 > .bandCol:nth-child(2) {
+    border-left: 1px solid var(--ink);
+    border-right: 1px solid var(--ink);
+    padding: 0 1.5rem;
+  }
+
+  .band3 > .bandCol:first-child {
+    padding-right: 1.4rem;
+  }
+
+  .band3 > .bandCol:last-child {
+    padding-left: 1.4rem;
+  }
+}

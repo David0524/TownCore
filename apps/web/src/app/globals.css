@@ -124,6 +124,11 @@ a:hover {
   }
 }
 
+/* The town's family wrapper (layout.tsx) stays out of the page's flex layout. */
+.family {
+  display: contents;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

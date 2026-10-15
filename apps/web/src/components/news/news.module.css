@@ -319,3 +319,31 @@
     font-weight: 500;
   }
 }
+
+/* heritage (docs/plans/M4b.md revision 6): section titles are small italic serif labels over a
+   1px ink rule, like a newspaper's standing heads; never all caps (§11a). */
+@media (min-width: 600px) {
+  :global([data-family='heritage']) .sectionHeader {
+    padding-bottom: 0.35rem;
+  }
+
+  :global([data-family='heritage']) .sectionHeader h1,
+  :global([data-family='heritage']) .sectionHeader h2 {
+    font-family: var(--font-meta);
+    font-style: var(--meta-style);
+    font-size: 1.0625rem;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  :global([data-family='heritage']) .list .headline {
+    font-family: var(--font-meta);
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  :global([data-family='heritage']) .dek {
+    font-family: var(--font-meta);
+  }
+}

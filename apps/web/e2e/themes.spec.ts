@@ -11,12 +11,7 @@ const towns = {
   harbor: {
     url: 'http://harborpoint.test',
     name: 'The Harbor Point Ledger',
-    parts: [
-      'header:left-logo-inline-nav',
-      'nav:hamburger-only',
-      'grid:single-column',
-      'footer:minimal',
-    ],
+    parts: ['header:nameplate-double-rule', 'nav:text-nav', 'grid:single-column', 'footer:minimal'],
   },
 };
 
@@ -76,12 +71,35 @@ test('neither town mentions the publisher or links to the other', async ({ page 
   }
 });
 
-test('the hamburger menu opens and links work', async ({ page, isMobile }) => {
+test('the heritage section row links to each section', async ({ page, isMobile }) => {
   test.skip(isMobile, 'phones navigate with the tab bar');
   await page.goto(`${towns.harbor.url}/`);
-  const nav = page.locator('[data-part="nav:hamburger-only"]');
-  await nav.getByText('Menu').click();
+  const nav = page.locator('[data-part="nav:text-nav"]');
   await nav.getByRole('link', { name: 'Schools' }).click();
   await expect(page).toHaveURL(`${towns.harbor.url}/beat/schools`);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Schools');
+});
+
+test('heritage puts the lead in the center column between Today and the briefs', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'columns are a desktop layout');
+  await page.goto(`${towns.harbor.url}/`);
+  await expect(page.locator('[data-family="heritage"]')).toHaveCount(1);
+  const band = page.locator('[data-band="three-column"]');
+  const columns = band.locator(':scope > [data-band-col]');
+  await expect(columns).toHaveCount(3);
+  await expect(columns.nth(1).locator('[data-module="lead-story"]')).toHaveCount(1);
+  await expect(columns.nth(2).locator('[data-module="briefs"]')).toHaveCount(1);
+  const [left, center, right] = await columns.evaluateAll((els) =>
+    els.map((el) => el.getBoundingClientRect().x),
+  );
+  expect(left! < center! && center! < right!).toBe(true);
+  // Square corners, the town's tagline under the nameplate, and the red Subscribe button.
+  await expect(page.getByText('News off the dock, every morning.')).toBeVisible();
+  const subscribe = page.getByRole('link', { name: 'Subscribe free' });
+  expect(await subscribe.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+    'rgb(179, 38, 30)',
+  );
 });

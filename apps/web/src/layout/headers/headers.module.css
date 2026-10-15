@@ -125,3 +125,78 @@
 .subscribe:hover {
   text-decoration: underline;
 }
+
+/* nameplate-double-rule (heritage): rules in the town's ink, square and dense. */
+.nameplate {
+  border-bottom: 0;
+}
+
+.nameplateInner {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0.85rem var(--gutter) 0;
+}
+
+.ear {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.6rem;
+}
+
+.earEnd {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.earTemp {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.subscribeSecondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 0.9rem;
+  border-radius: var(--radius);
+  background: var(--secondary);
+  color: var(--secondary-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.subscribeSecondary:hover {
+  text-decoration: underline;
+}
+
+.plate {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  padding: 0.9rem 0 0.75rem;
+  border-top: 4px double var(--ink);
+  border-bottom: 1px solid var(--ink);
+  text-align: center;
+}
+
+.tagline {
+  margin: 0;
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+.plateNav {
+  border-bottom: 3px double var(--ink);
+}

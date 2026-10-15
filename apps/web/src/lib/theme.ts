@@ -55,6 +55,10 @@ export function themeCssVariables(theme: Theme): string {
     '--ink': palette.ink,
     '--accent': palette.accent,
     '--accent-text': palette.accentText,
+    '--secondary': palette.secondary ?? palette.accent,
+    '--secondary-text': palette.secondary
+      ? (palette.secondaryText ?? palette.accentText)
+      : palette.accentText,
     '--tint': palette.tint,
     '--surface': palette.surface,
     '--background': palette.background,
@@ -137,6 +141,8 @@ export function networkCssVariables(): string {
     '--ink': brandColors.navy,
     '--accent': brandColors.navy,
     '--accent-text': brandColors.white,
+    '--secondary': brandColors.navy,
+    '--secondary-text': brandColors.white,
     '--tint': brandColors.paper,
     '--surface': brandColors.paper,
     '--background': brandColors.white,
