@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { beats } from '@towncore/config';
 import { listPublishedArticles } from '@towncore/db';
 import { db } from '@/lib/db';
+import { StandardPage } from '@/lib/pages';
 import { formatTownDate, requireTown } from '@/lib/town';
 
 type Props = { params: Promise<{ host: string; beat: string }> };
@@ -24,7 +25,7 @@ export default async function BeatPage({ params }: Props) {
   const articles = await listPublishedArticles(db(), town.id, { beat: beat.slug });
 
   return (
-    <>
+    <StandardPage town={town}>
       <h1>{beat.label}</h1>
       {articles.length === 0 ? (
         <p>No {beat.label.toLowerCase()} stories yet.</p>
@@ -38,6 +39,6 @@ export default async function BeatPage({ params }: Props) {
           ))}
         </ul>
       )}
-    </>
+    </StandardPage>
   );
 }

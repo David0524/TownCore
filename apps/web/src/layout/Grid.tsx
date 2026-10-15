@@ -6,10 +6,12 @@ export function Grid({
   kind,
   children,
   rail,
+  measure = 'normal',
 }: {
   kind: Theme['layout']['grid'];
   children: ReactNode;
   rail?: ReactNode;
+  measure?: 'normal' | 'wide';
 }) {
   if (kind === 'main-right-rail') {
     return (
@@ -22,7 +24,10 @@ export function Grid({
     );
   }
   return (
-    <main className={`${styles.grid} ${styles.single}`} data-part="grid:single-column">
+    <main
+      className={`${styles.grid} ${measure === 'wide' ? styles.wide : styles.single}`}
+      data-part="grid:single-column"
+    >
       {children}
     </main>
   );

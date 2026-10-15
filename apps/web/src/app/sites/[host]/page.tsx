@@ -3,6 +3,7 @@ import { homeModules, homeOrder } from '@/modules/registry';
 import { themeFor } from '@/lib/theme';
 import { requireTown } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
+import { TownGrid } from '@/layout/TownGrid';
 
 // The homepage is the theme's ordered module list, not a fixed template (CLAUDE.md §11a-2).
 export default async function HomePage({ params }: { params: Promise<{ host: string }> }) {
@@ -20,7 +21,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
   const hasNews = rendered.some(({ key }) => !key.startsWith('newsletter-cta'));
 
   return (
-    <>
+    <TownGrid town={town} kind={theme.layout.grid}>
       <h1 className="sr-only">
         {town.siteName}: local news for {town.name}, {town.state}
       </h1>
@@ -42,6 +43,6 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
           Stories will appear here as soon as our newsroom starts publishing.
         </p>
       )}
-    </>
+    </TownGrid>
   );
 }

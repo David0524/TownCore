@@ -7,7 +7,7 @@ if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 const nextConfig: NextConfig = {
   // Workspace packages ship as TypeScript source.
-  transpilePackages: ['@towncore/brand', '@towncore/config', '@towncore/db'],
+  transpilePackages: ['@towncore/brand', '@towncore/config', '@towncore/db', '@towncore/pipeline'],
   poweredByHeader: false,
 };
 

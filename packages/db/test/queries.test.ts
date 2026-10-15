@@ -4,13 +4,16 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Db } from '../src/client';
 import {
   getActiveCampaign,
+  getPublishedArticle,
+  getSourceRecords,
+  listTownCorrections,
   getTownByHost,
   getTownBySlug,
   listLiveTowns,
   listPublishedArticles,
   normalizeHost,
 } from '../src/queries';
-import { articles, campaigns, records, sources, towns } from '../src/schema';
+import { articles, campaigns, corrections, records, sources, towns } from '../src/schema';
 import { createTestDb } from '../src/testing';
 import { syncTowns } from '../src/towns';
 import { eq } from 'drizzle-orm';
@@ -169,5 +172,51 @@ describe('town and article queries', () => {
     const campaign = await getActiveCampaign(db, townId, 'home.top', now);
     expect(campaign?.creative).toEqual({ headline: 'high' });
     expect(await getActiveCampaign(db, townId, 'article.inline', now)).toBeNull();
+  });
+
+  it('serves only public articles by slug, with sources in citation order and corrections', async () => {
+    const [source] = await db
+      .insert(sources)
+      .values({ townId, kind: 'agenda', platform: 'test', adapter: 'test' })
+      .returning();
+    const [r1, r2] = await db
+      .insert(records)
+      .values([
+        { sourceId: source!.id, townId, externalId: 'c1', type: 'agenda', contentHash: 'a' },
+        { sourceId: source!.id, townId, externalId: 'c2', type: 'agenda', contentHash: 'b' },
+      ])
+      .returning();
+    const base = {
+      townId,
+      bodyMd: 'Body.',
+      beat: 'government',
+      tier: 2,
+      byline: 'Boca Town Square Newsroom (AI-assisted)',
+      sourceRecordIds: [r2!.id, r1!.id],
+    };
+    const [pub] = await db
+      .insert(articles)
+      .values({
+        ...base,
+        slug: 'pub',
+        headline: 'Pub',
+        status: 'published',
+        publishedAt: new Date(),
+      })
+      .returning();
+    await db
+      .insert(articles)
+      .values({ ...base, slug: 'hidden', headline: 'Hidden', status: 'in_review' });
+    await db.insert(corrections).values({ articleId: pub!.id, note: 'Fixed a date.' });
+
+    expect((await getPublishedArticle(db, townId, 'pub'))?.id).toBe(pub!.id);
+    expect(await getPublishedArticle(db, townId, 'hidden')).toBeNull();
+    expect((await getSourceRecords(db, pub!.sourceRecordIds)).map((r) => r.externalId)).toEqual([
+      'c2',
+      'c1',
+    ]);
+    expect(await getSourceRecords(db, [])).toEqual([]);
+    const townCorrections = await listTownCorrections(db, townId);
+    expect(townCorrections.map((c) => c.article.slug)).toContain('pub');
   });
 });
