@@ -7,6 +7,10 @@ export { syncTowns, type SyncTownsResult } from './towns';
 export { and, asc, desc, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 export {
   getActiveCampaign,
+  getPublishedArticle,
+  getSourceRecords,
+  listArticleCorrections,
+  listTownCorrections,
   getTownByHost,
   getTownBySlug,
   listLiveTowns,
@@ -14,5 +18,7 @@ export {
   normalizeHost,
   type Article,
   type Campaign,
+  type Correction,
+  type SourceRecord,
   type Town,
 } from './queries';

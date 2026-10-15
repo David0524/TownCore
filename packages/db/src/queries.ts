@@ -1,10 +1,12 @@
-import { and, arrayContains, desc, eq, gt, isNull, lte, or } from 'drizzle-orm';
+import { and, arrayContains, desc, eq, gt, inArray, isNull, lte, or } from 'drizzle-orm';
 import type { Db } from './client';
-import { articles, campaigns, towns } from './schema';
+import { articles, campaigns, corrections, records, towns } from './schema';
 
 export type Town = typeof towns.$inferSelect;
 export type Article = typeof articles.$inferSelect;
 export type Campaign = typeof campaigns.$inferSelect;
+export type SourceRecord = typeof records.$inferSelect;
+export type Correction = typeof corrections.$inferSelect;
 
 /**
  * Strips port, trailing dot and a leading "www." and lowercases. Returns null for anything
@@ -80,4 +82,52 @@ export async function getActiveCampaign(
     .orderBy(desc(campaigns.priority), desc(campaigns.startsAt))
     .limit(1);
   return campaign ?? null;
+}
+
+const isPublic = or(eq(articles.status, 'published'), eq(articles.status, 'corrected'));
+
+/** A published (or corrected) article by slug; drafts, review items and blocked items are never served. */
+export async function getPublishedArticle(
+  db: Db,
+  townId: string,
+  slug: string,
+): Promise<Article | null> {
+  const [article] = await db
+    .select()
+    .from(articles)
+    .where(and(eq(articles.townId, townId), eq(articles.slug, slug), isPublic))
+    .limit(1);
+  return article ?? null;
+}
+
+/** Source records an article cites (Rule 4), in the article's citation order. */
+export async function getSourceRecords(db: Db, ids: string[]): Promise<SourceRecord[]> {
+  if (ids.length === 0) return [];
+  const rows = await db.select().from(records).where(inArray(records.id, ids));
+  return ids.map((id) => rows.find((r) => r.id === id)).filter((r): r is SourceRecord => !!r);
+}
+
+export async function listArticleCorrections(db: Db, articleId: string): Promise<Correction[]> {
+  return db
+    .select()
+    .from(corrections)
+    .where(eq(corrections.articleId, articleId))
+    .orderBy(desc(corrections.createdAt));
+}
+
+/** Every public correction in a town, newest first, with its article (Corrections page). */
+export async function listTownCorrections(
+  db: Db,
+  townId: string,
+): Promise<Array<{ correction: Correction; article: Pick<Article, 'slug' | 'headline'> }>> {
+  const rows = await db
+    .select({ correction: corrections, slug: articles.slug, headline: articles.headline })
+    .from(corrections)
+    .innerJoin(articles, eq(corrections.articleId, articles.id))
+    .where(and(eq(articles.townId, townId), isPublic))
+    .orderBy(desc(corrections.createdAt));
+  return rows.map(({ correction, slug, headline }) => ({
+    correction,
+    article: { slug, headline },
+  }));
 }

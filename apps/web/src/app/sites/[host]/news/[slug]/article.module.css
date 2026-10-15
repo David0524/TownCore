@@ -1,0 +1,77 @@
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.kicker {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.kicker a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.headline {
+  font-size: clamp(1.9rem, 5.5vw, 2.75rem);
+}
+
+.largeHeadline {
+  font-size: clamp(2.1rem, 6.5vw, 3.25rem);
+}
+
+.dek {
+  font-size: 1.2rem;
+  margin: 0 0 1rem;
+}
+
+/* Locked: byline, dates, sources and corrections look the same in every town (§11a-2). */
+.byline {
+  margin: 0;
+  font-weight: 600;
+}
+
+.dates {
+  margin: 0.15rem 0 0;
+  font-size: 0.875rem;
+}
+
+.body :global(p) {
+  margin: 0 0 1.1em;
+}
+
+.correction {
+  border-left: 4px solid var(--ink);
+  background: var(--surface);
+  padding: 0.75rem 1rem;
+  margin: 0 0 1.5rem;
+  font-size: 0.9375rem;
+}
+
+.correction p {
+  margin: 0.25rem 0;
+}
+
+.sources {
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin: 2rem 0 1rem;
+  font-size: 0.9375rem;
+}
+
+.sources h2 {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.sources ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.report {
+  font-size: 0.9375rem;
+}

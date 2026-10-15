@@ -98,8 +98,10 @@ export const BriefingColumn: HomeModuleComponent = async ({ town }) => {
   );
 };
 
-export const BeatSections: HomeModuleComponent = async ({ town }) => {
-  const articles = await recentArticles(town.id);
+export const BeatSections: HomeModuleComponent = async ({ town, modules }) => {
+  const all = await recentArticles(town.id);
+  const lead = modules.includes('lead-story') ? pickLead(all) : undefined;
+  const articles = all.filter((a) => a.id !== lead?.id);
   const sections = beats
     .map((beat) => ({ beat, items: articles.filter((a) => a.beat === beat.slug).slice(0, 3) }))
     .filter((s) => s.items.length > 0);
