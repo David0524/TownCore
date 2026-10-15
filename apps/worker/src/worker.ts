@@ -12,9 +12,12 @@ import { PgBoss } from 'pg-boss';
 import type { Logger } from 'pino';
 import { recordHeartbeat } from './heartbeat';
 import {
+  bulkFromEnv,
   inboundFromEnv,
+  runBulkHealth,
   runMailTick,
   sesFromEnv,
+  startBulkLoop,
   startInboundLoop,
   type InboundConfig,
 } from './mail';
@@ -42,6 +45,8 @@ export type WorkerOptions = {
   ses?: IdentityProvider | null;
   /** Raw mail bucket for inbound processing. Default: from AWS env; null turns it off. */
   inbound?: InboundConfig | null;
+  /** Bulk sending. Default: from the environment; false turns it off. */
+  bulk?: boolean;
 };
 
 export type RunningWorker = {
@@ -63,6 +68,7 @@ export async function startWorker({
   llmProvider = resolveProviderName() ? providerFromEnv() : null,
   ses = sesFromEnv(),
   inbound = inboundFromEnv(),
+  bulk = true,
 }: WorkerOptions): Promise<RunningWorker> {
   const startedAt = new Date();
   const db = createDb(databaseUrl, { max: 5 });
@@ -108,12 +114,18 @@ export async function startWorker({
     await runMailTick(db, ses, logger);
   });
 
+  await boss.work(queues.bulkHealth, async () => {
+    await runBulkHealth(db, logger);
+  });
+
   for (const { queue, cron } of schedules) {
     await boss.schedule(queue, cron);
   }
 
   // Inbound mail: the webhook stores SNS notifications in mail_events; this drains them.
   const stopInbound = startInboundLoop(db, inbound, logger);
+  // Newsletters and campaigns (Mail-5).
+  const stopBulk = startBulkLoop(bulk ? bulkFromEnv(db) : null, logger);
 
   logger.info(
     { workerId, queues: Object.values(queues), llm: llmProvider?.name ?? 'none' },
@@ -125,6 +137,7 @@ export async function startWorker({
     stopping ??= (async () => {
       logger.info({ workerId }, 'worker stopping');
       await stopInbound();
+      await stopBulk();
       await boss.stop({ graceful: true, timeout: 30_000 });
       await db.$client.end();
       logger.info({ workerId }, 'worker stopped');

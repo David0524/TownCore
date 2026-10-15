@@ -9,6 +9,7 @@ export const queues = {
   factCheck: 'fact-check',
   newsletter: 'newsletter',
   mailTick: 'mail.tick',
+  bulkHealth: 'mail.bulk-health',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -22,4 +23,6 @@ export const schedules = [
   { queue: queues.storyFinderTick, cron: '*/30 * * * *' },
   // Every 5 minutes, check mail domains waiting on SES and any "Re-check" requests (Mail-1).
   { queue: queues.mailTick, cron: '*/5 * * * *' },
+  // Every 15 minutes, bulk auto-pause checks and the daily warm-up step (Mail-5).
+  { queue: queues.bulkHealth, cron: '*/15 * * * *' },
 ] as const;

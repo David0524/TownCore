@@ -9,4 +9,5 @@ export const aboutItems = [
   { href: '/about', label: 'About' },
   { href: '/methods', label: 'How we report' },
   { href: '/corrections', label: 'Corrections' },
+  { href: '/privacy', label: 'Privacy' },
 ];

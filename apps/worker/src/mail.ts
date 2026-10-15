@@ -2,13 +2,20 @@ import { loadEnv } from '@towncore/config';
 import { eq, isNotNull, loadRoutingTable, mailDomains, or, type Db } from '@towncore/db';
 import {
   checkVerification,
+  expandDueCampaigns,
   handleSendingEvent,
+  logTransport,
   pgOnboardingStore,
   processDueEvents,
   processReceivedNotification,
+  runAutoPause,
+  runWarmupDay,
   s3MailStore,
+  sendDueBatches,
   sesIdentities,
+  sesTransport,
   SENDING_EVENT_TYPES,
+  type BulkDeps,
   type EventHandler,
   type IdentityProvider,
   type MailObjectStore,
@@ -117,6 +124,68 @@ export function startInboundLoop(
         if (r.retried || r.failed) logger.warn(r, 'mail events retried or failed');
       })
       .catch((error: unknown) => logger.error({ err: error }, 'mail event batch failed'))
+      .finally(() => {
+        if (!stopped) timer = setTimeout(tick, intervalMs);
+      });
+  };
+  timer = setTimeout(tick, 0);
+  return async () => {
+    stopped = true;
+    clearTimeout(timer);
+    await running;
+  };
+}
+
+/** Bulk sending needs a transport, the bulk configuration set and the token secret (Mail-5). */
+export function bulkFromEnv(db: Db): BulkDeps | null {
+  const env = loadEnv();
+  const mode = env.MAIL_TRANSPORT ?? (env.AWS_ACCESS_KEY_ID ? 'ses' : null);
+  if (!mode || !env.MAIL_TOKEN_SECRET) return null;
+  if (mode === 'ses' && !env.SES_CONFIG_SET_BULK) return null;
+  return {
+    db,
+    transport:
+      mode === 'log' ? logTransport() : sesTransport({ region: env.AWS_REGION ?? 'us-east-1' }),
+    configurationSet: env.SES_CONFIG_SET_BULK ?? 'log',
+    secret: env.MAIL_TOKEN_SECRET,
+    postalAddress: env.MAIL_POSTAL_ADDRESS ?? null,
+  };
+}
+
+/** Every 15 minutes: auto-pause on bad bounce or complaint rates, and the daily warm-up step. */
+export async function runBulkHealth(db: Db, logger: Logger, now = new Date()): Promise<void> {
+  const paused = await runAutoPause(db, now);
+  for (const p of paused.paused) logger.warn(p, 'bulk mail auto-paused for a domain');
+  if (paused.network)
+    logger.error({ reason: paused.network }, 'bulk mail auto-paused for every town');
+  const ramp = await runWarmupDay(db, now);
+  if (ramp.length) logger.info({ domains: ramp }, 'warm-up step');
+}
+
+/**
+ * Sends due campaigns every few seconds (expand, then throttled batches). Returns a stop
+ * function that waits for the batch in flight. Does nothing until sending is configured.
+ */
+export function startBulkLoop(
+  bulk: BulkDeps | null,
+  logger: Logger,
+  intervalMs = 15_000,
+): () => Promise<void> {
+  if (!bulk) {
+    logger.info('bulk mail: no transport, SES_CONFIG_SET_BULK or MAIL_TOKEN_SECRET; not sending');
+    return async () => {};
+  }
+  let running: Promise<unknown> = Promise.resolve();
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const tick = () => {
+    if (stopped) return;
+    running = (async () => {
+      await expandDueCampaigns(bulk.db);
+      const r = await sendDueBatches(bulk);
+      if (r.sent || r.failed || r.deferred || r.finished) logger.info(r, 'bulk batch');
+    })()
+      .catch((error: unknown) => logger.error({ err: error }, 'bulk batch failed'))
       .finally(() => {
         if (!stopped) timer = setTimeout(tick, intervalMs);
       });

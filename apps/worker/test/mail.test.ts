@@ -212,3 +212,88 @@ describe('sending events', () => {
     }
   });
 });
+
+describe('bulk loop (Mail-5)', () => {
+  it('sends a due, approved campaign through the log transport and finishes it', async () => {
+    const { towns, subscribers, staff, emailCampaigns, emailCampaignSends } =
+      await import('@towncore/db');
+    const { approveCampaign, createCampaign, logTransport } = await import('@towncore/mail');
+    const { startBulkLoop, runBulkHealth } = await import('../src/mail');
+    const [town] = await db
+      .insert(towns)
+      .values({
+        slug: 'bulkville',
+        name: 'Bulkville',
+        state: 'FL',
+        county: 'X',
+        timezone: 'America/New_York',
+        domain: 'bulkville.test',
+        siteName: 'Bulkville Ledger',
+        tier: 'small',
+        config: {},
+      })
+      .returning();
+    const [domain] = await db
+      .insert(mailDomains)
+      .values({
+        name: 'bulkville.test',
+        townId: town!.id,
+        displayName: 'Bulkville Ledger',
+        status: 'live',
+        bulkStatus: 'warming',
+        bulkDailyCap: 50,
+      })
+      .returning();
+    await db.insert(subscribers).values(
+      ['a', 'b', 'c'].map((x) => ({
+        townId: town!.id,
+        email: `${x}@example.com`,
+        status: 'active' as const,
+        confirmedAt: new Date(),
+      })),
+    );
+    const [ed] = await db
+      .insert(staff)
+      .values({ email: 'bulk-ed@towncore.net', name: 'Ed', role: 'admin' })
+      .returning();
+    const actor = { id: ed!.id, name: 'Ed' };
+    const c = await createCampaign(db, actor, {
+      domainId: domain!.id,
+      subject: 'Hi',
+      body: 'Hello',
+    });
+    await approveCampaign(db, actor, c.id);
+
+    const lines: string[] = [];
+    const stop = startBulkLoop(
+      {
+        db,
+        transport: logTransport((l) => lines.push(l)),
+        configurationSet: 'log',
+        secret: 's'.repeat(40),
+        postalAddress: '1 Main St',
+      },
+      logger,
+      50,
+    );
+    for (let i = 0; i < 100; i++) {
+      const [row] = await db.select().from(emailCampaigns).where(eq(emailCampaigns.id, c.id));
+      if (row!.status === 'sent') break;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    await stop();
+    const [row] = await db.select().from(emailCampaigns).where(eq(emailCampaigns.id, c.id));
+    expect(row!.status).toBe('sent');
+    const sends = await db
+      .select()
+      .from(emailCampaignSends)
+      .where(eq(emailCampaignSends.campaignId, c.id));
+    expect(sends.map((s) => s.status)).toEqual(['sent', 'sent', 'sent']);
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toContain('from=newsletter@news.bulkville.test');
+
+    await runBulkHealth(db, logger);
+    const [d] = await db.select().from(mailDomains).where(eq(mailDomains.id, domain!.id));
+    expect(d!.bulkStatus).toBe('warming');
+  });
+});
