@@ -1,7 +1,7 @@
 # Mail runbook
 
-How to run the mail platform (`docs/plans/MAIL.md`). Each section is filled in by the phase that
-builds it; sections marked _(Mail-N)_ are not built yet.
+How to run the mail platform (`docs/plans/MAIL.md`). Start every incident at **Admin → Mail
+health**: it lists what is wrong, and each alert names the section below to follow.
 
 ## Owner setup checklist
 
@@ -24,7 +24,14 @@ Do these once. Values go into the hosting dashboards (Vercel, Railway), never in
       use-case text. Until then SES only sends to verified addresses, 200 a day.
 - [ ] **Vercel API token** with DNS scope (`VERCEL_DNS_TOKEN`) and the team ID (`VERCEL_TEAM_ID`).
 - [ ] **Test domains** (3) and external test inbox addresses.
-- [ ] **DMARC report address** (`DMARC_REPORT_ADDRESS`).
+- [ ] **DMARC report address** (`DMARC_REPORT_ADDRESS`). Recommended: `dmarc@` on a town domain
+      we receive mail for, e.g. `dmarc@bocatownsquare.com`. Reports to it are parsed into Admin →
+      Mail health instead of the inbox. An address on another domain needs that domain to
+      publish a `*._report._dmarc` TXT record with `v=DMARC1`.
+- [ ] **towncore.net in SES** for staff mail (alerts, sign-in links): verify `towncore.net` as an
+      SES identity (Easy DKIM CNAMEs in its DNS) so `alerts@towncore.net` can send. Until then
+      alerts show only on the health page and in the worker log.
+- [ ] **Database backups on Railway** (before real subscribers; see "Restoring from backup").
 - [ ] **Postal address** for newsletter footers (`MAIL_POSTAL_ADDRESS`).
 - [ ] **Teams and role mapping.** Defaults: `admin@`, `billing@`, `privacy@` → Admin; `sales@`,
       `advertise@` → Sales; `news@`, `editor@`, `tips@`, `corrections@` → Editorial; anything
@@ -218,11 +225,69 @@ If all mail together passes 4% bounces or 0.08% complaints, bulk mail pauses for
 (Admin → Campaigns shows the reason). SES reviews accounts at 5% and 0.1%, so treat this as
 urgent: find the cause before an admin presses "Resume bulk mail for every town".
 
-## Handling an SES account review _(Mail-6)_
+## Handling an SES account review
 
-## Restoring from backup _(Mail-6)_
+SES reviews the whole account at about **5% bounces** or **0.1% complaints** and may pause
+sending at 10% / 0.5%. All towns share the account, so a review affects replies too. Mail health
+shows the account's status (HEALTHY, PROBATION or SHUTDOWN), checked every 15 minutes, and
+alerts when it isn't HEALTHY or when rates reach 3% / 0.06%.
 
-Before real subscribers exist, confirm the Railway Postgres backup and point-in-time-restore
-options and record them here (D-MAIL-10).
+1. **Stop the damage.** Bulk mail for every town pauses automatically at 4% / 0.08%. If it
+   hasn't, pause the worst domains: Admin → Mail health shows each domain's bulk bounce and
+   complaint rates.
+2. **Find the cause.** Usually one town: a bad import, a signup form bots got past, or a
+   campaign people marked as spam. Check that domain's recent campaigns and the
+   `email_events` rows behind its numbers.
+3. **Fix it.** Suppress or remove the bad addresses, fix the form, stop the campaign. Hard bounces
+   and complaints are already suppressed automatically.
+4. **Answer AWS.** The SES console (Account dashboard) shows the review case. Reply with what
+   happened, what was fixed and how it's prevented (double opt-in, suppression list,
+   per-domain auto-pause, warm-up). Keep bulk paused until the account is HEALTHY again.
+5. **Resume slowly.** Unpause one domain at a time (see "Unpausing a domain") and watch its rates
+   for a day before the next.
 
-## Removing a domain cleanly _(Mail-6)_
+## Restoring from backup
+
+Postgres runs on Railway (D-MAIL-10). Turn on all three layers before real subscribers:
+
+- **Volume backups:** Postgres service → Backups → schedule daily backups. A restore replaces
+  the same service's data; use it for a broken volume.
+- **Point-in-time recovery (PITR):** Postgres service → Backups → Enable PITR. Railway archives
+  every WAL segment (pgBackRest) to a bucket it creates, `Postgres-PITR`. A restore to any time
+  in the retention window creates a **new sibling Postgres service**; the original is never
+  touched. Railway's docs note that PITR needs the official Postgres image pinned to a major
+  version (not `:latest`), and that a long storage outage can drop WAL and shorten the window.
+- **Logical dumps:** a nightly `pg_dump` to storage outside Railway, so we can leave Railway or
+  copy one table back by hand.
+
+To recover from a mistake (for example a bad import or a mass update):
+1. Note the time just before it happened (UTC).
+2. Restore PITR to that time. Railway creates a new Postgres service beside the old one.
+3. Stop the worker. Point `DATABASE_URL` for the web app and the worker at the new service,
+   redeploy both, and start the worker again.
+4. Check Admin → Mail health and the subscriber counts. Keep the old service until you're sure,
+   then delete it.
+
+Raw mail and attachments live in S3, not Postgres, so a restore never loses them; messages
+received after the restore point come back by re-processing their `mail_events` (set them to
+`pending`).
+
+## Removing a domain cleanly
+
+```sh
+pnpm mail:onboard remove boca-example.com            # dry run: lists what would be deleted
+pnpm mail:onboard remove boca-example.com --execute  # add --approved outside MAIL_TEST_DOMAINS
+```
+
+It deletes only what onboarding created: the DNS records it wrote (by their Vercel record ids)
+and the two SES identities (`domain` and `news.domain`). Records the domain had before us are
+never touched. The domain is then marked `removed`: inbound mail off, bulk paused, newsletter
+off. Running it again is harmless; running `add` later starts onboarding from scratch.
+
+It needs the operator credentials (Vercel token, AWS keys with `ses:DeleteEmailIdentity`), like
+onboarding. Afterwards:
+- **Data:** conversations, subscribers and campaign history stay in Postgres; raw mail stays in
+  S3 under the bucket's lifecycle rules. Delete subscriber rows only on a person's request
+  (Privacy page) or when the owner sets a retention period.
+- **DMARC:** reports for the domain stop arriving within a few days.
+- **The town site:** removing mail doesn't touch the site or its domain registration.

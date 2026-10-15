@@ -17,14 +17,15 @@ beforeAll(async () => {
 });
 afterAll(async () => drop());
 
-const env = loadEnv({
+const rawEnv = {
   MAIL_TEST_DOMAINS: 'alpha.test, beta.test',
   VERCEL_DNS_TOKEN: 'x',
   AWS_ACCESS_KEY_ID: 'x',
   DMARC_REPORT_ADDRESS: 'dmarc@towncore.net',
   SES_CONFIG_SET_CONVERSATIONAL: 'towncore-dev-conversational',
   SES_CONFIG_SET_BULK: 'towncore-dev-bulk',
-});
+};
+const env = loadEnv(rawEnv);
 
 function world(domains: string[]) {
   const dns = fakeDns(Object.fromEntries(domains.map((d) => [d, []])));
@@ -207,5 +208,53 @@ describe('pgOnboardingStore', () => {
     ]);
     expect(results.map((r) => r.outcome).sort()).toEqual(['busy', 'live']);
     expect(w.ses.calls.creates).toBe(2);
+  });
+
+  it('remove deletes only what we created, behind the same guard', async () => {
+    const w = world(['gone.test']);
+    // A record the owner had before onboarding: never touched.
+    w.dns.zones['gone.test']!.push({
+      id: 'owner_1',
+      type: 'TXT',
+      name: 'google',
+      value: 'site-verification',
+      priority: null,
+    });
+    const testEnv = loadEnv({ ...rawEnv, MAIL_TEST_DOMAINS: 'gone.test' });
+    const lines: string[] = [];
+    const runRemove = (argv: string[], e = testEnv) =>
+      runOnboardCommand(argv, { db, env: e, out: (l) => lines.push(l), providers: w.providers });
+    const added = await runRemove(['add', 'gone.test', '--display-name', 'Gone', '--execute']);
+    expect(added, lines.join('\n')).toBe(0);
+    const created = await db.select().from(dnsRecords).where(eq(dnsRecords.status, 'created'));
+    expect(created.length).toBeGreaterThan(0);
+    expect(w.ses.identities.size).toBe(2);
+
+    lines.length = 0;
+    expect(await runRemove(['remove', 'gone.test'])).toBe(0);
+    expect(lines.join('\n')).toMatch(
+      /would delete \d+ DNS record\(s\) we created and 2 SES identities[\s\S]*Dry run: nothing changed/,
+    );
+    expect(w.ses.identities.size).toBe(2);
+
+    // Outside the test list, --execute needs --approved.
+    expect(await runRemove(['remove', 'gone.test', '--execute'], loadEnv(rawEnv))).toBe(3);
+    expect(w.ses.identities.size).toBe(2);
+
+    expect(await runRemove(['remove', 'gone.test', '--execute'])).toBe(0);
+    expect(w.ses.identities.size).toBe(0);
+    expect(w.dns.zones['gone.test']!.map((r) => r.id)).toEqual(['owner_1']);
+    const [d] = await db.select().from(mailDomains).where(eq(mailDomains.name, 'gone.test'));
+    expect(d).toMatchObject({
+      status: 'removed',
+      inboundEnabled: false,
+      bulkStatus: 'paused',
+      newsletterMode: 'off',
+    });
+    expect(
+      await db.select().from(domainIdentities).where(eq(domainIdentities.domainId, d!.id)),
+    ).toEqual([]);
+    // Running it again is harmless.
+    expect(await runRemove(['remove', 'gone.test', '--execute'])).toBe(0);
   });
 });

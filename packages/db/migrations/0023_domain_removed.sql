@@ -1,0 +1,1 @@
+ALTER TYPE "public"."mail_domain_status" ADD VALUE 'removed';

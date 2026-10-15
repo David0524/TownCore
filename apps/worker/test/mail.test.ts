@@ -46,6 +46,10 @@ function ses(status: 'PENDING' | 'SUCCESS'): IdentityProvider & { writes: number
       provider.writes++;
       throw new Error('the worker must never change identities');
     },
+    async deleteIdentity() {
+      provider.writes++;
+      throw new Error('the worker must never delete identities');
+    },
   };
   return provider;
 }

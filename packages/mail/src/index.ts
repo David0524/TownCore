@@ -269,3 +269,4 @@ export {
   type DmarcSource,
   type DmarcSummary,
 } from './ops/dmarc';
+export { applyRemoval, describeRemoval, planRemoval, type RemovalPlan } from './removal';

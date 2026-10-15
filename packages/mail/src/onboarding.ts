@@ -31,7 +31,7 @@ export type StepName = (typeof STEPS)[number];
 export type StepStatus = 'pending' | 'running' | 'waiting' | 'done' | 'failed';
 export type StepState = { status: StepStatus; attempts: number; lastError: string | null };
 
-export type DomainStatus = 'pending' | 'onboarding' | 'live' | 'paused' | 'failed';
+export type DomainStatus = 'pending' | 'onboarding' | 'live' | 'paused' | 'failed' | 'removed';
 export type DomainState = {
   id: string;
   name: string;

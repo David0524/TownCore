@@ -38,6 +38,9 @@ export function fakeDns(
       });
       return id;
     },
+    async deleteRecord(domain, recordId) {
+      zones[domain] = (zones[domain] ?? []).filter((r) => r.id !== recordId);
+    },
   };
   return { provider, zones, calls, failOnCreateNumber: (n: number | null) => (failOnCreate = n) };
 }
@@ -93,6 +96,9 @@ export function fakeSes(zones: Record<string, ExistingRecord[]>) {
     async setMailFrom(name, mailFromDomain) {
       calls.mailFrom++;
       identities.get(name)!.mailFromDomain = mailFromDomain;
+    },
+    async deleteIdentity(name) {
+      identities.delete(name);
     },
   };
   return {

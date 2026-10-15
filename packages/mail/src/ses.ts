@@ -1,6 +1,7 @@
 import {
   AlreadyExistsException,
   CreateEmailIdentityCommand,
+  DeleteEmailIdentityCommand,
   GetEmailIdentityCommand,
   NotFoundException,
   PutEmailIdentityMailFromAttributesCommand,
@@ -32,6 +33,8 @@ export interface IdentityProvider {
     tags: Record<string, string>,
   ): Promise<IdentityInfo>;
   setMailFrom(name: string, mailFromDomain: string): Promise<void>;
+  /** Removes the identity (domain removal, Mail-6). Already gone is fine. */
+  deleteIdentity(name: string): Promise<void>;
 }
 
 export function sesIdentities(options: {
@@ -103,6 +106,13 @@ export function sesIdentities(options: {
           }),
         ),
       );
+    },
+    async deleteIdentity(name) {
+      try {
+        await send(() => client.send(new DeleteEmailIdentityCommand({ EmailIdentity: name })));
+      } catch (error) {
+        if (!(error instanceof NotFoundException)) throw error;
+      }
     },
   };
 }

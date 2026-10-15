@@ -221,6 +221,8 @@ export class MailStack extends Stack {
             'ses:GetEmailIdentity',
             'ses:ListEmailIdentities',
             'ses:PutEmailIdentityMailFromAttributes',
+            // Domain removal (Mail-6): only the operator's credentials can delete identities.
+            'ses:DeleteEmailIdentity',
             'ses:PutEmailIdentityConfigurationSetAttributes',
             'ses:PutEmailIdentityDkimAttributes',
             'ses:TagResource',

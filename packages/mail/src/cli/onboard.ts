@@ -11,6 +11,7 @@ import {
   type OnboardingReport,
 } from '../onboarding';
 import { dryRunStore, pgOnboardingStore } from '../pg-store';
+import { applyRemoval, describeRemoval, planRemoval } from '../removal';
 import { sesIdentities, type IdentityProvider } from '../ses';
 import { vercelDns, type DnsProvider } from '../vercel';
 
@@ -23,8 +24,9 @@ export const USAGE = `Usage:
   pnpm mail:onboard status [domain]
   pnpm mail:onboard retry <domain> [--execute] [--approved]
   pnpm mail:onboard verify-all [--execute]
+  pnpm mail:onboard remove <domain> [--execute] [--approved]
 
-Dry-run is the default. --execute writes SES identities and DNS records.
+Dry-run is the default. --execute writes SES identities and DNS records (remove deletes them).
 --approved is required to change any domain not in MAIL_TEST_DOMAINS, and for more than
 one domain at a time outside the test list.`;
 
@@ -122,6 +124,40 @@ export async function runOnboardCommand(argv: string[], ctx: CommandContext): Pr
         concurrency: 1,
         retry: !execute,
       });
+    }
+    case 'remove': {
+      const domain = rest[0]?.toLowerCase();
+      if (!domain) {
+        ctx.out(USAGE);
+        return 2;
+      }
+      const plan = await planRemoval(ctx.db, domain);
+      if (!plan) {
+        ctx.out(`${domain} isn't a mail domain.`);
+        return 1;
+      }
+      for (const line of describeRemoval(plan)) ctx.out(line);
+      if (!execute) {
+        ctx.out(
+          'Dry run: nothing changed. Re-run with --execute (and --approved outside MAIL_TEST_DOMAINS).',
+        );
+        return 0;
+      }
+      try {
+        checkAllowedFor(ctx, [domain], execute, values.approved);
+      } catch (error) {
+        if (!(error instanceof GuardError)) throw error;
+        ctx.out(error.message);
+        return 3;
+      }
+      const providers = (ctx.providers ?? realProviders)(ctx.env);
+      if (providers.offline) {
+        ctx.out('No Vercel token or AWS credentials: can’t remove anything.');
+        return 1;
+      }
+      await applyRemoval(ctx.db, plan, providers);
+      ctx.out(`${domain} removed.`);
+      return 0;
     }
     case 'verify-all': {
       const rows = await ctx.db
@@ -329,6 +365,9 @@ export function offlineProviders(): Providers {
       createRecord: async () => {
         throw new Error('offline');
       },
+      deleteRecord: async () => {
+        throw new Error('offline');
+      },
     },
     ses: {
       getIdentity: async () => null,
@@ -336,6 +375,9 @@ export function offlineProviders(): Providers {
         throw new Error('offline');
       },
       setMailFrom: async () => {
+        throw new Error('offline');
+      },
+      deleteIdentity: async () => {
         throw new Error('offline');
       },
     },

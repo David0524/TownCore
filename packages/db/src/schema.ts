@@ -738,6 +738,8 @@ export const mailDomainStatus = pgEnum('mail_domain_status', [
   'live',
   'paused',
   'failed',
+  // Mail-6: SES identities and our DNS records deleted; mail history kept.
+  'removed',
 ]);
 export const bulkStatus = pgEnum('bulk_status', ['not_started', 'warming', 'active', 'paused']);
 export const identityKind = pgEnum('identity_kind', ['root', 'news']);
