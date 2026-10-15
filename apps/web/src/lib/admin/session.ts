@@ -23,6 +23,13 @@ export function sessionCookieOptions(maxAgeSeconds: number) {
   };
 }
 
+// Holds one Google sign-in attempt (state, nonce, PKCE verifier) for 10 minutes.
+export const OAUTH_COOKIE = 'tc_admin_oauth';
+
+export function oauthCookieOptions() {
+  return { ...sessionCookieOptions(600), path: '/admin/auth' };
+}
+
 export async function currentStaff(): Promise<StaffMember | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   return token ? getSessionStaff(db(), token) : null;

@@ -45,6 +45,7 @@ export {
 } from './queries';
 export {
   createLoginToken,
+  createStaffSession,
   endSession,
   findOrCreateStaff,
   getSessionStaff,

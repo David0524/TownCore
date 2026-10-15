@@ -84,14 +84,23 @@ export async function redeemLoginToken(
   if (!row) return null;
   const [member] = await db.select().from(staff).where(eq(staff.id, row.staffId));
   if (!member?.active) return null;
+  return { sessionToken: await createStaffSession(db, member.id, now), staff: member };
+}
+
+/** Starts a session for a staff member who has proved who they are; returns its token. */
+export async function createStaffSession(
+  db: Db,
+  staffId: string,
+  now = new Date(),
+): Promise<string> {
   const sessionToken = newToken();
   await db.insert(staffSessions).values({
-    staffId: member.id,
+    staffId,
     tokenHash: hashToken(sessionToken),
     expiresAt: new Date(now.getTime() + SESSION_TTL_MS),
     createdAt: now,
   });
-  return { sessionToken, staff: member };
+  return sessionToken;
 }
 
 export async function getSessionStaff(
