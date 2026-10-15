@@ -103,7 +103,10 @@ pnpm mail:onboard retry testtown.com --execute     # after fixing whatever faile
   interrupted run resumes where it stopped, a finished domain is a no-op, and two runs never
   work on one domain at once (a 15-minute lease on `mail_domains`).
 - **Verification** usually takes minutes but can take up to 72 hours. Domains waiting on SES
-  show as `onboarding`; run `verify-all` later. If SES gives up (DKIM or MAIL FROM `FAILED`),
+  show as `onboarding`. The worker checks them every 5 minutes and takes them live once SES
+  verifies (it only reads SES, with the app's credentials); `verify-all` does the same by hand.
+  **Admin → Mail domains** shows each domain's identities, records and steps, and its
+  "Re-check SES status" button asks the worker to look again on its next tick. If SES gives up (DKIM or MAIL FROM `FAILED`),
   the domain fails with the reason; check the records in Vercel, then `retry`.
 
 ## Unpausing a domain _(Mail-5)_

@@ -1,6 +1,7 @@
 import { hostname } from 'node:os';
 import { Fetcher } from '@towncore/adapters';
 import { createDb, type Db } from '@towncore/db';
+import type { IdentityProvider } from '@towncore/mail';
 import {
   providerFromEnv,
   resolveProviderName,
@@ -10,6 +11,7 @@ import {
 import { PgBoss } from 'pg-boss';
 import type { Logger } from 'pino';
 import { recordHeartbeat } from './heartbeat';
+import { runMailTick, sesFromEnv } from './mail';
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
 import { queues, schedules } from './queues';
 import {
@@ -30,6 +32,8 @@ export type WorkerOptions = {
    * key is set). null runs without a model: candidates wait as pending.
    */
   llmProvider?: { name: Llm['providerName']; provider: LlmProvider } | null;
+  /** SES (read-only use) for mail domain checks. Default: from AWS env; null skips them. */
+  ses?: IdentityProvider | null;
 };
 
 export type RunningWorker = {
@@ -49,6 +53,7 @@ export async function startWorker({
   workerId = `${hostname()}-${process.pid}`,
   fetcher = new Fetcher(),
   llmProvider = resolveProviderName() ? providerFromEnv() : null,
+  ses = sesFromEnv(),
 }: WorkerOptions): Promise<RunningWorker> {
   const startedAt = new Date();
   const db = createDb(databaseUrl, { max: 5 });
@@ -88,6 +93,10 @@ export async function startWorker({
   // inside the same job, so a retry never re-publishes half a story).
   await boss.work<WriterJob>(queues.writer, async (jobs) => {
     for (const job of jobs) await runWriterJob(db, llm, logger, job.data);
+  });
+
+  await boss.work(queues.mailTick, async () => {
+    await runMailTick(db, ses, logger);
   });
 
   for (const { queue, cron } of schedules) {

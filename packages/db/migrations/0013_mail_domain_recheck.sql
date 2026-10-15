@@ -1,0 +1,1 @@
+ALTER TABLE "mail_domains" ADD COLUMN "recheck_requested_at" timestamp with time zone;

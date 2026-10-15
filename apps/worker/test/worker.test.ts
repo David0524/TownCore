@@ -25,6 +25,7 @@ beforeAll(async () => {
     workerId: 'test-worker',
     fetcher: offlineFetcher(),
     llmProvider: null,
+    ses: null,
   });
 });
 

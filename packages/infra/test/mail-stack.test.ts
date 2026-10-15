@@ -100,13 +100,14 @@ describe('MailStack', () => {
         's3:GetObject',
         's3:PutObject',
         'ses:GetAccount',
+        'ses:GetEmailIdentity',
         'ses:SendEmail',
         'ses:SendRawEmail',
       ].sort(),
     );
     expect(actions.some((a) => a.endsWith('*'))).toBe(false);
-    // Identity management belongs only to the operator's onboarding policy.
-    expect(actions.some((a) => a.includes('Identity'))).toBe(false);
+    // Creating or changing identities belongs only to the operator's onboarding policy.
+    expect(actions.filter((a) => a.includes('Identity'))).toEqual(['ses:GetEmailIdentity']);
   });
 
   it('names resources per environment so dev and prod never collide', () => {
