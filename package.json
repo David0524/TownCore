@@ -21,7 +21,8 @@
     "ingest:once": "pnpm --filter @towncore/adapters ingest:once",
     "evals": "pnpm --filter @towncore/pipeline evals",
     "stories:once": "pnpm --filter @towncore/pipeline stories:once",
-    "mail:routing:sync": "pnpm --filter @towncore/db mail:routing:sync"
+    "mail:routing:sync": "pnpm --filter @towncore/db mail:routing:sync",
+    "mail:onboard": "pnpm --silent --filter @towncore/mail onboard"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

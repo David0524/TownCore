@@ -238,6 +238,13 @@ importers:
       '@towncore/config':
         specifier: workspace:*
         version: link:../config
+      '@towncore/db':
+        specifier: workspace:*
+        version: link:../db
+    devDependencies:
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
 
   packages/pipeline:
     dependencies:

@@ -32,6 +32,15 @@ export const envSchema = z.object({
   MAIL_S3_BUCKET: optional(z.string()),
   SES_CONFIG_SET_CONVERSATIONAL: optional(z.string()),
   SES_CONFIG_SET_BULK: optional(z.string()),
+  // Owner-designated test domains: the only ones onboarding may change without --approved.
+  MAIL_TEST_DOMAINS: optional(
+    z.string().transform((list) =>
+      list
+        .split(',')
+        .map((d) => d.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ),
   VERCEL_DNS_TOKEN: optional(z.string()),
   VERCEL_TEAM_ID: optional(z.string()),
   GOOGLE_CLIENT_ID: optional(z.string()),

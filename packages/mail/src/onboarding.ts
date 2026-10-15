@@ -210,7 +210,10 @@ export async function onboardDomain(
 
     async verify() {
       const all = [await identityFor('root'), await identityFor('news')];
-      if (all.some((i) => !i)) return options.execute ? 'waiting' : 'planned';
+      if (all.some((i) => !i)) {
+        act('wait for SES to verify both identities (DKIM and MAIL FROM)');
+        return options.execute ? 'waiting' : 'planned';
+      }
       // Fresh status from SES on every check.
       identities.root = (await ses.getIdentity(name)) ?? undefined;
       identities.news = (await ses.getIdentity(newsIdentityName(name))) ?? undefined;
@@ -249,7 +252,10 @@ export async function onboardDomain(
     let info = await identityFor(kind);
     if (!info) {
       act(`create SES identity ${identity} (Easy DKIM, default configuration set ${configSet})`);
-      if (!options.execute) return 'planned' as const;
+      if (!options.execute) {
+        act(`set MAIL FROM of ${identity} to ${mailFrom}`);
+        return 'planned' as const;
+      }
       info = await ses.createIdentity(identity, configSet, {
         domain: name,
         stream: kind === 'root' ? 'conversational' : 'bulk',
@@ -303,14 +309,14 @@ export async function onboardDomain(
         return report;
       }
       if (result === 'planned') {
-        // Dry-run can't go past a write it only reported; leave the step pending.
+        // Dry-run: the write was only reported. Leave the step pending and keep going, so the
+        // report covers every step.
         await store.setStep(domain.id, step, {
           status: 'pending',
           attempts: before.attempts,
           lastError: null,
         });
-        report.outcome = 'planned';
-        return report;
+        continue;
       }
       await store.setStep(domain.id, step, { status: result, attempts, lastError: null });
       if (result === 'waiting') {

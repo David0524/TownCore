@@ -69,7 +69,22 @@ describe('onboardDomain', () => {
     const { dns, ses, deps } = setup();
     const report = await onboardDomain(spec, deps, { execute: false });
     expect(report.outcome).toBe('planned');
-    expect(report.actions[0]).toMatch(/^would create SES identity testtown\.com/);
+    expect(report.actions.slice(0, 4)).toEqual([
+      'would create SES identity testtown.com (Easy DKIM, default configuration set towncore-dev-conversational)',
+      'would set MAIL FROM of testtown.com to mail.testtown.com',
+      'would create SES identity news.testtown.com (Easy DKIM, default configuration set towncore-dev-bulk)',
+      'would set MAIL FROM of news.testtown.com to bounce.news.testtown.com',
+    ]);
+    expect(
+      report.actions.filter(
+        (a) =>
+          a.startsWith('would create MX') ||
+          a.startsWith('would create TXT') ||
+          a.startsWith('would create CNAME'),
+      ),
+    ).toHaveLength(14);
+    expect(report.actions.at(-2)).toMatch(/^would wait for SES/);
+    expect(report.actions.at(-1)).toMatch(/^would mark live for inbound, warming for bulk/);
     expect(ses.calls).toEqual({ creates: 0, mailFrom: 0 });
     expect(dns.calls.creates).toBe(0);
   });
