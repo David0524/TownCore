@@ -138,6 +138,49 @@ export default async function MailHealth() {
         </table>
       </div>
 
+      <h2>DMARC reports (last 30 days)</h2>
+      {h.dmarc.length === 0 ? (
+        <p className={styles.muted} data-testid="dmarc">
+          No reports yet. They arrive at DMARC_REPORT_ADDRESS once receivers start sending them
+          (usually a day after a domain goes live).
+        </p>
+      ) : (
+        <div className={styles.scroll}>
+          <table className={styles.table} data-testid="dmarc">
+            <thead>
+              <tr>
+                <th>Domain</th>
+                <th>Reports</th>
+                <th>Messages</th>
+                <th>DMARC pass</th>
+                <th>DKIM pass</th>
+                <th>SPF pass</th>
+                <th>Failing sources (IP · messages · reported by)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {h.dmarc.map((d) => (
+                <tr key={d.domain}>
+                  <td>{d.domain}</td>
+                  <td>{d.reports}</td>
+                  <td>{d.messages}</td>
+                  <td>{rate(d.dmarcPass, d.messages)}</td>
+                  <td>{rate(d.dkimPass, d.messages)}</td>
+                  <td>{rate(d.spfPass, d.messages)}</td>
+                  <td>
+                    {d.failing.length
+                      ? d.failing
+                          .map((f) => `${f.ip} · ${f.count} · ${f.reporters.join(', ')}`)
+                          .join('; ')
+                      : 'none'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <h2>Pipeline</h2>
       <p data-testid="pipeline">
         Mail events waiting: {h.events.pending}

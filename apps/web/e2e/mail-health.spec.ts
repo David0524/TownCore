@@ -48,6 +48,7 @@ test('open alerts come first; the account, domains and pipeline follow', async (
     await expect(fire).toContainText(`CRITICAL Bulk mail paused for e2e-${info.project.name}.test`);
     await expect(page.getByTestId('account')).toContainText('SES reviews at 5.0%');
     await expect(page.getByTestId('pipeline')).toContainText('Mail events waiting:');
+    await expect(page.getByRole('heading', { name: 'DMARC reports (last 30 days)' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Mail health' })).toBeVisible();
   } finally {
     await db.update(mailAlerts).set({ resolvedAt: new Date() }).where(eq(mailAlerts.key, key));

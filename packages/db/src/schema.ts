@@ -1287,3 +1287,29 @@ export const mailAlerts = pgTable(
     check('mail_alerts_severity', sql`${t.severity} in ('warning', 'critical')`),
   ],
 );
+
+// DMARC aggregate (rua) reports (docs/plans/MAIL.md, Mail-6), one row per report: who sent it,
+// for which domain and period, and how much mail passed DMARC alignment. `sources` keeps the
+// per-IP rows (count, disposition, DKIM and SPF results) for the health page.
+export const dmarcReports = pgTable(
+  'dmarc_reports',
+  {
+    id: id(),
+    orgName: text('org_name').notNull(),
+    reportId: text('report_id').notNull(),
+    domain: text('domain').notNull(),
+    policy: text('policy'),
+    beginAt: timestamp('begin_at', { withTimezone: true }).notNull(),
+    endAt: timestamp('end_at', { withTimezone: true }).notNull(),
+    messages: integer('messages').notNull(),
+    dkimPass: integer('dkim_pass').notNull(),
+    spfPass: integer('spf_pass').notNull(),
+    dmarcPass: integer('dmarc_pass').notNull(),
+    sources: jsonb('sources').notNull(),
+    receivedAt: timestamp('received_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    unique('dmarc_reports_org_report_uq').on(t.orgName, t.reportId),
+    index('dmarc_reports_domain_end_idx').on(t.domain, t.endAt),
+  ],
+);
