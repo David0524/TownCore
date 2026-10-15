@@ -1,0 +1,32 @@
+.grid {
+  flex: 1;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem var(--gutter) 3rem;
+}
+
+.single {
+  max-width: var(--measure);
+}
+
+/* main-right-rail: content plus a rail on desktop; the rail stacks below on mobile. */
+.rail {
+  max-width: var(--wide);
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 64rem) {
+  .rail {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+
+.main {
+  min-width: 0;
+}
+
+.aside {
+  min-width: 0;
+}

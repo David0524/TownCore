@@ -51,6 +51,8 @@ jobs:
           fi
       - run: pnpm db:migrate
       - run: pnpm towns:sync
+      - name: Seed fictional fixture towns (CI only)
+        run: pnpm --filter @towncore/web seed:fixtures
       - run: pnpm test
       - run: pnpm build
       - name: Worker boots from the build

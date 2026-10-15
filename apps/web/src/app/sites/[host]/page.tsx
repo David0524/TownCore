@@ -8,7 +8,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
   const articles = await listPublishedArticles(db(), town.id);
 
   return (
-    <main>
+    <>
       <h1>{town.siteName}</h1>
       <p>
         Local news for {town.name}, written from public records: meetings, permits, filings and
@@ -32,6 +32,6 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
           ))}
         </ul>
       )}
-    </main>
+    </>
   );
 }

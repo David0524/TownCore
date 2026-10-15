@@ -1,6 +1,6 @@
 /* Token-driven base styles. Every color, font and radius comes from a CSS custom property:
    town theme tokens (--ink, --accent, --accent-text, --tint, --surface, --background,
-   --font-headline, --font-body, --radius) or locked network tokens (--net-*).
+   --font-headline, --font-body, --radius).
    A test fails the build if a literal color, font or radius appears in apps/web/src. */
 
 :root {

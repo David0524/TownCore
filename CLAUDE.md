@@ -14,7 +14,7 @@ TownCore runs a network of AI-written local news sites, one per town, each with 
 
 The long-term goal is thousands of towns. The core system goal: **launching a new town = buy a domain + run one command**, with about 15 minutes of human review.
 
-TownCore is the corporate/internal name. Consumer brands are local, but every site discloses that it is part of the **TownCore Local network** (see rules).
+TownCore is the corporate name and the publisher of every site. Each site looks and reads as an independent local paper: no network branding, badge or cross-site links. Each site's About and Privacy pages name TownCore as the publisher (see rules).
 
 ---
 
@@ -22,7 +22,7 @@ TownCore is the corporate/internal name. Consumer brands are local, but every si
 
 These protect us from Google spam actions, lawsuits and press exposés. Code must enforce them; do not rely on prompts alone.
 
-1. **Disclose the network.** Every site footer shows a "Part of the TownCore Local network" badge linking to a network About page naming the company and a contact email. Every site has an About page, a Methods page (how AI writes and how stories are checked), and a Corrections page.
+1. **Disclose the publisher.** Every site's About page and Privacy page state "{Site Name} is published by TownCore." No other page shows TownCore branding, a network badge or links between sites. Every site has an About page, a Methods page (how AI writes and how stories are checked), and a Corrections page. AI disclosure (Rule 2 bylines, Methods) is never reduced.
 2. **Honest bylines.** Byline format: `{Site Name} Newsroom (AI-assisted)`. If a human reviewed or edited it, add `Reviewed by {name}`.
 3. **Primary sources only.** Stories are written from source documents and records. Never rewrite another news outlet's article. Other outlets may appear only as: headline + one-line summary in our own words + link out.
 4. **Every claim is sourced.** Every published article stores and displays links to the source records it was written from.
@@ -300,11 +300,11 @@ score = 0.25 business_value + 0.20 households_x_income + 0.20 source_readiness
 
 ## 11. Sites, newsletter, directory
 
-**Site pages:** home (latest + top stories), article, beat pages, events calendar, directory (category + business pages), newsletter signup, About, Methods, Corrections, network About, Report-an-error form on every article. Fast pages, mobile first.
+**Site pages:** home (latest + top stories), article, beat pages, events calendar, directory (category + business pages), newsletter signup, About, Methods, Corrections, Privacy, Report-an-error form on every article. Fast pages, mobile first.
 
 **SEO:** NewsArticle + Organization structured data on articles, LocalBusiness on directory pages, XML sitemap + Google News sitemap per domain, canonical URLs, RSS, Open Graph images, accurate published/updated dates.
 
-**TownCore network brand** (network About page, footer badge, admin only, NOT the town sites' look): `--navy #16233A` · `--brick #C2461F` (white text OK) · `--teal #1F8A8A` · `--paper #F6F1E7` · `--slate #5B6475`. Never brick text on navy. Town sites get their own themes (Section 11a).
+**TownCore brand** (staff admin only; never shown on town sites): `--navy #16233A` · `--brick #C2461F` (white text OK) · `--teal #1F8A8A` · `--paper #F6F1E7` · `--slate #5B6475`. Never brick text on navy. Town sites get their own themes (Section 11a).
 
 **Newsletter:** daily at the town's send time: weather, 5–8 items, events, one labeled sponsor slot. Double opt-in, one-click unsubscribe, physical address footer.
 
@@ -320,7 +320,7 @@ score = 0.25 business_value + 0.20 households_x_income + 0.20 source_readiness
 
 ## 11a. Web design system (one system, a distinct look per town)
 
-Every town runs the same components and page templates, but each gets its own theme so it feels like *that town's* paper. Variation is for local character and reader trust, never to hide the network: Rule 1 disclosure applies to every theme.
+Every town runs the same components and page templates, but each gets its own theme so it feels like *that town's* paper. Variation is for local character and reader trust. Rule 1 (publisher named on About and Privacy) and Rule 2 (AI-assisted bylines) apply to every theme.
 
 **Architecture**
 - One component library in `apps/web/components` driven entirely by CSS custom properties. No component may hardcode a color, font or radius.
@@ -382,7 +382,7 @@ Pages are composed from interchangeable parts, so towns differ in structure, not
 - **Content volume decides structure.** Towns with fewer than 5 items a day cannot use `lead-story` first or `split-two-column`; they lead with `briefing-column`, `events` or `directory-featured`, so small towns never look empty.
 - **Required everywhere.** `newsletter-cta` appears in the first two modules on mobile. Every layout must satisfy the slot contract in Section 11b.
 - **Neighbors look different.** Two towns within 50 miles may share at most two of: header, grid, article template, and the first three homepage modules.
-- **Locked components.** Variation never touches disclosure, bylines, source links, the "Sponsored" label style or the network badge.
+- **Locked components.** Variation never touches the publisher disclosure, bylines, source links or the "Sponsored" label style.
 
 **Layouts are experiments.** Thousands of towns make a huge test bed. Assign module orders and templates as tracked experiments and measure newsletter signup rate, pages per visit, directory clicks and revenue per 1,000 visits. Spread winning patterns across the network, but keep the neighbor constraint so winners don't make every site identical.
 
@@ -393,7 +393,6 @@ Pages are composed from interchangeable parts, so towns differ in structure, not
 - A weather strip.
 - "Sponsored" labels styled visibly differently from editorial content, never disguised.
 - Source links on every article.
-- The network badge in the footer.
 
 **Quality floor (enforced in CI and in the launcher)**
 - WCAG AA contrast is checked automatically for every token pair in a theme. A theme that fails cannot be saved.
@@ -512,7 +511,7 @@ Every article gets a visual, but a visual must never be misleading. The image ro
 | # | Milestone | Done when |
 | --- | --- | --- |
 | M0 | Scaffold | Monorepo, DB + migrations, worker boots, CI with lint + tests, `.env.example` |
-| M1 | Multi-tenant site + design system | Token-driven components; a layout system with at least 2 options per part and the homepage module library; the slot contract with house ads in every slot; the contrast checker; BocaTownSquare.com renders by hostname with its own theme, SVG masthead, About, Methods and Corrections pages, network badge and a test article; and a second dummy town with a different look AND layout proves nothing is hardcoded |
+| M1 | Multi-tenant site + design system | Token-driven components; a layout system with at least 2 options per part and the homepage module library; the slot contract with house ads in every slot; the contrast checker; BocaTownSquare.com renders by hostname with its own theme, SVG masthead, About (naming TownCore as publisher), Methods and Corrections pages, no network branding elsewhere, and a test article; and a second dummy town with a different look AND layout proves nothing is hardcoded |
 | M2 | Ingestion | Adapter framework + NWS, Boca agenda/meeting source, Florida business filings or licenses; scheduled; health tracked |
 | M3 | Writer + fact-check + router | Candidates become articles; tiers enforced; `/admin/review` approve/edit/reject works; newsworthiness score, daily story budget, skip log and follow-up linking |
 | M4 | Publishing + SEO | Articles live with sources shown, sitemaps, news sitemap, structured data, RSS, 30 evergreen guides; ranking (rank formula, pins, diversity rules), entity pages, the image router with maps, data graphics and typographic cards, and Open Graph images |
@@ -555,6 +554,7 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
 - 2026-10-15 — **UPDATE-01 applied.** Part A: the navy/brick/teal/paper/slate palette is now the TownCore *network* brand only (network About, badge, admin); each town site gets its own zod-validated theme (palette, curated type pairing, corners, motif, SVG masthead) and its own layout assembled from interchangeable parts and a homepage module library (§11a, §11a-2); every layout must satisfy a fixed monetization slot contract with house-ad fallback, reserved heights and CI-enforced ad standards (§11b). This supersedes the earlier "Source Serif 4 + Inter" font decision for town sites. M1 now includes the design system, layouts, slot contract, contrast checker and a second dummy town; M6 and M7 expanded. Part B: town selection by score (§10a), naming/domain/identity rules (§10b), newsworthiness scoring and ranking (§6a), article image rules (§11c), launcher steps updated, M3/M4/M7 expanded, new M9, and new tables in §5.
 - 2026-10-15 — **M1 plan (`docs/plans/M1.md`) approved with its defaults:** newsletter CTA says "launching soon" with no email field until M5 (D-M1-1); directory layout values accepted in the theme schema, templates built in M6 (D-M1-2); weather strip hidden until M2 data (D-M1-3); only `campaigns` and `towns.theme` added in M1, other new tables with their milestones (D-M1-4); dummy town "Harbor Point" on `harborpoint.test`, kept out of `towns/` (D-M1-5); masthead is live SVG text until M4/M7 (D-M1-6); Boca uses the §11a example theme as given (D-M1-7).
 - 2026-10-15 — Fonts are self-hosted via `@fontsource` packages (no Google requests at build or run time). All 6 curated pairings' `@font-face` rules ship; browsers download only the town's pair.
+- 2026-10-15 — **Rule 1 changed by the owner: sites look independent.** No "Part of the TownCore Local network" badge, no network About page, no TownCore mention or cross-site links on town sites, except one line on each site's About and Privacy pages: "{Site Name} is published by TownCore." Reason: each site should read as an independent local paper. Kept: AI-assisted bylines, Methods, sources (Rules 2 and 4). Legal identification still appears where law requires it (newsletter physical-address footer under CAN-SPAM, privacy policy, Stripe receipts). Public contact on sites is a per-site address (`contact_email`, default `news@{domain}`) forwarding to info@towncore.net, which needs mail forwarding set up per domain before launch. Supersedes the earlier `/network` decision and UPDATE-01's "never to hide the network" wording.
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.

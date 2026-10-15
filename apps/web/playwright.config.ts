@@ -2,7 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 const port = 3100;
 // Chromium resolves our real domains to the local server, so tests use real Host headers.
-const hosts = ['bocatownsquare.com', 'www.bocatownsquare.com', 'unknown-town.example'];
+const hosts = [
+  'bocatownsquare.com',
+  'www.bocatownsquare.com',
+  'harborpoint.test',
+  'unknown-town.example',
+];
 
 export default defineConfig({
   testDir: './e2e',

@@ -41,13 +41,35 @@ export function checkThemeContrast(p: Palette): ContrastFailure[] {
 }
 
 /** Curated headline/body pairings (§11a). Add pairs only by human decision. */
+// headlineAdvanceEm: mean bold (700) glyph advance in em, measured in Chromium over sample site
+// names. The SVG masthead uses it to size the wordmark without stretching letter spacing.
 export const typePairings = {
-  'newsreader-publicsans': { headline: 'Newsreader Variable', body: 'Public Sans Variable' },
-  'fraunces-worksans': { headline: 'Fraunces Variable', body: 'Work Sans Variable' },
-  'librecaslon-sourcesans3': { headline: 'Libre Caslon Text', body: 'Source Sans 3 Variable' },
-  'literata-ibmplexsans': { headline: 'Literata Variable', body: 'IBM Plex Sans Variable' },
-  'bitter-hankengrotesk': { headline: 'Bitter Variable', body: 'Hanken Grotesk Variable' },
-  'spectral-karla': { headline: 'Spectral', body: 'Karla Variable' },
+  'newsreader-publicsans': {
+    headline: 'Newsreader Variable',
+    body: 'Public Sans Variable',
+    headlineAdvanceEm: 0.496,
+  },
+  'fraunces-worksans': {
+    headline: 'Fraunces Variable',
+    body: 'Work Sans Variable',
+    headlineAdvanceEm: 0.537,
+  },
+  'librecaslon-sourcesans3': {
+    headline: 'Libre Caslon Text',
+    body: 'Source Sans 3 Variable',
+    headlineAdvanceEm: 0.565,
+  },
+  'literata-ibmplexsans': {
+    headline: 'Literata Variable',
+    body: 'IBM Plex Sans Variable',
+    headlineAdvanceEm: 0.54,
+  },
+  'bitter-hankengrotesk': {
+    headline: 'Bitter Variable',
+    body: 'Hanken Grotesk Variable',
+    headlineAdvanceEm: 0.501,
+  },
+  'spectral-karla': { headline: 'Spectral', body: 'Karla Variable', headlineAdvanceEm: 0.501 },
 } as const;
 export type TypePairing = keyof typeof typePairings;
 
@@ -178,3 +200,14 @@ export function parseTheme(json: string, label = 'theme'): Theme {
   if (!result.success) throw new Error(`Invalid ${label}:\n${z.prettifyError(result.error)}`);
   return result.data;
 }
+
+/** Beats used for navigation and beat pages. Article `beat` values use these slugs. */
+export const beats = [
+  { slug: 'government', label: 'Government' },
+  { slug: 'development', label: 'Development' },
+  { slug: 'business', label: 'Business' },
+  { slug: 'schools', label: 'Schools' },
+  { slug: 'public-safety', label: 'Public safety' },
+  { slug: 'community', label: 'Community' },
+] as const;
+export type BeatSlug = (typeof beats)[number]['slug'];

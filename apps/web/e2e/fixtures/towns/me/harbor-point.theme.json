@@ -1,0 +1,24 @@
+{
+  "palette": {
+    "ink": "#1B2A41",
+    "accent": "#B23A48",
+    "accentText": "#FFFFFF",
+    "tint": "#CCD6DD",
+    "surface": "#EEF3F6",
+    "background": "#FFFFFF"
+  },
+  "type": "bitter-hankengrotesk",
+  "masthead": "left-motif",
+  "layout": {
+    "header": "left-logo-inline-nav",
+    "nav": "hamburger-only",
+    "grid": "single-column",
+    "home": ["briefing-column", "newsletter-cta", "events", "latest-list"],
+    "article": "wide-reading",
+    "directory": "category-grid",
+    "footer": "minimal"
+  },
+  "corners": "round",
+  "motif": "lighthouse",
+  "identityNotes": "Fictional test town: granite coast, lobster boats, a white lighthouse on the point."
+}

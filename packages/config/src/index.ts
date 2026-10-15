@@ -8,12 +8,13 @@ export {
   type BrandColor,
 } from './brand';
 export { models } from './models';
-export { network } from './network';
+export { publisher, publisherLine } from './publisher';
 export {
   findTbdFields,
   loadTownConfigs,
   loadTowns,
   parseTownConfig,
+  townContactEmail,
   sourceKinds,
   TBD,
   townConfigSchema,
@@ -25,6 +26,7 @@ export {
 } from './town';
 export {
   AA_TEXT,
+  beats,
   checkThemeContrast,
   checkThemeForTown,
   cornerRadii,
@@ -37,6 +39,7 @@ export {
   themeSchema,
   themeTextPairs,
   typePairings,
+  type BeatSlug,
   type ContrastFailure,
   type HomeModule,
   type Palette,

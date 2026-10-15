@@ -37,11 +37,11 @@ export async function listLiveTowns(db: Db): Promise<Town[]> {
   return db.select().from(towns).where(eq(towns.status, 'live')).orderBy(towns.name);
 }
 
-/** Published (including corrected) articles for a town, newest first. */
+/** Published (including corrected) articles for a town, newest first, optionally one beat. */
 export async function listPublishedArticles(
   db: Db,
   townId: string,
-  limit = 20,
+  { limit = 20, beat }: { limit?: number; beat?: string } = {},
 ): Promise<Article[]> {
   return db
     .select()
@@ -50,6 +50,7 @@ export async function listPublishedArticles(
       and(
         eq(articles.townId, townId),
         or(eq(articles.status, 'published'), eq(articles.status, 'corrected')),
+        beat ? eq(articles.beat, beat) : undefined,
       ),
     )
     .orderBy(desc(articles.publishedAt))

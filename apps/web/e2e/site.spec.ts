@@ -23,26 +23,27 @@ test.describe('multi-tenant routing', () => {
   });
 });
 
-test.describe('network disclosure (rule 1)', () => {
-  for (const path of ['/', '/network']) {
-    test(`${path} shows the network badge linking to the network About page`, async ({ page }) => {
+test.describe('sites look independent (Rule 1)', () => {
+  for (const path of ['/', '/beat/government', '/does-not-exist']) {
+    test(`${path} never mentions the publisher or a network`, async ({ page }) => {
       await page.goto(`${boca}${path}`);
-      const badge = page.getByTestId('network-badge');
-      await expect(badge).toBeVisible();
-      await expect(badge).toContainText('Part of the TownCore Local network');
-      await expect(badge).toHaveAttribute('href', '/network');
+      const html = await page.content();
+      expect(html).not.toMatch(/towncore/i);
+      expect(html).not.toMatch(/part of the .* network/i);
     });
   }
 
-  test('network About names the company and contact email', async ({ page }) => {
-    await page.goto(`${boca}/network`);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'About the TownCore Local network',
+  test('there is no network page', async ({ page }) => {
+    const response = await page.goto(`${boca}/network`);
+    expect(response?.status()).toBe(404);
+  });
+
+  test('the footer shows the site’s own contact address', async ({ page }) => {
+    await page.goto(`${boca}/`);
+    await expect(page.getByTestId('contact-email')).toHaveAttribute(
+      'href',
+      'mailto:news@bocatownsquare.com',
     );
-    await expect(page.getByRole('main')).toContainText('operated by TownCore');
-    await expect(
-      page.getByRole('main').getByRole('link', { name: 'info@towncore.net' }),
-    ).toHaveAttribute('href', 'mailto:info@towncore.net');
   });
 });
 
@@ -72,23 +73,6 @@ test('the Boca theme is applied (palette, type pairing, corners)', async ({ page
   });
   expect(styles.h1Font).toContain('Newsreader');
   expect(styles.bodyFont).toContain('Public Sans');
-});
-
-test('the network badge keeps the locked network style, not the town theme', async ({ page }) => {
-  await page.goto(`${boca}/`);
-  const badge = await page.getByTestId('network-badge').evaluate((el) => {
-    const css = getComputedStyle(el);
-    return { background: css.backgroundColor, color: css.color };
-  });
-  expect(badge).toEqual({ background: 'rgb(22, 35, 58)', color: 'rgb(246, 241, 231)' }); // --net-navy / --net-paper
-});
-
-test('the network About content uses the network brand', async ({ page }) => {
-  await page.goto(`${boca}/network`);
-  const panel = await page
-    .getByTestId('network-panel')
-    .evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(panel).toBe('rgb(246, 241, 231)'); // --net-paper
 });
 
 test('no horizontal scroll at phone width', async ({ page }) => {

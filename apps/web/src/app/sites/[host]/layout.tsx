@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { SiteFooter } from '@/components/SiteFooter';
-import { SiteHeader } from '@/components/SiteHeader';
+import { Grid } from '@/layout/Grid';
+import { footers, headers, navs } from '@/layout/registry';
 import { themeCssVariables, themeFor } from '@/lib/theme';
 import { requireTown, resolveTown } from '@/lib/town';
 
@@ -19,15 +19,20 @@ export async function generateMetadata({ params }: Pick<Props, 'params'>): Promi
   };
 }
 
+// Each town is assembled from the layout parts its theme names (CLAUDE.md §11a-2).
 export default async function TownLayout({ children, params }: Props) {
   const town = await requireTown(params);
-  const logo = (town.config as { logo?: string }).logo;
+  const theme = themeFor(town);
+  const Header = headers[theme.layout.header];
+  const Nav = navs[theme.layout.nav];
+  const Footer = footers[theme.layout.footer];
+
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: themeCssVariables(themeFor(town)) }} />
-      <SiteHeader siteName={town.siteName} logo={logo} />
-      {children}
-      <SiteFooter siteName={town.siteName} />
+      <style dangerouslySetInnerHTML={{ __html: themeCssVariables(theme) }} />
+      <Header town={town} theme={theme} nav={<Nav />} />
+      <Grid kind={theme.layout.grid}>{children}</Grid>
+      <Footer town={town} theme={theme} />
     </>
   );
 }
