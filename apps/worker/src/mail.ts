@@ -2,11 +2,13 @@ import { loadEnv } from '@towncore/config';
 import { eq, isNotNull, loadRoutingTable, mailDomains, or, type Db } from '@towncore/db';
 import {
   checkVerification,
+  handleSendingEvent,
   pgOnboardingStore,
   processDueEvents,
   processReceivedNotification,
   s3MailStore,
   sesIdentities,
+  SENDING_EVENT_TYPES,
   type EventHandler,
   type IdentityProvider,
   type MailObjectStore,
@@ -64,11 +66,16 @@ export function inboundFromEnv(): InboundConfig | null {
   };
 }
 
-/** Handles one stored SNS notification. Sending events (bounces, deliveries) arrive in Mail-4. */
+/** Handles one stored SNS notification: inbound mail, or an SES sending event (Mail-4). */
 export function mailEventHandler(db: Db, inbound: InboundConfig, logger: Logger): EventHandler {
   return async (event) => {
+    if (SENDING_EVENT_TYPES.has(event.type)) {
+      const result = await handleSendingEvent(db, event.id, event.payload);
+      logger.info({ event: event.id, type: event.type, ...result }, 'sending event processed');
+      return { status: 'done' };
+    }
     if (event.type !== 'Received')
-      return { status: 'dropped', note: `${event.type} is not handled yet` };
+      return { status: 'dropped', note: `${event.type} is not handled` };
     const result = await processReceivedNotification(event.payload, {
       db,
       objects: inbound.objects,

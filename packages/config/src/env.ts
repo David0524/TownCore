@@ -30,6 +30,9 @@ export const envSchema = z.object({
   AWS_ACCESS_KEY_ID: optional(z.string()),
   AWS_SECRET_ACCESS_KEY: optional(z.string()),
   MAIL_S3_BUCKET: optional(z.string()),
+  // How outbound mail leaves: 'ses', or 'log' (development and CI: written to the server log,
+  // never sent). Unset: SES when AWS credentials are set, otherwise sending is off.
+  MAIL_TRANSPORT: optional(z.enum(['ses', 'log'])),
   SES_CONFIG_SET_CONVERSATIONAL: optional(z.string()),
   SES_CONFIG_SET_BULK: optional(z.string()),
   // Owner-designated test domains: the only ones onboarding may change without --approved.

@@ -44,6 +44,8 @@ export default defineConfig({
       ...(process.env as Record<string, string>),
       APP_BASE_URL: 'http://admin.test',
       ADMIN_EMAILS: 'editor@admin.test',
+      // Outbound mail goes to the server log in tests, never anywhere real (Rule 10).
+      MAIL_TRANSPORT: 'log',
     },
     timeout: 60_000,
   },
