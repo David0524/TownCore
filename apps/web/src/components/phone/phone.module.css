@@ -352,3 +352,25 @@ a.row:hover .rowLabel {
 .homeScreenClose {
   color: var(--accent);
 }
+
+/* Phone header treatment by family (revision 6: on phones, families differ by tint, wordmark
+   and header). heritage: a centered nameplate over a double rule. */
+:global([data-family='heritage']) .bar {
+  border-bottom: 3px double var(--ink);
+  background: var(--background);
+}
+
+:global([data-family='heritage']) .barMark {
+  justify-content: center;
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+:global([data-family='heritage']) .barMark .wordmark {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+:global([data-family='heritage']) .barEnd {
+  grid-row: 1;
+}

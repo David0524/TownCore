@@ -14,6 +14,10 @@ export const palette = z.strictObject({
   tint: hex, // light fills only, never text
   surface: hex, // cards, rails, bands
   background: hex, // page
+  // Optional second action color (heritage's red Subscribe, community's amber sign-up); buttons
+  // only. Falls back to accent.
+  secondary: hex.optional(),
+  secondaryText: hex.optional(),
 });
 export type Palette = z.infer<typeof palette>;
 type PaletteKey = keyof Palette;
@@ -36,9 +40,16 @@ export function checkThemeContrast(p: Palette): ContrastFailure[] {
   const failures = themeTextPairs
     .map((pair) => ({
       ...pair,
-      ratio: Math.round(contrastRatio(p[pair.fg], p[pair.bg]) * 100) / 100,
+      ratio: Math.round(contrastRatio(p[pair.fg]!, p[pair.bg]!) * 100) / 100,
     }))
     .filter((pair) => pair.ratio < AA_TEXT);
+  if (p.secondary) {
+    const fg = p.secondaryText ?? p.accentText;
+    const ratio = Math.round(contrastRatio(fg, p.secondary) * 100) / 100;
+    if (ratio < AA_TEXT) {
+      failures.push({ fg: 'secondaryText', bg: 'secondary', use: 'secondary buttons', ratio });
+    }
+  }
   // Sponsored units sit on the network's sand tile in every town; their text is the town's ink.
   const sand = Math.round(contrastRatio(p.ink, systemColors.sand) * 100) / 100;
   if (sand < AA_TEXT) {
@@ -125,8 +136,14 @@ export type StyleFamily = keyof typeof styleFamilies;
 
 /** Layout options per part that the web app implements (§11a-2). Add as they're built. */
 export const layoutOptions = {
-  header: ['centered-masthead', 'left-logo-inline-nav', 'stacked-dateline', 'slim-left'],
-  nav: ['beat-tabs', 'hamburger-only'],
+  header: [
+    'centered-masthead',
+    'left-logo-inline-nav',
+    'stacked-dateline',
+    'slim-left',
+    'nameplate-double-rule',
+  ],
+  nav: ['beat-tabs', 'hamburger-only', 'text-nav'],
   grid: ['single-column', 'main-right-rail'],
   article: ['classic-rail', 'wide-reading'],
   // Directory templates are built in M6 with real data (decision D-M1-2).
@@ -142,6 +159,7 @@ export const homeModules = [
   'documents-posted',
   'lead-story',
   'latest-list',
+  'briefs',
   'beat-sections',
   'briefing-column',
   'meetings-this-week',
@@ -175,10 +193,11 @@ export const themeSchema = z
         .array(z.enum(homeModules))
         .min(1)
         .refine((list) => new Set(list).size === list.length, 'home modules must be unique'),
-      // A full-width band above the grid: `good-morning` (if listed) spans it, then the next
-      // module takes 8 of 12 columns and the one after 4 (coastal-modern's lead + Today).
-      // Stacks on phones.
-      homeTop: z.array(z.enum(homeModules)).max(3).optional(),
+      // A full-width band above the grid. `good-morning` (if listed) spans it. Then, by family:
+      // coastal-modern and community put the first module in the wide column and the rest beside
+      // it; heritage puts `lead-story` in the center, the modules before it on the left and the
+      // ones after it on the right. Stacks on phones in list order.
+      homeTop: z.array(z.enum(homeModules)).max(6).optional(),
       // Modules in the desktop rail, above rail.box; they follow the main column on phones.
       homeRail: z.array(z.enum(homeModules)).optional(),
       article: z.enum(layoutOptions.article),
@@ -187,6 +206,8 @@ export const themeSchema = z
     }),
     corners: z.enum(Object.keys(cornerRadii) as [keyof typeof cornerRadii]),
     motif: z.enum(motifs),
+    // One line under the nameplate (heritage), in the paper's own voice.
+    tagline: z.string().min(1).max(80).optional(),
     identityNotes: z.string().min(1),
   })
   .superRefine((theme, ctx) => {

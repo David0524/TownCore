@@ -254,3 +254,11 @@ a.lineText:hover {
     color: var(--ios-separator);
   }
 }
+
+/* heritage: the temperature in the display face, on the square tint. */
+@media (min-width: 600px) {
+  :global([data-family='heritage']) .temp {
+    font-family: var(--font-headline);
+    font-weight: 400;
+  }
+}

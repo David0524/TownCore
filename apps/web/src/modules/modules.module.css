@@ -131,3 +131,21 @@
     font-size: 1.0625rem;
   }
 }
+
+/* The signup in a narrow band column (heritage's Today column): stacked, never two columns. */
+:global([data-band-col='side']) .cta {
+  display: block;
+}
+
+/* heritage: the signup is a ruled box with a display-face heading. */
+@media (min-width: 600px) {
+  :global([data-family='heritage']) .cta {
+    border: 1px solid var(--ink);
+    padding: 1rem;
+  }
+
+  :global([data-family='heritage']) .cta h2 {
+    font-size: 1.375rem;
+    line-height: 1.1;
+  }
+}

@@ -114,6 +114,28 @@ export const LatestList: HomeModuleComponent = async ({ town, modules }) => {
   );
 };
 
+/** Short headlines after the lead and Today (heritage's right-hand column). */
+export const Briefs: HomeModuleComponent = async ({ town, modules }) => {
+  const items = frontSplit(await recentArticles(town.id), modules).rest.slice(0, 6);
+  if (items.length === 0) return null;
+  return (
+    <section
+      className={`${styles.module} ${styles.briefs}`}
+      data-module="briefs"
+      aria-labelledby="briefs-h"
+    >
+      <SectionHeader title="Briefs" id="briefs-h" />
+      <ul className={styles.list}>
+        {items.map((article) => (
+          <li key={article.id}>
+            <StoryBlock story={article} town={town} variant="list" />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+};
+
 /** Newsletter-style dated list; good for smaller towns (CLAUDE.md §11a-2). */
 export const BriefingColumn: HomeModuleComponent = async ({ town }) => {
   const articles = (await recentArticles(town.id)).slice(0, 8);

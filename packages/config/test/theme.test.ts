@@ -53,6 +53,39 @@ describe('theme schema', () => {
     ).toBe(true);
   });
 
+  it('checks the optional secondary button color for contrast', () => {
+    expect(() =>
+      parseTheme(withPalette({ secondary: '#B3261E', secondaryText: '#FFFFFF' })),
+    ).not.toThrow();
+    expect(checkThemeContrast({ ...defaultTheme.palette, secondary: '#E8A33D' })).toEqual([
+      expect.objectContaining({ fg: 'secondaryText', bg: 'secondary' }),
+    ]);
+    expect(
+      checkThemeContrast({
+        ...defaultTheme.palette,
+        secondary: '#E8A33D',
+        secondaryText: '#17201A',
+      }),
+    ).toEqual([]);
+  });
+
+  it('accepts the heritage fixture town (Harbor Point)', () => {
+    const harbor = parseTheme(
+      readFileSync(
+        fileURLToPath(
+          new URL(
+            '../../../apps/web/e2e/fixtures/towns/me/harbor-point.theme.json',
+            import.meta.url,
+          ),
+        ),
+        'utf8',
+      ),
+    );
+    expect(harbor.family).toBe('heritage');
+    expect(harbor.layout.header).toBe('nameplate-double-rule');
+    expect(checkThemeForTown(harbor, { tier: 'small' })).toEqual([]);
+  });
+
   it('requires a family', () => {
     const { family: _family, ...rest } = defaultTheme;
     expect(themeSchema.safeParse(rest).success).toBe(false);

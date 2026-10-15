@@ -91,7 +91,28 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
       },
     ];
   }
+  // The fictional family showcases (Harbor Point, heritage) get a few short items so the
+  // front's columns and section lists have something to show.
+  const extra = (prefix: string): TestStory[] =>
+    [
+      ['government', 'Select board sets a sample public hearing date', 5],
+      ['business', 'Three fictional businesses register this week', 8],
+      ['schools', 'School committee reviews a sample bus schedule', 26],
+      ['community', 'Sample library hours change for the season', 50],
+    ].map(([beat, headline, hoursAgo]) => ({
+      slug: `test-${prefix}-${beat}`,
+      headline: `[TEST] ${headline}`,
+      dek: 'A short fictional item for the front page. It is not news.',
+      beat: beat as string,
+      paragraphs: paragraphs(4),
+      source: {
+        title: 'Sample town notice (fictional test source)',
+        url: `https://example.com/${townSlug}-notices`,
+      },
+      hoursAgo: hoursAgo as number,
+    }));
   return [
+    ...(townSlug === 'harbor-point' ? extra('harbor') : []),
     {
       slug: 'test-site-plan',
       headline: `[TEST] Fictional planning board reviews a sample site plan`,

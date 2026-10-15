@@ -68,3 +68,42 @@
   padding: 0.4rem 0.5rem;
   color: var(--ink);
 }
+
+/* text-nav (heritage): equal columns with hairline dividers. */
+.textNav {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(8.5rem, 1fr);
+  overflow-x: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.textNav li + li {
+  border-left: var(--hairline);
+}
+
+.textNav a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.5rem;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.textNav a:hover {
+  text-decoration: underline;
+}
+
+.mark {
+  width: 7px;
+  height: 7px;
+  flex: none;
+}

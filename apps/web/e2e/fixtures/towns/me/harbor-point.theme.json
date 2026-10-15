@@ -1,25 +1,29 @@
 {
   "palette": {
-    "ink": "#1B2A41",
-    "accent": "#B23A48",
+    "ink": "#1A1A1A",
+    "accent": "#0F4C5C",
     "accentText": "#FFFFFF",
-    "tint": "#CCD6DD",
-    "surface": "#EEF3F6",
-    "background": "#FFFFFF"
+    "tint": "#E9EFF0",
+    "surface": "#F2F4F5",
+    "background": "#FFFFFF",
+    "secondary": "#B3261E",
+    "secondaryText": "#FFFFFF"
   },
   "family": "heritage",
-  "type": "bitter-hankengrotesk",
-  "masthead": "left-motif",
+  "type": "librecaslondisplay-publicsans",
+  "masthead": "centered-serif",
   "layout": {
-    "header": "left-logo-inline-nav",
-    "nav": "hamburger-only",
+    "header": "nameplate-double-rule",
+    "nav": "text-nav",
     "grid": "single-column",
-    "home": ["briefing-column", "newsletter-cta", "events", "latest-list"],
+    "homeTop": ["today-bento", "newsletter-cta", "coming-up", "lead-story", "briefs"],
+    "home": ["beat-sections", "documents-posted"],
     "article": "wide-reading",
     "directory": "category-grid",
     "footer": "minimal"
   },
-  "corners": "round",
+  "corners": "square",
   "motif": "lighthouse",
-  "identityNotes": "Fictional test town: granite coast, lobster boats, a white lighthouse on the point."
+  "tagline": "News off the dock, every morning.",
+  "identityNotes": "Fictional test town: granite coast, lobster boats, a white lighthouse on the point. Harbor teal and a red ensign; a paper with a long memory."
 }

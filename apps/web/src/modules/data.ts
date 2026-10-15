@@ -183,7 +183,9 @@ export const ALSO_TODAY = 3;
 export function frontSplit(articles: RankableArticle[], modules: readonly string[]) {
   const lead = modules.includes('lead-story') ? pickLead(articles) : undefined;
   const rest = articles.filter((a) => a.id !== lead?.id);
-  const also = modules.includes('today-bento') ? rest.slice(0, ALSO_TODAY) : [];
+  // With a Briefs column (heritage) the short items go there, not under Today.
+  const also =
+    modules.includes('today-bento') && !modules.includes('briefs') ? rest.slice(0, ALSO_TODAY) : [];
   return { lead, also, rest: rest.slice(also.length) };
 }
 

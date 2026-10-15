@@ -2,6 +2,7 @@ import type { HomeModule } from '@towncore/config';
 import {
   BeatSections,
   BriefingColumn,
+  Briefs,
   LatestList,
   LeadStory,
   NewsletterCta,
@@ -26,6 +27,7 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
   'documents-posted': DocumentsPosted,
   'lead-story': LeadStory,
   'latest-list': LatestList,
+  briefs: Briefs,
   'beat-sections': BeatSections,
   'briefing-column': BriefingColumn,
   'newsletter-cta': NewsletterCta,
