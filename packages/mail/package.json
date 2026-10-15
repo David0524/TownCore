@@ -9,5 +9,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1152.0",
+    "@towncore/config": "workspace:*"
   }
 }

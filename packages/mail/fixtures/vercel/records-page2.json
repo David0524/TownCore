@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "id": "rec_c",
+      "slug": "testtown.com.-mx",
+      "name": "",
+      "type": "MX",
+      "value": "inbound-smtp.us-east-1.amazonaws.com",
+      "mxPriority": 10,
+      "creator": "u_1",
+      "created": 1760000000002,
+      "createdAt": 1760000000002,
+      "updated": 1760000000002,
+      "updatedAt": 1760000000002,
+      "ttl": 3600
+    }
+  ],
+  "pagination": { "count": 1, "next": null, "prev": 1760000000002 }
+}
