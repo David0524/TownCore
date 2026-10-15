@@ -22,8 +22,11 @@ export const providerModels: Record<LlmProviderName, Record<ModelRole, string>> 
   },
   gemini: {
     routine: 'gemini-flash-lite-latest',
-    writer: 'gemini-flash-latest',
-    factCheck: 'gemini-flash-latest',
+    // Flash-Lite for writing and fact-checking too (owner's call, 2026-10-15): the free tier
+    // allows only 20 requests a day on gemini-flash-latest. Weaker drafts and checks than Flash;
+    // the code checks (verbatim quotes, names, numbers, tiers) are unchanged.
+    writer: 'gemini-flash-lite-latest',
+    factCheck: 'gemini-flash-lite-latest',
     launcher: 'gemini-pro-latest',
   },
 };
