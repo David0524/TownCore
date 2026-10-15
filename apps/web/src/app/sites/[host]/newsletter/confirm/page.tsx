@@ -20,7 +20,7 @@ export default async function ConfirmPage({
       {t ? (
         <form method="post" action="/newsletter/confirmed">
           <input type="hidden" name="t" value={t} />
-          <p>Press the button to start getting the {town.siteName} newsletter.</p>
+          <p>Press the button to start getting the daily newsletter from {town.siteName}.</p>
           <button type="submit">Confirm my subscription</button>
         </form>
       ) : (
