@@ -33,10 +33,14 @@ describe('town config', () => {
     });
   });
 
-  it('only the unverified agenda source is still TBD', () => {
+  it('Boca has only verified sources', () => {
     const boca = loadTownConfigs(townsDir).find((t) => t.slug === 'boca-raton')!;
-    expect(findTbdFields(boca)).toEqual(['sources[0].platform', 'sources[0].url']);
-    expect(boca.sources[1]).toMatchObject({ kind: 'weather', platform: 'nws', zone: 'FLZ168' });
+    expect(findTbdFields(boca)).toEqual([]);
+    expect(boca.sources.map((s) => `${s.kind}/${s.platform}`)).toEqual([
+      'agenda/civicplus',
+      'city_news/civicplus',
+      'weather/nws',
+    ]);
   });
 
   it('applies defaults', () => {

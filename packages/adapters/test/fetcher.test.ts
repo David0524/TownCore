@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Fetcher, FetchPolicyError, type FetchFn } from '../src/http/fetcher';
+import { Fetcher, FetchPolicyError, retryAfterMs, type FetchFn } from '../src/http/fetcher';
 import { replayFetch } from '../src/http/fixtures';
 import { DOCUMENTED_APIS, isBlockedUrl, USER_AGENT } from '../src/http/policy';
 
@@ -157,5 +157,33 @@ describe('Fetcher', () => {
 
   it('every documented API records the terms that permit automated access', () => {
     for (const api of Object.values(DOCUMENTED_APIS)) expect(api.terms).toMatch(/^https:\/\//);
+  });
+
+  it('on HTTP 429 waits Retry-After, retries, and permanently slows down for that host', async () => {
+    const clock = fakeClock();
+    const times: number[] = [];
+    let n = 0;
+    const fetchImpl: FetchFn = async (url) => {
+      if (url.endsWith('robots.txt')) return new Response('', { status: 404 });
+      times.push(clock.now());
+      n++;
+      return n === 1
+        ? new Response('', { status: 429, headers: { 'retry-after': '5' } })
+        : new Response('ok');
+    };
+    const fetcher = new Fetcher({ fetchImpl, ...clock });
+    await expect(fetcher.getText('https://city.example/a')).resolves.toBe('ok');
+    expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(5_000);
+    expect(fetcher.intervalFor('city.example')).toBe(2_000);
+    await fetcher.getText('https://city.example/b');
+    expect(times[2]! - times[1]!).toBeGreaterThanOrEqual(2_000);
+  });
+
+  it('parses Retry-After seconds and dates, capped at a minute', () => {
+    expect(retryAfterMs('5')).toBe(5_000);
+    expect(retryAfterMs('600')).toBe(60_000);
+    expect(retryAfterMs(new Date(10_000).toUTCString(), 0)).toBe(10_000);
+    expect(retryAfterMs(null)).toBeNull();
+    expect(retryAfterMs('soon')).toBeNull();
   });
 });

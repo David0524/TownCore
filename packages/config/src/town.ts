@@ -21,6 +21,8 @@ export const sourceKinds = [
   'schools',
   'weather',
   'events',
+  // Official releases from a town's own government (e.g. CivicPlus News Flash).
+  'city_news',
   'other_outlet',
 ] as const;
 export type SourceKind = (typeof sourceKinds)[number];

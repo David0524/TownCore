@@ -1,6 +1,5 @@
 # Boca Town Square. Schema: packages/config/src/town.ts (CLAUDE.md §10).
-# Sources are added only once verified live. Agendas are on Granicus, which robots.txt blocks
-# (CLAUDE.md Decisions, 2026-10-15), so the meeting source is the city calendar feed (M2 PR C).
+# Sources are added only once verified live (CLAUDE.md §14).
 slug: boca-raton
 name: Boca Raton
 state: FL
@@ -17,9 +16,17 @@ agencies:
   - Boca Raton Police Services
   - Boca Raton Fire Rescue
 sources:
+  # Verified 2026-10-15. Council and public meetings: the city's CivicPlus calendar (iCal export).
+  # Agenda documents themselves are on Granicus, which robots.txt blocks, so they're not fetched.
   - kind: agenda
-    platform: TBD
-    url: TBD
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '29' }
+  # City media releases (CivicPlus News Flash, all categories).
+  - kind: city_news
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: newsflash, catId: All-newsflash.xml }
   # Verified 2026-10-15: NWS Miami zone FLZ168, Coastal Palm Beach County (names Boca Raton).
   - kind: weather
     platform: nws

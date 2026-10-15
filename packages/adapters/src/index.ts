@@ -16,3 +16,5 @@ export { defaultSchedule, intervalMs, isDue } from './schedule';
 export type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from './types';
 export { DOCUMENTED_APIS, documentedApi } from './http/policy';
 export { nwsAdapter } from './nws';
+export { civicplusAdapter } from './civicplus';
+export { parseIcal, zonedTimeToUtc } from './lib/ical';

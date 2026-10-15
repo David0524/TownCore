@@ -52,7 +52,12 @@ export async function syncTowns(db: Db, loaded: LoadedTown[]): Promise<SyncTowns
           adapter: source.platform,
           url: source.url ?? null,
           schedule: source.schedule ?? null,
-          config: { ...(source.zone ? { zone: source.zone } : {}), ...(source.options ?? {}) },
+          // Adapters get the town's timezone so local dates and times parse correctly.
+          config: {
+            timezone: config.timezone,
+            ...(source.zone ? { zone: source.zone } : {}),
+            ...(source.options ?? {}),
+          },
         };
         await tx
           .insert(sources)
@@ -77,5 +82,6 @@ export async function syncTowns(db: Db, loaded: LoadedTown[]): Promise<SyncTowns
 
 /** Stable identity of a YAML source within its town. */
 export function sourceKey(source: TownSourceConfig): string {
-  return `${source.kind}:${source.platform}:${source.url ?? source.zone ?? ''}`;
+  const option = source.options ? `:${JSON.stringify(source.options)}` : '';
+  return `${source.kind}:${source.platform}:${source.url ?? source.zone ?? ''}${option}`;
 }

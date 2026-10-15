@@ -80,7 +80,7 @@ docs/plans/       # milestone plans written before coding
 ## 5. Data model (starting point)
 
 - `towns` — id, slug, name, state, census_id, county, timezone, domain, site_name, status (`draft|live|paused`), tier (`small|mid|large`), config (jsonb), readiness_score
-- `sources` — id, town_id, kind (`agenda|meeting_video|permits|property_sales|business_filings|inspections|police|fire|schools|weather|events|other_outlet`), platform, url, adapter, schedule, health (`ok|degraded|broken`), last_ok_at
+- `sources` — id, town_id, kind (`agenda|meeting_video|permits|property_sales|business_filings|inspections|police|fire|schools|weather|events|city_news|other_outlet`; `city_news` = the town government's own releases), platform, url, adapter, schedule, health (`ok|degraded|broken`), last_ok_at
 - `records` — id, source_id, town_id, external_id, type, title, text, url, occurred_at, raw (jsonb), content_hash; unique(source_id, external_id)
 - `story_candidates` — id, town_id, record_ids[], beat, proposed_tier, newsworthiness, status
 - `articles` — id, town_id, slug, headline, dek, body_md, beat, tier, status (`draft|in_review|published|rejected|blocked|corrected`), byline, reviewer_id, source_record_ids[], claims (jsonb), factcheck (jsonb), published_at, updated_at

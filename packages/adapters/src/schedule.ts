@@ -8,6 +8,7 @@ const DEFAULTS: Partial<Record<SourceKind, string>> = {
   meeting_video: '2h',
   police: '1h',
   fire: '1h',
+  city_news: '1h',
   business_filings: '1d',
   permits: '1d',
   property_sales: '1d',
