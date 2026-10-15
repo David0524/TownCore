@@ -4,6 +4,7 @@ import { Grid } from '@/layout/Grid';
 import { footers, headers, navs } from '@/layout/registry';
 import { themeCssVariables, themeFor } from '@/lib/theme';
 import { requireTown, resolveTown } from '@/lib/town';
+import { Slot } from '@/slots/Slot';
 
 type Props = { children: ReactNode; params: Promise<{ host: string }> };
 
@@ -31,7 +32,12 @@ export default async function TownLayout({ children, params }: Props) {
     <>
       <style dangerouslySetInnerHTML={{ __html: themeCssVariables(theme) }} />
       <Header town={town} theme={theme} nav={<Nav />} />
-      <Grid kind={theme.layout.grid}>{children}</Grid>
+      <Grid
+        kind={theme.layout.grid}
+        rail={theme.layout.grid === 'main-right-rail' ? <Slot town={town} name="rail.box" /> : null}
+      >
+        {children}
+      </Grid>
       <Footer town={town} theme={theme} />
     </>
   );

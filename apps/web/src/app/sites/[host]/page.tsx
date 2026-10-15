@@ -1,36 +1,46 @@
-import Link from 'next/link';
-import { listPublishedArticles } from '@towncore/db';
-import { db } from '@/lib/db';
-import { formatTownDate, requireTown } from '@/lib/town';
+import { Fragment, type ReactNode } from 'react';
+import { homeModules, homeOrder } from '@/modules/registry';
+import { themeFor } from '@/lib/theme';
+import { requireTown } from '@/lib/town';
+import { Slot } from '@/slots/Slot';
 
+// The homepage is the theme's ordered module list, not a fixed template (CLAUDE.md §11a-2).
 export default async function HomePage({ params }: { params: Promise<{ host: string }> }) {
   const town = await requireTown(params);
-  const articles = await listPublishedArticles(db(), town.id);
+  const theme = themeFor(town);
+  const list = theme.layout.home;
+
+  // Render each module now so empty ones (null) drop out before we place inline slots.
+  const rendered: Array<{ key: string; node: ReactNode; mobileOnly: boolean }> = [];
+  for (const { module, mobileOnly } of homeOrder(list)) {
+    const node = await homeModules[module]({ town, theme, modules: list });
+    if (node !== null)
+      rendered.push({ key: `${module}${mobileOnly ? '-mobile' : ''}`, node, mobileOnly });
+  }
+  const hasNews = rendered.some(({ key }) => !key.startsWith('newsletter-cta'));
 
   return (
     <>
-      <h1>{town.siteName}</h1>
-      <p>
-        Local news for {town.name}, written from public records: meetings, permits, filings and
-        official releases. <Link href="/methods">How we report</Link>.
-      </p>
-      <hr className="rule" />
-      {articles.length === 0 ? (
-        <p>No stories yet. Check back soon.</p>
-      ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '1.5rem' }}>
-          {articles.map((article) => (
-            <li key={article.id}>
-              <h2 style={{ fontSize: '1.375rem', marginBottom: '0.25rem' }}>
-                <Link href={`/news/${article.slug}`}>{article.headline}</Link>
-              </h2>
-              {article.dek ? <p style={{ margin: '0 0 0.25rem' }}>{article.dek}</p> : null}
-              <p className="muted" style={{ margin: 0 }}>
-                {formatTownDate(article.publishedAt!, town)}
-              </p>
-            </li>
-          ))}
-        </ul>
+      <h1 className="sr-only">
+        {town.siteName}: local news for {town.name}, {town.state}
+      </h1>
+      <Slot town={town} name="home.top" />
+      {rendered.map(({ key, node, mobileOnly }, i) => (
+        <Fragment key={key}>
+          <div className={mobileOnly ? 'mobile-only' : undefined}>{node}</div>
+          {/* Single-column layouts have no rail, so rail.box goes inline after the second module. */}
+          {theme.layout.grid === 'single-column' && i === 1 ? (
+            <Slot town={town} name="rail.box" />
+          ) : null}
+        </Fragment>
+      ))}
+      {theme.layout.grid === 'single-column' && rendered.length < 2 ? (
+        <Slot town={town} name="rail.box" />
+      ) : null}
+      {hasNews ? null : (
+        <p className="muted" data-testid="home-empty">
+          Stories will appear here as soon as our newsroom starts publishing.
+        </p>
       )}
     </>
   );

@@ -69,6 +69,7 @@ export const subscriberStatus = pgEnum('subscriber_status', [
   'complained',
 ]);
 export const staffRole = pgEnum('staff_role', ['admin', 'reviewer']);
+export const campaignStatus = pgEnum('campaign_status', ['draft', 'active', 'paused', 'ended']);
 
 export const towns = pgTable('towns', {
   id: id(),
@@ -349,6 +350,31 @@ export const aiUsage = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('ai_usage_town_created_idx').on(t.townId, t.createdAt)],
+);
+
+// Direct-sold campaigns filling monetization slots (CLAUDE.md §11b). First in every slot's fill
+// order. `slot` is a slot name such as "home.top"; `creative` is validated by the web app.
+export const campaigns = pgTable(
+  'campaigns',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    slot: text('slot').notNull(),
+    placementId: uuid('placement_id').references(() => placements.id),
+    creative: jsonb('creative').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }),
+    priority: integer('priority').notNull().default(0),
+    status: campaignStatus('status').notNull().default('draft'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('campaigns_town_slot_idx').on(t.townId, t.slot, t.status),
+    check('campaigns_dates', sql`${t.endsAt} is null or ${t.endsAt} > ${t.startsAt}`),
+  ],
 );
 
 // Liveness of worker processes (one row per process, upserted by the heartbeat job).

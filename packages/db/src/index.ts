@@ -6,11 +6,13 @@ export { syncTowns, type SyncTownsResult } from './towns';
 // variants otherwise produce duplicate, incompatible types).
 export { and, asc, desc, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 export {
+  getActiveCampaign,
   getTownByHost,
   getTownBySlug,
   listLiveTowns,
   listPublishedArticles,
   normalizeHost,
   type Article,
+  type Campaign,
   type Town,
 } from './queries';
