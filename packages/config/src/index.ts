@@ -30,6 +30,7 @@ export {
   type ModelRole,
   type TokenUsage,
 } from './models';
+export { catchAllTeam, defaultRoleAddresses, defaultTeams, type DefaultTeam } from './mail';
 export { publisher, publisherLine } from './publisher';
 export {
   findTbdFields,

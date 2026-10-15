@@ -214,6 +214,8 @@ importers:
 
   packages/launcher: {}
 
+  packages/mail: {}
+
   packages/pipeline:
     dependencies:
       '@anthropic-ai/sdk':

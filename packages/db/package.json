@@ -14,7 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check",
     "db:migrate": "tsx src/scripts/migrate.ts",
-    "towns:sync": "tsx src/scripts/sync-towns.ts"
+    "towns:sync": "tsx src/scripts/sync-towns.ts",
+    "mail:routing:sync": "tsx src/scripts/sync-mail-routing.ts"
   },
   "dependencies": {
     "@towncore/config": "workspace:*",
