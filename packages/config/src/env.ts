@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { z } from 'zod';
 
 // The only module allowed to read process.env (enforced by ESLint).
@@ -32,6 +31,11 @@ export type Env = z.infer<typeof envSchema>;
 
 let cached: Env | undefined;
 
+/** Drops the cached parse, e.g. after loading a .env file into process.env. */
+export function resetEnvCache(): void {
+  cached = undefined;
+}
+
 export function loadEnv(source: Record<string, string | undefined> = process.env): Env {
   if (source === process.env && cached) return cached;
   const result = envSchema.safeParse(source);
@@ -48,10 +52,4 @@ export function requireEnv<K extends keyof Env>(key: K, env: Env = loadEnv()): N
     throw new Error(`Missing required environment variable ${key}. See .env.example.`);
   }
   return value as NonNullable<Env[K]>;
-}
-
-/** Loads the repo-root .env into process.env for local scripts, if the file exists. */
-export function loadDotEnv(file: URL = new URL('../../../.env', import.meta.url)): void {
-  if (existsSync(file)) process.loadEnvFile(file);
-  cached = undefined;
 }

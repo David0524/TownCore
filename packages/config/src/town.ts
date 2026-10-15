@@ -1,7 +1,8 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
+import { checkThemeForTown, defaultTheme, parseTheme, type Theme } from './theme';
 
 // Town config schema (CLAUDE.md §10). Objects are strict: unknown keys fail, so a town
 // can't sneak in brand overrides beyond site_name and logo.
@@ -101,6 +102,27 @@ export function loadTownConfigs(dir: string): TownConfig[] {
     }
   }
   return configs;
+}
+
+export type LoadedTown = { config: TownConfig; theme: Theme; hasThemeFile: boolean };
+
+/**
+ * Loads every town config plus its theme (`<slug>.theme.json` next to the YAML). Towns without
+ * a theme file get the network default theme. Theme rules that depend on the town are checked.
+ */
+export function loadTowns(dir: string): LoadedTown[] {
+  return loadTownConfigs(dir).map((config) => {
+    const themeFile = join(dir, config.state.toLowerCase(), `${config.slug}.theme.json`);
+    const hasThemeFile = existsSync(themeFile);
+    const theme = hasThemeFile
+      ? parseTheme(readFileSync(themeFile, 'utf8'), relative(dir, themeFile))
+      : defaultTheme;
+    const problems = checkThemeForTown(theme, config);
+    if (problems.length > 0) {
+      throw new Error(`${config.slug} theme: ${problems.join('; ')}`);
+    }
+    return { config, theme, hasThemeFile };
+  });
 }
 
 /** Lists config fields still set to TBD. A town can't go live until this is empty (M7). */

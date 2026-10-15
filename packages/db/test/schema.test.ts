@@ -1,11 +1,11 @@
 import { fileURLToPath } from 'node:url';
-import { loadTownConfigs, parseTownConfig } from '@towncore/config';
+import { defaultTheme, loadTowns, parseTownConfig } from '@towncore/config';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Db } from '../src/client.js';
-import { articles, corrections, records, sources, subscribers, towns } from '../src/schema.js';
-import { syncTowns } from '../src/towns.js';
-import { createTestDb } from '../src/testing.js';
+import type { Db } from '../src/client';
+import { articles, corrections, records, sources, subscribers, towns } from '../src/schema';
+import { syncTowns } from '../src/towns';
+import { createTestDb } from '../src/testing';
 
 const townsDir = fileURLToPath(new URL('../../../towns', import.meta.url));
 
@@ -14,7 +14,7 @@ let drop: () => Promise<void>;
 
 beforeAll(async () => {
   ({ db, drop } = await createTestDb());
-  await syncTowns(db, loadTownConfigs(townsDir));
+  await syncTowns(db, loadTowns(townsDir));
 });
 afterAll(async () => drop());
 
@@ -35,6 +35,11 @@ async function expectViolation(promise: Promise<unknown>, constraint: string) {
 }
 
 describe('towns:sync', () => {
+  it('stores the Boca theme from its theme file', async () => {
+    const town = await boca();
+    expect((town.theme as { type: string }).type).toBe('newsreader-publicsans');
+  });
+
   it('creates Boca Raton as a draft town', async () => {
     const town = await boca();
     expect(town).toMatchObject({
@@ -51,13 +56,15 @@ describe('towns:sync', () => {
       .update(towns)
       .set({ status: 'live', readinessScore: 12 })
       .where(eq(towns.slug, 'boca-raton'));
-    const [config] = loadTownConfigs(townsDir).filter((t) => t.slug === 'boca-raton');
-    await syncTowns(db, [{ ...config!, site_name: 'Renamed Square' }]);
+    const [loaded] = loadTowns(townsDir).filter((t) => t.config.slug === 'boca-raton');
+    await syncTowns(db, [
+      { ...loaded!, config: { ...loaded!.config, site_name: 'Renamed Square' } },
+    ]);
 
     const town = await boca();
     expect(town).toMatchObject({ siteName: 'Renamed Square', status: 'live', readinessScore: 12 });
 
-    await syncTowns(db, loadTownConfigs(townsDir));
+    await syncTowns(db, loadTowns(townsDir));
     await db
       .update(towns)
       .set({ status: 'draft', readinessScore: null })
@@ -65,8 +72,10 @@ describe('towns:sync', () => {
   });
 
   it('rejects a second town with the same domain', async () => {
-    const [config] = loadTownConfigs(townsDir).filter((t) => t.slug === 'boca-raton');
-    await expect(syncTowns(db, [{ ...config!, slug: 'boca-copy' }])).rejects.toThrow();
+    const [loaded] = loadTowns(townsDir).filter((t) => t.config.slug === 'boca-raton');
+    await expect(
+      syncTowns(db, [{ ...loaded!, config: { ...loaded!.config, slug: 'boca-copy' } }]),
+    ).rejects.toThrow();
   });
 });
 
@@ -224,7 +233,9 @@ newsletter_send_time: "06:30"
 agencies: [City of Test Town]
 pricing: { sponsored_slot_usd: 199, enhanced_usd: 39 }
 `);
-    await syncTowns(db, [other]);
+    await syncTowns(db, [{ config: other, theme: defaultTheme, hasThemeFile: false }]);
     expect((await boca()).siteName).toBe('Boca Town Square');
+    const [synced] = await db.select().from(towns).where(eq(towns.slug, 'test-town'));
+    expect(synced!.theme).toBeNull(); // no theme file → network default at render time
   });
 });

@@ -1,7 +1,7 @@
 import { requireEnv } from '@towncore/config';
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from './schema.js';
+import * as schema from './schema';
 
 export type Db = PostgresJsDatabase<typeof schema> & { $client: postgres.Sql };
 

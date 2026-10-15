@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { envSchema, loadEnv, requireEnv } from '../src/env.js';
+import { envSchema, loadEnv, requireEnv } from '../src/env';
 
 const envExamplePath = fileURLToPath(new URL('../../../.env.example', import.meta.url));
 

@@ -87,6 +87,8 @@ export const towns = pgTable('towns', {
   status: townStatus('status').notNull().default('draft'),
   tier: townTier('tier').notNull(),
   config: jsonb('config').notNull(),
+  // Town theme (CLAUDE.md §11a); null means the network default theme.
+  theme: jsonb('theme'),
   readinessScore: real('readiness_score'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),

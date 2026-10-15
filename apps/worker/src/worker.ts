@@ -2,8 +2,8 @@ import { hostname } from 'node:os';
 import { createDb, type Db } from '@towncore/db';
 import { PgBoss } from 'pg-boss';
 import type { Logger } from 'pino';
-import { recordHeartbeat } from './heartbeat.js';
-import { queues, schedules } from './queues.js';
+import { recordHeartbeat } from './heartbeat';
+import { queues, schedules } from './queues';
 
 export type WorkerOptions = {
   databaseUrl: string;
