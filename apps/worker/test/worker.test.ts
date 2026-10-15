@@ -1,11 +1,20 @@
 import { eq, workerHeartbeats } from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
+import { Fetcher } from '@towncore/adapters';
 import { pino } from 'pino';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { queues } from '../src/queues';
 import { startWorker, type RunningWorker } from '../src/worker';
 
 let testDb: Awaited<ReturnType<typeof createTestDb>>;
+
+// Tests never touch the network: any real fetch fails loudly.
+const offlineFetcher = () =>
+  new Fetcher({
+    fetchImpl: async (url) => {
+      throw new Error(`Network disabled in tests (${url})`);
+    },
+  });
 let worker: RunningWorker;
 
 beforeAll(async () => {
@@ -14,6 +23,7 @@ beforeAll(async () => {
     databaseUrl: testDb.url,
     logger: pino({ level: 'silent' }),
     workerId: 'test-worker',
+    fetcher: offlineFetcher(),
   });
 });
 
@@ -61,6 +71,7 @@ describe('worker', () => {
       databaseUrl: testDb.url,
       logger: pino({ level: 'silent' }),
       workerId: 'second-worker',
+      fetcher: offlineFetcher(),
     });
     await expect(second.stop()).resolves.toBeUndefined();
     await expect(second.stop()).resolves.toBeUndefined();
@@ -81,10 +92,14 @@ describe('ingest', () => {
       fetch: async () => [{ externalId: 'e1', type: 'event', title: 'Test event', raw: {} }],
       healthCheck: async () => ({ ok: true }),
     });
-    await syncTowns(
-      testDb.db,
-      loadTowns(fileURLToPath(new URL('../../../towns', import.meta.url))),
+    // Boca's config without its real sources, so the tick only finds the test source.
+    const loaded = loadTowns(fileURLToPath(new URL('../../../towns', import.meta.url))).map(
+      (t) => ({
+        ...t,
+        config: { ...t.config, sources: [] },
+      }),
     );
+    await syncTowns(testDb.db, loaded);
     const town = await getTownBySlug(testDb.db, 'boca-raton');
     const [source] = await testDb.db
       .insert(sources)
