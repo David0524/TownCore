@@ -1,0 +1,14 @@
+# FICTIONAL test town for the newsletter e2e tests (Mail-5). Its mail domain is created by the
+# spec, so the signup form appears only here; Boca and Harbor Point keep "launching soon".
+# .test is a reserved TLD that can never resolve publicly.
+slug: letter-town
+name: Letter Town
+state: ME
+county: Fictional
+timezone: America/New_York
+site_name: The Letter Town Post
+domain: lettertown.test
+tier: small
+newsletter_send_time: '06:45'
+agencies: [Town of Letter Town]
+pricing: { sponsored_slot_usd: 99, enhanced_usd: 19 }

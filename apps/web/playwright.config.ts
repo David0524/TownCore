@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
+import { E2E_MAIL_TOKEN_SECRET } from './e2e/newsletter-secret';
 
 // Specs that seed data (admin) need DATABASE_URL; use the repo .env locally (CI sets it).
 const envFile = new URL('../../.env', import.meta.url);
@@ -16,6 +17,8 @@ const hosts = [
   'admin.test',
   'reviewtown.test',
   'feedtown.test',
+  // Newsletter signup tests (Mail-5).
+  'lettertown.test',
 ];
 
 export default defineConfig({
@@ -46,6 +49,8 @@ export default defineConfig({
       ADMIN_EMAILS: 'editor@admin.test',
       // Outbound mail goes to the server log in tests, never anywhere real (Rule 10).
       MAIL_TRANSPORT: 'log',
+      MAIL_TOKEN_SECRET: E2E_MAIL_TOKEN_SECRET,
+      MAIL_POSTAL_ADDRESS: '1 Test Street, Letter Town, ME 04000',
     },
     timeout: 60_000,
   },

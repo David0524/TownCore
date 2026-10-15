@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { NewsletterForm } from '@/components/NewsletterForm';
+import { newsletterOpen } from '@/lib/newsletter';
 import { beats } from '@towncore/config';
 import type { Article } from '@towncore/db';
 import { formatTownDate } from '@/lib/town';
@@ -126,13 +128,26 @@ export const BeatSections: HomeModuleComponent = async ({ town, modules }) => {
   );
 };
 
-/** Decision D-M1-1: no email field until double opt-in exists (M5). */
+/**
+ * The signup box (Mail-5). Until the town's mail domain can send bulk mail it keeps the
+ * "launching soon" line with no email field (D-M1-1).
+ */
 export const NewsletterCta: HomeModuleComponent = async ({ town }) => (
   <section className={`${styles.module} ${styles.cta}`} data-module="newsletter-cta">
     <h2>Get {town.name} news every morning</h2>
-    <p>
-      Our free daily newsletter, written from public records, is launching soon.{' '}
-      <Link href="/methods">How we report</Link>.
-    </p>
+    {(await newsletterOpen(town)) ? (
+      <>
+        <p>
+          Our free daily newsletter, written from public records.{' '}
+          <Link href="/methods">How we report</Link>.
+        </p>
+        <NewsletterForm source="/" id="cta" />
+      </>
+    ) : (
+      <p>
+        Our free daily newsletter, written from public records, is launching soon.{' '}
+        <Link href="/methods">How we report</Link>.
+      </p>
+    )}
   </section>
 );

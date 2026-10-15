@@ -26,6 +26,14 @@ test.describe('About, Methods and Corrections (Rule 1)', () => {
     }
   });
 
+  test('Privacy names the publisher and explains the newsletter data', async ({ page }) => {
+    const response = await page.goto(`${boca}/privacy`);
+    expect(response?.status()).toBe(200);
+    const main = page.getByRole('main');
+    await expect(main).toContainText('Boca Town Square is published by TownCore.');
+    await expect(main).toContainText("We don't put tracking pixels");
+  });
+
   test('Corrections lists corrections with links to the stories', async ({ page }) => {
     const response = await page.goto(`${boca}/corrections`);
     expect(response?.status()).toBe(200);
@@ -34,7 +42,7 @@ test.describe('About, Methods and Corrections (Rule 1)', () => {
     await expect(list.getByRole('link')).toHaveAttribute('href', '/news/test-article');
   });
 
-  test('only the About page mentions the publisher', async ({ page }) => {
+  test('only the About and Privacy pages mention the publisher', async ({ page }) => {
     for (const path of [
       '/',
       '/methods',
