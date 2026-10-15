@@ -36,7 +36,6 @@ export const envSchema = z.object({
   VERCEL_TEAM_ID: optional(z.string()),
   GOOGLE_CLIENT_ID: optional(z.string()),
   GOOGLE_CLIENT_SECRET: optional(z.string()),
-  HQ_DOMAIN: optional(z.string().regex(/^[a-z0-9-]+(\.[a-z0-9-]+)+$/)),
   DMARC_REPORT_ADDRESS: optional(z.email()),
   MAIL_TOKEN_SECRET: optional(z.string().min(32)),
   MAIL_POSTAL_ADDRESS: optional(z.string()),
