@@ -2,6 +2,9 @@ import { beats } from '@towncore/config';
 import { FEED_ITEMS, listListedArticles, rssFeed, xmlResponse } from '@/lib/discovery';
 import { resolveTown } from '@/lib/town';
 
+// Built per request from the database (never pre-rendered at build time).
+export const dynamic = 'force-dynamic';
+
 type Ctx = { params: Promise<{ host: string; beat: string }> };
 
 // RSS for one beat.

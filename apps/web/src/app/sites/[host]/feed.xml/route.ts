@@ -1,6 +1,9 @@
 import { FEED_ITEMS, listListedArticles, rssFeed, xmlResponse } from '@/lib/discovery';
 import { resolveTown } from '@/lib/town';
 
+// Built per request from the database (never pre-rendered at build time).
+export const dynamic = 'force-dynamic';
+
 type Ctx = { params: Promise<{ host: string }> };
 
 // RSS for the whole site.

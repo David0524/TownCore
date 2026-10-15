@@ -9,6 +9,9 @@ import {
 } from '@/lib/discovery';
 import { resolveTown } from '@/lib/town';
 
+// Built per request from the database (never pre-rendered at build time).
+export const dynamic = 'force-dynamic';
+
 type Ctx = { params: Promise<{ host: string; file: string }> };
 
 // /sitemaps/pages.xml and /sitemaps/articles-YYYY-MM.xml

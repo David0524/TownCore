@@ -1,6 +1,9 @@
 import { robotsTxt, xmlResponse } from '@/lib/discovery';
 import { resolveTown } from '@/lib/town';
 
+// Built per request from the database (never pre-rendered at build time).
+export const dynamic = 'force-dynamic';
+
 type Ctx = { params: Promise<{ host: string }> };
 
 // Per-town robots.txt. A town that isn't live disallows everything.

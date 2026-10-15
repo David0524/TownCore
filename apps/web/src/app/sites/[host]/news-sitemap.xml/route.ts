@@ -1,6 +1,9 @@
 import { listListedArticles, NEWS_SITEMAP_HOURS, newsSitemap, xmlResponse } from '@/lib/discovery';
 import { resolveTown } from '@/lib/town';
 
+// Built per request from the database (never pre-rendered at build time).
+export const dynamic = 'force-dynamic';
+
 type Ctx = { params: Promise<{ host: string }> };
 
 // Google News sitemap: the last 48 hours of public articles.
