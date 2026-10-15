@@ -32,7 +32,7 @@ export async function findOrCreateStaff(
 ): Promise<StaffMember | null> {
   const normalized = email.trim().toLowerCase();
   const [existing] = await db.select().from(staff).where(eq(staff.email, normalized));
-  if (existing) return existing;
+  if (existing) return existing.active ? existing : null;
   if (!adminEmails.map((e) => e.toLowerCase()).includes(normalized)) return null;
   const [created] = await db
     .insert(staff)
@@ -83,15 +83,24 @@ export async function redeemLoginToken(
     .returning();
   if (!row) return null;
   const [member] = await db.select().from(staff).where(eq(staff.id, row.staffId));
-  if (!member) return null;
+  if (!member?.active) return null;
+  return { sessionToken: await createStaffSession(db, member.id, now), staff: member };
+}
+
+/** Starts a session for a staff member who has proved who they are; returns its token. */
+export async function createStaffSession(
+  db: Db,
+  staffId: string,
+  now = new Date(),
+): Promise<string> {
   const sessionToken = newToken();
   await db.insert(staffSessions).values({
-    staffId: member.id,
+    staffId,
     tokenHash: hashToken(sessionToken),
     expiresAt: new Date(now.getTime() + SESSION_TTL_MS),
     createdAt: now,
   });
-  return { sessionToken, staff: member };
+  return sessionToken;
 }
 
 export async function getSessionStaff(
@@ -104,7 +113,11 @@ export async function getSessionStaff(
     .from(staffSessions)
     .innerJoin(staff, eq(staffSessions.staffId, staff.id))
     .where(
-      and(eq(staffSessions.tokenHash, hashToken(sessionToken)), gte(staffSessions.expiresAt, now)),
+      and(
+        eq(staffSessions.tokenHash, hashToken(sessionToken)),
+        gte(staffSessions.expiresAt, now),
+        eq(staff.active, true),
+      ),
     );
   return row?.member ?? null;
 }
@@ -120,6 +133,8 @@ export async function logAdminAction(
     action: string;
     articleId?: string | null;
     candidateId?: string | null;
+    /** For non-editorial actions: what was acted on, e.g. { type: 'mail_domain', id }. */
+    target?: { type: string; id: string } | null;
     detail?: unknown;
   },
 ): Promise<void> {
@@ -128,6 +143,8 @@ export async function logAdminAction(
     action: entry.action,
     articleId: entry.articleId ?? null,
     candidateId: entry.candidateId ?? null,
+    targetType: entry.target?.type ?? null,
+    targetId: entry.target?.id ?? null,
     detail: entry.detail ?? null,
   });
 }

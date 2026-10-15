@@ -10,6 +10,7 @@ import {
   numeric,
   pgEnum,
   pgTable,
+  primaryKey,
   real,
   smallint,
   text,
@@ -111,6 +112,8 @@ export const staff = pgTable('staff', {
   // A stand-in reviewer used before a real one is named (CLAUDE.md Decisions, 2026-10-15).
   // Never allowed on a live town's published story (Rule 2).
   placeholder: boolean('placeholder').notNull().default(false),
+  // Deactivated staff keep their history but can't sign in (sessions stop working at once).
+  active: boolean('active').notNull().default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -148,7 +151,9 @@ export const staffSessions = pgTable(
   (t) => [uniqueIndex('staff_sessions_hash_uq').on(t.tokenHash)],
 );
 
-// Every editorial action taken in /admin: who, what, when, and a before/after summary.
+// The audit log for every staff action in /admin: editorial actions, and mail sends,
+// assignments, imports, onboarding, pauses and settings (D-MAIL-5). Editorial rows keep their
+// article/candidate columns; everything else names its target by type and id.
 export const adminActions = pgTable(
   'admin_actions',
   {
@@ -159,10 +164,61 @@ export const adminActions = pgTable(
     action: text('action').notNull(),
     articleId: uuid('article_id'),
     candidateId: uuid('candidate_id'),
+    targetType: text('target_type'),
+    targetId: text('target_id'),
     detail: jsonb('detail'),
     createdAt: createdAt(),
   },
-  (t) => [index('admin_actions_created_idx').on(t.createdAt)],
+  (t) => [
+    index('admin_actions_created_idx').on(t.createdAt),
+    index('admin_actions_target_idx').on(t.targetType, t.targetId),
+    check('admin_actions_target_pair', sql`(${t.targetType} is null) = (${t.targetId} is null)`),
+  ],
+);
+
+// Mail routing (docs/plans/MAIL.md, D-MAIL-3). Teams are central: no per-town staff.
+export const teams = pgTable('teams', {
+  id: id(),
+  name: text('name').notNull().unique(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const teamMembers = pgTable(
+  'team_members',
+  {
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.teamId, t.staffId] })],
+);
+
+// Global role addresses: `sales@` on any town domain goes to the same team. The one catch-all
+// row has no local part and takes every address that matches no role.
+export const roleAddresses = pgTable(
+  'role_addresses',
+  {
+    id: id(),
+    localPart: text('local_part').unique(),
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id),
+    isCatchAll: boolean('is_catch_all').notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('role_addresses_one_catch_all_uq')
+      .on(t.isCatchAll)
+      .where(sql`${t.isCatchAll}`),
+    check('role_addresses_catch_all_shape', sql`${t.isCatchAll} = (${t.localPart} is null)`),
+    check('role_addresses_local_part', sql`${t.localPart} ~ '^[a-z0-9][a-z0-9._-]*$'`),
+  ],
 );
 
 export const sources = pgTable(

@@ -2,6 +2,12 @@ export * as schema from './schema';
 export * from './schema';
 export { createDb, getDb, type Db } from './client';
 export { syncTowns, type SyncTownsResult } from './towns';
+export {
+  loadRoutingTable,
+  syncMailRouting,
+  type RoutingTable,
+  type SyncMailRoutingResult,
+} from './mail-routing';
 // Re-exported so apps use the same drizzle-orm instance as the schema (peer-dependency
 // variants otherwise produce duplicate, incompatible types).
 export {
@@ -39,6 +45,7 @@ export {
 } from './queries';
 export {
   createLoginToken,
+  createStaffSession,
   endSession,
   findOrCreateStaff,
   getSessionStaff,

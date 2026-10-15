@@ -12,6 +12,7 @@ export default tseslint.config(
       '**/.turbo/',
       '**/coverage/',
       'packages/db/migrations/',
+      '**/cdk.out/',
     ],
   },
   js.configs.recommended,

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Db } from '../src/client';
-import { staffLoginTokens } from '../src/schema';
+import { eq } from 'drizzle-orm';
+import { staff, staffLoginTokens } from '../src/schema';
 import {
   createLoginToken,
   endSession,
@@ -68,5 +69,16 @@ describe('staff sign-in', () => {
       TooManyLoginLinks,
     );
     await expect(createLoginToken(db, member.id, later(3_700_000))).resolves.toBeTypeOf('string');
+  });
+
+  it('deactivated staff cannot sign in, and their sessions stop working', async () => {
+    const member = (await findOrCreateStaff(db, 'c@example.com', ['c@example.com']))!;
+    const session = await redeemLoginToken(db, await createLoginToken(db, member.id, NOW), NOW);
+    const pending = await createLoginToken(db, member.id, NOW);
+    await db.update(staff).set({ active: false }).where(eq(staff.id, member.id));
+
+    expect(await getSessionStaff(db, session!.sessionToken, NOW)).toBeNull();
+    expect(await redeemLoginToken(db, pending, NOW)).toBeNull();
+    expect(await findOrCreateStaff(db, 'c@example.com', ['c@example.com'])).toBeNull();
   });
 });

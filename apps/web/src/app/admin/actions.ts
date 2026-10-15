@@ -5,6 +5,7 @@ import { createLoginToken, endSession, findOrCreateStaff, TooManyLoginLinks } fr
 import { logProvider, staffOnly } from '@towncore/email';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { signInMode } from '@/lib/admin/google';
 import { adminBaseUrl, SESSION_COOKIE } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 
@@ -19,6 +20,7 @@ export async function requestLoginLink(_prev: LoginState, form: FormData): Promi
     message:
       'If that address belongs to staff, a sign-in link is on its way. It works once, for 15 minutes.',
   };
+  if (signInMode(loadEnv()).kind !== 'email') return { message: 'Sign in with Google instead.' };
   if (!email.includes('@')) return { message: 'Enter your email address.' };
   const adminEmails = loadEnv().ADMIN_EMAILS ?? [];
   const member = await findOrCreateStaff(db(), email, adminEmails);

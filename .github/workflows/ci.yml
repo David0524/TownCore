@@ -51,6 +51,7 @@ jobs:
           fi
       - run: pnpm db:migrate
       - run: pnpm towns:sync
+      - run: pnpm mail:routing:sync
       - name: Seed fictional fixture towns (CI only)
         run: pnpm --filter @towncore/web seed:fixtures
       - run: pnpm test
