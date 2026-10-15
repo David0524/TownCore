@@ -4,6 +4,7 @@ import { Minimal } from './footers/Minimal';
 import { ThreeColumn } from './footers/ThreeColumn';
 import { CenteredMasthead } from './headers/CenteredMasthead';
 import { LeftLogoInlineNav } from './headers/LeftLogoInlineNav';
+import { SlimLeft } from './headers/SlimLeft';
 import { StackedDateline } from './headers/StackedDateline';
 import { BeatTabs } from './navs/BeatTabs';
 import { HamburgerOnly } from './navs/HamburgerOnly';
@@ -17,7 +18,11 @@ export const headers: Record<Layout['header'], ComponentType<HeaderProps>> = {
   'centered-masthead': CenteredMasthead,
   'left-logo-inline-nav': LeftLogoInlineNav,
   'stacked-dateline': StackedDateline,
+  'slim-left': SlimLeft,
 };
+
+/** Headers that show the weather themselves, so the page doesn't add a weather line. */
+export const headersWithWeather = new Set<Layout['header']>(['slim-left']);
 
 export const navs: Record<Layout['nav'], ComponentType> = {
   'beat-tabs': BeatTabs,

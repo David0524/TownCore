@@ -23,7 +23,22 @@ describe('theme schema', () => {
     expect(theme.type).toBe('instrumentserif-geist');
     expect(theme.palette.ink).toBe('#111418');
     expect(theme.palette.accent).toBe('#0E6FA8');
-    expect(theme.layout.home[0]).toBe('lead-story');
+    expect(theme.layout.header).toBe('slim-left');
+    expect(theme.layout.homeTop).toEqual(['good-morning', 'lead-story', 'today-bento']);
+    expect(theme.layout.homeRail).toEqual(['coming-up']);
+  });
+
+  it('allows each homepage module once across the band, main column and rail', () => {
+    const layout = { ...defaultTheme.layout, grid: 'main-right-rail' as const };
+    const ok = { ...defaultTheme, layout: { ...layout, homeRail: ['coming-up'] } };
+    expect(themeSchema.safeParse(ok).success).toBe(true);
+    const twice = { ...defaultTheme, layout: { ...layout, homeTop: ['latest-list'] } };
+    expect(() => parseTheme(JSON.stringify(twice))).toThrow(/only once/);
+  });
+
+  it('puts rail modules only in a layout with a rail', () => {
+    const theme = { ...defaultTheme, layout: { ...defaultTheme.layout, homeRail: ['coming-up'] } };
+    expect(() => parseTheme(JSON.stringify(theme))).toThrow(/main-right-rail/);
   });
 
   it("rejects a type set outside the family's list, but allows legacy M1 pairings", () => {

@@ -1,18 +1,29 @@
 // About page copy (CLAUDE.md Rule 1: names the publisher). Draft for owner review before launch.
-export const aboutCopy = `
-{site_name} is a local news site for {town_name}, {state}. We report on what the public record
-says about {town_name}: city and county meetings, votes and budgets, building permits and
-development, new businesses, school board decisions, official public safety releases, weather
-and community events.
+// Laid out per docs/plans/M4b.md §4: an "In short" box, how we work in three steps, what we
+// cover, then corrections, advertising and contact, ending with the publisher line.
 
-## Who writes our stories
+export const aboutInShort = [
+  '{site_name} reports what the public record says about {town_name}: meetings, votes, permits, new businesses, official releases and weather.',
+  'Stories are drafted by software from public records, checked fact by fact against those records, and every one links to its sources.',
+  'Every byline says "(AI-assisted)". Sensitive stories are approved by a person before they publish.',
+];
 
-Our stories are written by the {site_name} Newsroom, an AI-assisted newsroom. Software drafts
-each story from public documents and records, a separate check compares every fact against
-those records, and stories on sensitive subjects are approved by a person before they publish.
-Every byline says "(AI-assisted)", and every story links to the records it was written from.
-[How we report](/methods) explains the process in detail.
+export const aboutSteps = [
+  {
+    title: 'We start from public records',
+    text: 'City meeting calendars and releases, state business and license records, and National Weather Service data. We never rewrite other news outlets.',
+  },
+  {
+    title: 'Software drafts, a separate check verifies',
+    text: 'A draft is written from the records alone. A separate check compares every name, number and quote against them; anything it can’t find goes back or to a person.',
+  },
+  {
+    title: 'People approve the sensitive ones',
+    text: 'Stories about public safety, health, inspections or any private person are approved by an editor before they publish, and the byline says so.',
+  },
+];
 
+export const aboutRest = `
 ## What we don't do
 
 - We don't rewrite other news outlets' stories.
@@ -25,7 +36,13 @@ Every byline says "(AI-assisted)", and every story links to the records it was w
 If we got something wrong, tell us at [{contact_email}](mailto:{contact_email}). We fix errors
 quickly and note every correction on the story and on our [Corrections](/corrections) page.
 
-News tips and public records are welcome at the same address.
+News tips and public records are welcome at the same address. [How we report](/methods)
+explains our process in detail.
+
+## Advertising
+
+Local businesses can sponsor {site_name} or feature their listing. Ask at
+[{contact_email}](mailto:{contact_email}).
 
 ## Publisher
 

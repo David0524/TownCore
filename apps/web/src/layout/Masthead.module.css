@@ -29,3 +29,8 @@
   height: 100%;
   width: auto;
 }
+
+/* slim-left header: about 30px of wordmark, as in the canvas. */
+.slim {
+  height: 2.25rem;
+}

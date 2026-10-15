@@ -1,0 +1,85 @@
+.greeting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  margin: 0 0 1.25rem;
+}
+
+.greeting p {
+  margin: 0;
+}
+
+.hello {
+  font-family: var(--font-headline);
+  font-weight: var(--headline-weight);
+  font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.5rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.buttons {
+  list-style: none;
+  margin: 0 0 2.5rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.button:hover {
+  border-color: var(--ink);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--round);
+  flex: none;
+}
+
+.coming {
+  margin: 0 0 2rem;
+}
+
+.meetings {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.meetings li {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem 0;
+  border-bottom: var(--hairline);
+}
+
+.meetingTitle {
+  color: var(--ink);
+  font-weight: 500;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+a.meetingTitle:hover {
+  text-decoration: underline;
+}
+
+.where {
+  font-size: 0.875rem;
+  color: var(--muted);
+}

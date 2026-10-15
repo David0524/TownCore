@@ -9,7 +9,7 @@
   border-radius: var(--radius-tile);
   background: var(--tint);
   color: var(--ink);
-  margin: 0 0 2rem;
+  margin: 0;
 }
 
 .tileTop {
@@ -153,4 +153,24 @@ a.lineText:hover {
 
 .alert:hover strong {
   text-decoration: underline;
+}
+
+/* Small Today tiles (sunset now; beach and tides when their sources are approved). */
+.small {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius-tile);
+  background: var(--surface);
+}
+
+.smallLabel {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.smallValue {
+  font-weight: 600;
 }

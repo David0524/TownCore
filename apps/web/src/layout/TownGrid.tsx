@@ -12,18 +12,32 @@ export function TownGrid({
   town,
   kind,
   measure = 'normal',
+  top,
+  railModules,
   children,
 }: {
   town: Town;
   kind: Theme['layout']['grid'];
   measure?: 'normal' | 'wide';
+  /** Full-width area above the columns. */
+  top?: ReactNode;
+  /** Modules shown in the rail above rail.box (homepage). */
+  railModules?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <Grid
       kind={kind}
       measure={measure}
-      rail={kind === 'main-right-rail' ? <Slot town={town} name="rail.box" /> : null}
+      top={top}
+      rail={
+        kind === 'main-right-rail' ? (
+          <>
+            {railModules}
+            <Slot town={town} name="rail.box" />
+          </>
+        ) : null
+      }
     >
       {children}
     </Grid>

@@ -41,9 +41,14 @@ export function ThreeColumn({ town }: PartProps) {
             </p>
           </section>
         </div>
-        <p className={styles.copyright}>
-          © {new Date().getFullYear()} {town.siteName}
-        </p>
+        <div className={styles.signoff}>
+          <p className={styles.wordmark} aria-hidden="true">
+            {town.siteName}
+          </p>
+          <p className={styles.copyright}>
+            © {new Date().getFullYear()} {town.siteName}
+          </p>
+        </div>
       </div>
     </footer>
   );

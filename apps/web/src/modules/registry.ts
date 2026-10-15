@@ -7,6 +7,7 @@ import {
   NewsletterCta,
   TodayBento,
 } from './news';
+import { CategoryButtons, ComingUp, DocumentsPosted, GoodMorning } from './front';
 import type { HomeModuleComponent } from './types';
 
 // Modules whose data arrives in a later milestone. They render nothing until then, exactly
@@ -18,7 +19,11 @@ const awaitingData =
 
 // One component per module in the theme schema; the Record type fails the build on a gap.
 export const homeModules: Record<HomeModule, HomeModuleComponent> = {
+  'good-morning': GoodMorning,
   'today-bento': TodayBento,
+  'category-buttons': CategoryButtons,
+  'coming-up': ComingUp,
+  'documents-posted': DocumentsPosted,
   'lead-story': LeadStory,
   'latest-list': LatestList,
   'beat-sections': BeatSections,
@@ -37,14 +42,25 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
 };
 
 /**
- * The order to render: the theme's list, with newsletter-cta guaranteed among the first two on
- * mobile. If the theme doesn't place it there, it's added at position 2 for mobile only.
+ * The order to render the main column: the theme's list, with newsletter-cta guaranteed among
+ * the first two modules on mobile. With a full-width top band (homeTop), the band's first module
+ * counts as the first, so the CTA is added mobile-only right after it.
  */
 export function homeOrder(
   list: readonly HomeModule[],
+  top: readonly HomeModule[] = [],
 ): Array<{ module: HomeModule; mobileOnly: boolean }> {
   const order = list.map((module) => ({ module, mobileOnly: false }));
-  if (list.indexOf('newsletter-cta') === 0 || list.indexOf('newsletter-cta') === 1) return order;
+  const position = [...top, ...list].indexOf('newsletter-cta');
+  if (position === 0 || position === 1) return order;
+  if (top.length > 0) return order; // the page inserts it into the band (see topBand).
   order.splice(1, 0, { module: 'newsletter-cta', mobileOnly: true });
   return order;
+}
+
+/** Whether the top band needs a mobile-only newsletter CTA after its first module. */
+export function bandNeedsCta(list: readonly HomeModule[], top: readonly HomeModule[]): boolean {
+  if (top.length === 0) return false;
+  const position = [...top, ...list].indexOf('newsletter-cta');
+  return position !== 0 && position !== 1;
 }

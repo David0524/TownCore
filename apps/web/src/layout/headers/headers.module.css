@@ -43,3 +43,85 @@
 .navRow {
   margin-top: 0.5rem;
 }
+
+/* slim-left (coastal-modern): one 68px row on wide screens; nav wraps below on narrow ones. */
+.slim {
+  border-bottom: var(--hairline);
+}
+
+.slimInner {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0.6rem var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'mark end'
+    'nav nav';
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+}
+
+@media (min-width: 64rem) {
+  .slimInner {
+    min-height: 68px;
+    padding-block: 0;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'mark nav end';
+  }
+}
+
+.slimMark {
+  grid-area: mark;
+  min-width: 0;
+}
+
+.slimNav {
+  grid-area: nav;
+  min-width: 0;
+}
+
+.slimNav ul {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+@media (min-width: 64rem) {
+  .slimNav ul {
+    justify-content: center;
+  }
+}
+
+.slimEnd {
+  grid-area: end;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.slimTemp {
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.subscribe {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 1rem;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--background);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.subscribe:hover {
+  text-decoration: underline;
+}

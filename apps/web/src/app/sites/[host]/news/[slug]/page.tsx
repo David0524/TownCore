@@ -14,7 +14,11 @@ import { themeFor } from '@/lib/theme';
 import { formatTownDate, requireTown, resolveTown } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
 import { rssAlternate } from '@/lib/discovery';
-import { roundupFigure } from '@/modules/data';
+import { rankedBeatArticles, roundupFigure } from '@/modules/data';
+import { NewsletterCta } from '@/modules/news';
+import { SectionHeader } from '@/components/news/SectionHeader';
+import { ShareButton } from '@/components/news/ShareButton';
+import { StoryBlock } from '@/components/news/StoryBlock';
 import { JsonLd, newsArticleJsonLd } from '@/lib/structured-data';
 import styles from './article.module.css';
 
@@ -46,11 +50,16 @@ export default async function ArticlePage({ params }: Props) {
 
   const theme = themeFor(town);
   const template = theme.layout.article;
-  const [sourceRecords, corrections, figure] = await Promise.all([
+  const [sourceRecords, corrections, figure, sameBeat] = await Promise.all([
     getSourceRecords(db(), article.sourceRecordIds),
     listArticleCorrections(db(), article.id),
     roundupFigure(article),
+    rankedBeatArticles(town.id, article.beat),
   ]);
+  // Three more from the same section; test fixtures never appear beside real stories.
+  const more = sameBeat
+    .filter((a) => a.id !== article.id && !a.slug.startsWith('test-'))
+    .slice(0, 3);
   const beat = beats.find((b) => b.slug === article.beat);
   const blocks = markdownBlocks(article.bodyMd);
   const slotAfter = new Set(inlineSlotPositions(blocks));
@@ -78,13 +87,21 @@ export default async function ArticlePage({ params }: Props) {
             {article.headline}
           </h1>
           {article.dek ? <p className={styles.dek}>{article.dek}</p> : null}
-          <p className={styles.byline} data-testid="byline">
-            {article.byline}
-          </p>
-          <p className={`${styles.dates} meta`}>
-            Published {formatTownDate(article.publishedAt!, town)}
-            {updated ? ` · Updated ${formatTownDate(updated, town)}` : ''}
-          </p>
+          <div className={styles.bylineRow}>
+            <div>
+              <p className={styles.byline} data-testid="byline">
+                {article.byline}
+              </p>
+              <p className={`${styles.dates} meta`}>
+                Published {formatTownDate(article.publishedAt!, town)}
+                {updated ? ` · Updated ${formatTownDate(updated, town)}` : ''}
+              </p>
+            </div>
+            <ShareButton
+              title={article.headline}
+              url={`https://${town.domain}/news/${article.slug}`}
+            />
+          </div>
         </header>
 
         {corrections.length > 0 ? (
@@ -151,7 +168,26 @@ export default async function ArticlePage({ params }: Props) {
           .
         </p>
 
+        {await NewsletterCta({ town, theme, modules: [] })}
+
         <Slot town={town} name="article.related-businesses" />
+
+        {more.length > 0 ? (
+          <section className={styles.more} aria-labelledby="more-h">
+            <SectionHeader
+              title={`More ${beat?.label.toLowerCase() ?? 'news'}`}
+              href={beat ? `/beat/${beat.slug}` : '/'}
+              id="more-h"
+            />
+            <ul className={styles.moreList}>
+              {more.map((story) => (
+                <li key={story.id}>
+                  <StoryBlock story={story} town={town} variant="list" />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         {grid === 'single-column' ? <Slot town={town} name="rail.box" /> : null}
       </article>
     </TownGrid>

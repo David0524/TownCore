@@ -1,5 +1,19 @@
-.grid {
+.frame {
   flex: 1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Full-width band above the columns: 8 + 4 of 12 on wide screens. */
+.top {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 2rem var(--gutter) 0;
+}
+
+.grid {
   width: 100%;
   margin: 0 auto;
   padding: 2rem var(--gutter) 3rem;

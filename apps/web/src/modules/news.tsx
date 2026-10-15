@@ -9,7 +9,16 @@ import { beats } from '@towncore/config';
 import type { Article } from '@towncore/db';
 import { formatTownDate } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
-import { pickLead, recentArticles, roundupFigure, townWeather } from './data';
+import { SunsetTile } from '@/components/weather/SunsetTile';
+import { townSunset } from '@/lib/sun';
+import {
+  frontSplit,
+  pickLead,
+  recentArticles,
+  roundupFigure,
+  townPoint,
+  townWeather,
+} from './data';
 import type { HomeModuleComponent } from './types';
 import styles from './modules.module.css';
 
@@ -38,12 +47,33 @@ export const LeadStory: HomeModuleComponent = async ({ town, theme }) => {
 };
 
 /** The Today tile: weather now (docs/plans/M4b.md). Hidden when the town has no NWS data. */
-export const TodayBento: HomeModuleComponent = async ({ town }) => {
-  const weather = await townWeather(town.id);
-  if (!weather) return null;
+export const TodayBento: HomeModuleComponent = async ({ town, modules }) => {
+  const [weather, point, articles] = await Promise.all([
+    townWeather(town.id),
+    townPoint(town.id),
+    recentArticles(town.id),
+  ]);
+  const sunset = point ? townSunset(new Date(), town.timezone, point[0], point[1]) : null;
+  const { also } = frontSplit(articles, modules);
+  if (!weather && !sunset && also.length === 0) return null;
   return (
-    <div data-module="today-bento">
-      <WeatherTile town={town} weather={weather} />
+    <div className={styles.today} data-module="today-bento">
+      {weather ? <WeatherTile town={town} weather={weather} /> : null}
+      {sunset ? <SunsetTile town={town} sunset={sunset} /> : null}
+      {also.length > 0 ? (
+        <section aria-labelledby="also-h">
+          <h2 id="also-h" className={`meta ${styles.alsoHeading}`}>
+            Also today
+          </h2>
+          <ul className={styles.list}>
+            {also.map((article) => (
+              <li key={article.id}>
+                <StoryBlock story={article} town={town} variant="list" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 };
@@ -51,9 +81,7 @@ export const TodayBento: HomeModuleComponent = async ({ town }) => {
 const INFEED_EVERY = 6;
 
 export const LatestList: HomeModuleComponent = async ({ town, modules }) => {
-  const articles = await recentArticles(town.id);
-  const lead = modules.includes('lead-story') ? pickLead(articles) : undefined;
-  const items = articles.filter((a) => a.id !== lead?.id).slice(0, 12);
+  const items = frontSplit(await recentArticles(town.id), modules).rest.slice(0, 12);
   if (items.length === 0) return null;
 
   // home.infeed every ~6 items, and once at the end of shorter lists.

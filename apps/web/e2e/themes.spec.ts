@@ -6,12 +6,7 @@ const towns = {
   boca: {
     url: 'http://bocatownsquare.com',
     name: 'Boca Town Square',
-    parts: [
-      'header:stacked-dateline',
-      'nav:beat-tabs',
-      'grid:main-right-rail',
-      'footer:three-column',
-    ],
+    parts: ['header:slim-left', 'nav:beat-tabs', 'grid:main-right-rail', 'footer:three-column'],
   },
   harbor: {
     url: 'http://harborpoint.test',
