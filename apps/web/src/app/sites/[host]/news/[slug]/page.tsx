@@ -11,6 +11,8 @@ import { inlineSlotPositions, markdownBlocks } from '@/lib/markdown';
 import { themeFor } from '@/lib/theme';
 import { formatTownDate, requireTown, resolveTown } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
+import { rssAlternate } from '@/lib/discovery';
+import { JsonLd, newsArticleJsonLd } from '@/lib/structured-data';
 import styles from './article.module.css';
 
 type Props = { params: Promise<{ host: string; slug: string }> };
@@ -27,6 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: article.headline,
     description: article.dek ?? undefined,
+    alternates: { canonical: `/news/${article.slug}`, types: rssAlternate(town) },
     // Test fixtures are never indexable, even on a live town.
     robots: slug.startsWith('test-') ? { index: false, follow: false } : undefined,
   };
@@ -63,6 +66,7 @@ export default async function ArticlePage({ params }: Props) {
   return (
     <TownGrid town={town} kind={grid} measure={wide ? 'wide' : 'normal'}>
       <article data-part={`article:${template}`}>
+        <JsonLd data={newsArticleJsonLd(town, article)} />
         <header className={styles.header}>
           {beat ? (
             <p className={styles.kicker}>

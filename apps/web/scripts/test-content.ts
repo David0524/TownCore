@@ -1,8 +1,20 @@
-import { and, articles, corrections, eq, records, sources, type Db } from '@towncore/db';
+import {
+  and,
+  articleLinks,
+  articles,
+  articleUpdates,
+  corrections,
+  eq,
+  or,
+  records,
+  sources,
+  type Db,
+} from '@towncore/db';
 import { buildByline } from '@towncore/pipeline';
 
-// Clearly labeled test articles for dev and CI (plan: "Test content"). Every slug starts with
-// "test-" (always noindex) and every headline with "[TEST]". Idempotent: re-running replaces them.
+// Clearly labeled test articles for dev and CI (plan: "Test content"). Every headline starts with
+// "[TEST]", and every slug with "test-" (always noindex) except the fictional live Feed Town's
+// "fixture-" stories, which exist to test sitemaps and feeds. Idempotent: re-running replaces them.
 
 const TEST_PLATFORM = 'test-fixture';
 
@@ -14,6 +26,8 @@ type TestStory = {
   paragraphs: string[];
   source: { title: string; url: string };
   correction?: string;
+  /** How long ago it was published. Default 2 hours. */
+  hoursAgo?: number;
 };
 
 const testParagraph = (siteName: string, n: number) =>
@@ -24,6 +38,41 @@ const testParagraph = (siteName: string, n: number) =>
 export function testStories(siteName: string, townSlug: string): TestStory[] {
   const paragraphs = (count: number) =>
     Array.from({ length: count }, (_, i) => testParagraph(siteName, i + 1));
+  if (townSlug === 'feed-town') {
+    // A fictional *live* town for the sitemap and feed tests. "fixture-" slugs are listed like
+    // real stories; the "test-" one must never be.
+    const source = {
+      title: 'Fictional town notice (test source)',
+      url: 'https://example.com/feed-town',
+    };
+    return [
+      {
+        slug: 'fixture-council-vote',
+        headline: '[TEST] Feed Town council approves a sample budget & plan',
+        dek: 'A fictional story for the feed tests. It is not news.',
+        beat: 'government',
+        paragraphs: paragraphs(4),
+        source,
+      },
+      {
+        slug: 'fixture-park-opens',
+        headline: '[TEST] Fictional park reopens',
+        dek: 'Older fictional story: in the sitemap, not in the news sitemap.',
+        beat: 'community',
+        paragraphs: paragraphs(4),
+        source,
+        hoursAgo: 72,
+      },
+      {
+        slug: 'test-never-listed',
+        headline: '[TEST] A test fixture that must never be listed',
+        dek: 'Test slugs are excluded from every sitemap and feed.',
+        beat: 'government',
+        paragraphs: paragraphs(4),
+        source,
+      },
+    ];
+  }
   if (townSlug === 'boca-raton') {
     return [
       {
@@ -60,13 +109,19 @@ export async function seedTestContent(
   town: { id: string; slug: string; siteName: string },
 ) {
   await db.transaction(async (tx) => {
-    // Remove earlier test content for this town (corrections first; they restrict deletes).
+    // Remove earlier test content for this town (rows that reference an article go first).
     const old = await tx
       .select({ id: articles.id, slug: articles.slug })
       .from(articles)
       .where(eq(articles.townId, town.id));
-    for (const article of old.filter((a) => a.slug.startsWith('test-'))) {
+    for (const article of old.filter((a) => /^(test|fixture)-/.test(a.slug))) {
       await tx.delete(corrections).where(eq(corrections.articleId, article.id));
+      await tx.delete(articleUpdates).where(eq(articleUpdates.articleId, article.id));
+      await tx
+        .delete(articleLinks)
+        .where(
+          or(eq(articleLinks.fromArticleId, article.id), eq(articleLinks.toArticleId, article.id)),
+        );
       await tx.delete(articles).where(eq(articles.id, article.id));
     }
     const oldSources = await tx
@@ -83,7 +138,7 @@ export async function seedTestContent(
       .values({ townId: town.id, kind: 'agenda', platform: TEST_PLATFORM, adapter: TEST_PLATFORM })
       .returning();
     for (const story of testStories(town.siteName, town.slug)) {
-      const publishedAt = new Date(Date.now() - 2 * 3_600_000);
+      const publishedAt = new Date(Date.now() - (story.hoursAgo ?? 2) * 3_600_000);
       const [record] = await tx
         .insert(records)
         .values({

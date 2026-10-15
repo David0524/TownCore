@@ -24,6 +24,7 @@ export {
   lt,
   lte,
   ne,
+  not,
   or,
   sql,
 } from 'drizzle-orm';

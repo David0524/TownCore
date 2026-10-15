@@ -23,6 +23,7 @@ function isAdminHost(host: string): boolean {
 }
 
 export const config = {
-  // Skip Next internals and files with an extension (fonts, icons, robots.txt is per-town later).
-  matcher: ['/((?!_next/|favicon.ico|.*\\.[a-zA-Z0-9]+$).*)'],
+  // Pages, plus the per-town discovery files (robots.txt, sitemaps, feeds). Skip Next internals
+  // and other files with an extension (fonts, icons).
+  matcher: ['/((?!_next/|favicon.ico|.*\\.[a-zA-Z0-9]+$).*)', '/((?!_next/).*\\.(?:xml|txt))'],
 };
