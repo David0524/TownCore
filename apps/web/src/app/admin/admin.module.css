@@ -305,3 +305,7 @@
   margin: 0.25rem 0 0;
   white-space: pre-wrap;
 }
+
+.signature {
+  white-space: pre-wrap;
+}

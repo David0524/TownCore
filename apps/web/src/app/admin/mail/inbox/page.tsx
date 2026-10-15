@@ -42,6 +42,9 @@ export default async function Inbox({ searchParams }: Props) {
     <main>
       <KeyboardNav />
       <h1>Inbox</h1>
+      <p>
+        <Link href="/admin/mail/compose">New message</Link>
+      </p>
       <form className={styles.filters} method="get" role="search">
         <label>
           Search

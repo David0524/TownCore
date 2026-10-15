@@ -283,7 +283,8 @@ async function deliver(
         sesMessageId,
         rfcMessageId: seen,
         altMessageIds: [...new Set([...alternates, ourId].filter((id) => id !== seen))],
-        deliveryStatus: 'sent',
+        // The log transport (development, CI) never reaches anyone; say so on the message.
+        deliveryStatus: deps.transport.name === 'log' ? 'logged' : 'sent',
       })
       .where(eq(messages.id, messageId));
   } catch (e) {

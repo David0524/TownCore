@@ -87,6 +87,25 @@ Mail to a domain that isn't live for inbound is dropped (`mail_events.status = '
 reason in `last_error`). Spam (SES verdict FAIL) starts in the spam folder; viruses are kept
 quarantined and their attachments are never extracted.
 
+### Sending replies and new messages
+
+Staff send from the thread page (Reply / Reply all) or from **New message**
+(`/admin/mail/compose`). Pressing Send is the Rule 10 approval for that one message (D-MAIL-11).
+Mail goes out through the conversational configuration set, from the town address, with the
+sender's signature. `MAIL_TRANSPORT=log` (development, CI) writes the message to the server log
+instead and marks it `logged`; production uses SES (the default whenever AWS credentials are
+set).
+
+Delivery status on each sent message follows SES events (sent → delivered, delayed, bounced,
+complained, rejected). A hard bounce or complaint adds a suppression; sending to a suppressed
+address asks for a "Send anyway" confirmation. Failed sends are marked `failed` with the SES
+error, and the draft is kept.
+
+**First live check (once SES production access is granted):** reply from a test domain to an
+outside mailbox, reply to that again, and confirm the answer lands in the same thread. SES
+replaces our Message-ID, so threading depends on the stored SES ids (`messages.rfc_message_id`
+and `alt_message_ids`); if the reply opens a new thread, compare its `In-Reply-To` with those.
+
 ## Rotating credentials
 
 - **App AWS key:** create a second access key for the app user, update it in Vercel and

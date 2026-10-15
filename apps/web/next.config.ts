@@ -13,10 +13,15 @@ const nextConfig: NextConfig = {
     '@towncore/config',
     '@towncore/db',
     '@towncore/email',
+    '@towncore/mail',
     '@towncore/pipeline',
     '@towncore/prompts',
   ],
   poweredByHeader: false,
+  experimental: {
+    // Reply attachments go through a server action (10 MB in total, plus form overhead).
+    serverActions: { bodySizeLimit: '12mb' },
+  },
 };
 
 export default nextConfig;

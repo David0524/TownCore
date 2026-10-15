@@ -1,9 +1,15 @@
+import { mailDomains, signatures } from '@towncore/db';
 import {
   getThread,
   hasRemoteImages,
   inboxFacets,
   markRead,
   messageDocument,
+  parseAddress,
+  pickSignature,
+  renderSignature,
+  replyRecipients,
+  replySubject,
   threadStatuses,
 } from '@towncore/mail';
 import Link from 'next/link';
@@ -12,6 +18,8 @@ import { inlineImageUrl } from '@/lib/admin/inbox';
 import { adminBaseUrl, requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../../../admin.module.css';
+import { sendReplyAction } from '../../compose/actions';
+import { Composer } from '../../compose/Composer';
 import { assignAction, moveTeamAction, noteAction, statusAction } from '../actions';
 import { ThreadKeys } from '../KeyboardNav';
 
@@ -19,7 +27,7 @@ export const metadata = { title: 'Conversation' };
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ images?: string; error?: string }>;
+  searchParams: Promise<{ images?: string; error?: string; sent?: string; reply?: string }>;
 };
 
 const when = (d: Date) =>
@@ -41,13 +49,33 @@ const FAILS = (m: {
 export default async function Conversation({ params, searchParams }: Props) {
   const me = await requireStaff();
   const { id } = await params;
-  const { images, error } = await searchParams;
+  const { images, error, sent, reply } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [thread, facets] = await Promise.all([getThread(db(), id), inboxFacets(db())]);
   if (!thread) notFound();
   await markRead(db(), id, me.id);
   const t = thread.thread;
   const hidden = <input type="hidden" name="threadId" value={t.id} />;
+
+  // Reply defaults: answer the last message from outside; "Reply all" adds its other people.
+  const [domainRows, sigRows] = await Promise.all([
+    db().select({ name: mailDomains.name }).from(mailDomains),
+    db().select().from(signatures),
+  ]);
+  const lastInbound = [...thread.messages].reverse().find((m) => m.direction === 'inbound');
+  const recipients = lastInbound
+    ? replyRecipients(lastInbound, {
+        mode: reply === 'all' ? 'replyAll' : 'reply',
+        ourDomains: new Set(domainRows.map((d) => d.name)),
+      })
+    : { to: [thread.contactEmail], cc: [] };
+  const role = parseAddress(t.townAddress)?.role ?? '';
+  const signature = renderSignature(pickSignature(sigRows, me.id, role), {
+    town_name: thread.displayName,
+    user_name: me.name,
+    role,
+    domain: thread.domainName,
+  });
 
   return (
     <main>
@@ -66,6 +94,11 @@ export default async function Conversation({ params, searchParams }: Props) {
       {error ? (
         <p className={styles.notice} role="alert">
           {error}
+        </p>
+      ) : null}
+      {sent ? (
+        <p className={styles.notice} role="status">
+          Sent from {t.townAddress}.
         </p>
       ) : null}
 
@@ -162,6 +195,12 @@ export default async function Conversation({ params, searchParams }: Props) {
                   : ''}
               </span>
               <span className={styles.badges}>
+                {m.direction === 'outbound' ? (
+                  <span className={styles.badge} data-testid="delivery-status">
+                    {m.deliveryStatus ?? 'unknown'}
+                    {m.deliveryError ? `: ${m.deliveryError}` : ''}
+                  </span>
+                ) : null}
                 {m.spamVerdict === 'FAIL' ? (
                   <span className={styles.badge}>Spam verdict</span>
                 ) : null}
@@ -222,6 +261,28 @@ export default async function Conversation({ params, searchParams }: Props) {
           </article>
         );
       })}
+
+      <section aria-labelledby="reply-heading">
+        <h2 id="reply-heading">
+          {reply === 'all' ? 'Reply all' : 'Reply'} from {t.townAddress}
+        </h2>
+        <p className={styles.actions}>
+          <Link href={`/admin/mail/inbox/${t.id}`}>Reply</Link>
+          <Link href={`/admin/mail/inbox/${t.id}?reply=all`}>Reply all</Link>
+        </p>
+        <Composer
+          key={reply ?? 'reply'}
+          action={sendReplyAction}
+          hidden={{ threadId: t.id }}
+          defaults={{
+            to: recipients.to.join(', '),
+            cc: recipients.cc.join(', '),
+            subject: replySubject(t.subject),
+          }}
+          signature={signature}
+          submitLabel="Send reply"
+        />
+      </section>
 
       <section aria-labelledby="notes-heading">
         <h2 id="notes-heading">Internal notes</h2>
