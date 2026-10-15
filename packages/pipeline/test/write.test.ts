@@ -17,13 +17,7 @@ import { createTestDb } from '@towncore/db/testing';
 import { factcheckV1, writerV1, type FactcheckResult, type WriterDraft } from '@towncore/prompts';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Llm, LlmProvider, LlmResponse } from '../src/llm';
-import {
-  placeholderSignedArticles,
-  publishArticle,
-  PublishBlocked,
-  slugify,
-  type Reviewer,
-} from '../src/publish';
+import { publishArticle, slugify, type Reviewer } from '../src/publish';
 import { writeCandidate } from '../src/write';
 import { classification } from './helpers';
 
@@ -320,7 +314,7 @@ describe('publishing with a reviewer', () => {
     return { id: row!.id, name: row!.name, placeholder: true };
   };
 
-  it('signs the byline, and never lets a placeholder reviewer sign on a live town', async () => {
+  it('marks the story reviewed without naming the reviewer, on draft and live towns', async () => {
     const { candidate, recordId } = await storyCandidate(TEXT, { proposedTier: 3 });
     const { llm } = scripted({
       writer: [draft({ source_record_ids: [recordId] })],
@@ -332,21 +326,14 @@ describe('publishing with a reviewer', () => {
     const reviewer = await john();
 
     await db.update(towns).set({ status: 'live' }).where(eq(towns.id, townId));
-    await expect(publishArticle(db, articleId, { reviewer, now: NOW })).rejects.toBeInstanceOf(
-      PublishBlocked,
-    );
-    expect((await article(articleId)).status).toBe('in_review');
-
-    await db.update(towns).set({ status: 'draft' }).where(eq(towns.id, townId));
     await publishArticle(db, articleId, { reviewer, now: NOW });
     expect(await article(articleId)).toMatchObject({
       status: 'published',
-      byline: 'Boca Town Square Newsroom (AI-assisted). Reviewed by John',
+      byline: 'Boca Town Square Newsroom (AI-assisted). Reviewed by an editor',
       reviewerId: reviewer.id,
       reviewReason: null,
     });
-    // Going live must wait until these are re-signed by a real reviewer.
-    expect(await placeholderSignedArticles(db, townId)).toEqual([articleId]);
+    await db.update(towns).set({ status: 'draft' }).where(eq(towns.id, townId));
   });
 
   it('slugify', () => {

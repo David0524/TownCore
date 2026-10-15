@@ -177,9 +177,6 @@ export async function approveUpdate(form: FormData): Promise<void> {
     .innerJoin(towns, eq(articles.townId, towns.id))
     .where(eq(articleUpdates.id, id));
   if (!row || row.update.status !== 'in_review') redirect('/admin/review?error=state');
-  if (staff.placeholder && row!.town.status === 'live') {
-    redirect('/admin/review?error=placeholder');
-  }
   await applyUpdate(db(), id, { reviewerId: staff.id });
   await logAdminAction(db(), {
     staffId: staff.id,

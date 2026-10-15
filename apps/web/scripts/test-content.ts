@@ -2,10 +2,12 @@ import {
   and,
   articleLinks,
   articles,
+  articleStatsDaily,
   articleUpdates,
   corrections,
   eq,
   or,
+  pins,
   records,
   sources,
   type Db,
@@ -117,6 +119,8 @@ export async function seedTestContent(
     for (const article of old.filter((a) => /^(test|fixture)-/.test(a.slug))) {
       await tx.delete(corrections).where(eq(corrections.articleId, article.id));
       await tx.delete(articleUpdates).where(eq(articleUpdates.articleId, article.id));
+      await tx.delete(pins).where(eq(pins.articleId, article.id));
+      await tx.delete(articleStatsDaily).where(eq(articleStatsDaily.articleId, article.id));
       await tx
         .delete(articleLinks)
         .where(

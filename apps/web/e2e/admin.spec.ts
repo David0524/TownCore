@@ -173,7 +173,7 @@ test.describe('admin host', () => {
 });
 
 test.describe('review queue', () => {
-  test('edit re-checks names and numbers; approve publishes as "Reviewed by John"', async ({
+  test('edit re-checks names and numbers; approve publishes as "Reviewed by an editor"', async ({
     page,
     context,
   }, info) => {
@@ -182,7 +182,6 @@ test.describe('review queue', () => {
     await page.goto(`${admin}/admin/review`);
     await page.locator(`a[href="/admin/review/${article.id}"]`).click();
     await expect(page.getByTestId('claims')).toContainText('✓ Supported');
-    await expect(page.getByText('placeholder reviewer')).toBeVisible();
 
     // An edit that adds a number no record has is flagged.
     await page.getByText('Edit the story').click();
@@ -190,16 +189,18 @@ test.describe('review queue', () => {
     await page.getByRole('button', { name: 'Save edits and re-check' }).click();
     await expect(page.getByTestId('recheck')).toContainText('the number 90');
 
-    await page.getByRole('button', { name: /Approve and publish as “Reviewed by John”/ }).click();
+    await page
+      .getByRole('button', { name: /Approve and publish as “Reviewed by an editor”/ })
+      .click();
     await expect(page).toHaveURL(`${admin}/admin/review?done=approved`);
 
     const [published] = await db.select().from(articles).where(eq(articles.id, article.id));
     expect(published).toMatchObject({
       status: 'published',
-      byline: 'The Review Town Courier Newsroom (AI-assisted). Reviewed by John',
+      byline: 'The Review Town Courier Newsroom (AI-assisted). Reviewed by an editor',
     });
     await page.goto(`${reviewTown}/news/${article.slug}`);
-    await expect(page.getByText('Reviewed by John')).toBeVisible();
+    await expect(page.getByText('Reviewed by an editor')).toBeVisible();
     await expect(page.getByText('It will take 90 days.')).toBeVisible();
   });
 

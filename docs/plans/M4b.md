@@ -28,8 +28,8 @@ Later, with the milestones that bring their data: `quick-poll` (M5, results go i
 | # | Question | My recommendation |
 | --- | --- | --- |
 | D-M4b-1 | **Vote extraction** (open question 1). | Hide `recent-votes` and `VoteBars` for now. Boca's minutes are on Granicus, which we can't fetch, so there's nothing to extract from. Build extraction when a town has a fetchable minutes source, alongside data graphics. |
-| D-M4b-2 | **Reviewer names** (open question 2). | Keep "Reviewed by {name}" (Rule 2 and D-M3-3). A role label like "Reviewed by an editor" would weaken Rule 2, so it needs your explicit call. The placeholder "John" stays blocked on live towns. |
-| D-M4b-3 | **Extra data for the Today tiles:** tides and water temperature (NOAA CO-OPS), UV index (EPA), rip-current risk (NWS surf zone forecast). | Ship the weather tile on NWS data first, since NWS is already allowed. I'll check each API's terms and robots.txt, then ask you before adding any to the documented-API list, as with NWS and Sunbiz. |
+| D-M4b-2 | **Reviewer names** (open question 2). | **Decided by the owner:** bylines say "Reviewed by an editor"; Rule 2 is updated and the reviewer is recorded internally. |
+| D-M4b-3 | **Extra data for the Today tiles:** tides and water temperature (NOAA CO-OPS), UV index (EPA), rip-current risk (NWS surf zone forecast). | **Agreed by the owner:** the weather tile ships on NWS data first; each extra source is added only after a terms and robots.txt check and the owner's OK. |
 | D-M4b-4 | **Categories vs beats.** Readers see News, Events, Dining, Things to do, Businesses, Homes and Schools; the pipeline uses beats. | Beats stay the editorial unit (tiers, freshness, budget). Categories are a reader-facing grouping: News covers government, development, public safety and business news. A category appears only once it has content or a directory behind it, so no empty fronts. |
 | D-M4b-5 | **All-caps text.** iOS grouped lists use all-caps section headers; §11a bans all-caps eyebrows. | Allow all-caps only as grouped-list section headers on phones, never over headlines. |
 

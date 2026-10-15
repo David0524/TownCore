@@ -54,7 +54,6 @@ export {
 } from './factcheck';
 export {
   getReviewer,
-  placeholderSignedArticles,
   publishArticle,
   PublishBlocked,
   slugify,
