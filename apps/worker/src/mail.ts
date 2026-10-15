@@ -8,14 +8,19 @@ import {
   pgOnboardingStore,
   processDueEvents,
   processReceivedNotification,
+  refreshAccountStatus,
+  runAlerts,
   runAutoPause,
   runWarmupDay,
   s3MailStore,
   sendDueBatches,
+  sesAccount,
   sesIdentities,
   sesTransport,
   SENDING_EVENT_TYPES,
+  type AccountReader,
   type BulkDeps,
+  type MailTransport,
   type EventHandler,
   type IdentityProvider,
   type MailObjectStore,
@@ -152,14 +157,60 @@ export function bulkFromEnv(db: Db): BulkDeps | null {
   };
 }
 
-/** Every 15 minutes: auto-pause on bad bounce or complaint rates, and the daily warm-up step. */
-export async function runBulkHealth(db: Db, logger: Logger, now = new Date()): Promise<void> {
+export type OpsDeps = {
+  /** SES GetAccount; null without AWS credentials. */
+  account: AccountReader | null;
+  /** How alert emails leave (staff only); null logs alerts without emailing them. */
+  alertMail: { transport: MailTransport; configurationSet: string } | null;
+};
+
+/** Account reader and alert mail from the environment (Mail-6). */
+export function opsFromEnv(): OpsDeps {
+  const env = loadEnv();
+  const region = env.AWS_REGION ?? 'us-east-1';
+  const mode = env.MAIL_TRANSPORT ?? (env.AWS_ACCESS_KEY_ID ? 'ses' : null);
+  return {
+    account: env.AWS_ACCESS_KEY_ID ? sesAccount({ region }) : null,
+    alertMail:
+      mode === 'log'
+        ? { transport: logTransport(), configurationSet: 'log' }
+        : mode === 'ses' && env.SES_CONFIG_SET_CONVERSATIONAL
+          ? {
+              transport: sesTransport({ region }),
+              configurationSet: env.SES_CONFIG_SET_CONVERSATIONAL,
+            }
+          : null,
+  };
+}
+
+/**
+ * Every 15 minutes: auto-pause on bad bounce or complaint rates, the daily warm-up step, the
+ * SES account status, and mail health alerts (Mail-6).
+ */
+export async function runBulkHealth(
+  db: Db,
+  logger: Logger,
+  now = new Date(),
+  ops: OpsDeps = { account: null, alertMail: null },
+): Promise<void> {
   const paused = await runAutoPause(db, now);
   for (const p of paused.paused) logger.warn(p, 'bulk mail auto-paused for a domain');
   if (paused.network)
     logger.error({ reason: paused.network }, 'bulk mail auto-paused for every town');
   const ramp = await runWarmupDay(db, now);
   if (ramp.length) logger.info({ domains: ramp }, 'warm-up step');
+  if (ops.account) {
+    try {
+      const status = await refreshAccountStatus(db, ops.account, now);
+      if (status.enforcementStatus !== 'HEALTHY')
+        logger.error(status, 'SES account is not HEALTHY');
+    } catch (error) {
+      logger.error({ err: error }, 'SES GetAccount failed');
+    }
+  }
+  const alerts = await runAlerts(db, ops.alertMail, now);
+  for (const c of alerts.opened) logger.warn(c, 'mail alert opened');
+  for (const key of alerts.resolved) logger.info({ key }, 'mail alert resolved');
 }
 
 /**

@@ -34,6 +34,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <Link href="/admin/mail/subscribers">Subscribers</Link>
             <Link href="/admin/mail/campaigns">Campaigns</Link>
             <Link href="/admin/mail/domains">Mail domains</Link>
+            <Link href="/admin/mail/health">Mail health</Link>
             <Link href="/admin/account">{staff.name}</Link>
             <form action={signOut}>
               <button type="submit">Sign out</button>

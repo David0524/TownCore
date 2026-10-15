@@ -148,6 +148,13 @@
       "when": 1792100371454,
       "tag": "0020_newsletter",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792103692336,
+      "tag": "0021_mail_alerts",
+      "breakpoints": true
     }
   ]
 }

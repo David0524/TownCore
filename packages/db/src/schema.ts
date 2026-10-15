@@ -1264,3 +1264,26 @@ export const newsletterTesters = pgTable(
   },
   (t) => [primaryKey({ columns: [t.domainId, t.staffId] })],
 );
+
+// Mail health alerts (docs/plans/MAIL.md, Mail-6). One open row per condition (its key); the
+// worker resolves it when the condition clears. Emailed to admins when new, then once a day.
+export const mailAlerts = pgTable(
+  'mail_alerts',
+  {
+    id: id(),
+    key: text('key').notNull(),
+    severity: text('severity').notNull(),
+    message: text('message').notNull(),
+    firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+    lastNotifiedAt: timestamp('last_notified_at', { withTimezone: true }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedNotifiedAt: timestamp('resolved_notified_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('mail_alerts_open_key_uq')
+      .on(t.key)
+      .where(sql`${t.resolvedAt} is null`),
+    check('mail_alerts_severity', sql`${t.severity} in ('warning', 'critical')`),
+  ],
+);

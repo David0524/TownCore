@@ -237,3 +237,24 @@ export {
   unpauseDomainBulk,
   type ImportPlan,
 } from './bulk/admin';
+
+// Monitoring and operations (Mail-6)
+export {
+  refreshAccountStatus,
+  sesAccount,
+  storedAccountStatus,
+  type AccountReader,
+  type SesAccountStatus,
+} from './ops/account';
+export {
+  ACCOUNT_WARN,
+  alertRecipients,
+  currentConditions,
+  notifyAlerts,
+  runAlerts,
+  syncAlerts,
+  type AlertRun,
+  type Condition,
+} from './ops/alerts';
+export { mailHealthSnapshot, rate, SES_REVIEW, type StreamTotals } from './ops/health';
+export { ALERT_FROM, NotStaffAddress, sendStaffEmail } from './ops/staff-email';
