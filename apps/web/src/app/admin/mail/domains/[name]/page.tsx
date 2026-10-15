@@ -5,18 +5,19 @@ import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../../../admin.module.css';
 import { requestRecheck } from '../../actions';
+import { newsletterApprovalAction, unpauseAction } from '../../bulk-actions';
 
 export const metadata = { title: 'Mail domain' };
 
 type Props = {
   params: Promise<{ name: string }>;
-  searchParams: Promise<{ recheck?: string }>;
+  searchParams: Promise<{ recheck?: string; error?: string; done?: string }>;
 };
 
 export default async function MailDomain({ params, searchParams }: Props) {
-  await requireStaff();
+  const me = await requireStaff();
   const name = decodeURIComponent((await params).name);
-  const { recheck } = await searchParams;
+  const { recheck, error, done } = await searchParams;
   const [domain] = await db().select().from(mailDomains).where(eq(mailDomains.name, name));
   if (!domain) notFound();
   const [identities, records, steps] = await Promise.all([
@@ -58,6 +59,52 @@ export default async function MailDomain({ params, searchParams }: Props) {
           Re-check SES status
         </button>
       </form>
+
+      <h2>Bulk mail</h2>
+      {error ? (
+        <p className={styles.notice} role="alert">
+          {error}
+        </p>
+      ) : null}
+      {done ? (
+        <p className={styles.notice} role="status">
+          {done}
+        </p>
+      ) : null}
+      <p data-testid="bulk-status">
+        {domain.bulkStatus} · cap {domain.bulkDailyCap} a day (target {domain.bulkTargetCap}) ·
+        warm-up day {domain.warmupDay}
+        {domain.pausedReason ? ` · ${domain.pausedReason}` : ''}
+      </p>
+      <p>
+        Daily newsletter:{' '}
+        {domain.newsletterApprovedAt
+          ? `approved ${domain.newsletterApprovedAt.toISOString().slice(0, 10)}`
+          : 'not approved (issues won’t send)'}
+      </p>
+      {me.role === 'admin' && domain.townId ? (
+        <div className={styles.actions}>
+          <form action={newsletterApprovalAction}>
+            <input type="hidden" name="name" value={domain.name} />
+            <input type="hidden" name="domainId" value={domain.id} />
+            <input type="hidden" name="on" value={domain.newsletterApprovedAt ? 'no' : 'yes'} />
+            <button className={styles.secondary} type="submit">
+              {domain.newsletterApprovedAt
+                ? 'Withdraw the daily newsletter approval'
+                : 'Approve the daily newsletter'}
+            </button>
+          </form>
+          {domain.bulkStatus === 'paused' ? (
+            <form action={unpauseAction}>
+              <input type="hidden" name="name" value={domain.name} />
+              <input type="hidden" name="domainId" value={domain.id} />
+              <button className={styles.button} type="submit">
+                Unpause bulk mail
+              </button>
+            </form>
+          ) : null}
+        </div>
+      ) : null}
 
       <h2>SES identities</h2>
       <table className={styles.table} data-testid="mail-identities">

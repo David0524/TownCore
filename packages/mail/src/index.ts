@@ -190,6 +190,7 @@ export {
   buildConfirmationMime,
   bulkFromAddress,
   bulkHeaders,
+  campaignPreviewHtml,
   markdownToHtml,
   renderVars,
   unsubscribeUrls,
@@ -228,3 +229,11 @@ export {
   sendDueBatches,
   type BatchResult as BulkBatchResult,
 } from './bulk/sender';
+export {
+  applyImport,
+  parseImportList,
+  planImport,
+  resumeNetworkBulk,
+  unpauseDomainBulk,
+  type ImportPlan,
+} from './bulk/admin';

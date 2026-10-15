@@ -22,7 +22,8 @@
     "evals": "pnpm --filter @towncore/pipeline evals",
     "stories:once": "pnpm --filter @towncore/pipeline stories:once",
     "mail:routing:sync": "pnpm --filter @towncore/db mail:routing:sync",
-    "mail:onboard": "pnpm --silent --filter @towncore/mail onboard"
+    "mail:onboard": "pnpm --silent --filter @towncore/mail onboard",
+    "mail:import": "pnpm --silent --filter @towncore/mail import"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

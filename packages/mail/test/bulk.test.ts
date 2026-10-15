@@ -43,6 +43,8 @@ import {
   verifyUnsubscribeToken,
 } from '../src/bulk/tokens';
 import { nextWarmup, underCap, warmupCap } from '../src/bulk/warmup';
+import { unpauseDomainBulk } from '../src/bulk/admin';
+import { runImportCommand } from '../src/cli/import';
 import { handleSendingEvent } from '../src/outbound/events';
 import type { MailTransport, SendRequest } from '../src/outbound/transport';
 
@@ -647,5 +649,62 @@ describe('newsletters against Postgres', () => {
     expect(await runWarmupDay(db, new Date('2026-10-24T01:00:00Z'))).toEqual([
       { domain: 'boca.test', change: 'held', cap: 50 },
     ]);
+  });
+
+  it('unpausing needs an admin and is audited', async () => {
+    const harbor = ids['harbor.test']!;
+    await expect(unpauseDomainBulk(db, reviewer, harbor)).rejects.toThrow(CampaignError);
+    await unpauseDomainBulk(db, admin, harbor);
+    const [d] = await db.select().from(mailDomains).where(eq(mailDomains.id, harbor));
+    expect(d).toMatchObject({ bulkStatus: 'warming', pausedReason: null });
+    await expect(unpauseDomainBulk(db, admin, harbor)).rejects.toThrow(/isn’t paused/);
+    const audit = await db
+      .select()
+      .from(adminActions)
+      .where(eq(adminActions.action, 'bulk_unpause'));
+    expect(audit).toHaveLength(1);
+  });
+
+  it('the import CLI is a dry run until an admin approves, and never changes existing rows', async () => {
+    const lines: string[] = [];
+    const list =
+      'Email,Name\nfresh1@example.com,A\nFRESH2@example.com,B\nh1@example.com,C\nnope,D\n';
+    const run = (extra: string[]) =>
+      runImportCommand(
+        [
+          '--town',
+          'harbor',
+          '--file',
+          'list.csv',
+          '--consent-source',
+          'Signed up at the 2026 street fair',
+          ...extra,
+        ],
+        { db, out: (l) => lines.push(l), read: async () => list },
+      );
+    expect(await run([])).toBe(0);
+    expect(lines.join('\n')).toMatch(/2 to add, 1 already on the list .*, 1 invalid[\s\S]*Dry run/);
+    expect(
+      await db.select().from(subscribers).where(eq(subscribers.email, 'fresh1@example.com')),
+    ).toHaveLength(0);
+
+    expect(await run(['--approved-by', 'rae@towncore.net'])).toBe(1);
+    expect(lines.at(-1)).toMatch(/isn’t an active admin/);
+
+    const [before] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.email, 'h1@example.com'));
+    expect(await run(['--approved-by', 'ED@towncore.net'])).toBe(0);
+    const added = await db.select().from(subscribers).where(eq(subscribers.source, 'import'));
+    expect(added.map((a) => [a.email, a.status, a.consentSource])).toEqual([
+      ['fresh1@example.com', 'active', 'Signed up at the 2026 street fair'],
+      ['fresh2@example.com', 'active', 'Signed up at the 2026 street fair'],
+    ]);
+    const [after] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.email, 'h1@example.com'));
+    expect(after).toEqual(before);
   });
 });

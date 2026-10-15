@@ -153,7 +153,51 @@ pnpm mail:onboard retry testtown.com --execute     # after fixing whatever faile
   "Re-check SES status" button asks the worker to look again on its next tick. If SES gives up (DKIM or MAIL FROM `FAILED`),
   the domain fails with the reason; check the records in Vercel, then `retry`.
 
-## Unpausing a domain _(Mail-5)_
+## Newsletters and bulk mail
+
+**Before a town takes signups**, all of these must hold (otherwise its site keeps saying
+"launching soon"):
+- its mail domain is `live` and bulk is `warming` or `active` (onboarding sets `warming`);
+- `SES_CONFIG_SET_BULK`, `MAIL_TOKEN_SECRET` and a postal address (`MAIL_POSTAL_ADDRESS`, or
+  the domain's own) are set;
+- bulk mail isn't paused for every town.
+
+**Sending.** Staff write campaigns in Admin → Campaigns (Markdown, with `{{site_name}}`,
+`{{town_name}}` and `{{domain}}`). "Send a test to me" goes only to the person pressing it. An
+admin presses "Approve send" (Rule 10), now or at a UTC time; the worker then sends in batches
+under the domain's daily cap. Templates make one draft per chosen town. The daily newsletter
+(M5) sends only on domains whose page shows "Daily newsletter: approved", a switch an admin
+turns on per domain.
+
+**Warm-up.** New domains start at 50 a day; the cap doubles every 3 healthy days up to the
+target (50,000 by default). A day over the thresholds holds the ramp; two in a row step it back.
+Sends over the cap wait for the next UTC day and go first.
+
+**Imports** need the owner's approval and a written consent source:
+
+```sh
+pnpm mail:import --town boca-raton --file list.csv --consent-source "Signed up at the 2026 street fair"
+# Dry run: prints what it would add. Then, once the owner approves the list:
+pnpm mail:import --town boca-raton --file list.csv --consent-source "…" --approved-by owner@towncore.net
+```
+
+Only an active admin can approve. Existing subscribers are never changed; the import is audited.
+
+## Unpausing a domain
+
+The worker pauses a domain's bulk mail when, over the last 7 days and at least 100 sends,
+bounces pass 3% or complaints pass 0.08%. Its sending campaigns pause too; replies are never
+paused. The reason is shown on the domain's page.
+
+1. Find out why: look at the bounce and complaint events for the domain (`email_events` with
+   its `domain_id`) and the campaigns sent in that week.
+2. Fix the cause (a bad import, a broken signup form, content people report as spam).
+3. An admin presses "Unpause bulk mail" on the domain page. It goes back to warming (or active
+   if its ramp had finished); paused campaigns are resumed one by one from their pages.
+
+If all mail together passes 4% bounces or 0.08% complaints, bulk mail pauses for every town
+(Admin → Campaigns shows the reason). SES reviews accounts at 5% and 0.1%, so treat this as
+urgent: find the cause before an admin presses "Resume bulk mail for every town".
 
 ## Handling an SES account review _(Mail-6)_
 

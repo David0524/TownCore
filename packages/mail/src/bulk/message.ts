@@ -125,11 +125,11 @@ export async function buildConfirmationMime(input: {
   const foot = footer(brand, null);
   const subject = `Confirm your subscription to ${brand.siteName}`;
   const text =
-    `Please confirm that you want the ${brand.siteName} newsletter by opening this link:\n\n` +
+    `Please confirm that you want the daily newsletter from ${brand.siteName} by opening this link:\n\n` +
     `${input.confirmUrl}\n\n` +
     `If you didn't ask for it, ignore this email and you won't hear from us again.`;
   const html =
-    `<p>Please confirm that you want the ${esc(brand.siteName)} newsletter.</p>` +
+    `<p>Please confirm that you want the daily newsletter from ${esc(brand.siteName)}.</p>` +
     `<p><a href="${esc(input.confirmUrl)}" style="font-weight:bold">Confirm my subscription</a></p>` +
     `<p>If you didn’t ask for it, ignore this email and you won’t hear from us again.</p>`;
   return compile(
@@ -143,5 +143,16 @@ export async function buildConfirmationMime(input: {
       messageId: `<${newMessageId(`news.${brand.domain}`)}>`,
       headers: { 'Auto-Submitted': 'auto-generated', 'X-Auto-Response-Suppress': 'All' },
     }),
+  );
+}
+
+/** What staff see in the admin: the email body in the same wrapper, with a note for the footer. */
+export function campaignPreviewHtml(bodyHtml: string): string {
+  const note =
+    '<hr style="border:0;border-top:1px solid #ccc;margin:32px 0 16px">' +
+    '<p style="font-size:13px;color:#555">Added when sent: the unsubscribe link and the postal address.</p>';
+  return page(`${bodyHtml}${note}`).replace(
+    '<head>',
+    `<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'">`,
   );
 }

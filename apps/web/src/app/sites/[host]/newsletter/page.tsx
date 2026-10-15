@@ -20,15 +20,15 @@ export default async function NewsletterPage({
   const open = await newsletterOpen(town);
   return (
     <StandardPage town={town}>
-      <h1 id="signup">The {town.siteName} newsletter</h1>
+      <h1 id="signup">The daily newsletter</h1>
       {message && (
         <p className={styles.notice} role={message.tone === 'error' ? 'alert' : 'status'}>
           {message.text}
         </p>
       )}
       <p>
-        Every morning: the weather, what happened in {town.name} yesterday, what’s coming up, and
-        links to every record we wrote from. Free.
+        Every morning, {town.siteName} sends the weather, what happened in {town.name} yesterday,
+        what’s coming up, and links to every record we wrote from. It’s free.
       </p>
       {open ? (
         <NewsletterForm source="/newsletter" />
