@@ -1,6 +1,12 @@
 // Source adapters, one folder per PLATFORM (CLAUDE.md §9), plus the ingest framework.
 import './adapters';
-export { Fetcher, FetchPolicyError, type FetchFn, type FetcherOptions } from './http/fetcher';
+export {
+  Fetcher,
+  FetchPolicyError,
+  NotModified,
+  type FetchFn,
+  type FetcherOptions,
+} from './http/fetcher';
 export { recordingFetch, replayFetch, type FixtureFile } from './http/fixtures';
 export { isBlockedUrl, USER_AGENT } from './http/policy';
 export {
@@ -18,3 +24,4 @@ export { DOCUMENTED_APIS, documentedApi } from './http/policy';
 export { nwsAdapter } from './nws';
 export { civicplusAdapter } from './civicplus';
 export { parseIcal, zonedTimeToUtc } from './lib/ical';
+export { flDbprAdapter } from './fl-dbpr';

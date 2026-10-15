@@ -182,3 +182,21 @@ describe('schedules', () => {
     expect(defaultSchedule('events', 'civicplus')).toBe('1h');
   });
 });
+
+describe('NotModified', () => {
+  it('counts as a healthy run with no items, never as degraded', async () => {
+    const { NotModified } = await import('../src/http/fetcher');
+    const fake = fakeAdapter();
+    const source = await newSource();
+    for (let i = 0; i < 3; i++) {
+      fake.returns([item(`n${i}`)]);
+      await ingestSource(db, await reload(source.id), fake.adapter, fetcher);
+    }
+    fake.throws(new NotModified('unchanged'));
+    expect(await ingestSource(db, await reload(source.id), fake.adapter, fetcher)).toMatchObject({
+      status: 'ok',
+      items: 0,
+    });
+    expect(await reload(source.id)).toMatchObject({ health: 'ok', lastError: null });
+  });
+});

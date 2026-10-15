@@ -27,6 +27,10 @@ sources:
     platform: civicplus
     url: https://www.myboca.us/
     options: { module: newsflash, catId: All-newsflash.xml }
+  # Verified 2026-10-15: Florida DBPR licensee files (contractors, electricians), filtered to the city.
+  - kind: business_filings
+    platform: fl-dbpr
+    options: { city: BOCA RATON }
   # Verified 2026-10-15: NWS Miami zone FLZ168, Coastal Palm Beach County (names Boca Raton).
   - kind: weather
     platform: nws
