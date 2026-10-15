@@ -47,11 +47,11 @@ These protect us from Google spam actions, lawsuits and press exposés. Code mus
 | Scraping | fetch + cheerio first; Playwright only when a site needs JavaScript |
 | Documents | Send PDFs directly to Claude when parsing is hard; otherwise pdf text extraction |
 | AI | Anthropic TypeScript SDK. Model routing in Section 8 |
-| Email | A transactional/bulk provider with an API (Resend or Amazon SES — pick one, abstract behind `packages/email`) |
+| Email | Amazon SES (v2) for all sending and receiving, behind `packages/mail`; one shared staff inbox for every town domain (`docs/plans/MAIL.md`, brief in `docs/mail/BRIEF.md`) |
 | Payments | Stripe (Checkout + Billing + webhooks) |
-| DNS/CDN | Cloudflare |
+| DNS | Vercel DNS for every town domain, managed through the Vercel REST API |
 | Hosting | Web on Vercel (multi-domain); worker on Railway or Fly. Keep infra choices behind small interfaces |
-| Staff auth | Email magic link, staff-only admin at `/admin` |
+| Staff auth | Google sign-in limited to the company Workspace domain plus the `staff` allow-list, staff-only admin at `/admin` (magic link in local development only) |
 | Tests | Vitest; recorded HTTP fixtures for every adapter |
 
 ---
@@ -69,6 +69,8 @@ packages/
   prompts/        # versioned prompt files + eval sets
   launcher/       # town launcher CLI
   email/          # newsletter build + provider abstraction
+  mail/           # SES inbox, replies, bulk sending, suppression, domain onboarding CLI
+  infra/          # AWS infrastructure as code (CDK): S3, SNS, SES receipt rule, config sets, IAM
   directory/      # listings, seeding, claim flow, Stripe products
   config/         # town config schema (zod) + loader
 towns/            # one YAML config per town, e.g. towns/fl/boca-raton.yaml
@@ -88,10 +90,11 @@ docs/plans/       # milestone plans written before coding
 - `businesses` — id, town_id, name, category, address, phone, website, license_type, license_number, license_verified, data_source, claimed_by_email, claimed_at
 - `placements` — id, business_id, town_id, product (`enhanced|sponsored_slot|exclusive|newsletter|spotlight`), category, stripe_subscription_id, starts_at, ends_at, status
 - `leads` — id, business_id, kind (`call|form`), meta, created_at
-- `subscribers` — id, town_id, email, status, consent_at, source
+- `subscribers` — id, town_id, email, status (`pending|active|unsubscribed|bounced|complained`), consent_at, consent_source, consent_ip, confirmed_at, unsubscribed_at, last_engaged_at, source
 - `newsletter_issues` — id, town_id, date, article_ids[], sponsor_placement_id, sent_at, stats
 - `ai_usage` — id, town_id, job, model, input_tokens, output_tokens, est_cost_usd, created_at
-- `staff` — id, email, name, role (`admin|reviewer`)
+- `staff` — id, email, name, role (`admin|reviewer`), active
+- Mail (`docs/plans/MAIL.md`): `teams`, `team_members`, `role_addresses`, `signatures`, `mail_domains` (town_id), `domain_identities`, `dns_records`, `onboarding_runs`/`onboarding_steps`, `contacts`, `threads`, `messages`, `attachments`, `notes`, `email_campaign_templates`, `email_campaigns`, `email_campaign_sends`, `suppressions`, `email_events`, `domain_health_daily`. `admin_actions` is the audit log for all staff actions
 - `entities`, `article_entities`, `article_scores`, `pins`, `skipped_candidates` — editorial selection and ranking (Section 6a)
 - `images` — id, kind, source_url, license, attribution, ai_generated, approved_by (Section 11c)
 - `town_candidates` — id, town, state, inputs (jsonb), score, status (`proposed|approved|rejected|live`) (Section 10a)
@@ -564,6 +567,7 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
 - 2026-10-15 — **Gemini as the development model provider (owner's call; §3 stack change).** No Anthropic key yet, so development and the first Boca runs use a free-tier Gemini key (`GEMINI_API_KEY`, Interactions API on `generativelanguage.googleapis.com`). Production keeps Claude (§8) unless the owner decides otherwise. Both providers sit behind `packages/pipeline/src/llm.ts`; `LLM_PROVIDER` picks one (default: Anthropic if its key is set). Trade-offs accepted: free-tier inputs may be used by Google and read by its reviewers (we send public records and drafts only, never private data); about 1,500 requests a day, guarded by a per-town daily call cap; prompts and evals need re-tuning on Claude, so the hard checks (verbatim quotes, exact names and numbers, tier rules) stay in code.
 - 2026-10-15 — **Placeholder reviewer "John" (D-M3-3).** Until a real reviewer is named, approved stories read "Reviewed by John". John is a staff row marked as a placeholder, and code blocks publishing under a placeholder reviewer on any live town (Rule 2: bylines must be honest). Replacing him is a config change.
 - 2026-10-15 — **State records give a mailing city, not a municipality.** Sunbiz and DBPR filter on the address city ("BOCA RATON"), which includes areas outside city limits (West Boca). Roundups therefore say "with a {Town} mailing address" and note it can be outside city limits, instead of claiming the business is in the city. Exact city limits need parcel or geocoded lookups, planned with the directory (M6); a ZIP list was considered and rejected because several ZIPs straddle the boundary.
+- 2026-10-15 — **Mail platform plan approved** (`docs/plans/MAIL.md`, brief `docs/mail/BRIEF.md`; owner: "make your best judgment"). All recommendations taken: SES for all email incl. staff sign-in, replacing Resend (D-MAIL-1); Google sign-in for `/admin`, allow-list in `staff`, magic link dev-only (D-MAIL-2); teams added to `staff`, no `users` table (D-MAIL-3); `mail_domains` linked to `towns` (D-MAIL-4); brief's campaign tables named `email_campaign*`, `admin_actions` widened into the one audit log (D-MAIL-5); `subscribers` extended, keyed by town (D-MAIL-6); Mail-5 is M5's sending layer, newsletter from `newsletter@news.<domain>` with Reply-To `news@<domain>` (D-MAIL-7); `news@{domain}` received by SES and routed to Editorial, no per-domain forwarding (D-MAIL-8); Vercel DNS for every town (D-MAIL-9); Postgres stays on Railway, backups confirmed before real subscribers (D-MAIL-10); Rule 10: staff replies are approved by pressing Send, daily newsletters need a standing per-town approval, one-off campaigns an "Approve send" click, double opt-in confirmations are a standing rate-limited exception (D-MAIL-11); two shared SES configuration sets per environment with domain/stream tags (D-MAIL-12); no SES tenants in v1, revisit near 50 towns (D-MAIL-13); decisions and status stay here, runbook in `docs/mail/RUNBOOK.md` (D-MAIL-14).
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.
