@@ -8,6 +8,19 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:check": "drizzle-kit check",
+    "db:migrate": "tsx src/scripts/migrate.ts",
+    "towns:sync": "tsx src/scripts/sync-towns.ts"
+  },
+  "dependencies": {
+    "@towncore/config": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15"
   }
 }

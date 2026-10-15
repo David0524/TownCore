@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { z } from 'zod';
 
 // The only module allowed to read process.env (enforced by ESLint).
@@ -47,4 +48,10 @@ export function requireEnv<K extends keyof Env>(key: K, env: Env = loadEnv()): N
     throw new Error(`Missing required environment variable ${key}. See .env.example.`);
   }
   return value as NonNullable<Env[K]>;
+}
+
+/** Loads the repo-root .env into process.env for local scripts, if the file exists. */
+export function loadDotEnv(file: URL = new URL('../../../.env', import.meta.url)): void {
+  if (existsSync(file)) process.loadEnvFile(file);
+  cached = undefined;
 }
