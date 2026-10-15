@@ -769,3 +769,166 @@ export const onboardingSteps = pgTable(
   },
   (t) => [uniqueIndex('onboarding_steps_domain_step_uq').on(t.domainId, t.step)],
 );
+
+// Conversations: the shared inbox (docs/plans/MAIL.md, Mail-2+). One thread is one conversation
+// between a contact and one exact town address, owned by a central team.
+export const threadStatus = pgEnum('thread_status', ['open', 'pending', 'closed', 'spam']);
+export const messageDirection = pgEnum('message_direction', ['inbound', 'outbound']);
+export const mailEventStatus = pgEnum('mail_event_status', [
+  'pending',
+  'done',
+  'dropped',
+  'failed',
+]);
+
+export const contacts = pgTable(
+  'contacts',
+  {
+    id: id(),
+    email: text('email').notNull().unique(),
+    name: text('name'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [check('contacts_email_lower', sql`${t.email} = lower(${t.email})`)],
+);
+
+export const threads = pgTable(
+  'threads',
+  {
+    id: id(),
+    domainId: uuid('domain_id')
+      .notNull()
+      .references(() => mailDomains.id),
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id),
+    assigneeId: uuid('assignee_id').references(() => staff.id),
+    status: threadStatus('status').notNull().default('open'),
+    subject: text('subject').notNull(),
+    // Subject without Re:/Fwd: prefixes, lowercased: the threading fallback key.
+    normalizedSubject: text('normalized_subject').notNull(),
+    contactId: uuid('contact_id')
+      .notNull()
+      .references(() => contacts.id),
+    // The exact town address this conversation is with; replies go out from it.
+    townAddress: text('town_address').notNull(),
+    lastMessageAt: timestamp('last_message_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('threads_fallback_idx').on(t.contactId, t.townAddress, t.normalizedSubject),
+    index('threads_inbox_idx').on(t.teamId, t.status, t.lastMessageAt),
+  ],
+);
+
+export const messages = pgTable(
+  'messages',
+  {
+    id: id(),
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => threads.id),
+    direction: messageDirection('direction').notNull(),
+    rfcMessageId: text('rfc_message_id'),
+    inReplyTo: text('in_reply_to'),
+    references: text('references')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    fromAddress: text('from_address').notNull(),
+    fromName: text('from_name'),
+    toAddresses: text('to_addresses')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    ccAddresses: text('cc_addresses')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    // SES envelope RCPT TO: the address this copy was delivered to (handles BCC and catch-all).
+    envelopeRecipient: text('envelope_recipient'),
+    subject: text('subject').notNull(),
+    textBody: text('text_body'),
+    // Sanitized at ingest; rendered only in a sandboxed iframe (brief §10).
+    htmlBodySanitized: text('html_body_sanitized'),
+    rawS3Key: text('raw_s3_key'),
+    sesMessageId: text('ses_message_id'),
+    spamVerdict: text('spam_verdict'),
+    virusVerdict: text('virus_verdict'),
+    spfVerdict: text('spf_verdict'),
+    dkimVerdict: text('dkim_verdict'),
+    dmarcVerdict: text('dmarc_verdict'),
+    // Auto-Submitted / Precedence: bulk|list / X-Autoreply: never notify or auto-act on it.
+    isAutomated: boolean('is_automated').notNull().default(false),
+    // Virus verdict FAIL: kept for the record, attachments never shown or extracted.
+    quarantined: boolean('quarantined').notNull().default(false),
+    sentByStaffId: uuid('sent_by_staff_id').references(() => staff.id),
+    deliveryStatus: text('delivery_status'),
+    sentAt: timestamp('sent_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    // An SNS redelivery of the same message to the same recipient never makes a second row.
+    uniqueIndex('messages_ses_recipient_uq').on(t.sesMessageId, t.envelopeRecipient),
+    index('messages_rfc_id_idx').on(t.rfcMessageId),
+    index('messages_thread_idx').on(t.threadId, t.sentAt),
+  ],
+);
+
+export const attachments = pgTable(
+  'attachments',
+  {
+    id: id(),
+    messageId: uuid('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    filename: text('filename').notNull(),
+    contentType: text('content_type').notNull(),
+    size: integer('size').notNull(),
+    // Null for quarantined attachments: they stay only inside the raw message.
+    s3Key: text('s3_key'),
+    contentId: text('content_id'),
+    inline: boolean('inline').notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('attachments_message_position_uq').on(t.messageId, t.position)],
+);
+
+// Internal notes on a thread. Never emailed.
+export const notes = pgTable('notes', {
+  id: id(),
+  threadId: uuid('thread_id')
+    .notNull()
+    .references(() => threads.id, { onDelete: 'cascade' }),
+  staffId: uuid('staff_id')
+    .notNull()
+    .references(() => staff.id),
+  body: text('body').notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+// Every SNS notification the webhook accepted (inbound mail now; sending events in Mail-4),
+// stored first and processed by the worker, so the webhook returns fast and redeliveries
+// are no-ops.
+export const mailEvents = pgTable(
+  'mail_events',
+  {
+    id: id(),
+    snsMessageId: text('sns_message_id').notNull().unique(),
+    topicArn: text('topic_arn').notNull(),
+    type: text('type').notNull(),
+    payload: jsonb('payload').notNull(),
+    status: mailEventStatus('status').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    lastError: text('last_error'),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('mail_events_due_idx').on(t.status, t.nextAttemptAt)],
+);

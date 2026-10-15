@@ -12,6 +12,15 @@ export {
   type DnsRecordSpec,
   type ExistingRecord,
 } from './dns';
+export {
+  cleanMessageId,
+  isAutomatedMail,
+  parseRawEmail,
+  type ParsedAttachment,
+  type ParsedMessage,
+} from './inbound/parse';
+export { sanitizeEmailHtml } from './inbound/sanitize';
+export { normalizeSubject, referencedIds, THREAD_FALLBACK_DAYS } from './inbound/threading';
 export { memoryStore, type MemoryState } from './memory-store';
 export {
   ACTIVATE,
