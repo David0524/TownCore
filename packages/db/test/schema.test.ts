@@ -89,7 +89,7 @@ describe('towns:sync', () => {
       },
     };
     const first = await syncTowns(db, [withSource]);
-    expect(first).toMatchObject({ sources: 6, skippedSources: 0 });
+    expect(first).toMatchObject({ sources: 7, skippedSources: 0 });
     await syncTowns(db, [withSource]);
     const town = await boca();
     const rows = await db.select().from(sources).where(eq(sources.townId, town.id));

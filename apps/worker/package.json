@@ -16,6 +16,7 @@
     "@towncore/adapters": "workspace:*",
     "@towncore/config": "workspace:*",
     "@towncore/db": "workspace:*",
+    "@towncore/directory": "workspace:*",
     "@towncore/email": "workspace:*",
     "@towncore/mail": "workspace:*",
     "@towncore/pipeline": "workspace:*",

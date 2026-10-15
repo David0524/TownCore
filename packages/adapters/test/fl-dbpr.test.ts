@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_FILES, flDbprAdapter, parseDbprRow } from '../src/fl-dbpr';
+import { parseFoodRow } from '../src/fl-dbpr/food';
 import { Fetcher, NotModified, type FetchFn } from '../src/http/fetcher';
 import { replayFetch } from '../src/http/fixtures';
 import { parseCsvLine, streamLines } from '../src/lib/csv';
@@ -68,6 +69,32 @@ describe('fl-dbpr adapter', () => {
         '"2502 Real Estate Corporation","PENN FLORIDA REALTY CORP","","CQ RE Corp.","1515 N FEDERAL HWY 306","","","BOCA RATON","FL","33432","Palm Beach","251537","Current","Active","","03-APR-23","31-MAR-27","CQ251537","","",""',
       ),
     ).toBeNull();
+  });
+});
+
+describe('fl-dbpr food service files', () => {
+  const foodFixture = fileURLToPath(new URL('../fixtures/fl-dbpr/boca-food.json', import.meta.url));
+  const food: SourceConfig = { ...source, config: { city: 'BOCA RATON', files: ['hrfood2.csv'] } };
+
+  it('keeps Boca Raton locations, skips the header, and uses its own record type', async () => {
+    const records = await flDbprAdapter.fetch(food, null, ctx(replayFetch(foodFixture)));
+    expect(records).toHaveLength(40);
+    for (const record of records) {
+      expect(record.type).toBe('food_license');
+      expect(record.externalId).toMatch(/^food:[A-Z0-9]{6,12}$/);
+      expect((record.raw as { city: string }).city).toBe('BOCA RATON');
+    }
+    const bagels = records.find((r) => r.externalId === 'food:SEA6010779')!;
+    expect(bagels.title).toBe('BAGEL CITY SOUTH');
+    expect(bagels.text).toMatch(/^Permanent Food Service, seating, license SEA6010779\./);
+    expect(bagels.text).toContain('Location: 6006 SW 18 ST, BOCA RATON, FL 33433-7188.');
+    const kinds = new Set(records.map((r) => (r.raw as { occupation: string }).occupation));
+    expect(kinds).toContain('Mobile Food Dispensing Vehicle');
+    expect(kinds).toContain('Catering');
+  });
+
+  it('ignores the header row', () => {
+    expect(parseFoodRow('"Board Code","License Type Code","Licensee Name"')).toBeNull();
   });
 });
 

@@ -27,3 +27,9 @@ export { parseIcal, zonedTimeToUtc } from './lib/ical';
 export { flDbprAdapter } from './fl-dbpr';
 export { flSunbizAdapter } from './fl-sunbiz';
 export { fetchWeather, parsePoint } from './nws/weather';
+export {
+  geocodeAddress,
+  geocodeUrl,
+  type GeocodeInput,
+  type GeocodeResult,
+} from './census/geocoder';
