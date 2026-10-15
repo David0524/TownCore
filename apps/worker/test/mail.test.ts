@@ -1,9 +1,17 @@
-import { eq, mailDomains, onboardingSteps, type Db } from '@towncore/db';
+import {
+  eq,
+  mailDomains,
+  mailEvents,
+  messages,
+  onboardingSteps,
+  syncMailRouting,
+  type Db,
+} from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
 import { STEPS, type IdentityInfo, type IdentityProvider } from '@towncore/mail';
 import { pino } from 'pino';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { runMailTick } from '../src/mail';
+import { runMailTick, startInboundLoop } from '../src/mail';
 
 let db: Db;
 let drop: () => Promise<void>;
@@ -88,5 +96,57 @@ describe('runMailTick', () => {
     const [row] = await db.select().from(mailDomains).where(eq(mailDomains.name, 'two.test'));
     expect(row).toMatchObject({ status: 'onboarding' });
     expect(row!.recheckRequestedAt).not.toBeNull();
+  });
+});
+
+describe('inbound loop', () => {
+  it('drains stored SNS notifications into conversations', async () => {
+    await syncMailRouting(db);
+    await db.insert(mailDomains).values({
+      name: 'inbox.test',
+      displayName: 'I',
+      isTest: true,
+      status: 'live',
+      inboundEnabled: true,
+    });
+    const raw =
+      'From: Pat <pat@example.com>\r\nTo: sales@inbox.test\r\nSubject: Hello\r\nMessage-ID: <m1@example.com>\r\n\r\nHi there';
+    await db.insert(mailEvents).values({
+      snsMessageId: 'sns-1',
+      topicArn: 'arn:aws:sns:us-east-1:123456789012:inbound',
+      type: 'Received',
+      payload: {
+        notificationType: 'Received',
+        mail: { messageId: 'ses-1', source: 'pat@example.com' },
+        receipt: {
+          recipients: ['sales@inbox.test'],
+          action: { type: 'S3', bucketName: 'bucket', objectKey: 'inbound/ses-1' },
+        },
+      },
+    });
+    const stop = startInboundLoop(
+      db,
+      {
+        bucket: 'bucket',
+        objects: { getRaw: async () => Buffer.from(raw), putAttachment: async () => {} },
+      },
+      logger,
+      50,
+    );
+    try {
+      const deadline = Date.now() + 10_000;
+      let status = 'pending';
+      while (status === 'pending' && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 50));
+        [{ status }] = (await db.select({ status: mailEvents.status }).from(mailEvents)) as [
+          { status: string },
+        ];
+      }
+      expect(status).toBe('done');
+      const [message] = await db.select().from(messages).where(eq(messages.sesMessageId, 'ses-1'));
+      expect(message).toMatchObject({ subject: 'Hello', envelopeRecipient: 'sales@inbox.test' });
+    } finally {
+      await stop();
+    }
   });
 });

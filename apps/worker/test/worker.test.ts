@@ -26,6 +26,7 @@ beforeAll(async () => {
     fetcher: offlineFetcher(),
     llmProvider: null,
     ses: null,
+    inbound: null,
   });
 });
 

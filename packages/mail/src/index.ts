@@ -67,3 +67,20 @@ export {
   type SnsMessage,
 } from './sns';
 export { handleSnsWebhook, type WebhookDeps, type WebhookResult } from './webhook';
+export {
+  MAX_EVENT_ATTEMPTS,
+  processDueEvents,
+  retryDelayMs,
+  type BatchResult,
+  type EventHandler,
+} from './inbound/events';
+export {
+  processReceivedNotification,
+  receivedNotificationSchema,
+  safeFilename,
+  type MailObjectStore,
+  type ProcessDeps,
+  type ProcessResult,
+  type ReceivedNotification,
+} from './inbound/process';
+export { s3MailStore } from './inbound/s3';
