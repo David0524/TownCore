@@ -1,0 +1,19 @@
+# Local Postgres for development. Not used in production.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: towncore
+      POSTGRES_PASSWORD: towncore
+      POSTGRES_DB: towncore
+    ports:
+      - '5432:5432'
+    volumes:
+      - towncore-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U towncore']
+      interval: 2s
+      timeout: 5s
+      retries: 20
+volumes:
+  towncore-db:
