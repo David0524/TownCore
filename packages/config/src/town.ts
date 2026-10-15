@@ -35,14 +35,20 @@ const domain = z
   .toLowerCase()
   .regex(/^(?!www\.)([a-z0-9-]+\.)+[a-z]{2,}$/, 'bare domain, lowercase, no www.');
 
+/** Ingest interval: a number plus m/h/d, e.g. "15m", "3h", "7d". */
+export const scheduleSchema = z.string().regex(/^\d+[mhd]$/, 'use an interval like 15m, 3h or 7d');
+
 const sourceSchema = z.strictObject({
   kind: z.enum(sourceKinds),
   platform: z.string().min(1),
   url: z.union([z.literal(TBD), z.url()]).optional(),
-  // Platform-specific settings (e.g. NWS zone). Validated by the adapter in M2.
+  // NWS forecast zone, e.g. FLZ168.
   zone: z.string().min(1).optional(),
-  schedule: z.string().min(1).optional(),
+  schedule: scheduleSchema.optional(),
+  // Other platform-specific settings, validated by the adapter.
+  options: z.record(z.string(), z.union([z.string(), z.number(), z.array(z.string())])).optional(),
 });
+export type TownSourceConfig = z.infer<typeof sourceSchema>;
 
 export const townConfigSchema = z.strictObject({
   slug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
@@ -133,7 +139,7 @@ export function townContactEmail(config: Pick<TownConfig, 'domain' | 'contact_em
 }
 
 /** Lists config fields still set to TBD. A town can't go live until this is empty (M7). */
-export function findTbdFields(config: TownConfig): string[] {
+export function findTbdFields(config: unknown): string[] {
   const found: string[] = [];
   const walk = (value: unknown, path: string) => {
     if (value === TBD) found.push(path);

@@ -1,14 +1,17 @@
 import { hostname } from 'node:os';
+import { Fetcher } from '@towncore/adapters';
 import { createDb, type Db } from '@towncore/db';
 import { PgBoss } from 'pg-boss';
 import type { Logger } from 'pino';
 import { recordHeartbeat } from './heartbeat';
+import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
 import { queues, schedules } from './queues';
 
 export type WorkerOptions = {
   databaseUrl: string;
   logger: Logger;
   workerId?: string;
+  fetcher?: Fetcher;
 };
 
 export type RunningWorker = {
@@ -26,6 +29,7 @@ export async function startWorker({
   databaseUrl,
   logger,
   workerId = `${hostname()}-${process.pid}`,
+  fetcher = new Fetcher(),
 }: WorkerOptions): Promise<RunningWorker> {
   const startedAt = new Date();
   const db = createDb(databaseUrl, { max: 5 });
@@ -40,6 +44,14 @@ export async function startWorker({
   await boss.work(queues.heartbeat, async (jobs) => {
     await recordHeartbeat(db, workerId, startedAt);
     logger.info({ jobs: jobs.length, workerId }, 'heartbeat');
+  });
+
+  await boss.work(queues.ingestTick, async () => {
+    await enqueueDueSources(db, boss, logger);
+  });
+
+  await boss.work<IngestJob>(queues.ingest, async (jobs) => {
+    for (const job of jobs) await runIngestJob(db, fetcher, logger, job.data);
   });
 
   for (const { queue, cron } of schedules) {

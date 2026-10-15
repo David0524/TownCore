@@ -12,6 +12,7 @@
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
+    "@towncore/adapters": "workspace:*",
     "@towncore/config": "workspace:*",
     "@towncore/db": "workspace:*",
     "pg-boss": "^12.38.0",

@@ -8,6 +8,15 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "sources:status": "tsx src/scripts/status.ts"
+  },
+  "dependencies": {
+    "@towncore/config": "workspace:*",
+    "@towncore/db": "workspace:*",
+    "robots-parser": "^3.0.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
   }
 }

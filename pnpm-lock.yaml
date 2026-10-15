@@ -120,6 +120,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@towncore/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
       '@towncore/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -143,7 +146,21 @@ importers:
         specifier: ^4.23.15
         version: 4.23.15
 
-  packages/adapters: {}
+  packages/adapters:
+    dependencies:
+      '@towncore/config':
+        specifier: workspace:*
+        version: link:../config
+      '@towncore/db':
+        specifier: workspace:*
+        version: link:../db
+      robots-parser:
+        specifier: ^3.0.1
+        version: 3.0.1
+    devDependencies:
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
 
   packages/brand:
     devDependencies:
@@ -2177,6 +2194,10 @@ packages:
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
 
+  robots-parser@3.0.1:
+    resolution: {integrity: sha512-s+pyvQeIKIZ0dx5iJiQk1tPLJAWln39+MI5jtM8wnyws+G5azk+dMnMX0qfbqNetKKNgcWWOdi0sfm+FbQbgdQ==}
+    engines: {node: '>=10.0.0'}
+
   rolldown@1.2.14:
     resolution: {integrity: sha512-eTBTTqMR6uHKLgcUqpJP8ntzDI6V4LYA8negAMBEI7gkgVvOdrx6VsvS2Ym+83KhOPdLCHWJu0w7UQFJZhHKNw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -4079,6 +4100,8 @@ snapshots:
   resolve-from@5.0.0: {}
 
   resolve-pkg-maps@1.0.0: {}
+
+  robots-parser@3.0.1: {}
 
   rolldown@1.2.14:
     dependencies:
