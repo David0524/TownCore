@@ -22,3 +22,23 @@ export {
 } from './llm';
 export { anthropicProvider } from './llm/anthropic';
 export { geminiProvider } from './llm/gemini';
+export { runStoryFinder, type FinderReport } from './finder';
+export {
+  MIN_SOURCE_CHARS,
+  penalties,
+  scoreCandidate,
+  timeliness,
+  titleSimilarity,
+  weights,
+  type ScoreComponents,
+} from './scoring';
+export {
+  isNewsworthyAlert,
+  meetingsRoundup,
+  newBusinessesRoundup,
+  newLicensesRoundup,
+  weatherAlert,
+  type TemplatedDraft,
+  type TemplateRecord,
+} from './templates';
+export { cannotBeArticle, decideTier, mentionsMinor, type Tier, type TierDecision } from './tiers';

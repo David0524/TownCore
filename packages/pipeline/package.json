@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.134.0",
+    "@towncore/adapters": "workspace:*",
     "@towncore/config": "workspace:*",
     "@towncore/db": "workspace:*",
     "@towncore/prompts": "workspace:*",

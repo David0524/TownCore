@@ -129,6 +129,9 @@ importers:
       '@towncore/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@towncore/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
       pg-boss:
         specifier: ^12.38.0
         version: 12.38.0(@opentelemetry/api@1.9.1)
@@ -210,6 +213,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.134.0
         version: 0.134.0(zod@4.6.7)
+      '@towncore/adapters':
+        specifier: workspace:*
+        version: link:../adapters
       '@towncore/config':
         specifier: workspace:*
         version: link:../config

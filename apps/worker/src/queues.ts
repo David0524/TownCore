@@ -3,6 +3,7 @@ export const queues = {
   heartbeat: 'system.heartbeat',
   ingestTick: 'ingest.tick',
   ingest: 'ingest',
+  storyFinderTick: 'story-finder.tick',
   storyFinder: 'story-finder',
   writer: 'writer',
   factCheck: 'fact-check',
@@ -16,4 +17,6 @@ export const schedules = [
   { queue: queues.heartbeat, cron: '* * * * *' },
   // Every 5 minutes, enqueue an ingest job for each source that is due (docs/plans/M2.md §4).
   { queue: queues.ingestTick, cron: '*/5 * * * *' },
+  // Every 30 minutes, run the story finder for each town that isn't paused (CLAUDE.md §6).
+  { queue: queues.storyFinderTick, cron: '*/30 * * * *' },
 ] as const;
