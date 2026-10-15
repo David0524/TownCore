@@ -357,7 +357,12 @@ export const aiUsage = pgTable(
     model: text('model').notNull(),
     inputTokens: integer('input_tokens').notNull(),
     outputTokens: integer('output_tokens').notNull(),
-    estCostUsd: numeric('est_cost_usd', { precision: 10, scale: 4 }).notNull(),
+    cacheReadTokens: integer('cache_read_tokens').notNull().default(0),
+    estCostUsd: numeric('est_cost_usd', { precision: 10, scale: 6 }).notNull(),
+    provider: text('provider'),
+    promptVersion: text('prompt_version'),
+    // ok | refused | invalid (output failed its schema) | error (no usable response)
+    outcome: text('outcome').notNull().default('ok'),
     createdAt: createdAt(),
   },
   (t) => [index('ai_usage_town_created_idx').on(t.townId, t.createdAt)],

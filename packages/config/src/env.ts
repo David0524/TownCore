@@ -11,6 +11,9 @@ const optional = <T extends z.ZodType>(schema: T) =>
 export const envSchema = z.object({
   DATABASE_URL: optional(z.url({ protocol: /^postgres(ql)?$/ })),
   ANTHROPIC_API_KEY: optional(z.string()),
+  GEMINI_API_KEY: optional(z.string()),
+  // Which model provider the pipeline uses. Unset: Anthropic if its key is set, else Gemini.
+  LLM_PROVIDER: optional(z.enum(['anthropic', 'gemini'])),
   EMAIL_PROVIDER_KEY: optional(z.string()),
   STRIPE_SECRET_KEY: optional(z.string()),
   STRIPE_WEBHOOK_SECRET: optional(z.string()),

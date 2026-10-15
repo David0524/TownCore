@@ -9,5 +9,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@towncore/config": "workspace:*",
+    "zod": "^4.6.7"
   }
 }
