@@ -643,3 +643,127 @@ export const workerHeartbeats = pgTable('worker_heartbeats', {
   startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
   lastBeatAt: timestamp('last_beat_at', { withTimezone: true }).notNull(),
 });
+
+// Mail domains and onboarding (docs/plans/MAIL.md Mail-1). One row per domain that receives and
+// sends mail. A town domain links to its town; owner-designated test domains have no town.
+export const mailDomainStatus = pgEnum('mail_domain_status', [
+  'pending',
+  'onboarding',
+  'live',
+  'paused',
+  'failed',
+]);
+export const bulkStatus = pgEnum('bulk_status', ['not_started', 'warming', 'active', 'paused']);
+export const identityKind = pgEnum('identity_kind', ['root', 'news']);
+export const dnsPurpose = pgEnum('dns_purpose', [
+  'inbound_mx',
+  'dkim',
+  'mail_from_mx',
+  'mail_from_spf',
+  'spf',
+  'dmarc',
+]);
+export const dnsRecordStatus = pgEnum('dns_record_status', ['planned', 'created', 'existing']);
+export const onboardingStepStatus = pgEnum('onboarding_step_status', [
+  'pending',
+  'running',
+  'waiting',
+  'done',
+  'failed',
+]);
+
+export const mailDomains = pgTable(
+  'mail_domains',
+  {
+    id: id(),
+    name: text('name').notNull().unique(),
+    townId: uuid('town_id').references(() => towns.id),
+    // Brand name used in From headers; defaults to the town's site name.
+    displayName: text('display_name').notNull(),
+    isTest: boolean('is_test').notNull().default(false),
+    status: mailDomainStatus('status').notNull().default('pending'),
+    inboundEnabled: boolean('inbound_enabled').notNull().default(false),
+    bulkStatus: bulkStatus('bulk_status').notNull().default('not_started'),
+    warmupDay: integer('warmup_day').notNull().default(0),
+    bulkDailyCap: integer('bulk_daily_cap').notNull().default(0),
+    pausedReason: text('paused_reason'),
+    failureReason: text('failure_reason'),
+    // CAN-SPAM footer address; null means the company-wide MAIL_POSTAL_ADDRESS.
+    postalAddress: text('postal_address'),
+    // A running onboarding holds this lease so two runs never work on one domain at once.
+    leaseUntil: timestamp('lease_until', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check('mail_domains_name_lower', sql`${t.name} = lower(${t.name})`),
+    check(
+      'mail_domains_failed_reason',
+      sql`${t.status} <> 'failed' or ${t.failureReason} is not null`,
+    ),
+  ],
+);
+
+export const domainIdentities = pgTable(
+  'domain_identities',
+  {
+    id: id(),
+    domainId: uuid('domain_id')
+      .notNull()
+      .references(() => mailDomains.id, { onDelete: 'cascade' }),
+    kind: identityKind('kind').notNull(),
+    // The SES identity: the domain itself, or news.<domain> for bulk mail.
+    identityName: text('identity_name').notNull().unique(),
+    verificationStatus: text('verification_status'),
+    dkimStatus: text('dkim_status'),
+    dkimTokens: text('dkim_tokens').array(),
+    signingHostedZone: text('signing_hosted_zone'),
+    mailFromDomain: text('mail_from_domain'),
+    mailFromStatus: text('mail_from_status'),
+    lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('domain_identities_domain_kind_uq').on(t.domainId, t.kind)],
+);
+
+export const dnsRecords = pgTable(
+  'dns_records',
+  {
+    id: id(),
+    domainId: uuid('domain_id')
+      .notNull()
+      .references(() => mailDomains.id, { onDelete: 'cascade' }),
+    purpose: dnsPurpose('purpose').notNull(),
+    type: text('type').notNull(),
+    // Relative to the domain's zone, '' for the apex (Vercel's convention).
+    name: text('name').notNull(),
+    value: text('value').notNull(),
+    priority: integer('priority'),
+    ttl: integer('ttl'),
+    vercelRecordId: text('vercel_record_id'),
+    status: dnsRecordStatus('status').notNull().default('planned'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('dns_records_domain_record_uq').on(t.domainId, t.type, t.name, t.value)],
+);
+
+export const onboardingSteps = pgTable(
+  'onboarding_steps',
+  {
+    id: id(),
+    domainId: uuid('domain_id')
+      .notNull()
+      .references(() => mailDomains.id, { onDelete: 'cascade' }),
+    step: text('step').notNull(),
+    status: onboardingStepStatus('status').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    lastError: text('last_error'),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('onboarding_steps_domain_step_uq').on(t.domainId, t.step)],
+);

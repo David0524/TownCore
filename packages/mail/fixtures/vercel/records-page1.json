@@ -1,0 +1,31 @@
+{
+  "records": [
+    {
+      "id": "rec_a",
+      "slug": "testtown.com.-address",
+      "name": "",
+      "type": "ALIAS",
+      "value": "cname.vercel-dns.com",
+      "creator": "system",
+      "created": 1760000000000,
+      "createdAt": 1760000000000,
+      "updated": 1760000000000,
+      "updatedAt": 1760000000000,
+      "ttl": 60
+    },
+    {
+      "id": "rec_b",
+      "slug": "testtown.com.-txt",
+      "name": "",
+      "type": "TXT",
+      "value": "google-site-verification=abc123",
+      "creator": "u_1",
+      "created": 1760000000001,
+      "createdAt": 1760000000001,
+      "updated": 1760000000001,
+      "updatedAt": 1760000000001,
+      "ttl": 60
+    }
+  ],
+  "pagination": { "count": 2, "next": 1760000000001, "prev": null }
+}

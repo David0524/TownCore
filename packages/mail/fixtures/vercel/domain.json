@@ -1,0 +1,19 @@
+{
+  "domain": {
+    "boughtAt": null,
+    "createdAt": 1760000000000,
+    "creator": { "email": "partners@towncore.net", "id": "u_1", "username": "towncore" },
+    "customNameservers": [],
+    "echMode": "auto",
+    "expiresAt": null,
+    "id": "dom_1",
+    "intendedNameservers": ["ns1.vercel-dns.com", "ns2.vercel-dns.com"],
+    "name": "testtown.com",
+    "nameservers": ["ns1.vercel-dns.com", "ns2.vercel-dns.com"],
+    "serviceType": "zeit.world",
+    "suffix": false,
+    "teamId": "team_1",
+    "userId": "u_1",
+    "verified": true
+  }
+}

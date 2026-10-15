@@ -85,6 +85,13 @@
       "when": 1792087299575,
       "tag": "0011_mail_routing",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792088615479,
+      "tag": "0012_mail_domains",
+      "breakpoints": true
     }
   ]
 }

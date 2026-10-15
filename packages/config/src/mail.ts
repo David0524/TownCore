@@ -21,3 +21,13 @@ export const defaultRoleAddresses: readonly { localPart: string; team: DefaultTe
 ];
 
 export const catchAllTeam: DefaultTeam = 'Admin';
+
+/**
+ * Warm-up ramp for each new news. subdomain (brief §7.4): the daily bulk cap starts at 50 and
+ * doubles every 3 healthy days up to the target. A breach holds the ramp; two in a row step back.
+ */
+export const warmup = {
+  startCap: 50,
+  doubleEveryDays: 3,
+  targetCap: 50_000,
+} as const;

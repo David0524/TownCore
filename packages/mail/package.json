@@ -8,6 +8,15 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "onboard": "tsx scripts/onboard.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1152.0",
+    "@towncore/config": "workspace:*",
+    "@towncore/db": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
   }
 }

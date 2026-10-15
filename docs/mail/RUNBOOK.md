@@ -71,7 +71,40 @@ subscribe the app to every topic.
 - **`MAIL_TOKEN_SECRET`:** _(Mail-5)_ unsubscribe links in sent mail must keep working, so
   rotation will keep the old secret valid for verification.
 
-## Onboarding domains _(Mail-1)_
+## Onboarding domains
+
+`pnpm mail:onboard` creates each domain's two SES identities (root and `news.`, each with Easy
+DKIM and a custom MAIL FROM) and its 14 email DNS records on Vercel, waits for SES to verify,
+then marks the domain live for inbound and warming for bulk mail (50 a day to start).
+
+```sh
+pnpm mail:onboard add testtown.com                 # dry-run: prints every change, makes none
+pnpm mail:onboard add testtown.com --execute       # applies it (test domains only)
+pnpm mail:onboard add --from-file domains.txt --execute --approved   # owner-approved batch
+pnpm mail:onboard status [domain]                  # per-step progress and failures
+pnpm mail:onboard verify-all --execute             # finish domains waiting on SES
+pnpm mail:onboard retry testtown.com --execute     # after fixing whatever failed
+```
+
+- **Dry-run is the default.** Without a Vercel token or AWS credentials it runs offline,
+  assuming an empty zone and no identities, so the plan can be reviewed before access exists.
+- **Guard.** `--execute` changes only domains in `MAIL_TEST_DOMAINS`. Anything else, including
+  any batch with a non-test domain, needs `--approved`, which means the owner signed off.
+- **Town domains** take their From name from the town's `site_name`. Other domains need
+  `--display-name "Name"`.
+- **Needs** `VERCEL_DNS_TOKEN`, `VERCEL_TEAM_ID`, the operator's AWS credentials (with the
+  `towncore-{env}-onboarding` policy), `AWS_REGION`, `DMARC_REPORT_ADDRESS` and both
+  `SES_CONFIG_SET_*` values.
+- **It never overwrites a record.** If the domain already has a different MX, SPF, DMARC, or a
+  record where a CNAME must go, the domain is marked `failed` with the clash spelled out, nothing
+  is changed, and the other domains carry on. Resolving a conflict is the owner's call (for
+  example, a domain that already receives mail elsewhere). Fix it in Vercel, then run `retry`.
+- **Safe to re-run.** Each step records its status in `onboarding_steps`; a crashed or
+  interrupted run resumes where it stopped, a finished domain is a no-op, and two runs never
+  work on one domain at once (a 15-minute lease on `mail_domains`).
+- **Verification** usually takes minutes but can take up to 72 hours. Domains waiting on SES
+  show as `onboarding`; run `verify-all` later. If SES gives up (DKIM or MAIL FROM `FAILED`),
+  the domain fails with the reason; check the records in Vercel, then `retry`.
 
 ## Unpausing a domain _(Mail-5)_
 
