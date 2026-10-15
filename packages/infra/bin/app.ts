@@ -7,10 +7,12 @@ const app = new App();
 const mailEnv = (app.node.tryGetContext('env') ?? 'dev') as MailEnvironment;
 if (mailEnv !== 'dev' && mailEnv !== 'prod') throw new Error(`Unknown env ${String(mailEnv)}`);
 const webhookBaseUrl = app.node.tryGetContext('webhookBaseUrl') as string | undefined;
+const receiving = String(app.node.tryGetContext('receiving') ?? 'false') === 'true';
 
 new MailStack(app, `TownCoreMail-${mailEnv}`, {
   mailEnv,
   webhookBaseUrl,
+  receiving,
   env: {
     // Set by the CDK CLI from the operator's AWS profile; not app config (rule 11 covers secrets).
     /* eslint-disable no-restricted-properties */

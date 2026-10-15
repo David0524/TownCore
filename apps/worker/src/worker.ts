@@ -11,7 +11,13 @@ import {
 import { PgBoss } from 'pg-boss';
 import type { Logger } from 'pino';
 import { recordHeartbeat } from './heartbeat';
-import { runMailTick, sesFromEnv } from './mail';
+import {
+  inboundFromEnv,
+  runMailTick,
+  sesFromEnv,
+  startInboundLoop,
+  type InboundConfig,
+} from './mail';
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
 import { queues, schedules } from './queues';
 import {
@@ -34,6 +40,8 @@ export type WorkerOptions = {
   llmProvider?: { name: Llm['providerName']; provider: LlmProvider } | null;
   /** SES (read-only use) for mail domain checks. Default: from AWS env; null skips them. */
   ses?: IdentityProvider | null;
+  /** Raw mail bucket for inbound processing. Default: from AWS env; null turns it off. */
+  inbound?: InboundConfig | null;
 };
 
 export type RunningWorker = {
@@ -54,6 +62,7 @@ export async function startWorker({
   fetcher = new Fetcher(),
   llmProvider = resolveProviderName() ? providerFromEnv() : null,
   ses = sesFromEnv(),
+  inbound = inboundFromEnv(),
 }: WorkerOptions): Promise<RunningWorker> {
   const startedAt = new Date();
   const db = createDb(databaseUrl, { max: 5 });
@@ -103,6 +112,9 @@ export async function startWorker({
     await boss.schedule(queue, cron);
   }
 
+  // Inbound mail: the webhook stores SNS notifications in mail_events; this drains them.
+  const stopInbound = startInboundLoop(db, inbound, logger);
+
   logger.info(
     { workerId, queues: Object.values(queues), llm: llmProvider?.name ?? 'none' },
     'worker started',
@@ -112,6 +124,7 @@ export async function startWorker({
   const stop = () => {
     stopping ??= (async () => {
       logger.info({ workerId }, 'worker stopping');
+      await stopInbound();
       await boss.stop({ graceful: true, timeout: 30_000 });
       await db.$client.end();
       logger.info({ workerId }, 'worker stopped');

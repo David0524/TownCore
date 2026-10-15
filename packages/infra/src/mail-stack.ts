@@ -2,8 +2,10 @@ import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from 'aws-
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ses from 'aws-cdk-lib/aws-ses';
+import * as sesActions from 'aws-cdk-lib/aws-ses-actions';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as cr from 'aws-cdk-lib/custom-resources';
 import type { Construct } from 'constructs';
 
 // AWS resources for the mail platform (docs/plans/MAIL.md; brief §5). One stack per environment,
@@ -11,7 +13,9 @@ import type { Construct } from 'constructs';
 // (SES identities, DNS records) are created by the onboarding CLI, never here: cost and
 // resource count scale with mail volume, not with the number of towns.
 //
-// Not here yet: the SES receipt rule set and its catch-all rule (Mail-2).
+// Receiving: one catch-all receipt rule (no recipient conditions, so it covers every verified
+// domain) writes raw mail to inbound/ and notifies the inbound topic. Only one rule set can be
+// active per account and region, so only the stack deployed with `receiving` activates it.
 
 export type MailEnvironment = 'dev' | 'prod';
 
@@ -22,6 +26,11 @@ export interface MailStackProps extends StackProps {
    * app's signed SNS webhook. Leave unset until that endpoint exists (Mail-2).
    */
   webhookBaseUrl?: string;
+  /**
+   * Make this stack's rule set the account's active one (`-c receiving=true`). Only one
+   * environment per AWS account and region can receive mail.
+   */
+  receiving?: boolean;
 }
 
 /** Every sending event we track. Open and click are deliberately absent (brief §3 item 13). */
@@ -91,6 +100,41 @@ export class MailStack extends Stack {
         conditions: { StringEquals: { 'aws:SourceAccount': this.account } },
       }),
     );
+
+    // Catch-all inbound rule: spam and virus scanning on, raw message to S3, notice to SNS.
+    const ruleSet = new ses.ReceiptRuleSet(this, 'InboundRuleSet', {
+      receiptRuleSetName: name('inbound'),
+    });
+    ruleSet.addRule('CatchAll', {
+      receiptRuleName: name('catch-all'),
+      scanEnabled: true,
+      tlsPolicy: ses.TlsPolicy.OPTIONAL,
+      actions: [
+        new sesActions.S3({
+          bucket: this.bucket,
+          objectKeyPrefix: INBOUND_PREFIX,
+          topic: this.inboundTopic,
+        }),
+      ],
+    });
+    if (props.receiving) {
+      // CloudFormation has no resource for "active rule set"; set it through the SES API.
+      const activate = {
+        service: 'SES',
+        action: 'setActiveReceiptRuleSet',
+        parameters: { RuleSetName: ruleSet.receiptRuleSetName },
+        physicalResourceId: cr.PhysicalResourceId.of(`${name('inbound')}-active`),
+      };
+      new cr.AwsCustomResource(this, 'ActivateInboundRuleSet', {
+        onCreate: activate,
+        onUpdate: activate,
+        // Deactivating stops all receiving for the account and region; leave that to a person.
+        installLatestAwsSdk: false,
+        policy: cr.AwsCustomResourcePolicy.fromStatements([
+          new iam.PolicyStatement({ actions: ['ses:SetActiveReceiptRuleSet'], resources: ['*'] }),
+        ]),
+      });
+    }
 
     // Two sending streams, each with its own configuration set and event topic (D-MAIL-12).
     // The account-level suppression list stays on as a backstop; the app's own table decides.

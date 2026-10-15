@@ -59,8 +59,33 @@ After the deploy:
 3. Attach the `towncore-{env}-onboarding` policy to the IAM user or role that runs the
    onboarding CLI. Never give it to the app.
 
-Once the SNS webhook exists (Mail-2), redeploy with `-c webhookBaseUrl=https://<admin host>` to
-subscribe the app to every topic.
+### Turning on inbound mail
+
+1. Deploy the receiving environment with both flags:
+   `cdk deploy -c env=prod -c receiving=true -c webhookBaseUrl=https://<admin host>`.
+   `receiving=true` makes this stack's catch-all rule set the account's **active** one; only
+   one environment per AWS account and region can receive mail, so never pass it for two
+   stacks in the same account and region.
+2. Put the three topic ARNs (`InboundTopicArn` plus the two event topics, from the stack's
+   resources) in `MAIL_SNS_TOPIC_ARNS` for the web app, and redeploy it. The webhook refuses
+   any other topic.
+3. SNS sends a subscription confirmation to `/api/mail/sns`; the app verifies and confirms it
+   by itself. Check the subscription shows **Confirmed** in the SNS console.
+4. The worker needs `MAIL_S3_BUCKET` and the app AWS key to read raw mail. It polls stored
+   notifications every 5 seconds.
+
+### How inbound mail flows
+
+SES → raw message to `s3://<bucket>/inbound/<id>` and a notice to the inbound topic → SNS →
+`/api/mail/sns` (verified, stored once in `mail_events`) → worker: fetch, parse, sanitize, route
+by envelope recipient, thread, store. Failed events retry with backoff (1, 2, 4 … minutes) and
+are marked `failed` after 8 attempts; `select * from mail_events where status = 'failed'` shows
+them with their last error. To retry one, set `status = 'pending', attempts = 0,
+next_attempt_at = now()`.
+
+Mail to a domain that isn't live for inbound is dropped (`mail_events.status = 'dropped'`, the
+reason in `last_error`). Spam (SES verdict FAIL) starts in the spam folder; viruses are kept
+quarantined and their attachments are never extracted.
 
 ## Rotating credentials
 
