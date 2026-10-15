@@ -7,9 +7,12 @@ import {
   engagementByArticle,
   eq,
   getTownWeather,
+  gte,
   inArray,
   listRankableArticles,
+  lt,
   records,
+  sources,
   sql,
   type Article,
   type RankableArticle,
@@ -101,4 +104,85 @@ export async function roundupFigure(
   const label = top && roundupLabels[top.type];
   if (!top || !label) return null;
   return { figure: top.n.toLocaleString('en-US'), label: top.n === 1 ? label[0] : label[1] };
+}
+
+/** The town's forecast point ("lat,lon" on its NWS source), for the sunset tile. */
+export const townPoint = cache(async (townId: string): Promise<[number, number] | null> => {
+  const rows = await db()
+    .select({ config: sources.config })
+    .from(sources)
+    .where(and(eq(sources.townId, townId), eq(sources.platform, 'nws')));
+  for (const { config } of rows) {
+    const point = (config as { point?: unknown } | null)?.point;
+    const match = typeof point === 'string' && point.match(/^(-?[\d.]+),(-?[\d.]+)$/);
+    if (match) return [Number(match[1]), Number(match[2])];
+  }
+  return null;
+});
+
+export type UpcomingMeeting = {
+  id: string;
+  title: string;
+  when: Date;
+  where: string | null;
+  url: string | null;
+};
+
+/** Public meetings on the town's calendar in the next `days` days, soonest first. */
+export const upcomingMeetings = cache(
+  async (townId: string, days = 7, limit = 5): Promise<UpcomingMeeting[]> => {
+    const now = new Date();
+    const rows = await db()
+      .select({
+        id: records.id,
+        title: records.title,
+        text: records.text,
+        url: records.url,
+        occurredAt: records.occurredAt,
+      })
+      .from(records)
+      .where(
+        and(
+          eq(records.townId, townId),
+          eq(records.type, 'meeting'),
+          gte(records.occurredAt, now),
+          lt(records.occurredAt, new Date(now.getTime() + days * 86_400_000)),
+        ),
+      )
+      .orderBy(records.occurredAt)
+      .limit(limit);
+    return rows.map((r) => ({
+      id: r.id,
+      title: r.title ?? 'Public meeting',
+      when: r.occurredAt!,
+      where: r.text?.match(/^Where: (.*)$/m)?.[1] ?? null,
+      url: r.url,
+    }));
+  },
+);
+
+/** Published stories per beat in the last `days` days, for the section buttons. */
+export async function beatCounts(townId: string, days = 7): Promise<Map<string, number>> {
+  const since = Date.now() - days * 86_400_000;
+  const counts = new Map<string, number>();
+  for (const article of await recentArticles(townId)) {
+    if (article.publishedAt.getTime() >= since) {
+      counts.set(article.beat, (counts.get(article.beat) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+/** How many stories the Today band's "Also today" list takes after the lead. */
+export const ALSO_TODAY = 3;
+
+/**
+ * Splits the ranked stories between the front-page modules a theme uses, so no story shows
+ * twice: the lead, the Today band's "Also today" list, then everything else.
+ */
+export function frontSplit(articles: RankableArticle[], modules: readonly string[]) {
+  const lead = modules.includes('lead-story') ? pickLead(articles) : undefined;
+  const rest = articles.filter((a) => a.id !== lead?.id);
+  const also = modules.includes('today-bento') ? rest.slice(0, ALSO_TODAY) : [];
+  return { lead, also, rest: rest.slice(also.length) };
 }

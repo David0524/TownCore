@@ -125,7 +125,7 @@ export type StyleFamily = keyof typeof styleFamilies;
 
 /** Layout options per part that the web app implements (§11a-2). Add as they're built. */
 export const layoutOptions = {
-  header: ['centered-masthead', 'left-logo-inline-nav', 'stacked-dateline'],
+  header: ['centered-masthead', 'left-logo-inline-nav', 'stacked-dateline', 'slim-left'],
   nav: ['beat-tabs', 'hamburger-only'],
   grid: ['single-column', 'main-right-rail'],
   article: ['classic-rail', 'wide-reading'],
@@ -135,7 +135,10 @@ export const layoutOptions = {
 } as const;
 
 export const homeModules = [
+  'good-morning',
   'today-bento',
+  'category-buttons',
+  'coming-up',
   'lead-story',
   'latest-list',
   'beat-sections',
@@ -171,6 +174,12 @@ export const themeSchema = z
         .array(z.enum(homeModules))
         .min(1)
         .refine((list) => new Set(list).size === list.length, 'home modules must be unique'),
+      // A full-width band above the grid: `good-morning` (if listed) spans it, then the next
+      // module takes 8 of 12 columns and the one after 4 (coastal-modern's lead + Today).
+      // Stacks on phones.
+      homeTop: z.array(z.enum(homeModules)).max(3).optional(),
+      // Modules in the desktop rail, above rail.box; they follow the main column on phones.
+      homeRail: z.array(z.enum(homeModules)).optional(),
       article: z.enum(layoutOptions.article),
       directory: z.enum(layoutOptions.directory),
       footer: z.enum(layoutOptions.footer),
@@ -180,6 +189,22 @@ export const themeSchema = z
     identityNotes: z.string().min(1),
   })
   .superRefine((theme, ctx) => {
+    const { home, homeTop = [], homeRail = [] } = theme.layout;
+    const all = [...homeTop, ...home, ...homeRail];
+    if (new Set(all).size !== all.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['layout', 'home'],
+        message: 'a module may appear only once across homeTop, home and homeRail',
+      });
+    }
+    if (homeRail.length > 0 && theme.layout.grid !== 'main-right-rail') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['layout', 'homeRail'],
+        message: 'homeRail needs the main-right-rail grid',
+      });
+    }
     const set = typePairings[theme.type] as TypeSet;
     const allowed: readonly string[] = styleFamilies[theme.family].types;
     if (!set.legacy && !allowed.includes(theme.type)) {
@@ -210,7 +235,11 @@ export function checkThemeForTown(
 ): string[] {
   const problems: string[] = [];
   if (town.tier === 'small') {
-    if (theme.layout.home[0] === 'lead-story') {
+    // The greeting is a line of text, not a lead; the first real module decides.
+    const first = [...(theme.layout.homeTop ?? []), ...theme.layout.home].find(
+      (m) => m !== 'good-morning',
+    );
+    if (first === 'lead-story') {
       problems.push('small towns cannot lead the homepage with lead-story');
     }
   }

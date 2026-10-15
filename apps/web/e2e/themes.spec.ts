@@ -7,7 +7,7 @@ const towns = {
     url: 'http://bocatownsquare.com',
     name: 'Boca Town Square',
     parts: [
-      'header:stacked-dateline',
+      'header:slim-left',
       'nav:beat-tabs',
       'grid:main-right-rail',
       'footer:three-column',

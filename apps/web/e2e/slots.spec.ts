@@ -50,9 +50,11 @@ test('the newsletter CTA is among the first two modules on mobile, with no email
     .evaluateAll((els) =>
       els
         .filter((el) => (el as HTMLElement).offsetParent !== null)
-        .map((el) => el.getAttribute('data-module')),
+        .map((el) => el.getAttribute('data-module'))
+        // The greeting is a line of text above the modules, not a module with news.
+        .filter((name) => name !== 'good-morning'),
     );
-  // Boca has no articles yet, so news modules are hidden; the CTA must still be near the top.
+  // The CTA must be among the first two modules, right after the lead at the latest.
   expect(visibleModules.slice(0, 2)).toContain('newsletter-cta');
   await expect(page.locator('input[type="email"]')).toHaveCount(0);
 });

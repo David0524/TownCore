@@ -11,20 +11,21 @@
   "type": "instrumentserif-geist",
   "masthead": "centered-serif",
   "layout": {
-    "header": "stacked-dateline",
+    "header": "slim-left",
     "nav": "beat-tabs",
     "grid": "main-right-rail",
+    "homeTop": ["good-morning", "lead-story", "today-bento"],
     "home": [
-      "lead-story",
-      "today-bento",
+      "category-buttons",
+      "newsletter-cta",
       "latest-list",
-      "meetings-this-week",
-      "directory-featured",
       "beat-sections",
+      "directory-featured",
       "events",
       "new-businesses",
       "real-estate"
     ],
+    "homeRail": ["coming-up"],
     "article": "classic-rail",
     "directory": "list-map",
     "footer": "three-column"

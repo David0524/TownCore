@@ -1,0 +1,17 @@
+/* The homepage's full-width band (homeTop): lead in 8 columns, Today in 4, from 64rem. */
+.band {
+  display: grid;
+  gap: 0 2rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 64rem) {
+  .band {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}
+
+.bandMain,
+.bandSide {
+  min-width: 0;
+}

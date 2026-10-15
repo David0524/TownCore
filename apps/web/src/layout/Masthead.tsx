@@ -5,7 +5,7 @@ import type { PartProps } from './types';
 import styles from './Masthead.module.css';
 
 /** The town's generated SVG wordmark (or its logo file, once one exists), linking home. */
-export function Masthead({ town, theme, size }: PartProps & { size: 'large' | 'small' }) {
+export function Masthead({ town, theme, size }: PartProps & { size: 'large' | 'small' | 'slim' }) {
   const logo = (town.config as { logo?: string }).logo;
   return (
     <Link href="/" className={`${styles.masthead} ${styles[size]}`} data-testid="masthead">

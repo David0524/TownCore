@@ -376,7 +376,7 @@ Pages are composed from interchangeable parts, so towns differ in structure, not
 | Header | `centered-masthead`, `left-logo-inline-nav`, `stacked-dateline` (masthead + date and weather bar), `compact`, `slim-left` (coastal-modern), `nameplate-double-rule` (heritage), `tinted-bar` (community) |
 | Navigation | Desktop: `beat-tabs`, `mega-menu`, `text-nav`. Phones always use the bottom tab bar (above); a hamburger is never primary navigation |
 | Grid | `single-column`, `main-right-rail`, `main-left-rail`, `split-two-column` |
-| Homepage | An ordered list of modules from the module library (below), not a fixed template |
+| Homepage | Ordered lists of modules from the module library (below), not a fixed template: an optional full-width band (`homeTop`: greeting, then 8 + 4 columns), the main column (`home`) and the rail (`homeRail`) |
 | Article page | `classic-rail`, `wide-reading` (no rail, generous measure), `magazine` (large lead image, pull-out source box) |
 | Directory | `list-map`, `category-grid`, `search-first` |
 | Footer | `three-column`, `minimal`, `community` (events and newsletter forward) |
@@ -387,7 +387,7 @@ Pages are composed from interchangeable parts, so towns differ in structure, not
 - **Community modules:** `events`, `schools-sports`, `weather-strip`, `photo-of-the-day` (reader submissions, later).
 - **Directory and money modules:** `directory-featured`, `directory-categories`, `jobs-classifieds` (later).
 - **Signup module:** `newsletter-cta`.
-- **Added by M4b:** `today-bento` (weather with hourly row, plus one or two local panels such as beach and tides, trails and air quality, pass roads), `essentials` (quick links to the evergreen guides), `three-things`, `this-weekend`, `new-now-open`, `find-a-pro`, `coming-up`, `documents-posted`, `recent-votes` (hidden until vote data exists), `photo-of-the-week` and `quick-poll` (later).
+- **Added by M4b:** `good-morning` (greeting, date, last update), `category-buttons` (sections with new stories this week, with counts), `today-bento` (weather with hourly row, sunset, "Also today", plus local panels such as beach and tides, trails and air quality, pass roads, as sources are approved), `essentials` (quick links to the evergreen guides), `three-things`, `this-weekend`, `new-now-open`, `find-a-pro`, `coming-up`, `documents-posted`, `recent-votes` (hidden until vote data exists), `photo-of-the-week` and `quick-poll` (later).
 
 **Generation constraints**
 - **Content volume decides structure.** Towns with fewer than 5 items a day cannot use `lead-story` first or `split-two-column`; they lead with `briefing-column`, `events` or `directory-featured`, so small towns never look empty.
