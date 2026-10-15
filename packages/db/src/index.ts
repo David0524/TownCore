@@ -37,3 +37,17 @@ export {
   type SourceRecord,
   type Town,
 } from './queries';
+export {
+  createLoginToken,
+  endSession,
+  findOrCreateStaff,
+  getSessionStaff,
+  hashToken,
+  logAdminAction,
+  LOGIN_LINKS_PER_HOUR,
+  LOGIN_TOKEN_TTL_MS,
+  redeemLoginToken,
+  SESSION_TTL_MS,
+  TooManyLoginLinks,
+  type StaffMember,
+} from './staff-auth';

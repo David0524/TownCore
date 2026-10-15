@@ -1,12 +1,24 @@
+import { loadEnv } from '@towncore/config';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // Every page is served per town. The proxy only rewrites the path to /sites/<host>/...;
 // the layout resolves the host to a town (Next advises against shared state in proxy).
+//
+// Staff admin (/admin) is served only on the internal host from APP_BASE_URL. On a town
+// domain /admin is rewritten like any other path and 404s, so it never exists on a site.
 export function proxy(request: NextRequest) {
   const host = request.headers.get('host') ?? '';
   const url = request.nextUrl.clone();
+  if (isAdminHost(host) && /^\/admin(\/|$)/.test(url.pathname)) {
+    return NextResponse.next();
+  }
   url.pathname = `/sites/${encodeURIComponent(host)}${url.pathname === '/' ? '' : url.pathname}`;
   return NextResponse.rewrite(url);
+}
+
+function isAdminHost(host: string): boolean {
+  const base = loadEnv().APP_BASE_URL;
+  return Boolean(base) && new URL(base!).host.toLowerCase() === host.toLowerCase();
 }
 
 export const config = {

@@ -1,4 +1,11 @@
-import { cornerRadii, defaultTheme, themeSchema, typePairings, type Theme } from '@towncore/config';
+import {
+  brandColors,
+  cornerRadii,
+  defaultTheme,
+  themeSchema,
+  typePairings,
+  type Theme,
+} from '@towncore/config';
 
 // Fallback stacks keep text readable while web fonts load.
 const serifFallback = "Georgia, 'Times New Roman', serif";
@@ -29,6 +36,28 @@ export function themeCssVariables(theme: Theme): string {
     '--font-headline': `'${fonts.headline}', ${serifFallback}`,
     '--font-body': `'${fonts.body}', ${sansFallback}`,
     '--radius': cornerRadii[theme.corners],
+  };
+  return `:root{${Object.entries(vars)
+    .map(([name, value]) => `${name}:${value};`)
+    .join('')}}`;
+}
+
+/**
+ * Tokens for staff pages (/admin): the TownCore network brand (CLAUDE.md §11), never shown on
+ * town sites. Same token names as town themes, so the same components work.
+ */
+export function networkCssVariables(): string {
+  const vars: Record<string, string> = {
+    '--ink': brandColors.navy,
+    '--accent': brandColors.navy,
+    '--accent-text': brandColors.white,
+    '--tint': brandColors.paper,
+    '--surface': brandColors.paper,
+    '--background': brandColors.white,
+    '--muted': brandColors.slate,
+    '--font-headline': sansFallback,
+    '--font-body': sansFallback,
+    '--radius': '4px',
   };
   return `:root{${Object.entries(vars)
     .map(([name, value]) => `${name}:${value};`)

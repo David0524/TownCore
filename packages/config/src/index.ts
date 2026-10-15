@@ -3,6 +3,7 @@ export {
   dailyStoryBudget,
   defaultScoreThreshold,
   factcheckPassScore,
+  placeholderReviewerName,
   publicSafetyShare,
   storyBudgetFor,
   tier2ReviewSample,

@@ -64,6 +64,13 @@
       "when": 1792083917223,
       "tag": "0008_writer",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792084329921,
+      "tag": "0009_staff_auth",
+      "breakpoints": true
     }
   ]
 }

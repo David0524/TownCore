@@ -83,6 +83,12 @@ importers:
       '@towncore/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@towncore/email':
+        specifier: workspace:*
+        version: link:../../packages/email
+      '@towncore/prompts':
+        specifier: workspace:*
+        version: link:../../packages/prompts
       micromark:
         specifier: ^4.0.3
         version: 4.0.3
