@@ -17,6 +17,8 @@ export interface DnsProvider {
   getDomain(domain: string): Promise<VercelDomain | null>;
   listRecords(domain: string): Promise<ExistingRecord[]>;
   createRecord(domain: string, record: DnsRecordSpec, comment: string): Promise<string>;
+  /** Deletes one record we created (domain removal, Mail-6). Already gone is fine. */
+  deleteRecord(domain: string, recordId: string): Promise<void>;
 }
 
 export class VercelApiError extends Error {
@@ -46,7 +48,7 @@ export function vercelDns(options: {
   const { token, teamId, fetchImpl = fetch, retry, baseUrl = 'https://api.vercel.com' } = options;
 
   async function call<T>(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'DELETE',
     path: string,
     query: Record<string, string> = {},
     body?: unknown,
@@ -132,6 +134,13 @@ export function vercelDns(options: {
       if (!body?.uid)
         throw new VercelApiError(404, `Vercel could not create a record on ${domain}`);
       return body.uid;
+    },
+    async deleteRecord(domain, recordId) {
+      // https://vercel.com/docs/rest-api/reference/endpoints/dns/delete-a-dns-record
+      await call(
+        'DELETE',
+        `/v2/domains/${encodeURIComponent(domain)}/records/${encodeURIComponent(recordId)}`,
+      );
     },
   };
 }

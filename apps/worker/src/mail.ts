@@ -67,13 +67,18 @@ export async function runMailTick(
   }
 }
 
-export type InboundConfig = { objects: MailObjectStore; bucket: string };
+export type InboundConfig = {
+  objects: MailObjectStore;
+  bucket: string;
+  dmarcAddress?: string | null;
+};
 
 export function inboundFromEnv(): InboundConfig | null {
   const env = loadEnv();
   if (!env.AWS_ACCESS_KEY_ID || !env.MAIL_S3_BUCKET) return null;
   return {
     bucket: env.MAIL_S3_BUCKET,
+    dmarcAddress: env.DMARC_REPORT_ADDRESS ?? null,
     objects: s3MailStore({ region: env.AWS_REGION ?? 'us-east-1', bucket: env.MAIL_S3_BUCKET }),
   };
 }
@@ -92,6 +97,7 @@ export function mailEventHandler(db: Db, inbound: InboundConfig, logger: Logger)
       db,
       objects: inbound.objects,
       bucket: inbound.bucket,
+      dmarcAddress: inbound.dmarcAddress ?? null,
       routing: await loadRoutingTable(db),
     });
     logger.info({ event: event.id, ...result }, 'inbound mail processed');

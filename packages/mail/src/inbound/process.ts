@@ -16,6 +16,7 @@ import {
 } from '@towncore/db';
 import { z } from 'zod';
 import { routeRecipient } from '../routing';
+import { storeDmarcAttachments } from '../ops/dmarc';
 import { parseRawEmail, type ParsedMessage } from './parse';
 import { normalizeSubject, referencedIds, THREAD_FALLBACK_DAYS } from './threading';
 
@@ -56,6 +57,8 @@ export type ProcessResult = {
   stored: number;
   duplicates: number;
   dropped: { recipient: string; reason: string }[];
+  /** DMARC aggregate reports stored from mail to the report address (Mail-6). */
+  dmarcReports?: number;
 };
 
 export type ProcessDeps = {
@@ -64,6 +67,8 @@ export type ProcessDeps = {
   /** The bucket SES writes to (MAIL_S3_BUCKET); any other bucket in a notification is refused. */
   bucket: string;
   routing: { roles: ReadonlyMap<string, string>; catchAllTeamId: string };
+  /** DMARC_REPORT_ADDRESS: its mail is parsed into dmarc_reports, not put in the inbox. */
+  dmarcAddress?: string | null;
   now?: () => Date;
 };
 
@@ -83,8 +88,29 @@ export async function processReceivedNotification(
   const domainIds = new Map(live.map((d) => [d.name, d.id]));
   const result: ProcessResult = { outcome: 'dropped', stored: 0, duplicates: 0, dropped: [] };
 
+  const dmarc = deps.dmarcAddress?.toLowerCase() ?? null;
+  const recipients = new Set(notification.receipt.recipients.map((r) => r.toLowerCase()));
+  if (dmarc && recipients.has(dmarc)) {
+    recipients.delete(dmarc);
+    const report = await parseRawEmail(
+      await deps.objects.getRaw(action.bucketName, action.objectKey),
+    );
+    const stored = await storeDmarcAttachments(
+      deps.db,
+      report.attachments.map((a) => ({ filename: a.filename, content: a.content })),
+      deps.now?.() ?? new Date(),
+    );
+    result.dmarcReports = stored.stored + stored.duplicates;
+    if (result.dmarcReports) result.outcome = 'stored';
+    else
+      result.dropped.push({
+        recipient: dmarc,
+        reason: `no DMARC report found${stored.errors.length ? `: ${stored.errors.join('; ')}` : ''}`,
+      });
+  }
+
   const routes = [];
-  for (const recipient of new Set(notification.receipt.recipients.map((r) => r.toLowerCase()))) {
+  for (const recipient of recipients) {
     const route = routeRecipient(recipient, {
       domains: new Set(domainIds.keys()),
       ...deps.routing,

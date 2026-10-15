@@ -258,3 +258,15 @@ export {
 } from './ops/alerts';
 export { mailHealthSnapshot, rate, SES_REVIEW, type StreamTotals } from './ops/health';
 export { ALERT_FROM, NotStaffAddress, sendStaffEmail } from './ops/staff-email';
+export {
+  DmarcParseError,
+  dmarcSummary,
+  extractReportXml,
+  MAX_REPORT_BYTES,
+  parseDmarcXml,
+  storeDmarcAttachments,
+  type DmarcReport,
+  type DmarcSource,
+  type DmarcSummary,
+} from './ops/dmarc';
+export { applyRemoval, describeRemoval, planRemoval, type RemovalPlan } from './removal';

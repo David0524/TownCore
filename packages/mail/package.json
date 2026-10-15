@@ -18,6 +18,8 @@
     "@aws-sdk/s3-request-presigner": "^3.1152.0",
     "@towncore/config": "workspace:*",
     "@towncore/db": "workspace:*",
+    "fast-xml-parser": "^5.11.2",
+    "fflate": "^0.8.3",
     "mailparser": "^3.9.39",
     "micromark": "^4.0.3",
     "nodemailer": "^7.0.13",
