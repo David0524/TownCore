@@ -71,6 +71,33 @@ describe('towns:sync', () => {
       .where(eq(towns.slug, 'boca-raton'));
   });
 
+  it('syncs verified YAML sources, skips TBD ones, and is idempotent', async () => {
+    const [loaded] = loadTowns(townsDir).filter((t) => t.config.slug === 'boca-raton');
+    const withSource = {
+      ...loaded!,
+      config: {
+        ...loaded!.config,
+        sources: [
+          ...loaded!.config.sources,
+          { kind: 'weather' as const, platform: 'nws', zone: 'FLZ168', schedule: '3h' },
+        ],
+      },
+    };
+    const first = await syncTowns(db, [withSource]);
+    expect(first).toMatchObject({ sources: 1, skippedSources: 2 });
+    await syncTowns(db, [withSource]);
+    const town = await boca();
+    const rows = await db.select().from(sources).where(eq(sources.townId, town.id));
+    const nws = rows.filter((r) => r.key === 'weather:nws:FLZ168');
+    expect(nws).toHaveLength(1);
+    expect(nws[0]).toMatchObject({
+      platform: 'nws',
+      adapter: 'nws',
+      schedule: '3h',
+      config: { zone: 'FLZ168' },
+    });
+  });
+
   it('rejects a second town with the same domain', async () => {
     const [loaded] = loadTowns(townsDir).filter((t) => t.config.slug === 'boca-raton');
     await expect(

@@ -16,7 +16,8 @@
     "db:generate": "pnpm --filter @towncore/db db:generate",
     "db:check": "pnpm --filter @towncore/db db:check",
     "db:migrate": "pnpm --filter @towncore/db db:migrate",
-    "towns:sync": "pnpm --filter @towncore/db towns:sync"
+    "towns:sync": "pnpm --filter @towncore/db towns:sync",
+    "sources:status": "pnpm --filter @towncore/adapters sources:status"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

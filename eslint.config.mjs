@@ -37,6 +37,29 @@ export default tseslint.config(
     },
   },
   {
+    // Rule 8: adapters fetch only through the polite Fetcher (robots.txt, rate limit, UA).
+    files: ['packages/adapters/src/**/*.ts'],
+    ignores: ['packages/adapters/src/http/fetcher.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'fetch',
+          message: 'Use the Fetcher from packages/adapters/src/http/fetcher.ts (Rule 8).',
+        },
+      ],
+      'no-restricted-properties': [
+        'error',
+        { object: 'globalThis', property: 'fetch', message: 'Use the Fetcher (Rule 8).' },
+        {
+          object: 'process',
+          property: 'env',
+          message: 'Read environment variables through @towncore/config.',
+        },
+      ],
+    },
+  },
+  {
     files: ['packages/config/src/env.ts', '**/*.config.{js,mjs,cjs,ts}'],
     rules: { 'no-restricted-properties': 'off' },
   },

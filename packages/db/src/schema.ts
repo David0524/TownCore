@@ -69,6 +69,7 @@ export const subscriberStatus = pgEnum('subscriber_status', [
   'complained',
 ]);
 export const staffRole = pgEnum('staff_role', ['admin', 'reviewer']);
+export const sourceRunStatus = pgEnum('source_run_status', ['running', 'ok', 'failed']);
 export const campaignStatus = pgEnum('campaign_status', ['draft', 'active', 'paused', 'ended']);
 
 export const towns = pgTable('towns', {
@@ -119,10 +120,18 @@ export const sources = pgTable(
     config: jsonb('config').notNull().default({}),
     health: sourceHealth('health').notNull().default('ok'),
     lastOkAt: timestamp('last_ok_at', { withTimezone: true }),
+    lastRunAt: timestamp('last_run_at', { withTimezone: true }),
+    consecutiveFailures: integer('consecutive_failures').notNull().default(0),
+    lastError: text('last_error'),
+    // Stable identity for sources synced from town YAML ("kind:platform:url-or-zone").
+    key: text('key'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index('sources_town_idx').on(t.townId)],
+  (t) => [
+    index('sources_town_idx').on(t.townId),
+    uniqueIndex('sources_town_key_uq').on(t.townId, t.key),
+  ],
 );
 
 export const records = pgTable(
@@ -143,6 +152,8 @@ export const records = pgTable(
     occurredAt: timestamp('occurred_at', { withTimezone: true }),
     raw: jsonb('raw'),
     contentHash: text('content_hash').notNull(),
+    // Set when an existing record's content changes (feeds M3 follow-ups).
+    changedAt: timestamp('changed_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -350,6 +361,28 @@ export const aiUsage = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('ai_usage_town_created_idx').on(t.townId, t.createdAt)],
+);
+
+// One row per ingest run of a source (CLAUDE.md §6 ingest; health and M8 dashboards).
+export const sourceRuns = pgTable(
+  'source_runs',
+  {
+    id: id(),
+    sourceId: uuid('source_id')
+      .notNull()
+      .references(() => sources.id),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    status: sourceRunStatus('status').notNull().default('running'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    items: integer('items').notNull().default(0),
+    newItems: integer('new_items').notNull().default(0),
+    changedItems: integer('changed_items').notNull().default(0),
+    error: text('error'),
+  },
+  (t) => [index('source_runs_source_started_idx').on(t.sourceId, t.startedAt)],
 );
 
 // Direct-sold campaigns filling monetization slots (CLAUDE.md §11b). First in every slot's fill

@@ -66,3 +66,44 @@ describe('worker', () => {
     await expect(second.stop()).resolves.toBeUndefined();
   });
 });
+
+describe('ingest', () => {
+  it('a tick enqueues due sources and the ingest job stores their records', async () => {
+    const { registerAdapter } = await import('@towncore/adapters');
+    const { getTownBySlug, records, sources, syncTowns } = await import('@towncore/db');
+    const { loadTowns } = await import('@towncore/config');
+    const { fileURLToPath } = await import('node:url');
+
+    registerAdapter({
+      platform: 'worker-test',
+      kinds: ['events'],
+      detect: async () => 0,
+      fetch: async () => [{ externalId: 'e1', type: 'event', title: 'Test event', raw: {} }],
+      healthCheck: async () => ({ ok: true }),
+    });
+    await syncTowns(
+      testDb.db,
+      loadTowns(fileURLToPath(new URL('../../../towns', import.meta.url))),
+    );
+    const town = await getTownBySlug(testDb.db, 'boca-raton');
+    const [source] = await testDb.db
+      .insert(sources)
+      .values({
+        townId: town!.id,
+        kind: 'events',
+        platform: 'worker-test',
+        adapter: 'worker-test',
+        key: 'worker-test',
+      })
+      .returning();
+
+    await worker.boss.send(queues.ingestTick);
+    const stored = await waitFor(async () => {
+      const rows = await testDb.db.select().from(records).where(eq(records.sourceId, source!.id));
+      return rows.length > 0 ? rows : undefined;
+    });
+    expect(stored[0]).toMatchObject({ externalId: 'e1', title: 'Test event' });
+    const [after] = await testDb.db.select().from(sources).where(eq(sources.id, source!.id));
+    expect(after).toMatchObject({ health: 'ok' });
+  });
+});

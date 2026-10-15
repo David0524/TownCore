@@ -14,6 +14,7 @@ export {
   loadTownConfigs,
   loadTowns,
   parseTownConfig,
+  scheduleSchema,
   townContactEmail,
   sourceKinds,
   TBD,
@@ -21,6 +22,7 @@ export {
   townTiers,
   type LoadedTown,
   type SourceKind,
+  type TownSourceConfig,
   type TownConfig,
   type TownTier,
 } from './town';
