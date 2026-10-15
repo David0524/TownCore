@@ -68,7 +68,12 @@ describe('newBusinessesRoundup', () => {
         raw: { zip: '33432' },
       }),
     ]);
-    expect(draft.bodyMd).toContain('recorded 2 new business filings');
+    expect(draft.bodyMd).toContain(
+      'recorded 2 new business filings with a Boca Raton mailing address',
+    );
+    // State records give a mailing city, which can be outside city limits (wrong-town risk).
+    expect(draft.bodyMd).toContain('can be outside the city limits');
+    expect(draft.headline).not.toMatch(/ in Boca Raton/);
     expect(draft.bodyMd).toContain(
       '- **ALPHA CORP**: Florida profit corporation, filed 10/07/2026, ZIP 33432\n- **ZETA \\*SERVICES\\* LLC**: Florida limited liability company, filed 10/06/2026, ZIP 33431',
     );
