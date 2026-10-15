@@ -261,6 +261,16 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
 
 ## Decisions
 - (log decisions here with date and reason)
+- 2026-10-15 — Company name **TownCore**, public contact **info@towncore.net** (network page, About, corrections).
+- 2026-10-15 — `towncore.net` is internal, not a public site. The network About page lives on each town site at `/network`; the footer badge links there (satisfies rule 1).
+- 2026-10-15 — Production Postgres and the worker run on **Railway** (pg-boss needs session-mode connections). Web stays on Vercel.
+- 2026-10-15 — bocatownsquare.com is owned and its DNS is on **Vercel**; no Cloudflare step for Boca. DNS provider for future towns is decided before M7.
+- 2026-10-15 — Headline font **Source Serif 4**; UI font Inter. Styling with CSS modules + CSS variables (no Tailwind).
+- 2026-10-15 — **TypeScript 6.0.x**, because typescript-eslint 8.71 doesn't support TS ≥ 6.1 yet. Revisit when it does.
+- 2026-10-15 — Article ↔ source links stay `uuid[]` arrays (as in §5), with a DB check that published articles cite ≥ 1 source.
+- 2026-10-15 — Report-an-error is a `mailto:` link in M1; real form in M4.
+- 2026-10-15 — Brick (#C2461F) on paper is only for large text or decoration (contrast 4.45), and teal (#1F8A8A) is only for non-text accents (3.69). Enforced by a token-pair test.
+- 2026-10-15 — Logos are in progress; text wordmark until then, logo path read from town config.
 
 ## Status
 - Not started.
