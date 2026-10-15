@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Fragment } from 'react';
 import { beats, townContactEmail, type TownConfig } from '@towncore/config';
 import { getPublishedArticle, getSourceRecords, listArticleCorrections } from '@towncore/db';
 import { ViewBeacon } from '@/components/Beacon';
+import { BeatLabel } from '@/components/news/BeatLabel';
+import { TypographicCard } from '@/components/news/TypographicCard';
 import { Prose } from '@/components/Prose';
 import { TownGrid } from '@/layout/TownGrid';
 import { db } from '@/lib/db';
@@ -13,6 +14,7 @@ import { themeFor } from '@/lib/theme';
 import { formatTownDate, requireTown, resolveTown } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
 import { rssAlternate } from '@/lib/discovery';
+import { roundupFigure } from '@/modules/data';
 import { JsonLd, newsArticleJsonLd } from '@/lib/structured-data';
 import styles from './article.module.css';
 
@@ -44,9 +46,10 @@ export default async function ArticlePage({ params }: Props) {
 
   const theme = themeFor(town);
   const template = theme.layout.article;
-  const [sourceRecords, corrections] = await Promise.all([
+  const [sourceRecords, corrections, figure] = await Promise.all([
     getSourceRecords(db(), article.sourceRecordIds),
     listArticleCorrections(db(), article.id),
+    roundupFigure(article),
   ]);
   const beat = beats.find((b) => b.slug === article.beat);
   const blocks = markdownBlocks(article.bodyMd);
@@ -70,11 +73,7 @@ export default async function ArticlePage({ params }: Props) {
         <JsonLd data={newsArticleJsonLd(town, article)} />
         <ViewBeacon slug={article.slug} />
         <header className={styles.header}>
-          {beat ? (
-            <p className={styles.kicker}>
-              <Link href={`/beat/${beat.slug}`}>{beat.label}</Link>
-            </p>
-          ) : null}
+          {beat ? <BeatLabel beat={beat.slug} link /> : null}
           <h1 className={template === 'classic-rail' ? styles.headline : styles.largeHeadline}>
             {article.headline}
           </h1>
@@ -82,7 +81,7 @@ export default async function ArticlePage({ params }: Props) {
           <p className={styles.byline} data-testid="byline">
             {article.byline}
           </p>
-          <p className={`${styles.dates} muted`}>
+          <p className={`${styles.dates} meta`}>
             Published {formatTownDate(article.publishedAt!, town)}
             {updated ? ` · Updated ${formatTownDate(updated, town)}` : ''}
           </p>
@@ -97,6 +96,16 @@ export default async function ArticlePage({ params }: Props) {
             ))}
           </aside>
         ) : null}
+
+        {/* The story's visual (§11c): the typographic card until the image router (M4 PR C). */}
+        <figure className={styles.visual}>
+          <TypographicCard
+            theme={theme}
+            beat={article.beat}
+            headline={article.headline}
+            figure={figure}
+          />
+        </figure>
 
         {/* No slot may sit between the headline and the first paragraph (§11b). */}
         <div className={styles.body} data-testid="article-body">

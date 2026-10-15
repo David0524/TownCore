@@ -2,6 +2,7 @@ import { townContactEmail, type TownConfig } from '@towncore/config';
 import { getActiveCampaign, type Town } from '@towncore/db';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { newsletterOpen } from '@/lib/newsletter';
 import { slots, type SlotName } from './registry';
 
 // What a campaign may put in a slot. Text-only in M1; images arrive with the image rules (M4/M9).
@@ -53,11 +54,11 @@ export async function resolveSlotFill(
     );
   }
   // 2. Sponsored directory placements: M6. 3. Programmatic: gated, later.
-  return houseAd(town, slot);
+  return houseAd(town, slot, { newsletter: await newsletterOpen(town) });
 }
 
 /** House ads promote the site itself. They're labeled as the site's own, never as editorial. */
-export function houseAd(town: Town, slot: SlotName): SlotFill {
+export function houseAd(town: Town, slot: SlotName, opts: { newsletter?: boolean } = {}): SlotFill {
   const contact = townContactEmail(town.config as TownConfig);
   const advertise: SlotFill = {
     source: 'house',
@@ -67,15 +68,24 @@ export function houseAd(town: Town, slot: SlotName): SlotFill {
     href: `mailto:${contact}?subject=${encodeURIComponent(`Advertising in ${town.siteName}`)}`,
     cta: 'Get in touch',
   };
-  // Decision D-M1-1: no email collection until double opt-in exists (M5).
-  const newsletter: SlotFill = {
-    source: 'house',
-    label: `From ${town.siteName}`,
-    headline: 'Our daily newsletter is launching soon',
-    body: `${town.name} news from public records, every morning.`,
-    href: '/about',
-    cta: 'Learn more',
-  };
+  // Until the town's newsletter can send (Mail-5), the ad says it's coming (D-M1-1).
+  const newsletter: SlotFill = opts.newsletter
+    ? {
+        source: 'house',
+        label: `From ${town.siteName}`,
+        headline: `Start every day knowing what ${town.name} decided.`,
+        body: 'Our free morning email, written from public records.',
+        href: '/newsletter',
+        cta: 'Sign up',
+      }
+    : {
+        source: 'house',
+        label: `From ${town.siteName}`,
+        headline: 'Our free morning email is launching soon',
+        body: `${town.name} news from public records, every morning.`,
+        href: '/about',
+        cta: 'Learn more',
+      };
   const tips: SlotFill = {
     source: 'house',
     label: `From ${town.siteName}`,

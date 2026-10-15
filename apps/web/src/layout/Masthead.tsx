@@ -21,6 +21,7 @@ export function Masthead({ town, theme, size }: PartProps & { size: 'large' | 's
               style: theme.masthead,
               motif: theme.motif,
               advanceEm: typePairings[theme.type].headlineAdvanceEm,
+              fontWeight: typePairings[theme.type].headlineWeight,
             }),
           }}
         />

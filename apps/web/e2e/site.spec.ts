@@ -69,12 +69,13 @@ test('the Boca theme is applied (palette, type pairing, corners)', async ({ page
   });
   expect(styles).toMatchObject({
     background: 'rgb(255, 255, 255)', // palette.background #FFFFFF
-    text: 'rgb(14, 74, 107)', // palette.ink #0E4A6B
-    h1: 'rgb(14, 74, 107)',
+    text: 'rgb(17, 20, 24)', // palette.ink #111418
+    h1: 'rgb(17, 20, 24)',
     radius: '6px', // corners: soft
   });
-  expect(styles.h1Font).toContain('Newsreader');
-  expect(styles.bodyFont).toContain('Public Sans');
+  // coastal-modern type set: Instrument Serif display, Geist text.
+  expect(styles.h1Font).toContain('Instrument Serif');
+  expect(styles.bodyFont).toContain('Geist');
 });
 
 test('no horizontal scroll at phone width', async ({ page }) => {

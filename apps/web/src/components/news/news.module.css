@@ -1,0 +1,245 @@
+/* Story and section building blocks (docs/plans/M4b.md §3, revision 4): content on the page,
+   hairlines between items, no boxes or shadows. Every value comes from a token. */
+
+.label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.35rem;
+}
+
+.label a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.label a:hover {
+  text-decoration: underline;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--round);
+  flex: none;
+}
+
+/* Section header: display title over a 1px ink rule. */
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.sectionHeader h1,
+.sectionHeader h2 {
+  margin: 0;
+  font-size: clamp(1.625rem, 1.3rem + 1.2vw, 2rem);
+}
+
+.sectionHeader h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.more {
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.more:hover {
+  text-decoration: underline;
+}
+
+/* Headline links underline only on hover. */
+.headline {
+  margin: 0;
+}
+
+.headline a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.headline a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+  text-decoration-thickness: 1px;
+}
+
+.dek,
+.summary {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+}
+
+.lead .headline {
+  font-size: var(--fs-display);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+}
+
+.lead .dek {
+  font-size: var(--fs-dek);
+  line-height: 1.45;
+  max-width: 40rem;
+}
+
+.visual {
+  display: block;
+  margin-bottom: 1rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.secondary {
+  border-left: var(--hairline);
+  padding-left: 1rem;
+}
+
+.secondary .headline {
+  font-size: var(--fs-secondary);
+}
+
+.brief {
+  display: grid;
+  gap: 0.25rem 1.25rem;
+  padding: 1rem 0;
+  border-bottom: var(--hairline);
+}
+
+@media (min-width: 40rem) {
+  .brief {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+
+  .brief .label {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    align-items: baseline;
+  }
+}
+
+.brief .headline {
+  font-size: var(--fs-brief);
+}
+
+.brief .summary {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.list {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: var(--hairline);
+}
+
+.list .headline {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--fs-list);
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.list :global(.meta) {
+  white-space: nowrap;
+  flex: none;
+}
+
+/* Typographic card: the town's ink as the ground, its motif as a watermark. */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  overflow: hidden;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--background);
+}
+
+.cardWide {
+  aspect-ratio: 16 / 9;
+}
+
+.cardPhoto {
+  aspect-ratio: 3 / 2;
+}
+
+.card :global(.meta),
+.cardTop {
+  color: var(--background);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  position: relative;
+}
+
+.cardHeadline {
+  position: relative;
+  font-family: var(--font-headline);
+  font-weight: var(--headline-weight);
+  font-size: clamp(1.5rem, 1rem + 2.4vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  max-width: 24ch;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.cardFigure {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cardNumber {
+  font-family: var(--font-headline);
+  font-weight: var(--headline-weight);
+  font-size: clamp(3.5rem, 2rem + 7vw, 7rem);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+.cardFigureLabel {
+  font-size: 1.0625rem;
+}
+
+.cardGlyph {
+  position: relative;
+  align-self: flex-end;
+}
+
+.cardMotif {
+  position: absolute;
+  right: -6%;
+  bottom: -18%;
+  width: 62%;
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+.cardMotif svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}

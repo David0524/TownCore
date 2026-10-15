@@ -1,37 +1,50 @@
 import Link from 'next/link';
 import { NewsletterForm } from '@/components/NewsletterForm';
+import { SectionHeader } from '@/components/news/SectionHeader';
+import { StoryBlock } from '@/components/news/StoryBlock';
+import { TypographicCard } from '@/components/news/TypographicCard';
+import { WeatherTile } from '@/components/weather/WeatherTile';
 import { newsletterOpen } from '@/lib/newsletter';
 import { beats } from '@towncore/config';
 import type { Article } from '@towncore/db';
 import { formatTownDate } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
-import { pickLead, recentArticles } from './data';
+import { pickLead, recentArticles, roundupFigure, townWeather } from './data';
 import type { HomeModuleComponent } from './types';
 import styles from './modules.module.css';
 
-function ArticleItem({ article, timezone }: { article: Article; timezone: string }) {
-  return (
-    <article className={styles.item}>
-      <h3>
-        <Link href={`/news/${article.slug}`}>{article.headline}</Link>
-      </h3>
-      {article.dek ? <p className={styles.dek}>{article.dek}</p> : null}
-      <p className={`${styles.meta} muted`}>{formatTownDate(article.publishedAt!, { timezone })}</p>
-    </article>
-  );
-}
-
-export const LeadStory: HomeModuleComponent = async ({ town }) => {
+export const LeadStory: HomeModuleComponent = async ({ town, theme }) => {
   const lead = pickLead(await recentArticles(town.id));
   if (!lead) return null;
+  const figure = await roundupFigure(lead);
   return (
-    <section className={`${styles.module} ${styles.lead}`} data-module="lead-story">
-      <h2>
-        <Link href={`/news/${lead.slug}`}>{lead.headline}</Link>
-      </h2>
-      {lead.dek ? <p className={styles.dek}>{lead.dek}</p> : null}
-      <p className={`${styles.meta} muted`}>{formatTownDate(lead.publishedAt!, town)}</p>
+    <section className={styles.module} data-module="lead-story">
+      <StoryBlock
+        story={lead}
+        town={town}
+        variant="lead"
+        as="h2"
+        visual={
+          <TypographicCard
+            theme={theme}
+            beat={lead.beat}
+            headline={lead.headline}
+            figure={figure}
+          />
+        }
+      />
     </section>
+  );
+};
+
+/** The Today tile: weather now (docs/plans/M4b.md). Hidden when the town has no NWS data. */
+export const TodayBento: HomeModuleComponent = async ({ town }) => {
+  const weather = await townWeather(town.id);
+  if (!weather) return null;
+  return (
+    <div data-module="today-bento">
+      <WeatherTile town={town} weather={weather} />
+    </div>
   );
 };
 
@@ -48,7 +61,7 @@ export const LatestList: HomeModuleComponent = async ({ town, modules }) => {
   items.forEach((article, i) => {
     rows.push(
       <li key={article.id}>
-        <ArticleItem article={article} timezone={town.timezone} />
+        <StoryBlock story={article} town={town} variant="brief" />
       </li>,
     );
     const position = i + 1;
@@ -66,7 +79,7 @@ export const LatestList: HomeModuleComponent = async ({ town, modules }) => {
 
   return (
     <section className={styles.module} data-module="latest-list">
-      <h2 className={styles.heading}>Latest</h2>
+      <SectionHeader title="Latest" />
       <ul className={styles.list}>{rows}</ul>
     </section>
   );
@@ -83,14 +96,14 @@ export const BriefingColumn: HomeModuleComponent = async ({ town }) => {
   }
   return (
     <section className={`${styles.module} ${styles.briefing}`} data-module="briefing-column">
-      <h2 className={styles.heading}>The briefing</h2>
+      <SectionHeader title="The briefing" />
       {[...byDay].map(([day, dayArticles]) => (
         <div key={day}>
-          <p className={styles.day}>{day}</p>
+          <p className={`meta ${styles.day}`}>{day}</p>
           <ul className={styles.list}>
             {dayArticles.map((article) => (
               <li key={article.id}>
-                <Link href={`/news/${article.slug}`}>{article.headline}</Link>
+                <StoryBlock story={article} town={town} variant="list" />
               </li>
             ))}
           </ul>
@@ -112,13 +125,11 @@ export const BeatSections: HomeModuleComponent = async ({ town, modules }) => {
     <div data-module="beat-sections">
       {sections.map(({ beat, items }) => (
         <section key={beat.slug} className={styles.module}>
-          <h2 className={styles.heading}>
-            <Link href={`/beat/${beat.slug}`}>{beat.label}</Link>
-          </h2>
+          <SectionHeader title={beat.label} href={`/beat/${beat.slug}`} />
           <ul className={styles.list}>
             {items.map((article) => (
               <li key={article.id}>
-                <ArticleItem article={article} timezone={town.timezone} />
+                <StoryBlock story={article} town={town} variant="list" />
               </li>
             ))}
           </ul>

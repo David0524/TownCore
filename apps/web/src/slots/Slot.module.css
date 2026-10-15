@@ -1,48 +1,56 @@
-/* Locked component (CLAUDE.md §11a-2, §11b): the same structure and label style in every town,
-   visibly distinct from editorial content. Height is reserved so fills never shift the page. */
+/* Locked component (CLAUDE.md §11a-2, §11b; docs/plans/M4b.md revision 4): the same structure
+   and label style in every town. The label is mono text above the unit; paid units sit on the
+   network's sand tile, house ads on the town's surface. Height is reserved so fills never shift
+   the page, and each format's design fills its reserved size exactly. */
 .slot {
   display: flex;
   flex-direction: column;
-  min-height: var(--slot-h-mobile);
   height: var(--slot-h-mobile);
   overflow: hidden;
-  border: 1px dashed var(--ink);
-  border-radius: var(--radius);
-  background: var(--surface);
-  margin: 1.5rem 0;
+  margin: 1.75rem 0;
 }
 
 @media (min-width: 64rem) {
   .slot {
-    min-height: var(--slot-h-desktop);
     height: var(--slot-h-desktop);
   }
 }
 
 .label {
-  align-self: flex-start;
-  font-family: var(--font-body);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 0.2rem 0.5rem;
-  color: var(--background);
-  background: var(--ink);
+  flex: none;
+  height: var(--slot-label-h);
+  display: flex;
+  align-items: center;
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
-.card {
+.unit {
   flex: 1;
+  min-height: 0;
   display: grid;
   align-content: center;
-  gap: 0.25rem;
-  padding: 0.75rem 1rem;
+  gap: 0.3rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius);
   color: var(--ink);
   text-decoration: none;
 }
 
-.card:hover .headline {
+.paid {
+  background: var(--sand);
+}
+
+.house {
+  background: var(--surface);
+}
+
+.unit:hover .headline {
   text-decoration: underline;
+  text-underline-offset: 0.12em;
+  text-decoration-thickness: 1px;
 }
 
 .headline,
@@ -54,15 +62,17 @@
 
 /* Text is clamped so a fill can never overflow its reserved height mid-line. */
 .headline {
-  font-family: var(--font-body);
-  font-size: 1.0625rem;
-  line-height: 1.35;
+  font-family: var(--font-headline);
+  font-weight: var(--headline-weight);
+  font-size: 1.375rem;
+  line-height: 1.12;
   -webkit-line-clamp: 2;
 }
 
 .body {
   font-size: 0.9375rem;
   line-height: 1.4;
+  color: var(--muted);
   -webkit-line-clamp: 2;
 }
 
@@ -70,4 +80,59 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--accent);
+}
+
+/* Leaderboard: one line on a wide screen; headline and call to action side by side. */
+.leaderboard .unit {
+  padding-block: 0.5rem;
+}
+
+.leaderboard .body {
+  display: none;
+}
+
+.leaderboard .headline {
+  font-size: 1.25rem;
+}
+
+@media (min-width: 64rem) {
+  .leaderboard .unit {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 2rem;
+  }
+
+  .leaderboard .headline {
+    font-size: 1.625rem;
+    -webkit-line-clamp: 1;
+  }
+}
+
+/* Box: 300 wide, centered when its column is wider; a bigger headline fills the square. */
+.box .unit {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  align-content: space-between;
+  padding: 1.25rem;
+}
+
+.box .headline {
+  font-size: 1.75rem;
+  line-height: 1.08;
+  -webkit-line-clamp: 4;
+}
+
+.box .body {
+  -webkit-line-clamp: 3;
+}
+
+.card .headline {
+  font-size: 1.25rem;
+}
+
+.box .label {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
 }

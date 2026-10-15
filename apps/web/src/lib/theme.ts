@@ -1,6 +1,11 @@
 import {
+  beatCategory,
   brandColors,
+  categoryColors,
   cornerRadii,
+  darkColors,
+  deriveMuted,
+  systemColors,
   defaultTheme,
   themeSchema,
   typePairings,
@@ -10,6 +15,9 @@ import {
 // Fallback stacks keep text readable while web fonts load.
 const serifFallback = "Georgia, 'Times New Roman', serif";
 const sansFallback = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+const monoFallback = "ui-monospace, 'SF Mono', Menlo, monospace";
+// Today tiles are rounder than images in soft and round themes (canvas: 6px images, 16px tiles).
+const tileRadii = { square: '0', soft: '16px', round: '16px' } as const;
 
 /** The town's theme, or the default theme if it has none (or an invalid one slipped in). */
 export function themeFor(town: { slug: string; theme: unknown }): Theme {
@@ -22,10 +30,23 @@ export function themeFor(town: { slug: string; theme: unknown }): Theme {
   return parsed.data;
 }
 
-/** CSS custom properties for a theme. Components read only these, never literal values. */
+const css = (selector: string, vars: Record<string, string>) =>
+  `${selector}{${Object.entries(vars)
+    .map(([name, value]) => `${name}:${value};`)
+    .join('')}}`;
+
+/** The category color a beat's dot uses (fixed meanings network-wide, docs/plans/M4b.md). */
+export const beatColorVar = (beat: string) => `var(--cat-${beatCategory[beat] ?? 'news'})`;
+
+/**
+ * CSS custom properties for a theme. Components read only these, never literal values. The
+ * town supplies palette, fonts and corners; the network supplies category colors, the sponsored
+ * sand, alert amber and hairlines, which mean the same thing on every site.
+ */
 export function themeCssVariables(theme: Theme): string {
   const { palette } = theme;
   const fonts = typePairings[theme.type];
+  const metaFallback = fonts.metaStyle === 'mono' ? monoFallback : sansFallback;
   const vars: Record<string, string> = {
     '--ink': palette.ink,
     '--accent': palette.accent,
@@ -33,13 +54,31 @@ export function themeCssVariables(theme: Theme): string {
     '--tint': palette.tint,
     '--surface': palette.surface,
     '--background': palette.background,
+    '--muted': deriveMuted(palette),
+    '--rule': systemColors.rule,
+    '--sand': systemColors.sand,
+    '--alert': systemColors.alert,
+    '--alert-text': systemColors.alertText,
+    ...Object.fromEntries(Object.entries(categoryColors).map(([k, v]) => [`--cat-${k}`, v])),
     '--font-headline': `'${fonts.headline}', ${serifFallback}`,
     '--font-body': `'${fonts.body}', ${sansFallback}`,
+    '--font-meta': `'${fonts.meta}', ${metaFallback}`,
+    '--meta-style': fonts.metaStyle === 'italic' ? 'italic' : 'normal',
+    '--headline-weight': String(fonts.headlineWeight),
     '--radius': cornerRadii[theme.corners],
+    '--radius-tile': tileRadii[theme.corners],
   };
-  return `:root{${Object.entries(vars)
-    .map(([name, value]) => `${name}:${value};`)
-    .join('')}}`;
+  // Dark mode: the same roles on a near-black page. Built now, switched on later.
+  const dark: Record<string, string> = {
+    '--ink': darkColors.ink,
+    '--background': darkColors.background,
+    '--surface': darkColors.surface,
+    '--tint': darkColors.tint,
+    '--muted': darkColors.muted,
+    '--rule': darkColors.rule,
+    '--sand': darkColors.sand,
+  };
+  return css(':root', vars) + css(':root[data-color-scheme="dark"]', dark);
 }
 
 /**
@@ -55,11 +94,17 @@ export function networkCssVariables(): string {
     '--surface': brandColors.paper,
     '--background': brandColors.white,
     '--muted': brandColors.slate,
+    '--rule': brandColors.paper,
+    '--sand': brandColors.paper,
+    '--alert': systemColors.alert,
+    '--alert-text': systemColors.alertText,
     '--font-headline': sansFallback,
     '--font-body': sansFallback,
+    '--font-meta': sansFallback,
+    '--meta-style': 'normal',
+    '--headline-weight': '700',
     '--radius': '4px',
+    '--radius-tile': '4px',
   };
-  return `:root{${Object.entries(vars)
-    .map(([name, value]) => `${name}:${value};`)
-    .join('')}}`;
+  return css(':root', vars);
 }

@@ -14,8 +14,10 @@ export type MastheadInput = {
   motif: MotifName;
   /** CSS font-family value; normally var(--font-headline). */
   fontFamily?: string;
-  /** Mean bold glyph advance of the headline font, in em (from the type pairing). */
+  /** Mean glyph advance of the headline font at `fontWeight`, in em (from the type set). */
   advanceEm?: number;
+  /** The display face's headline weight; single-weight faces use 400, never a faked bold. */
+  fontWeight?: number;
 };
 
 // The viewBox is sized from the font's measured mean advance; textLength then fits the text
@@ -29,11 +31,12 @@ export function mastheadSvg({
   motif,
   fontFamily = 'var(--font-headline)',
   advanceEm = DEFAULT_ADVANCE_EM,
+  fontWeight = 700,
 }: MastheadInput): string {
   const name = escapeXml(siteName.trim());
   const textWidth = Math.round(siteName.trim().length * FONT_SIZE * advanceEm);
   const textAttrs =
-    `font-family="${escapeXml(fontFamily)}" font-size="${FONT_SIZE}" font-weight="700" fill="currentColor"` +
+    `font-family="${escapeXml(fontFamily)}" font-size="${FONT_SIZE}" font-weight="${fontWeight}" fill="currentColor"` +
     ` textLength="${textWidth}" lengthAdjust="spacing"`;
   const icon = (x: number, y: number, size: number) =>
     `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="currentColor"` +

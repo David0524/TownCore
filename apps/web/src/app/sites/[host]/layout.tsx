@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { AlertBar } from '@/components/weather/AlertBar';
+import { WeatherLine } from '@/components/weather/WeatherLine';
 import { footers, headers, navs } from '@/layout/registry';
+import { townWeather } from '@/modules/data';
 import { rssAlternate } from '@/lib/discovery';
 import { themeCssVariables, themeFor } from '@/lib/theme';
 import { requireTown, resolveTown } from '@/lib/town';
@@ -27,11 +30,14 @@ export default async function TownLayout({ children, params }: Props) {
   const Header = headers[theme.layout.header];
   const Nav = navs[theme.layout.nav];
   const Footer = footers[theme.layout.footer];
+  const weather = await townWeather(town.id);
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: themeCssVariables(theme) }} />
+      <AlertBar town={town} weather={weather} />
       <Header town={town} theme={theme} nav={<Nav />} />
+      <WeatherLine town={town} weather={weather} />
       {children}
       <Footer town={town} theme={theme} />
     </>

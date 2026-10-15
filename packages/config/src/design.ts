@@ -1,0 +1,79 @@
+import { contrastRatio } from './brand';
+
+// Network-wide design tokens for town sites (docs/plans/M4b.md; CLAUDE.md §11a "never varies
+// across towns"). Towns choose their palette, fonts and family; these colors mean the same
+// thing on every site, so readers and advertisers learn them once. Values from the approved
+// design canvas (revision 4).
+
+/** Category colors, shown as small dots and glyphs, never as filled sections. */
+export const categoryColors = {
+  news: '#0E6FA8',
+  events: '#B83C82',
+  dining: '#D2432C',
+  todo: '#0B7A7A',
+  business: '#1F7A4D',
+  homes: '#6B4FBF',
+} as const;
+export type Category = keyof typeof categoryColors;
+
+/** Which category color each beat wears. Beats stay the editorial unit (D-M4b-4). */
+export const beatCategory: Record<string, Category> = {
+  government: 'news',
+  development: 'news',
+  schools: 'news',
+  'public-safety': 'news',
+  business: 'business',
+  community: 'events',
+};
+
+export const systemColors = {
+  /** Secondary text, before per-town darkening (see deriveMuted). */
+  muted: '#5C6570',
+  /** Hairlines between items. Decoration only, never text. */
+  rule: '#E4E7EB',
+  /** The sponsored tile: the same warm sand behind every paid unit, network-wide (Rule 6). */
+  sand: '#FBF3E2',
+  /** Real warnings only (NWS alerts, closures). Never decorative. */
+  alert: '#F5A524',
+  alertText: '#111418',
+} as const;
+
+/** Dark-mode roles (built now, shipped later): near-black page, lifted tiles. */
+export const darkColors = {
+  background: '#0E1013',
+  surface: '#1A1D21',
+  tint: '#1A1D21',
+  ink: '#E8EAED',
+  muted: '#A2A9B1',
+  rule: '#2A2E33',
+  sand: '#2A2620',
+} as const;
+
+const AA = 4.5;
+
+function mix(a: string, b: string, t: number): string {
+  const channel = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+  return `#${[0, 1, 2]
+    .map((i) => Math.round(channel(a, i) * (1 - t) + channel(b, i) * t))
+    .map((v) => v.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase()}`;
+}
+
+/**
+ * Secondary text color for a town: the network grey, darkened toward the town's ink just enough
+ * to pass AA on every light surface it sits on (background, surface, tint, the sand tile).
+ */
+export function deriveMuted(palette: {
+  ink: string;
+  background: string;
+  surface: string;
+  tint: string;
+}): string {
+  const surfaces = [palette.background, palette.surface, palette.tint, systemColors.sand];
+  for (let t = 0; t <= 1; t += 0.05) {
+    const candidate = mix(systemColors.muted, palette.ink, t);
+    if (surfaces.every((bg) => contrastRatio(candidate, bg) >= AA)) return candidate;
+  }
+  return palette.ink;
+}
