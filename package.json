@@ -12,7 +12,11 @@
     "format:check": "prettier --check .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "build": "turbo run build"
+    "build": "turbo run build",
+    "db:generate": "pnpm --filter @towncore/db db:generate",
+    "db:check": "pnpm --filter @towncore/db db:check",
+    "db:migrate": "pnpm --filter @towncore/db db:migrate",
+    "towns:sync": "pnpm --filter @towncore/db towns:sync"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

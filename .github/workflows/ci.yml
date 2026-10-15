@@ -40,4 +40,15 @@ jobs:
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
+      - name: Migrations match schema
+        run: |
+          pnpm db:check
+          pnpm db:generate
+          if [ -n "$(git status --porcelain packages/db/migrations)" ]; then
+            echo "::error::Schema changed without a migration. Run 'pnpm db:generate' and commit the result."
+            git status --porcelain packages/db/migrations
+            exit 1
+          fi
+      - run: pnpm db:migrate
+      - run: pnpm towns:sync
       - run: pnpm test

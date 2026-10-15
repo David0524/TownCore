@@ -1,0 +1,27 @@
+# Boca Town Square. Schema: packages/config/src/town.ts (CLAUDE.md §10).
+# Source platforms and URLs stay TBD until they're checked in M2. Don't guess them.
+slug: boca-raton
+name: Boca Raton
+state: FL
+county: Palm Beach
+timezone: America/New_York
+site_name: Boca Town Square
+domain: bocatownsquare.com
+extra_domains: []
+tier: large
+newsletter_send_time: '06:30'
+same_name_elsewhere: [] # towns to guard against in wrong-town checks
+agencies:
+  - City of Boca Raton
+  - Boca Raton Police Services
+  - Boca Raton Fire Rescue
+sources:
+  - kind: agenda
+    platform: TBD
+    url: TBD
+  - kind: weather
+    platform: nws
+    zone: TBD
+pricing:
+  sponsored_slot_usd: 199
+  enhanced_usd: 39
