@@ -176,6 +176,13 @@
       "when": 1792106406687,
       "tag": "0024_directory_seed",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792107462822,
+      "tag": "0025_campaign_category",
+      "breakpoints": true
     }
   ]
 }

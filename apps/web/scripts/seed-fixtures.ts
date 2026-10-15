@@ -6,6 +6,7 @@ import { loadTowns, requireEnv } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
 import { createDb, eq, getTownBySlug, syncTowns, towns } from '@towncore/db';
 import { seedTestContent } from './test-content';
+import { seedTestDirectory } from './test-directory';
 
 loadDotEnv();
 const databaseUrl = requireEnv('DATABASE_URL');
@@ -30,6 +31,10 @@ try {
     if (!town) throw new Error(`Town ${slug} not found; run towns:sync first.`);
     await seedTestContent(db, town);
     console.log(`Seeded test articles for ${slug}`);
+    // Fictional listings for the fictional towns only; Boca's come from state records.
+    if (slug === 'harbor-point' || slug === 'feed-town') {
+      console.log(`Seeded ${await seedTestDirectory(db, town)} test listings for ${slug}`);
+    }
   }
 } finally {
   await db.$client.end();

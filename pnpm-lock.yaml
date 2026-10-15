@@ -101,6 +101,9 @@ importers:
       '@towncore/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@towncore/directory':
+        specifier: workspace:*
+        version: link:../../packages/directory
       '@towncore/email':
         specifier: workspace:*
         version: link:../../packages/email

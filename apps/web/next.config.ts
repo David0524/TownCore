@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     '@towncore/brand',
     '@towncore/config',
     '@towncore/db',
+    '@towncore/directory',
     '@towncore/email',
     '@towncore/mail',
     '@towncore/pipeline',

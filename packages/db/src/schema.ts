@@ -734,6 +734,8 @@ export const campaigns = pgTable(
       .notNull()
       .references(() => towns.id),
     slot: text('slot').notNull(),
+    /** Directory slots are sold per category (M6); null applies to every page with the slot. */
+    category: text('category'),
     placementId: uuid('placement_id').references(() => placements.id),
     creative: jsonb('creative').notNull(),
     startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),

@@ -1,4 +1,9 @@
-import { creativeSchema, townContactEmail, type TownConfig } from '@towncore/config';
+import {
+  creativeSchema,
+  townContactEmail,
+  type DirectoryCategory,
+  type TownConfig,
+} from '@towncore/config';
 import { getActiveCampaign, type Town } from '@towncore/db';
 import { db } from '@/lib/db';
 import { newsletterOpen } from '@/lib/newsletter';
@@ -21,12 +26,16 @@ export type SlotFill = {
  * 1. direct-sold campaign, 2. sponsored placement (M6), 3. programmatic (later, gated),
  * 4. house ad. A slot never renders empty.
  */
+/** What a slot's house ad can say about where it sits (the directory category, for one). */
+export type SlotContext = { category?: DirectoryCategory | undefined };
+
 export async function resolveSlotFill(
   town: Town,
   slot: SlotName,
   now = new Date(),
+  context: SlotContext = {},
 ): Promise<SlotFill> {
-  const campaign = await getActiveCampaign(db(), town.id, slot, now);
+  const campaign = await getActiveCampaign(db(), town.id, slot, now, context.category?.slug);
   if (campaign) {
     const creative = creativeSchema.safeParse(campaign.creative);
     if (creative.success) {
@@ -45,11 +54,15 @@ export async function resolveSlotFill(
     );
   }
   // 2. Sponsored directory placements: M6. 3. Programmatic: gated, later.
-  return houseAd(town, slot, { newsletter: await newsletterOpen(town) });
+  return houseAd(town, slot, { newsletter: await newsletterOpen(town), ...context });
 }
 
 /** House ads promote the site itself. They're labeled as the site's own, never as editorial. */
-export function houseAd(town: Town, slot: SlotName, opts: { newsletter?: boolean } = {}): SlotFill {
+export function houseAd(
+  town: Town,
+  slot: SlotName,
+  opts: { newsletter?: boolean } & SlotContext = {},
+): SlotFill {
   const contact = townContactEmail(town.config as TownConfig);
   const advertise: SlotFill = {
     source: 'house',
@@ -85,6 +98,45 @@ export function houseAd(town: Town, slot: SlotName, opts: { newsletter?: boolean
     href: `mailto:${contact}?subject=${encodeURIComponent('News tip')}`,
     cta: 'Send a tip',
   };
+  // Directory house ads sell the directory's own inventory to businesses already listed.
+  const category = opts.category;
+  const ask = (subject: string) => `mailto:${contact}?subject=${encodeURIComponent(subject)}`;
+  const topspot: SlotFill = {
+    source: 'house',
+    label: `From ${town.siteName}`,
+    headline: category ? `Top spot open: ${category.name}. Claim it` : 'Top spots are open',
+    body: `Be the first ${category?.singular ?? 'business'} ${town.name} readers see here.`,
+    href: ask(`Top spot: ${category?.name ?? 'directory'}`),
+    cta: 'Ask about the top spot',
+  };
+  const exclusive: SlotFill = {
+    source: 'house',
+    label: `From ${town.siteName}`,
+    headline: category
+      ? `Become ${town.name}'s featured ${category.singular}`
+      : `Feature your business in ${town.siteName}`,
+    body: 'One business per category, shown at the top of this page.',
+    href: ask(`Featured ${category?.singular ?? 'business'}`),
+    cta: 'Get in touch',
+  };
+  const claim: SlotFill = {
+    source: 'house',
+    label: `From ${town.siteName}`,
+    headline: 'Is your business listed here? Claim it free',
+    body: 'Add your phone, hours and website so readers can reach you.',
+    href: ask('Claim my listing'),
+    cta: 'Claim your listing',
+  };
+  const leads: SlotFill = {
+    source: 'house',
+    label: `From ${town.siteName}`,
+    headline: category
+      ? `Are you a ${category.singular}? Get quote requests from ${town.name} readers`
+      : `Get quote requests from ${town.name} readers`,
+    body: 'Sponsored listings receive the quote requests sent from this page.',
+    href: ask(`Quote requests: ${category?.name ?? 'directory'}`),
+    cta: 'Learn more',
+  };
   // Neighboring slots on one page get different messages.
   const rotation: Record<SlotName, SlotFill> = {
     'home.top': advertise,
@@ -95,6 +147,10 @@ export function houseAd(town: Town, slot: SlotName, opts: { newsletter?: boolean
     'article.inline': newsletter,
     'article.related-businesses': advertise,
     'article.realestate': advertise,
+    'directory.category.exclusive': exclusive,
+    'directory.topspot': topspot,
+    'directory.category.top': claim,
+    'directory.quote-request': leads,
   };
   return rotation[slot];
 }
