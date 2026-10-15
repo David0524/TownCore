@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Fragment } from 'react';
 import { beats, townContactEmail, type TownConfig } from '@towncore/config';
 import { getPublishedArticle, getSourceRecords, listArticleCorrections } from '@towncore/db';
+import { ViewBeacon } from '@/components/Beacon';
 import { Prose } from '@/components/Prose';
 import { TownGrid } from '@/layout/TownGrid';
 import { db } from '@/lib/db';
@@ -67,6 +68,7 @@ export default async function ArticlePage({ params }: Props) {
     <TownGrid town={town} kind={grid} measure={wide ? 'wide' : 'normal'}>
       <article data-part={`article:${template}`}>
         <JsonLd data={newsArticleJsonLd(town, article)} />
+        <ViewBeacon slug={article.slug} />
         <header className={styles.header}>
           {beat ? (
             <p className={styles.kicker}>

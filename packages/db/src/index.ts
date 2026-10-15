@@ -60,3 +60,11 @@ export {
   TooManyLoginLinks,
   type StaffMember,
 } from './staff-auth';
+export {
+  activePinIds,
+  countEngagement,
+  engagementByArticle,
+  listRankableArticles,
+  type CounterKind,
+  type RankableArticle,
+} from './ranking-queries';

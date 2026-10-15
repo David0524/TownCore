@@ -40,3 +40,27 @@ export function storyBudgetFor(config: Pick<TownConfig, 'tier' | 'story_budget'>
  * staff are marked as placeholders and can't sign stories on a live town (Rule 2).
  */
 export const placeholderReviewerName = 'John';
+
+/**
+ * Freshness half-life in hours (CLAUDE.md §6a): how fast a story fades from the homepage. By
+ * article kind first (alerts, guides), then by beat.
+ */
+export const freshnessHalfLifeHours = {
+  kind: { alert: 6, guide: 120 } as Record<string, number>,
+  beat: {
+    'public-safety': 12,
+    government: 48,
+    development: 48,
+    schools: 48,
+    business: 72,
+    community: 48,
+  } as Record<string, number>,
+  default: 48,
+};
+
+/** Engagement can move a story's rank by at most this much either way (§6a). */
+export const engagementCap = 0.3;
+/** Pseudo-impressions at the town average, so a few clicks can't swing a story. */
+export const engagementSmoothing = 50;
+/** No more than this many stories in a row from one beat (§6a). */
+export const maxSameBeatInARow = 2;

@@ -61,7 +61,7 @@ export {
   uniqueSlug,
   type Reviewer,
 } from './publish';
-export { writeCandidate, type WriteOutcome } from './write';
+export { roadClosurePin, severeWeatherPin, writeCandidate, type WriteOutcome } from './write';
 export {
   applyUpdate,
   createChangedRecordUpdates,
@@ -78,3 +78,14 @@ export {
   type EvalResult,
   type EvalSummary,
 } from './evals';
+export {
+  engagementAdjustment,
+  freshnessDecay,
+  halfLifeHours,
+  pickLead,
+  PIN_BOOST,
+  rankArticles,
+  rankScore,
+  type Engagement,
+  type Rankable,
+} from './ranking';
