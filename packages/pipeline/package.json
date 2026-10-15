@@ -9,7 +9,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "evals": "tsx scripts/evals.ts"
+    "evals": "tsx scripts/evals.ts",
+    "pipeline:once": "tsx scripts/run-once.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.134.0",
