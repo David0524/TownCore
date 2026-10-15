@@ -1,0 +1,33 @@
+{
+  "palette": {
+    "ink": "#0E4A6B",
+    "accent": "#3E7A4C",
+    "accentText": "#FFFFFF",
+    "tint": "#F2C9C4",
+    "surface": "#F2F6F8",
+    "background": "#FFFFFF"
+  },
+  "type": "newsreader-publicsans",
+  "masthead": "centered-serif",
+  "layout": {
+    "header": "stacked-dateline",
+    "nav": "beat-tabs",
+    "grid": "main-right-rail",
+    "home": [
+      "lead-story",
+      "latest-list",
+      "meetings-this-week",
+      "directory-featured",
+      "beat-sections",
+      "events",
+      "new-businesses",
+      "real-estate"
+    ],
+    "article": "classic-rail",
+    "directory": "list-map",
+    "footer": "three-column"
+  },
+  "corners": "soft",
+  "motif": "palm-frond",
+  "identityNotes": "Atlantic blue, sea-grape green, Mizner-era pink stucco as a light tint only"
+}

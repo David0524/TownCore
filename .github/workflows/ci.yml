@@ -55,3 +55,13 @@ jobs:
       - run: pnpm build
       - name: Worker boots from the build
         run: pnpm --filter @towncore/worker smoke
+      - name: Install Playwright Chromium
+        run: pnpm --filter @towncore/web exec playwright install --with-deps chromium
+      - name: Site end-to-end tests
+        run: pnpm --filter @towncore/web e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: apps/web/test-results/
+          retention-days: 7

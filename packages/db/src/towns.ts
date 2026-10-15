@@ -1,19 +1,19 @@
-import type { TownConfig } from '@towncore/config';
+import type { LoadedTown } from '@towncore/config';
 import { sql } from 'drizzle-orm';
-import type { Db } from './client.js';
-import { towns } from './schema.js';
+import type { Db } from './client';
+import { towns } from './schema';
 
 export type SyncTownsResult = { upserted: string[] };
 
 /**
- * Upserts town YAML configs into `towns`, keyed by slug. YAML owns the config fields;
+ * Upserts town YAML configs and themes into `towns`, keyed by slug. Files own config and theme;
  * the database owns status and readiness_score, which this never touches.
  * Sources are synced from config once adapters exist (M2).
  */
-export async function syncTowns(db: Db, configs: TownConfig[]): Promise<SyncTownsResult> {
+export async function syncTowns(db: Db, loaded: LoadedTown[]): Promise<SyncTownsResult> {
   const upserted: string[] = [];
   await db.transaction(async (tx) => {
-    for (const config of configs) {
+    for (const { config, theme, hasThemeFile } of loaded) {
       const values = {
         slug: config.slug,
         name: config.name,
@@ -26,6 +26,7 @@ export async function syncTowns(db: Db, configs: TownConfig[]): Promise<SyncTown
         siteName: config.site_name,
         tier: config.tier,
         config,
+        theme: hasThemeFile ? theme : null,
       };
       const { slug: _slug, ...updates } = values;
       await tx

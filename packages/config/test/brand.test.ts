@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  allowedColorPairs,
-  brandColors,
-  contrastRatio,
-  forbiddenColorPairs,
-} from '../src/brand.js';
+import { allowedColorPairs, brandColors, contrastRatio, forbiddenColorPairs } from '../src/brand';
 
 const minimum = { text: 4.5, large: 3, decoration: 3 } as const;
 

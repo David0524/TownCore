@@ -1,5 +1,6 @@
-import { loadDotEnv, requireEnv } from '@towncore/config';
-import { runMigrations } from '../migrate.js';
+import { requireEnv } from '@towncore/config';
+import { loadDotEnv } from '@towncore/config/dotenv';
+import { runMigrations } from '../migrate';
 
 loadDotEnv();
 await runMigrations(requireEnv('DATABASE_URL'));

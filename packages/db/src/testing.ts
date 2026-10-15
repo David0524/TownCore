@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { requireEnv } from '@towncore/config';
 import postgres from 'postgres';
-import { createDb, type Db } from './client.js';
-import { runMigrations } from './migrate.js';
+import { createDb, type Db } from './client';
+import { runMigrations } from './migrate';
 
 /**
  * Creates a fresh, migrated database for one test file and drops it afterwards, so tests

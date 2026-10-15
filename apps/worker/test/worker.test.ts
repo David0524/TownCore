@@ -2,8 +2,8 @@ import { eq, workerHeartbeats } from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
 import { pino } from 'pino';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { queues } from '../src/queues.js';
-import { startWorker, type RunningWorker } from '../src/worker.js';
+import { queues } from '../src/queues';
+import { startWorker, type RunningWorker } from '../src/worker';
 
 let testDb: Awaited<ReturnType<typeof createTestDb>>;
 let worker: RunningWorker;

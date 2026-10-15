@@ -1,0 +1,1 @@
+ALTER TABLE "towns" ADD COLUMN "theme" jsonb;

@@ -1,6 +1,7 @@
-import { loadDotEnv, requireEnv } from '@towncore/config';
+import { requireEnv } from '@towncore/config';
+import { loadDotEnv } from '@towncore/config/dotenv';
 import { pino } from 'pino';
-import { startWorker } from './worker.js';
+import { startWorker } from './worker';
 
 loadDotEnv();
 const logger = pino({ name: 'worker' });

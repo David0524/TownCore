@@ -1,4 +1,5 @@
-import { loadDotEnv, loadEnv } from '@towncore/config';
+import { loadEnv } from '@towncore/config';
+import { loadDotEnv } from '@towncore/config/dotenv';
 import { defineConfig } from 'drizzle-kit';
 
 loadDotEnv();

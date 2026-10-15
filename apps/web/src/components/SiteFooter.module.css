@@ -1,0 +1,30 @@
+/* Interim footer until the layout parts land (PR 5). Theme tokens only. */
+.footer {
+  background: var(--surface);
+  color: var(--ink);
+  border-top: 1px solid var(--tint);
+  margin-top: auto;
+}
+
+.inner {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 1.5rem var(--gutter) 2rem;
+  display: grid;
+  gap: 1rem;
+  font-size: 0.9375rem;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+.links a {
+  color: var(--ink);
+}
+
+.copyright {
+  margin: 0;
+}

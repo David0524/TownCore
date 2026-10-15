@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { findTbdFields, loadTownConfigs, parseTownConfig } from '../src/town.js';
+import { findTbdFields, loadTownConfigs, parseTownConfig } from '../src/town';
 
 const townsDir = fileURLToPath(new URL('../../../towns', import.meta.url));
 

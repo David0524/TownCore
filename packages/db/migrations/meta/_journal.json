@@ -15,6 +15,13 @@
       "when": 1792075456928,
       "tag": "0001_worker_heartbeats",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792076820418,
+      "tag": "0002_town_theme",
+      "breakpoints": true
     }
   ]
 }
