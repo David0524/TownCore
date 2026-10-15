@@ -166,3 +166,28 @@ Built 2026-10-15, after the owner said "go ahead with Mail-2". Choices made unde
 - **Receiving is per AWS account and region, not per stack.** Only one receipt rule set can be
   active, so only one environment per account and region receives mail. `packages/infra`
   creates the rule set in every stack but activates it only where `-c receiving=true`.
+
+## Mail-3 design (inbox)
+
+Built 2026-10-15, after the owner said "go ahead with Mail-3". Choices made under bucket B:
+
+- **Where.** `/admin/mail/inbox` (list) and `/admin/mail/inbox/<thread>` in the staff admin.
+  Filters: team, town, assignee (me, unassigned, a person) and status (active = open + pending,
+  or one status, or all); search over contact email and name, subject, town and town address.
+  50 per page, newest first. Every filter has an index; search is a plain ILIKE, enough for a
+  few thousand threads.
+- **Unread** is per person (`thread_reads`): a thread is unread when it has a message newer than
+  that person's read mark. Opening a thread marks it read. The nav shows the count of unread
+  open or pending threads in the person's teams (all teams if they're in none). Notifications
+  are in-app only for now; an email digest can come later.
+- **Safe display.** Message HTML (already sanitized at ingest) is shown in an `<iframe sandbox>`
+  with only `allow-popups` and `allow-popups-to-escape-sandbox` (so links open in a new tab), no
+  scripts, no same-origin, and a Content-Security-Policy that loads images only from the admin
+  host. Remote images stay blocked until someone clicks "Load remote images" for that message.
+  Inline (`cid:`) images are rewritten to signed URLs valid for 15 minutes and streamed through
+  the admin host, image types only. Downloads redirect to a 5-minute S3 presigned URL after a
+  staff check. Quarantined attachments are never served.
+- **Actions**: assign, status, move team, spam / not spam, internal notes. Each writes
+  `admin_actions` with the thread as target.
+- **Keyboard**: `j` / `k` move through the list, `Enter` opens, `/` focuses search; in a thread
+  `u` goes back to the list.
