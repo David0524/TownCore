@@ -692,6 +692,8 @@ export const mailDomains = pgTable(
     postalAddress: text('postal_address'),
     // A running onboarding holds this lease so two runs never work on one domain at once.
     leaseUntil: timestamp('lease_until', { withTimezone: true }),
+    // Set by "Re-check" in /admin/mail/domains; the worker's next mail tick clears it.
+    recheckRequestedAt: timestamp('recheck_requested_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

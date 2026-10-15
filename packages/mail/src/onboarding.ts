@@ -107,7 +107,17 @@ const PLACEHOLDER: DkimInfo = {
   tokens: ['<dkim-1>', '<dkim-2>', '<dkim-3>'],
   signingHostedZone: '<ses-dkim-zone>',
 };
-const LEASE_MS = 15 * 60_000;
+export const LEASE_MS = 15 * 60_000;
+
+/** A verified domain goes live for inbound and starts warming up for bulk (brief §7.4). */
+export const ACTIVATE = {
+  status: 'live',
+  failureReason: null,
+  inboundEnabled: true,
+  bulkStatus: 'warming',
+  warmupDay: 1,
+  bulkDailyCap: warmup.startCap,
+} as const;
 
 export const newsIdentityName = (domain: string) => `${NEWS_LABEL}.${domain}`;
 
@@ -230,14 +240,7 @@ export async function onboardDomain(
     async activate() {
       act(`mark live for inbound, warming for bulk (cap ${warmup.startCap}/day)`);
       if (options.execute) {
-        await store.updateDomain(domain.id, {
-          status: 'live',
-          failureReason: null,
-          inboundEnabled: true,
-          bulkStatus: 'warming',
-          warmupDay: 1,
-          bulkDailyCap: warmup.startCap,
-        });
+        await store.updateDomain(domain.id, ACTIVATE);
       }
       return options.execute ? 'done' : 'planned';
     },

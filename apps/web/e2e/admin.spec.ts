@@ -6,8 +6,13 @@ import {
   articleUpdates,
   createDb,
   staff,
+  adminActions,
   createLoginToken,
+  dnsRecords,
+  domainIdentities,
   eq,
+  mailDomains,
+  onboardingSteps,
   findOrCreateStaff,
   getTownBySlug,
   hashToken,
@@ -278,5 +283,59 @@ test.describe('update notes', () => {
     await page.goto(`${reviewTown}/news/${article.slug}`);
     await expect(page.getByText(note)).toBeVisible();
     await expect(page.getByRole('main')).toContainText(/Update, \w+\.? \d+, \d{4}:/);
+  });
+});
+
+test.describe('mail domains', () => {
+  test('lists domains, shows identities, records and steps, and queues a re-check', async ({
+    page,
+    context,
+  }, info) => {
+    await signIn(context);
+    const name = `e2e-${info.project.name}-${Date.now()}.test`;
+    const [domain] = await db
+      .insert(mailDomains)
+      .values({ name, displayName: 'E2E Times', isTest: true, status: 'onboarding' })
+      .returning();
+    await db.insert(domainIdentities).values({
+      domainId: domain!.id,
+      kind: 'root',
+      identityName: name,
+      verificationStatus: 'PENDING',
+      dkimStatus: 'PENDING',
+      mailFromDomain: `mail.${name}`,
+      mailFromStatus: 'PENDING',
+    });
+    await db.insert(dnsRecords).values({
+      domainId: domain!.id,
+      purpose: 'inbound_mx',
+      type: 'MX',
+      name: '',
+      value: 'inbound-smtp.us-east-1.amazonaws.com',
+      priority: 10,
+      status: 'created',
+    });
+    await db
+      .insert(onboardingSteps)
+      .values({ domainId: domain!.id, step: 'verify', status: 'waiting', attempts: 2 });
+
+    await page.goto(`${admin}/admin/mail/domains`);
+    await expect(page.getByTestId('mail-domains')).toContainText(name);
+    await page.getByRole('link', { name }).click();
+    await expect(page.getByRole('heading', { name })).toBeVisible();
+    await expect(page.getByTestId('mail-identities')).toContainText(`mail.${name} (PENDING)`);
+    await expect(page.getByTestId('mail-records')).toContainText(
+      '10 inbound-smtp.us-east-1.amazonaws.com',
+    );
+    await expect(page.getByTestId('mail-steps')).toContainText('waiting');
+
+    await page.getByRole('button', { name: 'Re-check SES status' }).click();
+    await expect(page.getByRole('status')).toContainText('Re-check requested');
+    const [row] = await db.select().from(mailDomains).where(eq(mailDomains.id, domain!.id));
+    expect(row!.recheckRequestedAt).not.toBeNull();
+    const audit = await db.select().from(adminActions).where(eq(adminActions.targetId, domain!.id));
+    expect(audit.map((a) => [a.action, a.targetType])).toEqual([
+      ['mail_domain_recheck', 'mail_domain'],
+    ]);
   });
 });

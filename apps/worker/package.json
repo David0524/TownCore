@@ -15,6 +15,7 @@
     "@towncore/adapters": "workspace:*",
     "@towncore/config": "workspace:*",
     "@towncore/db": "workspace:*",
+    "@towncore/mail": "workspace:*",
     "@towncore/pipeline": "workspace:*",
     "pg-boss": "^12.38.0",
     "pino": "^10.4.0"

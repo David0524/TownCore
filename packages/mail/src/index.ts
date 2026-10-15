@@ -14,6 +14,7 @@ export {
 } from './dns';
 export { memoryStore, type MemoryState } from './memory-store';
 export {
+  ACTIVATE,
   newsIdentityName,
   onboardDomain,
   resetFailedSteps,
@@ -28,6 +29,7 @@ export {
   type StepName,
   type StepState,
 } from './onboarding';
+export { dryRunStore, pgOnboardingStore } from './pg-store';
 export { RetryableError, withRetry, type RetryOptions } from './retry';
 export { routeRecipient, type Route, type RoutingInput } from './routing';
 export {
@@ -44,3 +46,4 @@ export {
   type DnsProvider,
   type VercelDomain,
 } from './vercel';
+export { checkVerification, type VerificationResult } from './verify';

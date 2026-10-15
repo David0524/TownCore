@@ -123,7 +123,7 @@ export class MailStack extends Stack {
     }
 
     // The app's credentials (web and worker): send through our two configuration sets, read
-    // raw mail, write attachments, and read the account status. Nothing else (brief §10).
+    // raw mail, write attachments, and read account and identity status. Nothing else (brief §10).
     const appPolicy = new iam.ManagedPolicy(this, 'AppPolicy', {
       managedPolicyName: name('app'),
       statements: [
@@ -140,6 +140,12 @@ export class MailStack extends Stack {
           sid: 'ReadAccountStatus',
           actions: ['ses:GetAccount'],
           resources: ['*'],
+        }),
+        // The worker re-checks domain verification (Mail-1); it never creates or changes one.
+        new iam.PolicyStatement({
+          sid: 'ReadIdentityStatus',
+          actions: ['ses:GetEmailIdentity'],
+          resources: [this.arn('ses', 'identity/*')],
         }),
         new iam.PolicyStatement({
           sid: 'ReadInbound',

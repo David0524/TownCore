@@ -135,6 +135,9 @@ importers:
       '@towncore/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@towncore/mail':
+        specifier: workspace:*
+        version: link:../../packages/mail
       '@towncore/pipeline':
         specifier: workspace:*
         version: link:../../packages/pipeline
