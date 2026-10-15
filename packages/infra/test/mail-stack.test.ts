@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { MailStack } from '../src/mail-stack';
 
 const env = { account: '123456789012', region: 'us-east-1' };
-const synth = (props: { webhookBaseUrl?: string } = {}) =>
+const synth = (props: { webhookBaseUrl?: string; receiving?: boolean } = {}) =>
   Template.fromStack(new MailStack(new App(), 'Test', { mailEnv: 'dev', env, ...props }));
 
 describe('MailStack', () => {
@@ -115,5 +115,31 @@ describe('MailStack', () => {
     const prod = Template.fromStack(new MailStack(new App(), 'P', { mailEnv: 'prod', env }));
     prod.hasResourceProperties('AWS::SES::ConfigurationSet', { Name: 'towncore-prod-bulk' });
     prod.hasResourceProperties('AWS::IAM::User', { UserName: 'towncore-prod-app' });
+  });
+
+  it('has one catch-all receipt rule: scan, raw mail to inbound/, notice to SNS', () => {
+    template.resourceCountIs('AWS::SES::ReceiptRule', 1);
+    template.hasResourceProperties('AWS::SES::ReceiptRule', {
+      Rule: {
+        Name: 'towncore-dev-catch-all',
+        Enabled: true,
+        ScanEnabled: true,
+        Recipients: Match.absent(),
+        Actions: [
+          {
+            S3Action: Match.objectLike({
+              ObjectKeyPrefix: 'inbound/',
+              TopicArn: Match.anyValue(),
+            }),
+          },
+        ],
+      },
+    });
+  });
+
+  it('activates the rule set only when asked, since one is active per account and region', () => {
+    const activations = (t: Template) => Object.keys(t.findResources('Custom::AWS'));
+    expect(activations(template)).toHaveLength(0);
+    expect(activations(synth({ receiving: true }))).toHaveLength(1);
   });
 });
