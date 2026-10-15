@@ -77,6 +77,7 @@ describe('MailStack', () => {
 
   it('has an inbound topic and one event topic per stream, with no webhook until asked', () => {
     template.resourceCountIs('AWS::SNS::Topic', 3);
+    template.resourcePropertiesCountIs('AWS::SNS::Topic', { SignatureVersion: '2' }, 3);
     template.resourceCountIs('AWS::SNS::Subscription', 0);
     synth({ webhookBaseUrl: 'https://admin.example/' }).resourcePropertiesCountIs(
       'AWS::SNS::Subscription',

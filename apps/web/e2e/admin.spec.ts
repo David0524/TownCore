@@ -286,6 +286,30 @@ test.describe('update notes', () => {
   });
 });
 
+test.describe('mail webhook', () => {
+  test('exists only on the admin host and refuses unsigned messages', async ({ request }) => {
+    const forged = {
+      Type: 'Notification',
+      MessageId: 'forged',
+      TopicArn: 'arn:aws:sns:us-east-1:123456789012:x',
+      Message: '{}',
+      Timestamp: '2026-10-15T00:00:00Z',
+      SignatureVersion: '2',
+      Signature: 'AAAA',
+      SigningCertURL: 'https://sns.us-east-1.amazonaws.com/x.pem',
+    };
+    // API requests don't use the browser's host mapping; send the Host header to the local server.
+    const post = (host: string, data: unknown) =>
+      request.post('http://127.0.0.1:3100/api/mail/sns', {
+        headers: { host: new URL(host).host },
+        data,
+      });
+    expect((await post(admin, 'not json')).status()).toBe(400);
+    expect((await post(admin, forged)).status()).toBe(403);
+    expect((await post(boca, forged)).status()).toBe(404);
+  });
+});
+
 test.describe('mail domains', () => {
   test('lists domains, shows identities, records and steps, and queues a re-check', async ({
     page,

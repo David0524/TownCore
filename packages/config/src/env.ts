@@ -41,6 +41,18 @@ export const envSchema = z.object({
         .filter(Boolean),
     ),
   ),
+  // SNS topics the mail webhook accepts (packages/infra outputs); anything else is refused.
+  MAIL_SNS_TOPIC_ARNS: optional(
+    z
+      .string()
+      .transform((list) =>
+        list
+          .split(',')
+          .map((arn) => arn.trim())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.string().regex(/^arn:aws[a-z-]*:sns:[a-z0-9-]+:\d{12}:[\w-]+$/))),
+  ),
   VERCEL_DNS_TOKEN: optional(z.string()),
   VERCEL_TEAM_ID: optional(z.string()),
   GOOGLE_CLIENT_ID: optional(z.string()),

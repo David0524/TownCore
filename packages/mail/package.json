@@ -16,7 +16,8 @@
     "@towncore/config": "workspace:*",
     "@towncore/db": "workspace:*",
     "mailparser": "^3.9.39",
-    "sanitize-html": "^2.18.1"
+    "sanitize-html": "^2.18.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/mailparser": "^3.9.0",
