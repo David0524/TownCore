@@ -7,7 +7,19 @@ export {
   forbiddenColorPairs,
   type BrandColor,
 } from './brand';
-export { models } from './models';
+export {
+  estimateCostUsd,
+  llmProviders,
+  modelPrices,
+  modelRoles,
+  models,
+  modelsVerifiedAt,
+  providerModels,
+  type LlmProviderName,
+  type ModelPrice,
+  type ModelRole,
+  type TokenUsage,
+} from './models';
 export { publisher, publisherLine } from './publisher';
 export {
   findTbdFields,

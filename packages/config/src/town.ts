@@ -70,6 +70,9 @@ export const townConfigSchema = z.strictObject({
   same_name_elsewhere: z.array(z.string().min(1)).default([]),
   agencies: z.array(z.string().min(1)).min(1),
   sources: z.array(sourceSchema).default([]),
+  // Daily AI spend cap (CLAUDE.md §8) and a call cap that also protects free-tier quotas.
+  ai_daily_cap_usd: z.number().positive().default(5),
+  ai_daily_call_cap: z.number().int().positive().default(400),
   pricing: z.strictObject({
     sponsored_slot_usd: z.number().int().positive(),
     enhanced_usd: z.number().int().positive(),
