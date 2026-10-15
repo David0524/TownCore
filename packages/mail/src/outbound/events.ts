@@ -1,9 +1,21 @@
-import { and, emailEvents, eq, messages, sql, type Db } from '@towncore/db';
+import {
+  and,
+  emailCampaignSends,
+  emailEvents,
+  eq,
+  inArray,
+  messages,
+  sql,
+  subscribers,
+  type Db,
+} from '@towncore/db';
+import { bumpHealth, type HealthField } from '../bulk/health';
 import { z } from 'zod';
 import { suppress } from './suppression';
 
-// SES sending events (brief Phase 4, §7.2): delivery status on our outbound messages, one
-// email_events row per recipient, and suppressions for hard bounces and complaints.
+// SES sending events (brief Phase 4, §7.2): delivery status on our outbound messages and bulk
+// sends, one email_events row per recipient, domain health counts (Mail-5), and suppressions
+// for hard bounces and complaints.
 
 const recipients = z.array(z.object({ emailAddress: z.string() })).optional();
 export const sendingEventSchema = z.object({
@@ -42,6 +54,8 @@ export const sendingEventSchema = z.object({
   reject: z.object({ reason: z.string().optional() }).optional(),
 });
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 /** Later outcomes win: a delivered message that then draws a complaint shows "complained". */
 const RANK: Record<string, number> = {
   sending: 0,
@@ -60,6 +74,14 @@ const STATUS: Record<string, string> = {
   Bounce: 'bounced',
   Complaint: 'complained',
   Reject: 'rejected',
+};
+
+const SEND_STATUS: Record<string, 'sent' | 'delivered' | 'bounced' | 'complained' | 'failed'> = {
+  sent: 'sent',
+  delivered: 'delivered',
+  bounced: 'bounced',
+  complained: 'complained',
+  rejected: 'failed',
 };
 
 export const SENDING_EVENT_TYPES = new Set([...Object.keys(STATUS), 'Rendering Failure']);
@@ -93,8 +115,23 @@ export async function handleSendingEvent(
   const subType = e.bounce
     ? `${e.bounce.bounceType}/${e.bounce.bounceSubType ?? ''}`
     : (e.complaint?.complaintFeedbackType ?? e.deliveryDelay?.delayType ?? null);
+  const tag = (name: string) => e.mail.tags?.[name]?.[0] ?? null;
+  const domainId = tag('domain_id');
+  const stream = tag('stream');
+  const permanent = type === 'Bounce' && e.bounce?.bounceType === 'Permanent';
+  const complaint = type === 'Complaint' && e.complaint?.complaintFeedbackType !== 'not-spam';
+  const field: HealthField | null =
+    type === 'Send'
+      ? 'sent'
+      : type === 'Delivery'
+        ? 'delivered'
+        : permanent
+          ? 'bounced'
+          : complaint
+            ? 'complained'
+            : null;
   for (const recipient of list) {
-    await db
+    const inserted = await db
       .insert(emailEvents)
       .values({
         mailEventId,
@@ -103,14 +140,18 @@ export async function handleSendingEvent(
         sesMessageId: e.mail.messageId,
         recipient,
         configurationSet: e.mail.tags?.['ses:configuration-set']?.[0] ?? null,
+        domainId: domainId && UUID.test(domainId) ? domainId : null,
+        stream,
         occurredAt,
       })
-      .onConflictDoNothing();
+      .onConflictDoNothing()
+      .returning({ id: emailEvents.id });
+    // Counted once per recipient, even when SNS delivers the event again.
+    if (inserted.length && field && domainId && UUID.test(domainId) && stream)
+      await bumpHealth(db, { domainId, stream, at: occurredAt, field });
   }
 
   let suppressed = 0;
-  const permanent = type === 'Bounce' && e.bounce?.bounceType === 'Permanent';
-  const complaint = type === 'Complaint' && e.complaint?.complaintFeedbackType !== 'not-spam';
   if (permanent || complaint) {
     for (const email of list) {
       await suppress(db, {
@@ -144,6 +185,36 @@ export async function handleSendingEvent(
           )} else -1 end) <= ${rank}`,
         ),
       );
+  }
+  const sendStatus = status ? SEND_STATUS[status] : undefined;
+  if (status && sendStatus && stream === 'bulk') {
+    const rank = RANK[status]!;
+    const updated = await db
+      .update(emailCampaignSends)
+      .set({
+        status: sendStatus,
+        ...(type === 'Reject' ? { error: e.reject?.reason ?? 'rejected' } : {}),
+      })
+      .where(
+        and(
+          eq(emailCampaignSends.sesMessageId, e.mail.messageId),
+          sql`(case ${emailCampaignSends.status}::text ${sql.join(
+            Object.entries(RANK).map(([name, n]) => sql`when ${name} then ${n}`),
+            sql` `,
+          )} else -1 end) <= ${rank}`,
+        ),
+      )
+      .returning({ subscriberId: emailCampaignSends.subscriberId });
+    if ((permanent || complaint) && updated.length)
+      await db
+        .update(subscribers)
+        .set({ status: permanent ? 'bounced' : 'complained' })
+        .where(
+          inArray(
+            subscribers.id,
+            updated.map((u) => u.subscriberId),
+          ),
+        );
   }
   return { recipients: list.length, suppressed };
 }

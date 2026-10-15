@@ -163,3 +163,68 @@ export {
   type MailTransport,
   type SendRequest,
 } from './outbound/transport';
+
+// Newsletters and bulk mail (Mail-5)
+export { BULK_CONFIG, type BulkConfig } from './bulk/config';
+export {
+  confirmToken,
+  unsubscribeToken,
+  verifyConfirmToken,
+  verifyUnsubscribeToken,
+} from './bulk/tokens';
+export { nextWarmup, underCap, warmupCap, type WarmupStep } from './bulk/warmup';
+export {
+  bumpHealth,
+  healthTotals,
+  networkBulkPause,
+  pauseDomainBulk,
+  rateBreach,
+  runAutoPause,
+  runWarmupDay,
+  setNetworkBulkPause,
+  type AutoPauseResult,
+  type HealthTotals,
+} from './bulk/health';
+export {
+  buildBulkMime,
+  buildConfirmationMime,
+  bulkFromAddress,
+  bulkHeaders,
+  markdownToHtml,
+  renderVars,
+  unsubscribeUrls,
+  type BulkBrand,
+} from './bulk/message';
+export {
+  confirmSubscription,
+  newsletterDomain,
+  signup,
+  subscriberForToken,
+  unsubscribeByToken,
+  unsubscribeSubscriber,
+  type BulkDeps,
+  type ConfirmOutcome,
+  type NewsletterDomain,
+  type SignupOutcome,
+} from './bulk/subscribers';
+export {
+  approveCampaign,
+  cancelCampaign,
+  CampaignError,
+  createCampaign,
+  createTemplate,
+  domainBrand,
+  fanOutTemplate,
+  pauseCampaign,
+  renderCampaign,
+  resumeCampaign,
+  scheduleNewsletterIssue,
+  setNewsletterApproval,
+  testSendCampaign,
+  townVars,
+} from './bulk/campaigns';
+export {
+  expandDueCampaigns,
+  sendDueBatches,
+  type BatchResult as BulkBatchResult,
+} from './bulk/sender';

@@ -272,7 +272,7 @@ async function deliver(
       to: draft.to,
       cc: draft.cc,
       configurationSet: deps.configurationSet,
-      tags: { domain: domain.name, stream: 'conversational' },
+      tags: { domain: domain.name, domain_id: domain.id, stream: 'conversational' },
     });
     // Recipients see the SES Message-ID; keep ours too so a reply to either threads back.
     const [seen, ...alternates] =

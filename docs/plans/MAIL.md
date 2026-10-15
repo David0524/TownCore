@@ -219,3 +219,68 @@ Built 2026-10-15, after the owner said "go ahead with Mail-4". Choices made unde
   (complained > bounced > rejected > delivered > delayed > sent). Permanent bounces and
   complaints (except `not-spam` feedback) add global suppressions.
 - **Limits:** 50 recipients, 10 MB of attachments per message.
+
+## Mail-5 design (newsletters and bulk sending)
+
+Built 2026-10-15, after the owner said "go ahead with Mail-5". Gmail, Yahoo and (since May 2025)
+Microsoft still require SPF, DKIM and DMARC, RFC 8058 one-click unsubscribe and a spam rate
+well under 0.3%; nothing in the brief's §7.3 changed. Choices made under bucket B:
+
+- **Who can be mailed.** Subscribers stay keyed by town (D-MAIL-6). A town can take signups
+  and bulk mail only when its mail domain is `live` and bulk isn't `not_started`; otherwise
+  the site's newsletter box keeps saying "launching soon" (D-M1-1).
+- **Double opt-in.** The town site's form posts to the town's own domain: honeypot field, at
+  most 5 signups per IP an hour and one confirmation email per address every 10 minutes (3 a
+  day). The answer is the same whether or not the address is already subscribed, so the form
+  can't be used to look people up. The confirmation goes from `newsletter@news.<domain>`
+  through the bulk configuration set (D-MAIL-11's standing exception). Its link opens a page
+  with a "Confirm" button; nothing is confirmed by a GET, so link scanners can't subscribe
+  anyone. Consent evidence: source URL, IP, consent time, confirmation time.
+- **Tokens.** Confirmation links: HMAC-SHA256 over the subscriber id with a 7-day expiry.
+  Unsubscribe links: HMAC-SHA256 over the subscriber id, no expiry (both with
+  `MAIL_TOKEN_SECRET`, each with its own purpose string).
+- **Unsubscribe.** `List-Unsubscribe: <https://<domain>/api/newsletter/unsubscribe/<token>>`
+  plus `List-Unsubscribe-Post: List-Unsubscribe=One-Click`; a POST there unsubscribes at once,
+  no login. The footer link opens `/u/<token>` on the town site, with one button that does the
+  same and a "subscribe again" option (which starts double opt-in again). Unsubscribing sets the
+  subscriber `unsubscribed`, adds a domain-scoped `unsubscribe` suppression (bulk only) and
+  cancels that person's queued sends.
+- **Every bulk message:** From `"{site name}" <newsletter@news.<domain>>`, Reply-To
+  `news@<domain>`, both unsubscribe headers, a `Feedback-ID` for Gmail, a plain-text part, and a
+  footer with the unsubscribe link and the postal address ("{site name}, published by
+  TownCore · {address}", the legal-identification exception in Rule 1's decision). With no
+  postal address (`mail_domains.postal_address` or `MAIL_POSTAL_ADDRESS`) nothing is sent.
+- **Campaigns** (`email_campaigns`): draft → scheduled → sending → sent, or paused/cancelled.
+  Rule 10 (D-MAIL-11): a one-off campaign needs an admin's "Approve send"; issues of the daily
+  newsletter (M5) go out under the town's standing approval, which an admin turns on per domain
+  (stored and audited). Templates (`email_campaign_templates`) fan out to one campaign per town
+  with `{{site_name}}`, `{{town_name}}`, `{{domain}}`. Staff can preview per town and test-send
+  to themselves.
+- **Sending** runs in the worker. A due campaign is expanded into one `email_campaign_sends`
+  row per active subscriber (unique per campaign and subscriber, so expanding twice adds
+  nothing). Batches are claimed with `SKIP LOCKED` and marked `sending` before SES is called;
+  status and suppressions are checked again at that moment. A row left in `sending` (a crash
+  mid-send) is never retried, because the mail may have gone; it becomes `failed` with "outcome
+  unknown". So a retried job sends no duplicates. Throughput is capped at 10 messages a second
+  (config) across all towns.
+- **Warm-up** (config in `packages/mail/src/bulk/config.ts`): 50 a day, doubling every 3 healthy
+  days, up to the domain's target (default 50,000), when it becomes `active`. A day over the
+  thresholds holds the ramp; two in a row step it back 3 days. Over the cap, sends become
+  `deferred_cap` and go first the next day (UTC days). During warm-up the most recently
+  confirmed subscribers go first. The cap counts campaign sends only; confirmations are few and
+  not capped.
+- **Health and auto-pause.** Every SES event updates `domain_health_daily` (sent, delivered,
+  bounced, complained) per domain and stream, using new `domain_id` and `stream` message tags.
+  Every 15 minutes the worker checks each bulk domain's last 7 days: bounces over 3% or
+  complaints over 0.08% (with at least 100 sent) pause that domain's bulk mail and its sending
+  campaigns. Over all mail, 4% bounces or 0.08% complaints pause bulk mail for every town
+  (`mail_settings.bulk_paused`). Replies are never paused automatically. Unpausing is an admin
+  action, audited.
+- **Events.** Bulk events move `email_campaign_sends` forward (as Mail-4 does for messages); a
+  hard bounce marks the subscriber `bounced` and a complaint marks them `complained`.
+- **CSV import** is a CLI (`pnpm mail:import`) that is a dry run unless given
+  `--approved-by <owner email>` and `--consent-source`; imported rows keep that evidence.
+- **EU and Canadian subscribers (flagged, not solved).** Nothing filters by country. Double
+  opt-in with stored consent evidence and one-click unsubscribe covers the core of CASL's
+  express consent and GDPR consent, but GDPR also needs a privacy notice, access and erasure
+  handling, and a lawful basis written down. The owner decides whether to accept such signups.
