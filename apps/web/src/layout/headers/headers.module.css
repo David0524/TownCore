@@ -200,3 +200,63 @@
 .plateNav {
   border-bottom: 3px double var(--ink);
 }
+
+/* tinted-bar (community): a compact band in the brand color. */
+.tinted {
+  border-bottom: 0;
+}
+
+.tintedBand {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.tintedInner {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  min-height: 76px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+}
+
+.tintedMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--accent-text);
+  font-family: var(--font-headline);
+  font-weight: var(--headline-weight);
+  font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2rem);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.tintedMotif {
+  display: inline-flex;
+  color: var(--secondary);
+}
+
+.tintedEnd {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tintedTemp {
+  color: var(--accent-text);
+  font-weight: 600;
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tinted .subscribeSecondary {
+  border-radius: var(--radius);
+  font-weight: 700;
+}

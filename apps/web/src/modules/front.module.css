@@ -126,3 +126,37 @@ a.meetingTitle:hover {
     height: 10px;
   }
 }
+
+/* community: the sections as tiles across the top (canvas PineHome). */
+@media (min-width: 600px) {
+  :global([data-family='community']) .buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  :global([data-family='community']) .button {
+    width: 100%;
+    min-height: 58px;
+    padding: 0.75rem 1rem;
+    border: 0;
+    border-radius: var(--radius-tile);
+    background: var(--tint);
+    font-weight: 700;
+  }
+
+  :global([data-family='community']) .button:hover {
+    text-decoration: underline;
+  }
+
+  :global([data-family='community']) .dot {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-field);
+  }
+}
+
+:global([data-family='community']) .button :global(.meta) {
+  white-space: nowrap;
+}

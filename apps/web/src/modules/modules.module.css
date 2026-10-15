@@ -149,3 +149,51 @@
     line-height: 1.1;
   }
 }
+
+/* community (canvas PineHome): briefs as rounded rows, the signup as a warm card, the weather
+   as a tile in the brand color. Tiles, 16px corners, no shadows. */
+:global([data-family='community']) .briefing .list li {
+  margin-bottom: 0.6rem;
+}
+
+@media (min-width: 600px) {
+  :global([data-family='community']) .briefing .list li > * {
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-tile);
+  }
+
+  :global([data-family='community']) .cta {
+    border: 0;
+    border-radius: var(--radius-tile);
+    padding: 1.25rem 1.4rem;
+    background: var(--secondary);
+    color: var(--secondary-text);
+  }
+
+  :global([data-family='community']) .cta h2,
+  :global([data-family='community']) .cta p,
+  :global([data-family='community']) .cta a,
+  :global([data-family='community']) .cta label {
+    color: var(--secondary-text);
+  }
+
+  :global([data-family='community']) .cta h2 {
+    font-size: 1.5rem;
+    line-height: 1.05;
+  }
+
+  :global([data-family='community']) .cta :global(form) button[type='submit'] {
+    background: var(--accent);
+    color: var(--accent-text);
+  }
+}
+
+@media (min-width: 600px) {
+  :global([data-family='community']) .briefing .list :global(h3) {
+    font-family: var(--font-headline);
+    font-weight: 700;
+    font-size: 1.1875rem;
+    letter-spacing: -0.01em;
+  }
+}

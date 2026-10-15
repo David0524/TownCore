@@ -374,3 +374,21 @@ a.row:hover .rowLabel {
 :global([data-family='heritage']) .barEnd {
   grid-row: 1;
 }
+
+/* community: the navigation bar in the brand color. */
+:global([data-family='community']) .bar {
+  background: var(--accent);
+  border-bottom: 0;
+  color: var(--accent-text);
+}
+
+:global([data-family='community']) .bar .wordmark,
+:global([data-family='community']) .bar .back,
+:global([data-family='community']) .bar .barTemp,
+:global([data-family='community']) .bar button {
+  color: var(--accent-text);
+}
+
+:global([data-family='community']) .wordmarkMotif {
+  color: var(--secondary);
+}

@@ -86,6 +86,24 @@ describe('theme schema', () => {
     expect(checkThemeForTown(harbor, { tier: 'small' })).toEqual([]);
   });
 
+  it('accepts the community fixture town (Pine Hollow)', () => {
+    const pine = parseTheme(
+      readFileSync(
+        fileURLToPath(
+          new URL(
+            '../../../apps/web/e2e/fixtures/towns/me/pine-hollow.theme.json',
+            import.meta.url,
+          ),
+        ),
+        'utf8',
+      ),
+    );
+    expect(pine.family).toBe('community');
+    expect(pine.layout.header).toBe('tinted-bar');
+    expect(pine.layout.footer).toBe('community');
+    expect(checkThemeForTown(pine, { tier: 'small' })).toEqual([]);
+  });
+
   it('requires a family', () => {
     const { family: _family, ...rest } = defaultTheme;
     expect(themeSchema.safeParse(rest).success).toBe(false);
