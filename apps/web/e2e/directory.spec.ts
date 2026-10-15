@@ -139,6 +139,16 @@ test('Places is the selected tab on directory pages', async ({ page, isMobile })
     'aria-current',
     'page',
   );
+  // Back goes to the category, and from there to Places; Places itself has none.
+  const bar = page.getByTestId('phone-bar');
+  await expect(bar.getByRole('link', { name: 'Back' })).toHaveAttribute(
+    'href',
+    '/directory/plumbers',
+  );
+  await page.goto(plumbers);
+  await expect(bar.getByRole('link', { name: 'Places' })).toHaveAttribute('href', '/directory');
+  await page.goto(`${harbor}/directory`);
+  await expect(bar.getByRole('link', { name: 'Places' })).toHaveCount(0);
 });
 
 test('directory slots keep their reserved heights and never overflow (ad standards)', async ({
