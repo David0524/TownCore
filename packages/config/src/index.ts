@@ -76,3 +76,4 @@ export {
   type TypePairing,
 } from './theme';
 export type { WeatherAlert, WeatherHour, WeatherSnapshot } from './weather';
+export { creativeSchema, type Creative } from './creative';
