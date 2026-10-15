@@ -1,0 +1,151 @@
+.shell {
+  min-height: 100vh;
+  background: var(--background);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  padding: 0.75rem var(--gutter);
+  background: var(--ink);
+  color: var(--accent-text);
+}
+
+.bar a,
+.bar button {
+  color: var(--accent-text);
+  font: inherit;
+}
+
+.brand {
+  font-weight: 700;
+  margin-right: auto;
+}
+
+.bar button {
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.page {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 1.5rem var(--gutter) 3rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--surface);
+  vertical-align: top;
+}
+
+.table th {
+  background: var(--surface);
+}
+
+.split {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 60rem) {
+  .split {
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.record {
+  white-space: pre-wrap;
+  font-size: 0.875rem;
+  max-height: 30rem;
+  overflow: auto;
+}
+
+.claims {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.claims li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--background);
+}
+
+.bad {
+  font-weight: 700;
+}
+
+.form {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+}
+
+.form input,
+.form textarea {
+  font: inherit;
+  padding: 0.5rem;
+  border: 1px solid var(--muted);
+  border-radius: var(--radius);
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin: 1rem 0;
+}
+
+.button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.secondary {
+  background: var(--background);
+  color: var(--ink);
+}
+
+.notice {
+  background: var(--tint);
+  border-left: 4px solid var(--ink);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+}
+
+.source {
+  margin-bottom: 1rem;
+}

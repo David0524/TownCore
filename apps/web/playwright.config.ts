@@ -1,4 +1,9 @@
+import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
+
+// Specs that seed data (admin) need DATABASE_URL; use the repo .env locally (CI sets it).
+const envFile = new URL('../../.env', import.meta.url);
+if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 const port = 3100;
 // Chromium resolves our real domains to the local server, so tests use real Host headers.
@@ -7,6 +12,9 @@ const hosts = [
   'www.bocatownsquare.com',
   'harborpoint.test',
   'unknown-town.example',
+  // Staff admin host (APP_BASE_URL below), and the fixture town admin tests publish to.
+  'admin.test',
+  'reviewtown.test',
 ];
 
 export default defineConfig({
@@ -30,6 +38,12 @@ export default defineConfig({
     command: `node node_modules/next/dist/bin/next start -p ${port}`,
     port,
     reuseExistingServer: true,
+    // The admin lives only on APP_BASE_URL's host; ADMIN_EMAILS may sign in.
+    env: {
+      ...(process.env as Record<string, string>),
+      APP_BASE_URL: 'http://admin.test',
+      ADMIN_EMAILS: 'editor@admin.test',
+    },
     timeout: 60_000,
   },
 });

@@ -115,6 +115,56 @@ export const staff = pgTable('staff', {
   updatedAt: updatedAt(),
 });
 
+// Staff sign-in by email link (CLAUDE.md §3). Only SHA-256 hashes of tokens are stored.
+export const staffLoginTokens = pgTable(
+  'staff_login_tokens',
+  {
+    id: id(),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('staff_login_tokens_hash_uq').on(t.tokenHash),
+    index('staff_login_tokens_staff_created_idx').on(t.staffId, t.createdAt),
+  ],
+);
+
+export const staffSessions = pgTable(
+  'staff_sessions',
+  {
+    id: id(),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('staff_sessions_hash_uq').on(t.tokenHash)],
+);
+
+// Every editorial action taken in /admin: who, what, when, and a before/after summary.
+export const adminActions = pgTable(
+  'admin_actions',
+  {
+    id: id(),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id),
+    action: text('action').notNull(),
+    articleId: uuid('article_id'),
+    candidateId: uuid('candidate_id'),
+    detail: jsonb('detail'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('admin_actions_created_idx').on(t.createdAt)],
+);
+
 export const sources = pgTable(
   'sources',
   {

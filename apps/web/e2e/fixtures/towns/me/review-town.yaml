@@ -1,0 +1,14 @@
+# FICTIONAL test town for the admin e2e tests (docs/plans/M3.md §8). Stories approved in those
+# tests publish here, so they never change what the Boca and Harbor Point specs see.
+# .test is a reserved TLD that can never resolve publicly.
+slug: review-town
+name: Review Town
+state: ME
+county: Fictional
+timezone: America/New_York
+site_name: The Review Town Courier
+domain: reviewtown.test
+tier: small
+newsletter_send_time: '07:00'
+agencies: [Town of Review Town]
+pricing: { sponsored_slot_usd: 99, enhanced_usd: 19 }

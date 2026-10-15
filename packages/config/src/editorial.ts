@@ -34,3 +34,9 @@ export const tier2ReviewSample = 0.1;
 export function storyBudgetFor(config: Pick<TownConfig, 'tier' | 'story_budget'>): number {
   return config.story_budget ?? dailyStoryBudget[config.tier];
 }
+
+/**
+ * Byline name for staff who haven't set their real name yet (owner's call, 2026-10-15). Such
+ * staff are marked as placeholders and can't sign stories on a live town (Rule 2).
+ */
+export const placeholderReviewerName = 'John';
