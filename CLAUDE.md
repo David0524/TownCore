@@ -329,6 +329,8 @@ Every town runs the same components and page templates, but each gets its own th
 - One component library in `apps/web/components` driven entirely by CSS custom properties. No component may hardcode a color, font or radius.
 - A town theme is a file: `towns/fl/boca-raton.theme.json`, validated by zod.
 - A theme has two halves: **look** (palette, type pairing, corner style, local motif, masthead style) and **layout** (how every page is assembled, Section 11a-2). Both vary per town.
+- **Style families** (`docs/plans/M4b.md`, revision 6): every theme names a `family` that sets the structural and stylistic defaults (header, front layout, shape, type roles); the town fills in its palette, display font, wordmark, motif, local panels and module order inside those limits. Families: `coastal-modern` (Boca), `heritage`, `community`; `civic-classic` and `magazine` are still to be designed. The generator picks the family from identity notes, size and news volume (fewer than 5 items a day → `community` or a briefing-led front).
+- **Never varies across towns:** category color meanings, alert amber, the sponsored label and tile, the slot contract, bylines and disclosure, weather and sign-up above the fold, the phone chrome (below), and the accessibility and performance budgets.
 
 **Theme schema (example: Boca Town Square)**
 ```json
@@ -341,6 +343,7 @@ Every town runs the same components and page templates, but each gets its own th
     "surface": "#F2F6F8",
     "background": "#FFFFFF"
   },
+  "family": "coastal-modern",
   "type": "newsreader-publicsans",
   "masthead": "centered-serif",
   "layout": {
@@ -358,7 +361,11 @@ Every town runs the same components and page templates, but each gets its own th
 }
 ```
 
-**Curated type pairings** (self-hosted Google Fonts; headline / body): Newsreader / Public Sans · Fraunces / Work Sans · Libre Caslon Text / Source Sans 3 · Literata / IBM Plex Sans · Bitter / Hanken Grotesk · Spectral / Karla. Add new pairs only by human decision.
+**Type, by role** (self-hosted from `@fontsource`; never fetched from Google at run time): **display** (wordmark and headlines), **text/UI**, and **mono** for metadata only (timestamps, datelines, counts, labels, credits), which replaces small all-caps labels. Each family has a shortlist: `coastal-modern` Instrument Serif / Geist / Geist Mono; `heritage` Libre Caslon Display / Public Sans + Libre Caslon Text; `community` Bricolage Grotesque / Figtree. Other approved display faces: Fraunces, Young Serif, Newsreader; text faces: Instrument Sans, Public Sans. Every display face must work at 22px and 58px. Add new faces only by human decision. The six M1 pairings stay valid until the `heritage` and `community` families ship, then retire.
+
+**Phones (below 600px) use Apple-native chrome on every town** (`docs/plans/M4b.md`, revision 5): system font stacks (San Francisco for interface and body, New York serif for headlines, wordmark and ad headlines; never embedded Apple font files), the iOS type scale in rem, iOS system colors with the town's `brand` as the tint, a bottom tab bar (Today, Sections, Events, Places, Search), large titles, inset grouped lists, sheets for settings and filters, 44pt touch targets, and SF Symbols look-alike icons drawn in our own SVG. On phones, towns differ by tint, wordmark, header treatment, widgets, the first module and one local tab. All-caps text is allowed only as iOS-style section headers of grouped lists on phones, never as eyebrows over headlines.
+
+**Color** (revision 4): white page, near-black text, one `brand` color (logo mark, primary button, phone tint) and its complement `accent`. Tints only for the Today tiles and the sponsored tile; category colors (fixed meaning network-wide) appear as small dots; the amber alert bar is the only full-width color. No drop shadows: elevation comes from tints and hairlines. Build dark-mode tokens now, even if dark mode ships later.
 
 ### 11a-2. Layout system: every town assembled differently
 
@@ -366,8 +373,8 @@ Pages are composed from interchangeable parts, so towns differ in structure, not
 
 | Part | Options (start with these; add more over time) |
 | --- | --- |
-| Header | `centered-masthead`, `left-logo-inline-nav`, `stacked-dateline` (masthead + date and weather bar), `compact` |
-| Navigation | `beat-tabs`, `mega-menu`, `hamburger-only` (small towns), `bottom-bar` (mobile) |
+| Header | `centered-masthead`, `left-logo-inline-nav`, `stacked-dateline` (masthead + date and weather bar), `compact`, `slim-left` (coastal-modern), `nameplate-double-rule` (heritage), `tinted-bar` (community) |
+| Navigation | Desktop: `beat-tabs`, `mega-menu`, `text-nav`. Phones always use the bottom tab bar (above); a hamburger is never primary navigation |
 | Grid | `single-column`, `main-right-rail`, `main-left-rail`, `split-two-column` |
 | Homepage | An ordered list of modules from the module library (below), not a fixed template |
 | Article page | `classic-rail`, `wide-reading` (no rail, generous measure), `magazine` (large lead image, pull-out source box) |
@@ -380,11 +387,12 @@ Pages are composed from interchangeable parts, so towns differ in structure, not
 - **Community modules:** `events`, `schools-sports`, `weather-strip`, `photo-of-the-day` (reader submissions, later).
 - **Directory and money modules:** `directory-featured`, `directory-categories`, `jobs-classifieds` (later).
 - **Signup module:** `newsletter-cta`.
+- **Added by M4b:** `today-bento` (weather with hourly row, plus one or two local panels such as beach and tides, trails and air quality, pass roads), `essentials` (quick links to the evergreen guides), `three-things`, `this-weekend`, `new-now-open`, `find-a-pro`, `coming-up`, `documents-posted`, `recent-votes` (hidden until vote data exists), `photo-of-the-week` and `quick-poll` (later).
 
 **Generation constraints**
 - **Content volume decides structure.** Towns with fewer than 5 items a day cannot use `lead-story` first or `split-two-column`; they lead with `briefing-column`, `events` or `directory-featured`, so small towns never look empty.
 - **Required everywhere.** `newsletter-cta` appears in the first two modules on mobile. Every layout must satisfy the slot contract in Section 11b.
-- **Neighbors look different.** Two towns within 50 miles may share at most two of: header, grid, article template, and the first three homepage modules.
+- **Neighbors look different.** Two towns within 50 miles never share family + palette, and may share at most two of: header, grid, article template, and the first three homepage modules. The launch report shows the town beside its two nearest neighbors.
 - **Locked components.** Variation never touches the publisher disclosure, bylines, source links or the "Sponsored" label style.
 
 **Layouts are experiments.** Thousands of towns make a huge test bed. Assign module orders and templates as tracked experiments and measure newsletter signup rate, pages per visit, directory clicks and revenue per 1,000 visits. Spread winning patterns across the network, but keep the neighbor constraint so winners don't make every site identical.
@@ -393,7 +401,7 @@ Pages are composed from interchangeable parts, so towns differ in structure, not
 
 **Every page also includes**
 - A newsletter signup above the fold on mobile.
-- A weather strip.
+- Weather above the fold on every viewport (the Today tile or a weather strip), never hidden; with no current conditions it shows the latest NWS forecast and alerts, with its source line.
 - "Sponsored" labels styled visibly differently from editorial content, never disguised.
 - Source links on every article.
 
@@ -409,7 +417,7 @@ Pages are composed from interchangeable parts, so towns differ in structure, not
 3. The contrast checker validates the palette and auto-adjusts it until it passes.
 4. Playwright screenshots the home, article, directory and newsletter pages on mobile and desktop.
 5. A Claude review pass critiques the screenshots against this section, fixes problems, then attaches the final screenshots to `launch-report.md` for the human approver.
-6. The generator enforces the neighbor rule in 11a-2 and avoids reusing a palette and type pairing within 50 miles. It also confirms the slot contract in 11b passes.
+6. The generator enforces the neighbor rule in 11a-2 (no shared family + palette within 50 miles). It also confirms the slot contract in 11b passes.
 
 **Avoid generic AI-site defaults:** cream background + high-contrast serif + terracotta accent as a default look, identical rounded cards with soft shadows everywhere, all-caps eyebrow labels over every heading, gradient washes. The default fallback theme must not be any of these.
 
@@ -434,19 +442,22 @@ Layouts vary, but where money appears does not. Every layout must provide these 
 | `directory.business.cta` | Business page | Call button (tracked number for paying businesses) and "Get a quote" lead form |
 | `directory.quote-request` | Category pages | One form that routes a lead to up to 3 sponsored businesses in that category |
 | `newsletter.top` / `newsletter.mid` / `newsletter.classifieds` | Daily email | Presenting sponsor, mid-issue sponsor, short classified lines |
+| `category.sponsor` | Each category front | "Dining, sponsored by [business]"; exclusive, monthly |
+| `weekend.sponsored` / `dining.featured` | `this-weekend` and `new-now-open` modules | One sponsored item inside the module |
+| `directory.topspot` | First listing in each directory category | Sponsored top listing; when unsold, a house ad "Top spot open: {category}. Claim it" |
 
 **Fill order for every slot:**
 1. Direct-sold campaign.
 2. Sponsored directory or local placement.
 3. Programmatic ad (later; see below).
-4. House ad: newsletter signup, "Claim your free listing", or "Advertise in {Site Name}".
+4. House ad: newsletter signup, "Claim your free listing", or "Advertise in {Site Name}". House ads are designed units, one per reserved size (970×90, 320×100, 300×250 and the in-feed card), so a reserved slot never shows empty space.
 
 Slots never render empty, and their height is reserved in advance so ads never shift the page (CLS budget).
 
 **Ad standards (enforced in CI)**
 - No pop-ups, interstitials, autoplay audio, or large sticky ads.
 - Mobile ad density stays at or below 30% of an article's scroll height, following the Coalition for Better Ads standard.
-- Every paid unit shows a "Sponsored" or "Advertisement" label in the locked label style.
+- Every paid unit shows a "Sponsored" or "Advertisement" label in the locked label style: a mono label plus a warm sand tile behind the unit, the same everywhere in the network (`docs/plans/M4b.md`, revision 4).
 - Ads never sit between a headline and its first paragraph, and never inside source boxes or correction notices.
 
 **Programmatic, later and gated:** only after a town passes Gate 2 and has steady traffic. Requires `ads.txt` generated per domain and a consent manager where state privacy law requires one. Remember that Google ad programs bar ads on pages that violate its search spam policies, so content quality protects ad revenue too.
@@ -517,7 +528,7 @@ Every article gets a visual, but a visual must never be misleading. The image ro
 | M1 | Multi-tenant site + design system | Token-driven components; a layout system with at least 2 options per part and the homepage module library; the slot contract with house ads in every slot; the contrast checker; BocaTownSquare.com renders by hostname with its own theme, SVG masthead, About (naming TownCore as publisher), Methods and Corrections pages, no network branding elsewhere, and a test article; and a second dummy town with a different look AND layout proves nothing is hardcoded |
 | M2 | Ingestion | Adapter framework + NWS, Boca agenda/meeting source, Florida business filings or licenses; scheduled; health tracked |
 | M3 | Writer + fact-check + router | Candidates become articles; tiers enforced; `/admin/review` approve/edit/reject works; newsworthiness score, daily story budget, skip log and follow-up linking |
-| M4 | Publishing + SEO | Articles live with sources shown, sitemaps, news sitemap, structured data, RSS, 30 evergreen guides; ranking (rank formula, pins, diversity rules), entity pages, the image router with maps, data graphics and typographic cards, and Open Graph images |
+| M4 | Publishing + SEO | Articles live with sources shown, sitemaps, news sitemap, structured data, RSS, 30 evergreen guides; ranking (rank formula, pins, diversity rules), entity pages, the image router with maps, data graphics and typographic cards, and Open Graph images; the town-site redesign (`docs/plans/M4b.md`): style families, Apple-native phone chrome, Today tiles, designed house ads and filled beat fronts, with Boca on `coastal-modern` and Harbor Point on a different family |
 | M5 | Newsletter | Signup, double opt-in, daily issue built and sent (test list first), unsubscribe |
 | M6 | Directory, slots + Stripe | The directory is seeded with category and business pages; the claim flow works; Stripe checkout books a sponsored slot into `campaigns`; articles show beat-matched related businesses; tracked calls and quote forms log to `leads`; `slot_stats_daily` is populated; and the ad-standards CI checks pass |
 | M7 | Launcher | `pnpm launch "Delray Beach, FL"` produces a passing launch report in dry-run, including a generated theme and screenshots that look clearly different from Boca, then live after approval; `towns:rank`, name and domain proposals with conflict checks, the motif library and masthead options |
@@ -571,6 +582,7 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
 - 2026-10-15 — **Company Google Workspace domain is towncore.net** (owner). Staff sign-in accepts only towncore.net accounts; it's a constant in `packages/config/src/publisher.ts`, not an env var, since it isn't secret and doesn't vary by environment. AWS and Vercel access come later.
 - 2026-10-15 — **Gemini writer and fact-check moved to Flash-Lite (owner's call).** The free tier allows 20 requests a day on `gemini-flash-latest`, too few for daily writing or the evals, so the routine, writer and fact-check roles all use `gemini-flash-lite-latest`. Trade-off accepted: weaker drafts and fact-checks than Flash, so more stories may fail the code checks and land in review. The code checks themselves are unchanged. Claude (production, §8) routing is unchanged.
 - 2026-10-15 — **M4 plan approved** (`docs/plans/M4.md`) with every recommendation: Census Geocoder plus a downloaded OpenStreetMap extract for block-level maps, no live OSM API calls (D-M4-1); 30 evergreen guides from official pages only, first batch per town reviewed (D-M4-2); first-party cookieless counters, no third-party analytics (D-M4-3); structured data names the site itself as publisher (D-M4-4); thin entity pages and non-live towns `noindex` (D-M4-5); Google News Publisher Center and Search Console are manual launch steps (D-M4-6).
+- 2026-10-15 — **Town-site redesign incorporated (owner: "Incorporate this"):** `docs/plans/M4b.md` (revision 6) becomes part of M4 and updates §11a, §11a-2 and §11b: style families (`coastal-modern`, `heritage`, `community`; two more to design), type by role with mono metadata replacing the six curated pairings once the new families ship, Apple-native chrome on phones (system font stacks, bottom tab bar, grouped lists, sheets), white page with one brand color and category dots, weather above the fold on every page, new homepage modules, and new slots (`category.sponsor`, `weekend.sponsored`, `dining.featured`, `directory.topspot`) with a designed house ad per size. The sponsored style changes once, network-wide, to a mono label on a sand tile, and stays locked. Where revisions conflict, the later revision wins (6 over 5 over 4 …). Open decisions are listed at the top of the plan.
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.
@@ -594,4 +606,5 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
   - Open: try it on real mail once Mail-2 is live (AWS, test domains); email digest notifications later.
 - 2026-10-15 — **Mail-4 Outbound replies: complete in CI** (David0524/TownCore#35 and the composer PR). Reply, reply all and new messages from any role address, with per-staff signatures; MIME built in code and sent raw through SES (conversational configuration set, domain and stream tags), or to the server log with `MAIL_TRANSPORT=log`; replies thread by our and SES's Message-IDs; attachments up to 10 MB stored in S3; suppressions (hard bounce, complaint, manual for every stream; unsubscribe for bulk only) with a "Send anyway" confirmation; SES sending events update each message's delivery status (forward only) and add suppressions; every send audited.
   - Open: live send test once SES production access is granted (runbook "First live check").
-- Next: **M4 Publishing + SEO**: plan approved; building (`docs/plans/M4.md`). **Mail-5 Bulk sending** (newsletter sending layer) is next for mail; Mail-1 to Mail-4 live tests need the Vercel token, AWS access, SES production access and test domains.
+- 2026-10-15 — **M4 PR A + B: merged** (David0524/TownCore#33): robots.txt (draft towns disallow all), sitemap index, news sitemap, RSS, canonical tags, JSON-LD naming the site as publisher; `rankArticles()` with freshness, engagement, diversity and lead rules, staff and automatic pins, cookieless view and click counters.
+- Next: **M4 Publishing + SEO** (`docs/plans/M4.md`): the town-site redesign (`docs/plans/M4b.md`) next, then images, entities, maps and guides. **Mail-5 Bulk sending** (newsletter sending layer) is next for mail; Mail-1 to Mail-4 live tests need the Vercel token, AWS access, SES production access and test domains.
