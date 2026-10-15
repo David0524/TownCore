@@ -33,13 +33,10 @@ describe('town config', () => {
     });
   });
 
-  it('Boca still has TBD sources (filled in M2)', () => {
+  it('only the unverified agenda source is still TBD', () => {
     const boca = loadTownConfigs(townsDir).find((t) => t.slug === 'boca-raton')!;
-    expect(findTbdFields(boca)).toEqual([
-      'sources[0].platform',
-      'sources[0].url',
-      'sources[1].zone',
-    ]);
+    expect(findTbdFields(boca)).toEqual(['sources[0].platform', 'sources[0].url']);
+    expect(boca.sources[1]).toMatchObject({ kind: 'weather', platform: 'nws', zone: 'FLZ168' });
   });
 
   it('applies defaults', () => {

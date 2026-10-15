@@ -9,7 +9,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "sources:status": "tsx src/scripts/status.ts"
+    "sources:status": "tsx src/scripts/status.ts",
+    "fixtures:record": "tsx src/scripts/record.ts",
+    "ingest:once": "tsx src/scripts/ingest-once.ts"
   },
   "dependencies": {
     "@towncore/config": "workspace:*",

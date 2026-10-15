@@ -1,5 +1,5 @@
 import robotsParser from 'robots-parser';
-import { isBlockedUrl, MIN_INTERVAL_MS, USER_AGENT } from './policy';
+import { documentedApi, isBlockedUrl, MIN_INTERVAL_MS, USER_AGENT } from './policy';
 
 // The only way adapters may make HTTP requests (a lint rule bans bare fetch in this package).
 // Every request: never-scrape list → robots.txt → 1 request/second per host → timeout + retries.
@@ -7,6 +7,9 @@ import { isBlockedUrl, MIN_INTERVAL_MS, USER_AGENT } from './policy';
 export class FetchPolicyError extends Error {}
 
 export type FetchFn = (input: string, init?: RequestInit) => Promise<Response>;
+
+/** The platform fetch. Only ever passed into a Fetcher (directly or via the fixture recorder). */
+export const defaultFetch: FetchFn = (input, init) => globalThis.fetch(input, init);
 
 export type FetcherOptions = {
   fetchImpl?: FetchFn;
@@ -37,7 +40,7 @@ export class Fetcher {
   >();
 
   constructor(options: FetcherOptions = {}) {
-    this.fetchImpl = options.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
+    this.fetchImpl = options.fetchImpl ?? defaultFetch;
     this.userAgent = options.userAgent ?? USER_AGENT;
     this.minIntervalMs = options.minIntervalMs ?? MIN_INTERVAL_MS;
     this.timeoutMs = options.timeoutMs ?? 20_000;
@@ -51,7 +54,8 @@ export class Fetcher {
     const target = new URL(url);
     const blocked = isBlockedUrl(target);
     if (blocked) throw new FetchPolicyError(`Refusing to fetch ${url}: ${blocked}`);
-    if (!(await this.allowedByRobots(target))) {
+    // Documented APIs that invite automated use skip robots.txt (Rule 8 exception); pages never do.
+    if (!documentedApi(target) && !(await this.allowedByRobots(target))) {
       throw new FetchPolicyError(`Refusing to fetch ${url}: disallowed by robots.txt`);
     }
     return this.request(target, headers);

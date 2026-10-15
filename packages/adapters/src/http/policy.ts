@@ -37,3 +37,20 @@ export function isBlockedUrl(url: URL): string | null {
     return 'Google Maps is on the never-scrape list';
   return null;
 }
+
+/**
+ * Official APIs whose published terms invite automated access (CLAUDE.md Rule 8 exception,
+ * approved 2026-10-15). Their hosts' robots.txt targets crawlers, so it isn't consulted for these
+ * API hosts; the never-scrape list, rate limit and User-Agent still apply. Add entries only after
+ * reading the terms, and record the terms URL. Never add a host to get around a website's robots.
+ */
+export const DOCUMENTED_APIS: Record<string, { name: string; terms: string }> = {
+  'api.weather.gov': {
+    name: 'National Weather Service API',
+    terms: 'https://www.weather.gov/documentation/services-web-api',
+  },
+};
+
+export function documentedApi(url: URL): { name: string; terms: string } | null {
+  return DOCUMENTED_APIS[url.hostname.toLowerCase()] ?? null;
+}
