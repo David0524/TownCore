@@ -28,4 +28,6 @@ export const schedules = [
   { queue: queues.bulkHealth, cron: '*/15 * * * *' },
   // Every 15 minutes, refresh each town's Today weather tile from NWS (docs/plans/M4b.md).
   { queue: queues.weather, cron: '*/15 * * * *' },
+  // Every 5 minutes, build and send each town's daily issue once its local send time passes (M5).
+  { queue: queues.newsletter, cron: '*/5 * * * *' },
 ] as const;
