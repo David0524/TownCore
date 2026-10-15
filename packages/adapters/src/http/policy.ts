@@ -49,6 +49,13 @@ export const DOCUMENTED_APIS: Record<string, { name: string; terms: string }> = 
     name: 'National Weather Service API',
     terms: 'https://www.weather.gov/documentation/services-web-api',
   },
+  // Owner approved 2026-10-15. The Division of Corporations publishes a public login and says
+  // its files are available "through your browser or a secure FTP client of your choice".
+  // Only this file host is listed; Sunbiz search pages are never fetched.
+  'sftp.floridados.gov': {
+    name: 'Florida Division of Corporations public data downloads',
+    terms: 'https://dos.fl.gov/sunbiz/other-services/data-downloads/daily-data/',
+  },
 };
 
 export function documentedApi(url: URL): { name: string; terms: string } | null {
