@@ -108,6 +108,7 @@
 }
 
 .form input,
+.form select,
 .form textarea {
   font: inherit;
   padding: 0.5rem;

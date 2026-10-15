@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { footers, headers, navs } from '@/layout/registry';
+import { rssAlternate } from '@/lib/discovery';
 import { themeCssVariables, themeFor } from '@/lib/theme';
 import { requireTown, resolveTown } from '@/lib/town';
 
@@ -13,6 +14,7 @@ export async function generateMetadata({ params }: Pick<Props, 'params'>): Promi
     metadataBase: new URL(`https://${town.domain}`),
     title: { default: town.siteName, template: `%s · ${town.siteName}` },
     description: `Local news for ${town.name}, ${town.state}, written from public records.`,
+    alternates: { types: rssAlternate(town) },
     // Nothing is indexed until a human sets the town live (rules 7 and 10).
     robots: town.status === 'live' ? undefined : { index: false, follow: false },
   };

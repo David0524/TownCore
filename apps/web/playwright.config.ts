@@ -15,6 +15,7 @@ const hosts = [
   // Staff admin host (APP_BASE_URL below), and the fixture town admin tests publish to.
   'admin.test',
   'reviewtown.test',
+  'feedtown.test',
 ];
 
 export default defineConfig({

@@ -4,7 +4,7 @@
 import { fileURLToPath } from 'node:url';
 import { loadTowns, requireEnv } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
-import { createDb, getTownBySlug, syncTowns } from '@towncore/db';
+import { createDb, eq, getTownBySlug, syncTowns, towns } from '@towncore/db';
 import { seedTestContent } from './test-content';
 
 loadDotEnv();
@@ -22,6 +22,9 @@ const db = createDb(databaseUrl, { max: 1 });
 try {
   const { upserted } = await syncTowns(db, loadTowns(fixturesDir));
   console.log(`Seeded fixture town(s): ${upserted.join(', ')}`);
+  // Feed Town is the one fictional town that is live, so sitemaps and feeds have something to
+  // list in tests (.test domains never resolve publicly).
+  await db.update(towns).set({ status: 'live' }).where(eq(towns.slug, 'feed-town'));
   for (const slug of ['boca-raton', ...upserted]) {
     const town = await getTownBySlug(db, slug);
     if (!town) throw new Error(`Town ${slug} not found; run towns:sync first.`);

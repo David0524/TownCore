@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { beats } from '@towncore/config';
-import { listPublishedArticles } from '@towncore/db';
-import { db } from '@/lib/db';
+import { ListBeacon } from '@/components/Beacon';
 import { StandardPage } from '@/lib/pages';
 import { formatTownDate, requireTown } from '@/lib/town';
+import { rankedBeatArticles } from '@/modules/data';
 
 type Props = { params: Promise<{ host: string; beat: string }> };
 
@@ -22,10 +22,11 @@ export default async function BeatPage({ params }: Props) {
   const town = await requireTown(params);
   const beat = findBeat((await params).beat);
   if (!beat) notFound();
-  const articles = await listPublishedArticles(db(), town.id, { beat: beat.slug });
+  const articles = await rankedBeatArticles(town.id, beat.slug);
 
   return (
     <StandardPage town={town}>
+      <ListBeacon />
       <h1>{beat.label}</h1>
       {articles.length === 0 ? (
         <p>No {beat.label.toLowerCase()} stories yet.</p>

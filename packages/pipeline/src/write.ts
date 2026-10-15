@@ -3,6 +3,7 @@ import {
   articles,
   articleUpdates,
   eq,
+  pins,
   inArray,
   records,
   sources,
@@ -94,10 +95,13 @@ export async function writeCandidate(
       text: '',
       baseTier: candidate.proposedTier as Tier,
     });
+    const isAlert = candidate.key.startsWith('alert:');
     return saveArticle(db, {
       candidateId,
       town: town!,
       draft,
+      kind: isAlert ? 'alert' : 'roundup',
+      pin: isAlert ? severeWeatherPin(rows[0]?.record.raw, now) : null,
       tier: tier.tier,
       tierReasons: [...(candidate.tierReasons ?? []), ...tier.reasons],
       factcheck: { method: 'template', score: 1, decision: 'pass' },
@@ -224,6 +228,8 @@ export async function writeCandidate(
   return saveArticle(db, {
     candidateId,
     town: town!,
+    kind: 'story',
+    pin: roadClosurePin(finalDraft.headline, now),
     draft: {
       headline: finalDraft.headline,
       dek: finalDraft.dek,
@@ -269,6 +275,8 @@ async function saveArticle(
     candidateId: string;
     town: typeof towns.$inferSelect;
     draft: TemplatedDraft;
+    kind: 'story' | 'roundup' | 'alert';
+    pin?: AutoPin | null;
     claims?: unknown;
     tier: Tier;
     tierReasons: string[];
@@ -313,6 +321,7 @@ async function saveArticle(
       claims: a.claims ?? null,
       factcheck: a.factcheck,
       candidateId: a.candidateId,
+      kind: a.kind,
       promptVersions: a.promptVersions,
       reviewReason,
       tierReasons: a.tierReasons,
@@ -323,6 +332,14 @@ async function saveArticle(
     .update(storyCandidates)
     .set({ status: 'written', articleId: article!.id })
     .where(eq(storyCandidates.id, a.candidateId));
+  if (a.pin && status !== 'blocked') {
+    await db.insert(pins).values({
+      articleId: article!.id,
+      townId: a.town.id,
+      reason: a.pin.reason,
+      expiresAt: a.pin.expiresAt,
+    });
+  }
   if (status !== 'blocked' && !a.promptVersions.includes('template')) {
     await linkRelatedStories(
       db,
@@ -486,4 +503,27 @@ async function writeUpdate(
   return reviewReason
     ? { status, articleId: target.id, reason: reviewReason }
     : { status, articleId: target.id };
+}
+
+type AutoPin = { reason: string; expiresAt: Date };
+
+/** Severe and Extreme NWS warnings pin themselves until the alert expires (§6a). */
+export function severeWeatherPin(raw: unknown, now: Date): AutoPin | null {
+  const alert = (raw ?? {}) as { severity?: string; expires?: string; ends?: string | null };
+  if (!['Severe', 'Extreme'].includes(alert.severity ?? '')) return null;
+  const until = new Date(alert.ends ?? alert.expires ?? '');
+  const expiresAt = Number.isNaN(until.getTime())
+    ? new Date(now.getTime() + 24 * 3_600_000)
+    : until;
+  return expiresAt > now ? { reason: 'severe weather warning', expiresAt } : null;
+}
+
+const ROAD_CLOSURE =
+  /\b(road|lane|street|bridge|ramp)s? closures?\b|\bclos(es|ed|ing|ure of)\b.*\b(road|street|avenue|boulevard|highway|bridge|lanes?)\b/i;
+
+/** Road-closure stories pin themselves for 48 hours (§6a). */
+export function roadClosurePin(headline: string, now: Date): AutoPin | null {
+  return ROAD_CLOSURE.test(headline)
+    ? { reason: 'road closure', expiresAt: new Date(now.getTime() + 48 * 3_600_000) }
+    : null;
 }
