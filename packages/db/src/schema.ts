@@ -108,6 +108,9 @@ export const staff = pgTable('staff', {
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
   role: staffRole('role').notNull(),
+  // A stand-in reviewer used before a real one is named (CLAUDE.md Decisions, 2026-10-15).
+  // Never allowed on a live town's published story (Rule 2).
+  placeholder: boolean('placeholder').notNull().default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -267,6 +270,13 @@ export const articles = pgTable(
       .default(sql`'{}'::uuid[]`),
     claims: jsonb('claims'),
     factcheck: jsonb('factcheck'),
+    candidateId: uuid('candidate_id'),
+    // e.g. ["writer@v1", "factcheck@v1"]: the prompts that produced this article.
+    promptVersions: text('prompt_versions').array(),
+    // Why it's in the review queue: tier3 | sample | factcheck | model_error | minor_override.
+    reviewReason: text('review_reason'),
+    tierReasons: text('tier_reasons').array(),
+    rejectionReason: text('rejection_reason'),
     publishedAt: timestamp('published_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

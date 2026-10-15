@@ -12,7 +12,13 @@ import type { Logger } from 'pino';
 import { recordHeartbeat } from './heartbeat';
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
 import { queues, schedules } from './queues';
-import { enqueueStoryFinders, runStoryFinderJob, type StoryFinderJob } from './stories';
+import {
+  enqueueStoryFinders,
+  runStoryFinderJob,
+  runWriterJob,
+  type StoryFinderJob,
+  type WriterJob,
+} from './stories';
 
 export type WorkerOptions = {
   databaseUrl: string;
@@ -75,7 +81,13 @@ export async function startWorker({
   });
 
   await boss.work<StoryFinderJob>(queues.storyFinder, async (jobs) => {
-    for (const job of jobs) await runStoryFinderJob(db, llm, logger, job.data);
+    for (const job of jobs) await runStoryFinderJob(db, boss, llm, logger, job.data);
+  });
+
+  // Writer + fact-check + tier router for one candidate (fact-check is a separate model call
+  // inside the same job, so a retry never re-publishes half a story).
+  await boss.work<WriterJob>(queues.writer, async (jobs) => {
+    for (const job of jobs) await runWriterJob(db, llm, logger, job.data);
   });
 
   for (const { queue, cron } of schedules) {

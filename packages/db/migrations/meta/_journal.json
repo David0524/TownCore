@@ -57,6 +57,13 @@
       "when": 1792083495668,
       "tag": "0007_story_finder",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792083917223,
+      "tag": "0008_writer",
+      "breakpoints": true
     }
   ]
 }
