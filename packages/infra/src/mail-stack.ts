@@ -79,6 +79,8 @@ export class MailStack extends Stack {
     this.inboundTopic = new sns.Topic(this, 'InboundTopic', {
       topicName: name('inbound'),
       enforceSSL: true,
+      // SHA-256 signatures; the webhook accepts v1 and v2 but v2 is what we ask for.
+      signatureVersion: '2',
     });
     this.inboundTopic.addToResourcePolicy(
       new iam.PolicyStatement({
@@ -96,6 +98,7 @@ export class MailStack extends Stack {
       const topic = new sns.Topic(this, `${key}EventsTopic`, {
         topicName: name(`${key}-events`),
         enforceSSL: true,
+        signatureVersion: '2',
       });
       const set = new ses.ConfigurationSet(this, `${key}ConfigSet`, {
         configurationSetName: name(key),
