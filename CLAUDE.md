@@ -255,7 +255,7 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
 - Keep this file current: decisions go in **Decisions**, progress in **Status**.
 
 ### Environment variables (keep `.env.example` in sync)
-`DATABASE_URL`, `ANTHROPIC_API_KEY`, `EMAIL_PROVIDER_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `CLOUDFLARE_API_TOKEN`, `REGISTRAR_API_KEY`, `HOSTING_API_TOKEN`, `APP_BASE_URL`, `ADMIN_EMAILS`
+`DATABASE_URL`, `ANTHROPIC_API_KEY`, `EMAIL_PROVIDER_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `CLOUDFLARE_API_TOKEN`, `REGISTRAR_API_KEY`, `HOSTING_API_TOKEN`, `APP_BASE_URL`, `ADMIN_EMAILS`, `DEV_TOWN_SLUG` (dev/preview only)
 
 ---
 
