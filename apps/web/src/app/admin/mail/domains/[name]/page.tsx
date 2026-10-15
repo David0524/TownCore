@@ -5,7 +5,7 @@ import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../../../admin.module.css';
 import { requestRecheck } from '../../actions';
-import { newsletterApprovalAction, unpauseAction } from '../../bulk-actions';
+import { unpauseAction } from '../../bulk-actions';
 
 export const metadata = { title: 'Mail domain' };
 
@@ -77,23 +77,19 @@ export default async function MailDomain({ params, searchParams }: Props) {
         {domain.pausedReason ? ` · ${domain.pausedReason}` : ''}
       </p>
       <p>
-        Daily newsletter:{' '}
+        Daily newsletter: {domain.newsletterMode}
         {domain.newsletterApprovedAt
-          ? `approved ${domain.newsletterApprovedAt.toISOString().slice(0, 10)}`
-          : 'not approved (issues won’t send)'}
+          ? ` (live since ${domain.newsletterApprovedAt.toISOString().slice(0, 10)})`
+          : ''}
+        {domain.townId ? (
+          <>
+            {' '}
+            · <Link href="/admin/newsletter">Manage in Newsletter</Link>
+          </>
+        ) : null}
       </p>
       {me.role === 'admin' && domain.townId ? (
         <div className={styles.actions}>
-          <form action={newsletterApprovalAction}>
-            <input type="hidden" name="name" value={domain.name} />
-            <input type="hidden" name="domainId" value={domain.id} />
-            <input type="hidden" name="on" value={domain.newsletterApprovedAt ? 'no' : 'yes'} />
-            <button className={styles.secondary} type="submit">
-              {domain.newsletterApprovedAt
-                ? 'Withdraw the daily newsletter approval'
-                : 'Approve the daily newsletter'}
-            </button>
-          </form>
           {domain.bulkStatus === 'paused' ? (
             <form action={unpauseAction}>
               <input type="hidden" name="name" value={domain.name} />

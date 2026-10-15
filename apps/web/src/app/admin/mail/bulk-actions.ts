@@ -11,7 +11,6 @@ import {
   pauseCampaign,
   resumeCampaign,
   resumeNetworkBulk,
-  setNewsletterApproval,
   testSendCampaign,
   unpauseDomainBulk,
   unsubscribeSubscriber,
@@ -149,14 +148,6 @@ export async function testSendAction(form: FormData): Promise<void> {
       );
     await testSendCampaign(deps, me, id);
   }, 'Test sent to you')(form);
-}
-
-export async function newsletterApprovalAction(form: FormData): Promise<void> {
-  const me = await requireStaff();
-  const name = str(form, 'name');
-  await attempt(`/admin/mail/domains/${encodeURIComponent(name)}`, { done: 'Saved' }, () =>
-    setNewsletterApproval(db(), me, str(form, 'domainId'), str(form, 'on') === 'yes'),
-  );
 }
 
 export async function unpauseAction(form: FormData): Promise<void> {

@@ -133,17 +133,3 @@ test('subscribers: search, export and manual unsubscribe', async ({ page, contex
   const [row] = await db.select().from(subscribers).where(eq(subscribers.email, email));
   expect(row!.status).toBe('unsubscribed');
 });
-
-test('the daily newsletter approval is an admin switch on the domain page', async ({
-  page,
-  context,
-}, info) => {
-  test.skip(info.project.name !== 'desktop', 'one project changes the shared domain');
-  await signIn(context, `approve-${info.project.name}`, 'admin');
-  await page.goto(`${admin}/admin/mail/domains/lettertown.test`);
-  await expect(page.getByTestId('bulk-status')).toContainText('warming · cap 50 a day');
-  await page.getByRole('button', { name: 'Approve the daily newsletter' }).click();
-  await expect(page.getByText(/Daily newsletter: approved/)).toBeVisible();
-  await page.getByRole('button', { name: 'Withdraw the daily newsletter approval' }).click();
-  await expect(page.getByText(/Daily newsletter: not approved/)).toBeVisible();
-});
