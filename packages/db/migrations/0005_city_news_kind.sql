@@ -1,0 +1,1 @@
+ALTER TYPE "public"."source_kind" ADD VALUE 'city_news' BEFORE 'other_outlet';

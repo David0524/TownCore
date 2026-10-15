@@ -23,6 +23,16 @@ export type FetcherOptions = {
 
 type Robots = { isAllowed(url: string, ua?: string): boolean | undefined };
 const ROBOTS_TTL_MS = 24 * 3_600_000;
+/** The slowest we'll pace a host after 429s. */
+const MAX_INTERVAL_MS = 10_000;
+
+/** Retry-After as seconds or an HTTP date, capped at 60s. */
+export function retryAfterMs(value: string | null, now = Date.now()): number | null {
+  if (!value) return null;
+  const seconds = Number(value);
+  const ms = Number.isFinite(seconds) ? seconds * 1_000 : new Date(value).getTime() - now;
+  return Number.isFinite(ms) && ms >= 0 ? Math.min(ms, 60_000) : null;
+}
 
 export class Fetcher {
   private readonly fetchImpl: FetchFn;
@@ -34,6 +44,8 @@ export class Fetcher {
   private readonly now: () => number;
   private readonly hostQueue = new Map<string, Promise<void>>();
   private readonly lastRequestAt = new Map<string, number>();
+  /** Per-host spacing; starts at minIntervalMs and grows when a host says we're too fast. */
+  private readonly hostInterval = new Map<string, number>();
   private readonly robots = new Map<
     string,
     { robots: Robots | 'allow-all' | 'disallow-all'; expires: number }
@@ -111,6 +123,18 @@ export class Fetcher {
             redirect: 'follow',
           }),
         );
+        if (response.status === 429) {
+          // Too fast for this host: slow down for good, and wait as long as it asks.
+          this.slowDown(target.host);
+          if (attempt < attempts) {
+            lastError = new Error('HTTP 429');
+            await this.sleep(
+              retryAfterMs(response.headers.get('retry-after')) ?? 2_000 * 2 ** (attempt - 1),
+            );
+            continue;
+          }
+          return response;
+        }
         if (response.status >= 500 && attempt < attempts) {
           lastError = new Error(`HTTP ${response.status}`);
         } else {
@@ -124,11 +148,24 @@ export class Fetcher {
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 
+  /** Current spacing for a host, in ms (for logging and tests). */
+  intervalFor(host: string): number {
+    return this.hostInterval.get(host) ?? this.minIntervalMs;
+  }
+
+  private slowDown(host: string) {
+    this.hostInterval.set(
+      host,
+      Math.min(MAX_INTERVAL_MS, Math.max(1_000, this.intervalFor(host) * 2)),
+    );
+  }
+
   /** Serializes requests per host and spaces them at least minIntervalMs apart. */
   private throttled<T>(host: string, run: () => Promise<T>): Promise<T> {
     const previous = this.hostQueue.get(host) ?? Promise.resolve();
     const result = previous.then(async () => {
-      const wait = (this.lastRequestAt.get(host) ?? -Infinity) + this.minIntervalMs - this.now();
+      const interval = this.hostInterval.get(host) ?? this.minIntervalMs;
+      const wait = (this.lastRequestAt.get(host) ?? -Infinity) + interval - this.now();
       if (wait > 0) await this.sleep(wait);
       this.lastRequestAt.set(host, this.now());
       return run();

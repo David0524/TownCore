@@ -71,7 +71,7 @@ describe('towns:sync', () => {
       .where(eq(towns.slug, 'boca-raton'));
   });
 
-  it('syncs verified YAML sources, skips TBD ones, and is idempotent', async () => {
+  it('syncs verified YAML sources and is idempotent', async () => {
     const [loaded] = loadTowns(townsDir).filter((t) => t.config.slug === 'boca-raton');
     const withSource = {
       ...loaded!,
@@ -89,14 +89,20 @@ describe('towns:sync', () => {
       },
     };
     const first = await syncTowns(db, [withSource]);
-    expect(first).toMatchObject({ sources: 2, skippedSources: 1 });
+    expect(first).toMatchObject({ sources: 4, skippedSources: 0 });
     await syncTowns(db, [withSource]);
     const town = await boca();
     const rows = await db.select().from(sources).where(eq(sources.townId, town.id));
     const nws = rows.filter((r) => r.key === 'weather:nws:FLZ168');
     expect(nws).toHaveLength(1);
-    expect(nws[0]).toMatchObject({ platform: 'nws', adapter: 'nws', config: { zone: 'FLZ168' } });
-    const calendar = rows.filter((r) => r.key?.startsWith('events:civicplus:'));
+    expect(nws[0]).toMatchObject({
+      platform: 'nws',
+      adapter: 'nws',
+      config: { zone: 'FLZ168', timezone: 'America/New_York' },
+    });
+    const calendar = rows.filter(
+      (r) => r.key?.startsWith('events:civicplus:') && r.schedule === '1h',
+    );
     expect(calendar).toHaveLength(1);
     expect(calendar[0]).toMatchObject({
       schedule: '1h',
