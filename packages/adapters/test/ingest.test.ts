@@ -167,7 +167,7 @@ describe('schedules', () => {
 
   it('decides when a source is due', () => {
     const now = new Date('2026-10-15T12:00:00Z');
-    const base = { kind: 'weather' as const, platform: 'nws', schedule: null };
+    const base = { kind: 'weather' as const, platform: 'nws', schedule: '3h' };
     expect(isDue({ ...base, lastRunAt: null }, now)).toBe(true);
     expect(isDue({ ...base, lastRunAt: new Date('2026-10-15T10:00:00Z') }, now)).toBe(false);
     expect(isDue({ ...base, lastRunAt: new Date('2026-10-15T08:59:00Z') }, now)).toBe(true);
@@ -177,7 +177,7 @@ describe('schedules', () => {
   });
 
   it('has platform overrides', () => {
-    expect(defaultSchedule('weather', 'nws-alerts')).toBe('15m');
+    expect(defaultSchedule('weather', 'nws')).toBe('15m');
     expect(defaultSchedule('business_filings', 'fl-dbpr')).toBe('7d');
     expect(defaultSchedule('events', 'civicplus')).toBe('1h');
   });

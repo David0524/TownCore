@@ -1,5 +1,6 @@
 # Boca Town Square. Schema: packages/config/src/town.ts (CLAUDE.md §10).
-# Source platforms and URLs stay TBD until they're checked in M2. Don't guess them.
+# Sources are added only once verified live. Agendas are on Granicus, which robots.txt blocks
+# (CLAUDE.md Decisions, 2026-10-15), so the meeting source is the city calendar feed (M2 PR C).
 slug: boca-raton
 name: Boca Raton
 state: FL
@@ -19,9 +20,10 @@ sources:
   - kind: agenda
     platform: TBD
     url: TBD
+  # Verified 2026-10-15: NWS Miami zone FLZ168, Coastal Palm Beach County (names Boca Raton).
   - kind: weather
     platform: nws
-    zone: TBD
+    zone: FLZ168
 pricing:
   sponsored_slot_usd: 199
   enhanced_usd: 39

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Fetcher, FetchPolicyError, type FetchFn } from '../src/http/fetcher';
 import { replayFetch } from '../src/http/fixtures';
-import { isBlockedUrl, USER_AGENT } from '../src/http/policy';
+import { DOCUMENTED_APIS, isBlockedUrl, USER_AGENT } from '../src/http/policy';
 
 const robots = (body: string, status = 200) => ({
   url: 'https://city.example/robots.txt',
@@ -136,5 +136,26 @@ describe('Fetcher', () => {
   it('replay fails loudly on an unrecorded URL', async () => {
     const fetchImpl = replayFetch({ recordedAt: '', exchanges: [] });
     await expect(fetchImpl('https://city.example/x')).rejects.toThrow(/No recorded fixture/);
+  });
+
+  it('calls documented APIs without consulting their crawler robots.txt', async () => {
+    const requested: string[] = [];
+    const fetchImpl: FetchFn = async (url) => {
+      requested.push(url);
+      return url.endsWith('robots.txt')
+        ? new Response('User-agent: *\nDisallow: /')
+        : new Response('{}');
+    };
+    const fetcher = new Fetcher({ fetchImpl, ...fakeClock() });
+    await expect(fetcher.getText('https://api.weather.gov/alerts?zone=FLZ168')).resolves.toBe('{}');
+    expect(requested).toEqual(['https://api.weather.gov/alerts?zone=FLZ168']);
+    // A website on a different host with the same robots.txt is still refused.
+    await expect(
+      fetcher.get('https://bocaraton.granicus.example/ViewPublisher.php'),
+    ).rejects.toThrow(/robots/);
+  });
+
+  it('every documented API records the terms that permit automated access', () => {
+    for (const api of Object.values(DOCUMENTED_APIS)) expect(api.terms).toMatch(/^https:\/\//);
   });
 });

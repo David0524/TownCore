@@ -79,22 +79,28 @@ describe('towns:sync', () => {
         ...loaded!.config,
         sources: [
           ...loaded!.config.sources,
-          { kind: 'weather' as const, platform: 'nws', zone: 'FLZ168', schedule: '3h' },
+          {
+            kind: 'events' as const,
+            platform: 'civicplus',
+            url: 'https://www.myboca.us/RSSFeed.aspx?ModID=58&CID=29',
+            schedule: '1h',
+          },
         ],
       },
     };
     const first = await syncTowns(db, [withSource]);
-    expect(first).toMatchObject({ sources: 1, skippedSources: 2 });
+    expect(first).toMatchObject({ sources: 2, skippedSources: 1 });
     await syncTowns(db, [withSource]);
     const town = await boca();
     const rows = await db.select().from(sources).where(eq(sources.townId, town.id));
     const nws = rows.filter((r) => r.key === 'weather:nws:FLZ168');
     expect(nws).toHaveLength(1);
-    expect(nws[0]).toMatchObject({
-      platform: 'nws',
-      adapter: 'nws',
-      schedule: '3h',
-      config: { zone: 'FLZ168' },
+    expect(nws[0]).toMatchObject({ platform: 'nws', adapter: 'nws', config: { zone: 'FLZ168' } });
+    const calendar = rows.filter((r) => r.key?.startsWith('events:civicplus:'));
+    expect(calendar).toHaveLength(1);
+    expect(calendar[0]).toMatchObject({
+      schedule: '1h',
+      url: 'https://www.myboca.us/RSSFeed.aspx?ModID=58&CID=29',
     });
   });
 

@@ -16,8 +16,8 @@ const DEFAULTS: Partial<Record<SourceKind, string>> = {
 };
 const FALLBACK = '6h';
 
-/** Platform-specific overrides: NWS alerts need to be fresh; DBPR files change weekly. */
-const PLATFORM_DEFAULTS: Record<string, string> = { 'nws-alerts': '15m', 'fl-dbpr': '7d' };
+/** Platform overrides: NWS carries alerts, so it runs often; DBPR files change weekly. */
+const PLATFORM_DEFAULTS: Record<string, string> = { nws: '15m', 'fl-dbpr': '7d' };
 
 export function defaultSchedule(kind: SourceKind, platform: string): string {
   return PLATFORM_DEFAULTS[platform] ?? DEFAULTS[kind] ?? FALLBACK;
