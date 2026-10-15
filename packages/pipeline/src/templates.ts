@@ -64,6 +64,12 @@ export function meetingsRoundup(
   };
 }
 
+// State records give a mailing city, not a municipality: a "Boca Raton" address can be outside
+// city limits (e.g. West Boca). Roundups say so rather than claim the business is in the city.
+// Exact city limits need parcel lookups (planned with the directory, M6).
+const MAILING_CITY_NOTE = (name: string) =>
+  `A ${name} mailing address can be outside the city limits.`;
+
 type Filing = { name?: string; number?: string; fileDate?: string; zip?: string };
 
 /** "New businesses registered" from Florida Division of Corporations daily filings. */
@@ -91,10 +97,10 @@ export function newBusinessesRoundup(
     })
     .sort((a, b) => a.name.localeCompare(b.name));
   return {
-    headline: `New businesses registered in ${town.name}, ${range}`,
-    dek: `${filings.length} new ${filings.length === 1 ? 'filing lists' : 'filings list'} a principal address in ${town.name}, according to the Florida Division of Corporations.`,
+    headline: `New businesses registered with a ${town.name} address, ${range}`,
+    dek: `${filings.length} new ${filings.length === 1 ? 'filing lists' : 'filings list'} a ${town.name} mailing address, according to the Florida Division of Corporations.`,
     bodyMd: [
-      `The Florida Division of Corporations recorded ${filings.length} new business ${filings.length === 1 ? 'filing' : 'filings'} with a principal address in ${town.name} from ${range}. A filing registers a company with the state; it doesn't mean the business has opened.`,
+      `The Florida Division of Corporations recorded ${filings.length} new business ${filings.length === 1 ? 'filing' : 'filings'} with a ${town.name} mailing address from ${range}. A filing registers a company with the state; it doesn't mean the business has opened. ${MAILING_CITY_NOTE(town.name)}`,
       rows.map((r) => `- **${md(r.name)}**: ${md(r.line)}`).join('\n'),
     ].join('\n\n'),
     beat: 'business',
@@ -110,6 +116,16 @@ type License = {
   alternateLicenseNumber?: string;
   occupationCode?: string;
 };
+
+/**
+ * True for a DBPR row that is an actual license. "Construction Business Information" rows
+ * (occupation code QB) have no license number: they register the company a licensed
+ * qualifier works under, so they don't belong in a list of new licenses.
+ */
+export function isIssuedLicense(raw: unknown): boolean {
+  const l = (raw ?? {}) as License;
+  return Boolean(l.alternateLicenseNumber?.trim() || l.licenseNumber?.trim());
+}
 
 /** New contractor and electrician licenses (Florida DBPR) first issued in the week. */
 export function newLicensesRoundup(
@@ -131,10 +147,10 @@ export function newLicensesRoundup(
     })
     .sort((a, b) => a.name.localeCompare(b.name));
   return {
-    headline: `New contractor licenses in ${town.name}, ${range}`,
-    dek: `The Florida Department of Business and Professional Regulation issued ${licenses.length} new ${licenses.length === 1 ? 'license' : 'licenses'} to contractors with a ${town.name} address.`,
+    headline: `New contractor licenses with a ${town.name} address, ${range}`,
+    dek: `The Florida Department of Business and Professional Regulation issued ${licenses.length} new ${licenses.length === 1 ? 'license' : 'licenses'} to contractors with a ${town.name} mailing address.`,
     bodyMd: [
-      `These contractors with a ${town.name} address were first licensed by the Florida Department of Business and Professional Regulation from ${range}. You can check any contractor's license status on the state's licensing site before hiring.`,
+      `These contractors with a ${town.name} mailing address were first licensed by the Florida Department of Business and Professional Regulation from ${range}. You can check any contractor's license status on the state's licensing site before hiring. ${MAILING_CITY_NOTE(town.name)}`,
       rows.map((r) => `- **${md(r.name)}**: ${md(r.line)}`).join('\n'),
     ].join('\n\n'),
     beat: 'business',

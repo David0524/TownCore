@@ -296,7 +296,7 @@ describe('writeCandidate: templated items', () => {
     expect(outcome.status).toBe('published');
     const a = await article((outcome as { articleId: string }).articleId);
     expect(a).toMatchObject({
-      headline: 'New businesses registered in Boca Raton, Oct. 5–Oct. 11',
+      headline: 'New businesses registered with a Boca Raton address, Oct. 5–Oct. 11',
       tier: 1,
       promptVersions: ['template'],
       sourceRecordIds: [filing!.id],

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isIssuedLicense,
   isNewsworthyAlert,
   meetingsRoundup,
   newBusinessesRoundup,
@@ -67,7 +68,12 @@ describe('newBusinessesRoundup', () => {
         raw: { zip: '33432' },
       }),
     ]);
-    expect(draft.bodyMd).toContain('recorded 2 new business filings');
+    expect(draft.bodyMd).toContain(
+      'recorded 2 new business filings with a Boca Raton mailing address',
+    );
+    // State records give a mailing city, which can be outside city limits (wrong-town risk).
+    expect(draft.bodyMd).toContain('can be outside the city limits');
+    expect(draft.headline).not.toMatch(/ in Boca Raton/);
     expect(draft.bodyMd).toContain(
       '- **ALPHA CORP**: Florida profit corporation, filed 10/07/2026, ZIP 33432\n- **ZETA \\*SERVICES\\* LLC**: Florida limited liability company, filed 10/06/2026, ZIP 33431',
     );
@@ -94,6 +100,22 @@ describe('newLicensesRoundup', () => {
       '- **DOE ROOFING LLC**: Certified Roofing Contractor, license CCC1234567',
     );
     expect(draft.dek).toContain('issued 1 new license');
+  });
+});
+
+describe('isIssuedLicense', () => {
+  it('rejects DBPR business-information rows, which carry no license number', () => {
+    expect(isIssuedLicense({ alternateLicenseNumber: 'CGC1542084' })).toBe(true);
+    expect(isIssuedLicense({ licenseNumber: '1542084' })).toBe(true);
+    expect(
+      isIssuedLicense({
+        occupation: 'Construction Business Information',
+        occupationCode: 'QB',
+        licenseNumber: '',
+        alternateLicenseNumber: '',
+      }),
+    ).toBe(false);
+    expect(isIssuedLicense(null)).toBe(false);
   });
 });
 
