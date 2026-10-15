@@ -9,6 +9,7 @@ import {
   mailDomains,
   messages,
   ne,
+  or,
   sql,
   threads,
   type Db,
@@ -205,14 +206,30 @@ async function findThread(
 ): Promise<string | null> {
   const ids = referencedIds(parsed);
   if (ids.length) {
+    // Our sent mail is known by the SES Message-ID and by the one we set (alt_message_ids).
     const matches = await db
-      .select({ threadId: messages.threadId, rfc: messages.rfcMessageId })
+      .select({
+        threadId: messages.threadId,
+        rfc: messages.rfcMessageId,
+        alt: messages.altMessageIds,
+      })
       .from(messages)
       .innerJoin(threads, eq(messages.threadId, threads.id))
-      .where(and(inArray(messages.rfcMessageId, ids), eq(threads.domainId, domainId)));
+      .where(
+        and(
+          or(
+            inArray(messages.rfcMessageId, ids),
+            sql`${messages.altMessageIds} && ${sql`array[${sql.join(
+              ids.map((id) => sql`${id}`),
+              sql`, `,
+            )}]::text[]`}`,
+          ),
+          eq(threads.domainId, domainId),
+        ),
+      );
     // The most direct reference wins (In-Reply-To first, then the newest References entry).
     for (const id of ids) {
-      const hit = matches.find((m) => m.rfc === id);
+      const hit = matches.find((m) => m.rfc === id || m.alt.includes(id));
       if (hit) return hit.threadId;
     }
   }

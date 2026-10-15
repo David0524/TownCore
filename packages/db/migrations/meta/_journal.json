@@ -120,6 +120,13 @@
       "when": 1792093611668,
       "tag": "0016_inbox",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792094923616,
+      "tag": "0017_outbound",
+      "breakpoints": true
     }
   ]
 }
