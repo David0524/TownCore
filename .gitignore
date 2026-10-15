@@ -14,3 +14,6 @@ next-env.d.ts
 
 # Scratch output from tests
 .tmp/
+
+# AWS CDK synth output
+cdk.out/
