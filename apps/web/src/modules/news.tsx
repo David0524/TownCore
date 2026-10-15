@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { EnvelopeIcon } from '@/components/phone/icons';
 import { NewsletterForm } from '@/components/NewsletterForm';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { StoryBlock } from '@/components/news/StoryBlock';
@@ -150,9 +151,9 @@ export const BeatSections: HomeModuleComponent = async ({ town, modules }) => {
     .filter((s) => s.items.length > 0);
   if (sections.length === 0) return null;
   return (
-    <div data-module="beat-sections">
+    <div data-module="beat-sections" className={styles.beatSections}>
       {sections.map(({ beat, items }) => (
-        <section key={beat.slug} className={styles.module}>
+        <section key={beat.slug} className={styles.module} data-follow-beat={beat.slug}>
           <SectionHeader title={beat.label} href={`/beat/${beat.slug}`} />
           <ul className={styles.list}>
             {items.map((article) => (
@@ -173,6 +174,9 @@ export const BeatSections: HomeModuleComponent = async ({ town, modules }) => {
  */
 export const NewsletterCta: HomeModuleComponent = async ({ town }) => (
   <section className={`${styles.module} ${styles.cta}`} data-module="newsletter-cta">
+    <span className={`${styles.ctaIcon} phone-only`} aria-hidden="true">
+      <EnvelopeIcon />
+    </span>
     <h2>Get {town.name} news every morning</h2>
     {(await newsletterOpen(town)) ? (
       <>

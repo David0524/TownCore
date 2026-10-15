@@ -51,7 +51,7 @@ export const CategoryButtons: HomeModuleComponent = async ({ town }) => {
     <nav aria-label="Sections with new stories" data-module="category-buttons">
       <ul className={styles.buttons}>
         {shown.map((beat) => (
-          <li key={beat.slug}>
+          <li key={beat.slug} data-follow-beat={beat.slug}>
             <Link href={`/beat/${beat.slug}`} className={styles.button}>
               <span
                 className={styles.dot}

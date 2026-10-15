@@ -15,8 +15,11 @@ import styles from './phone.module.css';
 export function PhoneBar({
   wordmark,
   weather,
+  action,
 }: {
   wordmark: ReactNode;
+  /** Trailing control on a tab's own page ("Your Boca"). */
+  action?: ReactNode;
   /** This hour's temperature, linked to the NWS forecast (weather above the fold, §11a). */
   weather: { value: string; href: string; label: string } | null;
 }) {
@@ -35,6 +38,7 @@ export function PhoneBar({
         <span className={styles.barMark}>{wordmark}</span>
       )}
       <span className={styles.barEnd}>
+        {back ? null : action}
         {weather ? (
           <a
             href={weather.href}

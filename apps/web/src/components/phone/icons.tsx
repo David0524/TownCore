@@ -106,3 +106,34 @@ export const WarningIcon = ({ size = 22 }: IconProps) =>
       <path d="M12 9.5v4.5M12 17h.01" stroke="var(--alert-text)" strokeWidth="2.2" />
     </>,
   );
+
+/** The "Your town" button: a person in a circle. */
+export const PersonIcon = ({ size = 28 }: IconProps) =>
+  svg(
+    size,
+    <>
+      <circle cx="12" cy="12" r="9.5" />
+      <circle cx="12" cy="10" r="3.2" />
+      <path d="M6.2 18.4a6.6 6.6 0 0 1 11.6 0" />
+    </>,
+  );
+
+/** An envelope (the newsletter card). */
+export const EnvelopeIcon = ({ size = 22 }: IconProps) =>
+  svg(
+    size,
+    <>
+      <rect x="3" y="5.5" width="18" height="13" rx="2.5" />
+      <path d="m3.5 7 8.5 6 8.5-6" />
+    </>,
+  );
+
+/** Share, as on iOS: a box with an arrow out of the top. */
+export const ShareIcon = ({ size = 18 }: IconProps) =>
+  svg(
+    size,
+    <>
+      <path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" />
+      <path d="M8 10.5H6.5a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-6.5a2 2 0 0 0-2-2H16" />
+    </>,
+  );

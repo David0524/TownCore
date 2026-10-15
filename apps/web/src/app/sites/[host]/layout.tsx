@@ -3,7 +3,12 @@ import type { ReactNode } from 'react';
 import { PhoneBar } from '@/components/phone/PhoneBar';
 import { TabBar } from '@/components/phone/TabBar';
 import { AlertBar } from '@/components/weather/AlertBar';
+import { followBootScript, followCss } from '@/components/phone/follow';
 import { PhoneWordmark } from '@/components/phone/PhoneWordmark';
+import { YourTown } from '@/components/phone/YourTown';
+import { newsletterOpen } from '@/lib/newsletter';
+import { beatColorVar } from '@/lib/theme';
+import { beats } from '@towncore/config';
 import { WeatherLine } from '@/components/weather/WeatherLine';
 import { footers, headers, headersWithWeather, navs } from '@/layout/registry';
 import { townWeather } from '@/modules/data';
@@ -23,17 +28,26 @@ export async function generateMetadata({ params }: Pick<Props, 'params'>): Promi
     alternates: { types: rssAlternate(town) },
     // Nothing is indexed until a human sets the town live (rules 7 and 10).
     robots: town.status === 'live' ? undefined : { index: false, follow: false },
+    manifest: '/manifest.webmanifest',
+    icons: {
+      icon: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+      apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+    },
+    // Opens standalone from the Home Screen, under the town's short name.
+    appleWebApp: { capable: true, title: town.siteName, statusBarStyle: 'default' },
   };
 }
 
 // Each town is assembled from the layout parts its theme names (CLAUDE.md §11a-2).
+const beatSlugs = beats.map((b) => b.slug);
+
 export default async function TownLayout({ children, params }: Props) {
   const town = await requireTown(params);
   const theme = themeFor(town);
   const Header = headers[theme.layout.header];
   const Nav = navs[theme.layout.nav];
   const Footer = footers[theme.layout.footer];
-  const weather = await townWeather(town.id);
+  const [weather, open] = await Promise.all([townWeather(town.id), newsletterOpen(town)]);
   const snapshot = weather?.kind === 'snapshot' ? weather.snapshot : null;
   const lineOn = {
     desktop: !(snapshot && headersWithWeather.has(theme.layout.header)),
@@ -42,7 +56,11 @@ export default async function TownLayout({ children, params }: Props) {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: themeCssVariables(theme) }} />
+      <style
+        dangerouslySetInnerHTML={{ __html: themeCssVariables(theme) + followCss(beatSlugs) }}
+      />
+      {/* Followed sections ("Your Boca") are applied before first paint: no layout shift. */}
+      <script dangerouslySetInnerHTML={{ __html: followBootScript }} />
       {/* Phones get iOS chrome instead of the town's header (docs/plans/M4b.md revision 5). */}
       <PhoneBar
         weather={
@@ -55,6 +73,17 @@ export default async function TownLayout({ children, params }: Props) {
             : null
         }
         wordmark={<PhoneWordmark town={town} theme={theme} />}
+        action={
+          <YourTown
+            townName={town.name}
+            beats={beats.map((b) => ({
+              slug: b.slug,
+              label: b.label,
+              color: beatColorVar(b.slug),
+            }))}
+            newsletter={open ? 'open' : 'soon'}
+          />
+        }
       />
       <AlertBar town={town} weather={weather} />
       <div className="not-phone">
