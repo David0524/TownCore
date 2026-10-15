@@ -61,3 +61,19 @@ export {
   type Reviewer,
 } from './publish';
 export { writeCandidate, type WriteOutcome } from './write';
+export {
+  applyUpdate,
+  createChangedRecordUpdates,
+  linkRelatedStories,
+  matchPublished,
+  mentionsDroppedCharges,
+  updateParagraph,
+} from './followups';
+export {
+  loadEvalCases,
+  runEvals,
+  stableUuid,
+  type EvalCase,
+  type EvalResult,
+  type EvalSummary,
+} from './evals';

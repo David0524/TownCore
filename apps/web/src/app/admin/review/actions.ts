@@ -3,6 +3,7 @@
 import type { TownConfig } from '@towncore/config';
 import {
   articles,
+  articleUpdates,
   eq,
   getSourceRecords,
   logAdminAction,
@@ -10,7 +11,7 @@ import {
   storyCandidates,
   skippedCandidates,
 } from '@towncore/db';
-import { publishArticle, PublishBlocked } from '@towncore/pipeline';
+import { applyUpdate, publishArticle, PublishBlocked } from '@towncore/pipeline';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { minorOverridable, recheckEdit } from '@/lib/admin/review';
@@ -163,4 +164,48 @@ export async function writeAnyway(form: FormData): Promise<void> {
   });
   revalidatePath('/admin/skipped');
   redirect('/admin/skipped?done=queued');
+}
+
+/** Approves a pending update note: it's appended to the story, dated. */
+export async function approveUpdate(form: FormData): Promise<void> {
+  const staff = await requireStaff();
+  const id = String(form.get('updateId'));
+  const [row] = await db()
+    .select({ update: articleUpdates, town: towns })
+    .from(articleUpdates)
+    .innerJoin(articles, eq(articleUpdates.articleId, articles.id))
+    .innerJoin(towns, eq(articles.townId, towns.id))
+    .where(eq(articleUpdates.id, id));
+  if (!row || row.update.status !== 'in_review') redirect('/admin/review?error=state');
+  if (staff.placeholder && row!.town.status === 'live') {
+    redirect('/admin/review?error=placeholder');
+  }
+  await applyUpdate(db(), id, { reviewerId: staff.id });
+  await logAdminAction(db(), {
+    staffId: staff.id,
+    action: 'approve_update',
+    articleId: row!.update.articleId,
+    detail: { updateId: id, reviewReason: row!.update.reviewReason },
+  });
+  revalidatePath('/admin/review');
+  redirect('/admin/review?done=approved');
+}
+
+export async function rejectUpdate(form: FormData): Promise<void> {
+  const staff = await requireStaff();
+  const id = String(form.get('updateId'));
+  const [update] = await db().select().from(articleUpdates).where(eq(articleUpdates.id, id));
+  if (!update || update.status !== 'in_review') redirect('/admin/review?error=state');
+  await db()
+    .update(articleUpdates)
+    .set({ status: 'rejected', reviewerId: staff.id })
+    .where(eq(articleUpdates.id, id));
+  await logAdminAction(db(), {
+    staffId: staff.id,
+    action: 'reject_update',
+    articleId: update!.articleId,
+    detail: { updateId: id },
+  });
+  revalidatePath('/admin/review');
+  redirect('/admin/review?done=rejected');
 }

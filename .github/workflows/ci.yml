@@ -54,6 +54,8 @@ jobs:
       - name: Seed fictional fixture towns (CI only)
         run: pnpm --filter @towncore/web seed:fixtures
       - run: pnpm test
+      - name: Evals (offline replay of recorded model responses)
+        run: pnpm evals
       - run: pnpm build
       - name: Worker boots from the build
         run: pnpm --filter @towncore/worker smoke

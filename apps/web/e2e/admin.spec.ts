@@ -3,6 +3,7 @@ import { expect, test, type BrowserContext } from '@playwright/test';
 import { requireEnv } from '@towncore/config';
 import {
   articles,
+  articleUpdates,
   createDb,
   staff,
   createLoginToken,
@@ -174,7 +175,7 @@ test.describe('review queue', () => {
     await signIn(context);
     const { article } = await storyInReview(`approve-${info.project.name}`);
     await page.goto(`${admin}/admin/review`);
-    await page.getByRole('link', { name: article.headline }).click();
+    await page.locator(`a[href="/admin/review/${article.id}"]`).click();
     await expect(page.getByTestId('claims')).toContainText('✓ Supported');
     await expect(page.getByText('placeholder reviewer')).toBeVisible();
 
@@ -246,5 +247,36 @@ test.describe('review queue', () => {
       .from(storyCandidates)
       .where(eq(storyCandidates.id, candidate!.id));
     expect(after?.status).toBe('accepted');
+  });
+});
+
+test.describe('update notes', () => {
+  test('approving a pending update adds a dated note to the published story', async ({
+    page,
+    context,
+  }, info) => {
+    await signIn(context);
+    const { article, record } = await storyInReview(`update-${info.project.name}`);
+    await db
+      .update(articles)
+      .set({ status: 'published', publishedAt: new Date(), reviewReason: null })
+      .where(eq(articles.id, article.id));
+    const note = `Work now starts Nov. 9 (${info.project.name}).`;
+    await db.insert(articleUpdates).values({
+      articleId: article.id,
+      noteMd: note,
+      recordIds: [record.id],
+      tier: 3,
+      status: 'in_review',
+      reviewReason: 'tier3',
+    });
+
+    await page.goto(`${admin}/admin/review`);
+    const card = page.getByTestId('update-queue').locator('div', { hasText: note }).first();
+    await card.getByRole('button', { name: 'Add update to the story' }).click();
+    await expect(page).toHaveURL(`${admin}/admin/review?done=approved`);
+    await page.goto(`${reviewTown}/news/${article.slug}`);
+    await expect(page.getByText(note)).toBeVisible();
+    await expect(page.getByRole('main')).toContainText(/Update, \w+\.? \d+, \d{4}:/);
   });
 });
