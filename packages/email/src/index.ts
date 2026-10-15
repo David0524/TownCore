@@ -39,3 +39,6 @@ export function staffOnly(provider: EmailProvider, allowed: readonly string[]): 
     },
   };
 }
+
+// The daily newsletter issue (M5).
+export * from './newsletter/index';
