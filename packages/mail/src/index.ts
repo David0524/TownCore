@@ -84,3 +84,32 @@ export {
   type ReceivedNotification,
 } from './inbound/process';
 export { s3MailStore } from './inbound/s3';
+export {
+  addNote,
+  assignThread,
+  InboxActionError,
+  moveThreadToTeam,
+  setThreadStatus,
+} from './inbox/actions';
+export {
+  getThread,
+  inboxFacets,
+  listThreads,
+  markRead,
+  PAGE_SIZE,
+  threadStatuses,
+  unreadCount,
+  type InboxFilter,
+  type InboxRow,
+  type StatusFilter,
+  type ThreadDetail,
+  type ThreadStatus,
+} from './inbox/queries';
+export {
+  cspFor,
+  hasRemoteImages,
+  messageDocument,
+  rewriteCidImages,
+  type RenderOptions,
+} from './inbox/render';
+export { INLINE_URL_TTL_MS, signAttachment, verifyAttachment } from './inbox/tokens';

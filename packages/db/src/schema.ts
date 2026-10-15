@@ -820,6 +820,9 @@ export const threads = pgTable(
   (t) => [
     index('threads_fallback_idx').on(t.contactId, t.townAddress, t.normalizedSubject),
     index('threads_inbox_idx').on(t.teamId, t.status, t.lastMessageAt),
+    index('threads_status_recent_idx').on(t.status, t.lastMessageAt),
+    index('threads_domain_idx').on(t.domainId),
+    index('threads_assignee_idx').on(t.assigneeId),
   ],
 );
 
@@ -931,4 +934,20 @@ export const mailEvents = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('mail_events_due_idx').on(t.status, t.nextAttemptAt)],
+);
+
+// Per-person read state for the shared inbox (Mail-3): a thread is unread for someone when it
+// has a message newer than their read mark, or they have never opened it.
+export const threadReads = pgTable(
+  'thread_reads',
+  {
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => threads.id, { onDelete: 'cascade' }),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'cascade' }),
+    readAt: timestamp('read_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.threadId, t.staffId] })],
 );
