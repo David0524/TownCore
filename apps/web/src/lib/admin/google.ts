@@ -1,8 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { Env } from '@towncore/config';
+import { publisher, type Env } from '@towncore/config';
 
 // Staff sign-in with Google (D-MAIL-2): OpenID Connect authorization-code flow with PKCE,
-// limited to the company Workspace domain (HQ_DOMAIN) plus the staff allow-list. Email-link
+// limited to the company Workspace domain (publisher.hqDomain) plus the staff allow-list. Email-link
 // sign-in works only while Google isn't configured, i.e. in local development and CI.
 
 export type SignInMode =
@@ -10,23 +10,22 @@ export type SignInMode =
   | { kind: 'email' }
   | { kind: 'misconfigured'; missing: string[] };
 
-export function signInMode(env: Env): SignInMode {
+export function signInMode(env: Env, hqDomain: string = publisher.hqDomain): SignInMode {
   const parts = {
     GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
-    HQ_DOMAIN: env.HQ_DOMAIN,
   };
   const missing = Object.entries(parts)
     .filter(([, value]) => !value)
     .map(([key]) => key);
   // Setting any Google variable turns email links off, so a half-done setup fails closed.
-  if (missing.length === 3) return { kind: 'email' };
+  if (missing.length === 2) return { kind: 'email' };
   if (missing.length > 0) return { kind: 'misconfigured', missing };
   return {
     kind: 'google',
     clientId: parts.GOOGLE_CLIENT_ID!,
     clientSecret: parts.GOOGLE_CLIENT_SECRET!,
-    hqDomain: parts.HQ_DOMAIN!,
+    hqDomain,
   };
 }
 

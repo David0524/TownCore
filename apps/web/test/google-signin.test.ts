@@ -44,7 +44,7 @@ describe('signInMode', () => {
   it('fails closed on a partial Google setup', () => {
     expect(signInMode(loadEnv({ GOOGLE_CLIENT_ID: 'x' }))).toEqual({
       kind: 'misconfigured',
-      missing: ['GOOGLE_CLIENT_SECRET', 'HQ_DOMAIN'],
+      missing: ['GOOGLE_CLIENT_SECRET'],
     });
   });
 
@@ -52,7 +52,6 @@ describe('signInMode', () => {
     const env = loadEnv({
       GOOGLE_CLIENT_ID: 'id',
       GOOGLE_CLIENT_SECRET: 's',
-      HQ_DOMAIN: 'towncore.net',
     });
     expect(signInMode(env)).toMatchObject({ kind: 'google', hqDomain: 'towncore.net' });
   });
@@ -89,7 +88,7 @@ describe('sign-in attempt', () => {
 });
 
 describe('verifyIdTokenClaims', () => {
-  it('accepts a verified Workspace account on HQ_DOMAIN', () => {
+  it('accepts a verified Workspace account on the company domain', () => {
     expect(verifyIdTokenClaims(idToken(), expected)).toEqual({
       email: 'pat@towncore.net',
       name: 'Pat Doe',

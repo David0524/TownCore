@@ -124,7 +124,7 @@ These follow the brief's phases 0–6 and take its acceptance criteria as writte
 
 ## Owner inputs needed (tracked in CLAUDE.md Status)
 
-- [ ] `<HQ_DOMAIN>`: is it `towncore.net` on Google Workspace?
+- [x] Company Google domain: **towncore.net** (owner, 2026-10-15)
 - [ ] AWS account access, and the SES region (recommend `us-east-1`)
 - [ ] SES production access request (I'll draft the use-case text; you submit it)
 - [ ] Vercel API token with DNS scope, and the team ID
@@ -138,4 +138,4 @@ These follow the brief's phases 0–6 and take its acceptance criteria as writte
 
 ## New environment variables (added to `.env.example` in Mail-0)
 
-`AWS_REGION`, `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (app: send and inbound bucket only), `MAIL_S3_BUCKET`, `SES_CONFIG_SET_CONVERSATIONAL`, `SES_CONFIG_SET_BULK`, `VERCEL_DNS_TOKEN`, `VERCEL_TEAM_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `HQ_DOMAIN`, `DMARC_REPORT_ADDRESS`, `MAIL_TOKEN_SECRET` (unsubscribe and confirm tokens), `MAIL_POSTAL_ADDRESS`. The onboarding CLI's broader AWS credentials are only in the operator's local environment. They're documented in the runbook and never in `.env.example` values.
+`AWS_REGION`, `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (app: send and inbound bucket only), `MAIL_S3_BUCKET`, `SES_CONFIG_SET_CONVERSATIONAL`, `SES_CONFIG_SET_BULK`, `VERCEL_DNS_TOKEN`, `VERCEL_TEAM_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DMARC_REPORT_ADDRESS`, `MAIL_TOKEN_SECRET` (unsubscribe and confirm tokens), `MAIL_POSTAL_ADDRESS`. The onboarding CLI's broader AWS credentials are only in the operator's local environment. They're documented in the runbook and never in `.env.example` values.

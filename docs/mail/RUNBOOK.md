@@ -7,15 +7,15 @@ builds it; sections marked _(Mail-N)_ are not built yet.
 
 Do these once. Values go into the hosting dashboards (Vercel, Railway), never into git.
 
-- [ ] **Company Google domain.** Confirm `HQ_DOMAIN` (e.g. `towncore.net` on Google Workspace).
+- [x] **Company Google domain:** towncore.net (set in `packages/config/src/publisher.ts`).
 - [ ] **Google OAuth client** for staff sign-in. Google Cloud console → APIs & Services →
       Credentials → Create OAuth client ID → Web application.
   - Authorized redirect URI: `{APP_BASE_URL}/admin/auth/google/callback` (and
     `http://localhost:3000/admin/auth/google/callback` for local testing).
   - OAuth consent screen: **Internal** (Workspace users only).
-  - Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `HQ_DOMAIN` together. Once any of them is
-    set, email-link sign-in turns off; if only some are set, sign-in is off entirely and the
-    login page names what's missing.
+  - Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` together. Once either is set, email-link
+    sign-in turns off; if only one is set, sign-in is off entirely and the login page names
+    what's missing.
   - The first admins come from `ADMIN_EMAILS`. After that, add staff in the database (an admin
     page comes later). Deactivate someone by setting `staff.active = false`; their sessions
     stop working at once.

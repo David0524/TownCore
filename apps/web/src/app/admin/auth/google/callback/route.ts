@@ -22,7 +22,7 @@ import {
 } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 
-// Google sends the browser back here. Only a verified account on HQ_DOMAIN that is also on the
+// Google sends the browser back here. Only a verified towncore.net account that is also on the
 // staff allow-list (an active staff row, or ADMIN_EMAILS for the first sign-in) gets a session.
 export async function GET(request: NextRequest) {
   const env = loadEnv();

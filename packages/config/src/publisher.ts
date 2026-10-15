@@ -4,6 +4,8 @@ export const publisher = {
   name: 'TownCore',
   // Internal inbox that per-site addresses (news@{domain}) forward to. Not shown on sites.
   inbox: 'info@towncore.net',
+  // Company Google Workspace domain. Only accounts on it may sign in to /admin (D-MAIL-2).
+  hqDomain: 'towncore.net',
 } as const;
 
 /** The line About and Privacy pages must show. */
