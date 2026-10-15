@@ -22,6 +22,12 @@ import {
   type Db,
 } from '@towncore/db';
 import { classifyV1, type Classification } from '@towncore/prompts';
+import {
+  createChangedRecordUpdates,
+  matchPublished,
+  mentionsDroppedCharges,
+  recentPublished,
+} from './followups';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { MIN_SOURCE_CHARS, scoreCandidate, titleSimilarity } from './scoring';
 import { isNewsworthyAlert } from './templates';
@@ -49,6 +55,8 @@ type SkipReason = (typeof skippedCandidates.$inferInsert)['reason'];
 export type FinderReport = {
   roundups: string[];
   templates: number;
+  /** Follow-up notes queued for published stories. */
+  updates: number;
   candidates: number;
   accepted: number;
   skipped: Partial<Record<SkipReason, number>>;
@@ -70,6 +78,7 @@ export async function runStoryFinder(
   const report: FinderReport = {
     roundups: [],
     templates: 0,
+    updates: 0,
     candidates: 0,
     accepted: 0,
     skipped: {},
@@ -80,6 +89,7 @@ export async function runStoryFinder(
 
   await createRoundups(db, town, now, report);
   await createAlertItems(db, town, now, report);
+  report.updates += await createChangedRecordUpdates(db, town.id, now);
   await createStoryCandidates(db, town, config, now, report, opts.llm);
   await applyBudget(db, town, config, now, report);
   return report;
@@ -265,12 +275,37 @@ async function createStoryCandidates(
         eq(records.townId, town.id),
         inArray(records.type, [...STORY_TYPES, ...LINK_TYPES]),
         gte(records.createdAt, since),
-        sql`not exists (select 1 from ${storyCandidates} c where c.town_id = ${town.id} and c.key = 'record:' || ${records.id}::text)`,
+        // Not already a candidate, and not already cited by an article.
+        sql`not exists (select 1 from ${storyCandidates} c where c.town_id = ${town.id} and ${records.id} = any(c.record_ids))`,
+        sql`not exists (select 1 from ${articles} a where a.town_id = ${town.id} and ${records.id} = any(a.source_record_ids))`,
       ),
     )
     .orderBy(records.occurredAt);
 
+  const published = await recentPublished(db, town.id, now);
   for (const { record, sourceKind } of fresh) {
+    const recordText = `${record.title ?? ''}\n${record.text ?? ''}`;
+    const dropped = mentionsDroppedCharges(recordText);
+    // A new record about a published story becomes a dated update to it (§6a).
+    const followed = STORY_TYPES.includes(record.type) ? matchPublished(record, published) : null;
+    if (followed) {
+      const id = await insertCandidate(db, {
+        townId: town.id,
+        kind: 'update',
+        key: `update:${followed.id}:${record.id}:${record.contentHash}`,
+        title: `Update: ${followed.headline}`,
+        beat: followed.beat,
+        recordIds: [record.id],
+        proposedTier: followed.tier,
+        targetArticleId: followed.id,
+        mustWrite: dropped,
+        tierReasons: ['follows up a published story'],
+        status: 'accepted',
+        acceptedAt: now,
+      });
+      if (id) report.updates++;
+      continue;
+    }
     const id = await insertCandidate(db, {
       townId: town.id,
       kind: 'story',
@@ -279,6 +314,8 @@ async function createStoryCandidates(
       beat: sourceKind === 'police' || sourceKind === 'fire' ? 'public-safety' : 'government',
       recordIds: [record.id],
       proposedTier: 2,
+      // Charges dropped must always be covered, whatever the score or budget (§6a).
+      mustWrite: dropped,
     });
     if (!id) continue;
     report.candidates++;
@@ -286,7 +323,7 @@ async function createStoryCandidates(
       await skip(db, report, id, 'other_outlet', 'Other outlets appear only as links (Rule 3).');
     } else if (LINK_TYPES.includes(record.type)) {
       await skip(db, report, id, 'thin_source', 'A link to another page, with no text of its own.');
-    } else if ((record.text ?? '').length < MIN_SOURCE_CHARS) {
+    } else if ((record.text ?? '').length < MIN_SOURCE_CHARS && !dropped) {
       await skip(
         db,
         report,
@@ -505,11 +542,19 @@ async function applyBudget(
         sql`${storyCandidates.newsworthiness} is not null`,
       ),
     )
-    .orderBy(sql`${storyCandidates.newsworthiness} desc`);
+    .orderBy(sql`${storyCandidates.mustWrite} desc, ${storyCandidates.newsworthiness} desc`);
 
   for (const candidate of scored) {
     const score = candidate.newsworthiness ?? 0;
-    if (score < threshold) {
+    if (candidate.mustWrite) {
+      await db
+        .update(storyCandidates)
+        .set({ status: 'accepted', acceptedAt: now })
+        .where(eq(storyCandidates.id, candidate.id));
+      remaining--;
+      if (candidate.beat === 'public-safety') publicSafety++;
+      report.accepted++;
+    } else if (score < threshold) {
       await skip(db, report, candidate.id, 'below_threshold', `Score ${score} < ${threshold}.`);
     } else if (remaining <= 0) {
       await skip(db, report, candidate.id, 'budget_full', `Daily budget of ${budget} used.`);

@@ -1,17 +1,25 @@
-import { and, articles, asc, desc, eq, towns } from '@towncore/db';
+import { and, articles, articleUpdates, asc, desc, eq, towns } from '@towncore/db';
 import Link from 'next/link';
 import { minorOverridable, reviewReasonLabel } from '@/lib/admin/review';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
+import { renderMarkdown } from '@/lib/markdown';
 import styles from '../admin.module.css';
+import { approveUpdate, rejectUpdate } from './actions';
 
 export const metadata = { title: 'Review queue' };
 
-type Props = { searchParams: Promise<{ done?: string }> };
+type Props = { searchParams: Promise<{ done?: string; error?: string }> };
+
+const errors: Record<string, string> = {
+  state: 'That item is no longer waiting for review.',
+  placeholder:
+    'A placeholder reviewer can’t approve on a live site. Set your real name in Account.',
+};
 
 export default async function ReviewQueue({ searchParams }: Props) {
   await requireStaff();
-  const { done } = await searchParams;
+  const { done, error } = await searchParams;
   const queue = await db()
     .select({ article: articles, town: towns.siteName })
     .from(articles)
@@ -27,6 +35,13 @@ export default async function ReviewQueue({ searchParams }: Props) {
       .orderBy(desc(articles.createdAt))
       .limit(50)
   ).filter((row) => minorOverridable(row.article));
+  const updates = await db()
+    .select({ update: articleUpdates, article: articles, town: towns.siteName })
+    .from(articleUpdates)
+    .innerJoin(articles, eq(articleUpdates.articleId, articles.id))
+    .innerJoin(towns, eq(articles.townId, towns.id))
+    .where(eq(articleUpdates.status, 'in_review'))
+    .orderBy(asc(articleUpdates.createdAt));
 
   return (
     <main>
@@ -34,6 +49,11 @@ export default async function ReviewQueue({ searchParams }: Props) {
       {done ? (
         <p className={styles.notice} role="status">
           Story {done}.
+        </p>
+      ) : null}
+      {error ? (
+        <p className={styles.notice} role="alert">
+          {errors[error] ?? error}
         </p>
       ) : null}
       {queue.length === 0 ? (
@@ -69,6 +89,46 @@ export default async function ReviewQueue({ searchParams }: Props) {
           </tbody>
         </table>
       )}
+
+      {updates.length > 0 ? (
+        <section aria-label="Updates waiting" data-testid="update-queue">
+          <h2>Updates to published stories</h2>
+          {updates.map(({ update, article, town }) => (
+            <div key={update.id} className={`${styles.panel} ${styles.source}`}>
+              <p>
+                <strong>{article.headline}</strong>{' '}
+                <span className={styles.muted}>
+                  ({town} · Tier {update.tier} ·{' '}
+                  {reviewReasonLabel[update.reviewReason ?? ''] ?? update.reviewReason})
+                </span>
+              </p>
+              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(update.noteMd) }} />
+              {(
+                (update.factcheck as { unsupportedClaims?: string[] } | null)?.unsupportedClaims ??
+                []
+              ).map((claim) => (
+                <p key={claim} className={styles.bad}>
+                  ✗ {claim}
+                </p>
+              ))}
+              <div className={styles.actions}>
+                <form action={approveUpdate}>
+                  <input type="hidden" name="updateId" value={update.id} />
+                  <button className={styles.button} type="submit">
+                    Add update to the story
+                  </button>
+                </form>
+                <form action={rejectUpdate}>
+                  <input type="hidden" name="updateId" value={update.id} />
+                  <button className={`${styles.button} ${styles.secondary}`} type="submit">
+                    Reject update
+                  </button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       {blocked.length > 0 ? (
         <>

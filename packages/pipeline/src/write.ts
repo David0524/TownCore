@@ -1,6 +1,7 @@
 import { tier2ReviewSample, type SourceKind, type TownConfig } from '@towncore/config';
 import {
   articles,
+  articleUpdates,
   eq,
   inArray,
   records,
@@ -10,7 +11,9 @@ import {
   type Db,
 } from '@towncore/db';
 import {
+  classifyV1,
   factcheckV1,
+  updateV1,
   writerV1,
   type Classification,
   type FactcheckResult,
@@ -18,6 +21,7 @@ import {
 } from '@towncore/prompts';
 import { buildByline } from './byline';
 import { checkDraft, type FactcheckReport } from './factcheck';
+import { applyUpdate, linkRelatedStories } from './followups';
 import { llmTown } from './finder';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { uniqueSlug } from './publish';
@@ -100,6 +104,19 @@ export async function writeCandidate(
       promptVersions: ['template'],
       now,
       random,
+    });
+  }
+
+  if (candidate.kind === 'update') {
+    return writeUpdate(db, {
+      candidate,
+      town: town!,
+      config,
+      rows,
+      llm: opts.llm,
+      now,
+      random,
+      backTo,
     });
   }
 
@@ -306,7 +323,167 @@ async function saveArticle(
     .update(storyCandidates)
     .set({ status: 'written', articleId: article!.id })
     .where(eq(storyCandidates.id, a.candidateId));
+  if (status !== 'blocked' && !a.promptVersions.includes('template')) {
+    await linkRelatedStories(
+      db,
+      { id: article!.id, townId: a.town.id, headline: a.draft.headline, bodyMd: a.draft.bodyMd },
+      a.now,
+    );
+  }
   return reviewReason
     ? { status, articleId: article!.id, reason: reviewReason }
     : { status, articleId: article!.id };
+}
+
+/** A dated update note for a published story (CLAUDE.md §6a), checked like any draft. */
+async function writeUpdate(
+  db: Db,
+  a: {
+    candidate: typeof storyCandidates.$inferSelect;
+    town: typeof towns.$inferSelect;
+    config: TownConfig;
+    rows: Row[];
+    llm?: Llm;
+    now: Date;
+    random: () => number;
+    backTo: (status: 'accepted' | 'skipped') => Promise<unknown>;
+  },
+): Promise<WriteOutcome> {
+  const { candidate, town, config, rows, now } = a;
+  const [target] = await db
+    .select()
+    .from(articles)
+    .where(eq(articles.id, candidate.targetArticleId ?? '00000000-0000-0000-0000-000000000000'));
+  if (!target || !['published', 'corrected'].includes(target.status)) {
+    await a.backTo('skipped');
+    return { status: 'skipped', reason: 'the story to update is not published' };
+  }
+  if (!a.llm) {
+    await a.backTo('accepted');
+    return { status: 'waiting', reason: 'no model provider configured' };
+  }
+  const tTown = llmTown(town, config);
+  const townLines = [
+    `Town: ${town.name}, ${town.state} (${town.county} County). Timezone: ${town.timezone}.`,
+    `Agencies: ${config.agencies.join('; ')}`,
+  ];
+  const recordText = (rs: { record: typeof records.$inferSelect; sourceKind: string }[]) =>
+    rs.map(({ record, sourceKind }) =>
+      [
+        `--- Record ${record.id} (source: ${sourceKind}${record.occurredAt ? `, dated ${record.occurredAt.toISOString()}` : ''})`,
+        `Title: ${record.title ?? ''}`,
+        record.text ?? '',
+      ].join('\n'),
+    );
+  const originals = (
+    await db
+      .select({ record: records, sourceKind: sources.kind })
+      .from(records)
+      .innerJoin(sources, eq(records.sourceId, sources.id))
+      .where(inArray(records.id, target.sourceRecordIds))
+  ).map((r) => ({ record: r.record, sourceKind: r.sourceKind as SourceKind }));
+
+  let classification: Classification;
+  let note: { note_md: string; source_record_ids: string[] };
+  let report: FactcheckReport | undefined;
+  try {
+    ({ value: classification } = await callModel(a.llm, {
+      job: 'update.classify',
+      town: tTown,
+      prompt: classifyV1,
+      input: [...townLines, '', ...recordText(rows)].join('\n'),
+    }));
+    ({ value: note } = await callModel(a.llm, {
+      job: 'update.write',
+      town: tTown,
+      prompt: updateV1,
+      input: [
+        ...townLines,
+        '',
+        '=== Published story',
+        `Headline: ${target.headline}`,
+        target.bodyMd,
+        '',
+        '=== New records',
+        ...recordText(rows),
+      ].join('\n'),
+    }));
+    const { value: checked } = await callModel(a.llm, {
+      job: 'update.fact-check',
+      town: tTown,
+      prompt: factcheckV1,
+      input: [
+        ...townLines,
+        '',
+        '=== Draft',
+        'Headline: (update note)',
+        note.note_md,
+        '',
+        '=== Records',
+        ...recordText(rows),
+      ].join('\n'),
+    });
+    report = checkDraft({
+      draft: { headline: '', dek: '', bodyMd: note.note_md },
+      // Names and numbers may also come from the story's own records (context).
+      sources: [...rows, ...originals].map((r) => ({
+        id: r.record.id,
+        title: r.record.title,
+        text: r.record.text,
+      })),
+      model: checked as FactcheckResult,
+      knownNames: [town.name, town.siteName, town.county, 'Florida', ...config.agencies],
+      otherPlaces: config.same_name_elsewhere,
+    });
+  } catch (error) {
+    if (error instanceof SpendCapReached) {
+      await a.backTo('accepted');
+      return { status: 'waiting', reason: error.message };
+    }
+    if (error instanceof LlmOutputError) {
+      await a.backTo('skipped');
+      return { status: 'skipped', reason: `update: ${error.message}` };
+    }
+    await a.backTo('accepted');
+    throw error;
+  }
+
+  const decision = decideTier({
+    sourceKinds: rows.map((r) => r.sourceKind),
+    beat: target.beat,
+    classification,
+    text: [...rows.map((r) => `${r.record.title}\n${r.record.text}`), note.note_md].join('\n'),
+    baseTier: target.tier as Tier,
+  });
+  const tier = Math.max(target.tier, decision.tier) as Tier;
+  let status: 'published' | 'in_review' | 'rejected' = 'published';
+  let reviewReason: string | null = null;
+  if (tier === 4) [status, reviewReason] = ['rejected', 'tier4'];
+  else if (report.decision !== 'pass') [status, reviewReason] = ['in_review', 'factcheck'];
+  else if (tier === 3) [status, reviewReason] = ['in_review', 'tier3'];
+  else if (tier === 2 && a.random() < tier2ReviewSample)
+    [status, reviewReason] = ['in_review', 'sample'];
+
+  const [update] = await db
+    .insert(articleUpdates)
+    .values({
+      articleId: target.id,
+      candidateId: candidate.id,
+      noteMd: note.note_md,
+      recordIds: rows.map((r) => r.record.id),
+      tier,
+      status: status === 'published' ? 'in_review' : status,
+      reviewReason,
+      factcheck: { method: 'model+code', ...report, tierReasons: decision.reasons },
+    })
+    .returning({ id: articleUpdates.id });
+  if (status === 'published') await applyUpdate(db, update!.id, { now });
+  await db
+    .update(storyCandidates)
+    .set({ status: 'written', articleId: target.id })
+    .where(eq(storyCandidates.id, candidate.id));
+  if (status === 'rejected') return { status: 'blocked', articleId: target.id, reason: 'tier4' };
+  return reviewReason
+    ? { status, articleId: target.id, reason: reviewReason }
+    : { status, articleId: target.id };
 }

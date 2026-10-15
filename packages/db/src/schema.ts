@@ -243,6 +243,10 @@ export const storyCandidates = pgTable(
     classification: jsonb('classification'),
     tierReasons: text('tier_reasons').array(),
     articleId: uuid('article_id'),
+    // For kind=update: the published article the note is added to (CLAUDE.md §6a follow-ups).
+    targetArticleId: uuid('target_article_id'),
+    // Must be written whatever its score or the budget (e.g. charges dropped, §6a).
+    mustWrite: boolean('must_write').notNull().default(false),
     acceptedAt: timestamp('accepted_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -355,6 +359,47 @@ export const articles = pgTable(
       sql`${t.status} not in ('published', 'corrected') or ${t.publishedAt} is not null`,
     ),
   ],
+);
+
+// Dated update notes on published stories (CLAUDE.md §6a follow-ups). Shown on the article
+// once published; pending ones wait in /admin/review.
+export const updateStatus = pgEnum('update_status', ['in_review', 'published', 'rejected']);
+export const articleUpdates = pgTable(
+  'article_updates',
+  {
+    id: id(),
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id),
+    candidateId: uuid('candidate_id'),
+    noteMd: text('note_md').notNull(),
+    recordIds: uuid('record_ids').array().notNull(),
+    tier: smallint('tier').notNull(),
+    status: updateStatus('status').notNull(),
+    reviewReason: text('review_reason'),
+    factcheck: jsonb('factcheck'),
+    reviewerId: uuid('reviewer_id').references(() => staff.id),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('article_updates_article_idx').on(t.articleId)],
+);
+
+// Links between related stories, e.g. a new story that follows up an earlier one.
+export const articleLinks = pgTable(
+  'article_links',
+  {
+    id: id(),
+    fromArticleId: uuid('from_article_id')
+      .notNull()
+      .references(() => articles.id),
+    toArticleId: uuid('to_article_id')
+      .notNull()
+      .references(() => articles.id),
+    kind: text('kind').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('article_links_uq').on(t.fromArticleId, t.toArticleId, t.kind)],
 );
 
 export const corrections = pgTable(
