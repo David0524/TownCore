@@ -636,12 +636,23 @@ export const newsletterIssues = pgTable(
       .notNull()
       .default(sql`'{}'::uuid[]`),
     sponsorPlacementId: uuid('sponsor_placement_id').references(() => placements.id),
+    // M5: what went out, to whom, and why a day was skipped. One row per town and local date
+    // also makes building idempotent: a retried tick never builds a second issue.
+    mode: text('mode'),
+    subject: text('subject'),
+    html: text('html'),
+    text: text('text'),
+    campaignId: uuid('campaign_id'),
+    skippedReason: text('skipped_reason'),
     sentAt: timestamp('sent_at', { withTimezone: true }),
     stats: jsonb('stats'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex('newsletter_issues_town_date_uq').on(t.townId, t.date)],
+  (t) => [
+    uniqueIndex('newsletter_issues_town_date_uq').on(t.townId, t.date),
+    check('newsletter_issues_mode', sql`${t.mode} is null or ${t.mode} in ('test', 'live')`),
+  ],
 );
 
 export const aiUsage = pgTable(
@@ -769,7 +780,10 @@ export const mailDomains = pgTable(
     bulkTargetCap: integer('bulk_target_cap').notNull().default(50_000),
     warmupBreaches: integer('warmup_breaches').notNull().default(0),
     warmupCheckedOn: date('warmup_checked_on'),
-    // D-MAIL-11: an admin's standing approval for the daily newsletter on this domain.
+    // M5 (D-M5-2): off → test (staff test list) → live (every active subscriber).
+    newsletterMode: text('newsletter_mode').notNull().default('off'),
+    // D-MAIL-11: an admin's standing approval for the daily newsletter on this domain; set when
+    // the mode becomes live.
     newsletterApprovedAt: timestamp('newsletter_approved_at', { withTimezone: true }),
     newsletterApprovedBy: uuid('newsletter_approved_by').references(() => staff.id),
     // A running onboarding holds this lease so two runs never work on one domain at once.
@@ -781,6 +795,7 @@ export const mailDomains = pgTable(
   },
   (t) => [
     check('mail_domains_name_lower', sql`${t.name} = lower(${t.name})`),
+    check('mail_domains_newsletter_mode', sql`${t.newsletterMode} in ('off', 'test', 'live')`),
     check(
       'mail_domains_failed_reason',
       sql`${t.status} <> 'failed' or ${t.failureReason} is not null`,
@@ -1234,3 +1249,18 @@ export const mailSettings = pgTable('mail_settings', {
   value: jsonb('value').notNull(),
   updatedAt: updatedAt(),
 });
+
+// The staff who get a town's daily issue while it is in test mode (D-M5-2).
+export const newsletterTesters = pgTable(
+  'newsletter_testers',
+  {
+    domainId: uuid('domain_id')
+      .notNull()
+      .references(() => mailDomains.id, { onDelete: 'cascade' }),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.domainId, t.staffId] })],
+);

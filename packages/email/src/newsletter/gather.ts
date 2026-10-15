@@ -18,6 +18,7 @@ import {
   getActiveCampaign,
   gt,
   gte,
+  isNotNull,
   listRankableArticles,
   lt,
   newsletterIssues,
@@ -106,7 +107,7 @@ export function newsletterHouseAd(
       };
 }
 
-/** When the previous issue was built, so this one covers only what's new (24 hours at first). */
+/** When the previous issue went out, so this one covers only what's new (24 hours at first). */
 export async function previousIssueAt(
   db: Db,
   townId: string,
@@ -114,12 +115,19 @@ export async function previousIssueAt(
   now: Date,
 ): Promise<Date> {
   const [last] = await db
-    .select({ createdAt: newsletterIssues.createdAt })
+    .select({ sentAt: newsletterIssues.sentAt })
     .from(newsletterIssues)
-    .where(and(eq(newsletterIssues.townId, townId), lt(newsletterIssues.date, before)))
+    // Only issues that went out: a skipped day leaves its stories for the next issue.
+    .where(
+      and(
+        eq(newsletterIssues.townId, townId),
+        lt(newsletterIssues.date, before),
+        isNotNull(newsletterIssues.sentAt),
+      ),
+    )
     .orderBy(desc(newsletterIssues.date))
     .limit(1);
-  return last?.createdAt ?? new Date(now.getTime() - 24 * 3_600_000);
+  return last?.sentAt ?? new Date(now.getTime() - 24 * 3_600_000);
 }
 
 export async function gatherIssue(db: Db, town: Town, now = new Date()): Promise<IssueContent> {

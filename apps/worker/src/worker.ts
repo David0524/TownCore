@@ -1,6 +1,7 @@
 import { hostname } from 'node:os';
 import { Fetcher } from '@towncore/adapters';
 import { createDb, type Db } from '@towncore/db';
+import { runNewsletterTick } from '@towncore/email';
 import type { IdentityProvider } from '@towncore/mail';
 import {
   providerFromEnv,
@@ -123,6 +124,16 @@ export async function startWorker({
     await refreshWeather(db, fetcher, logger);
   });
 
+  // The daily newsletter (M5): test list or every subscriber, once per town and local date.
+  const newsletterDeps = bulk ? bulkFromEnv(db) : null;
+  await boss.work(queues.newsletter, async () => {
+    if (!newsletterDeps) return;
+    for (const result of await runNewsletterTick(newsletterDeps)) {
+      if (result.outcome !== 'waiting' && result.outcome !== 'exists')
+        logger.info(result, 'newsletter issue');
+    }
+  });
+
   for (const { queue, cron } of schedules) {
     await boss.schedule(queue, cron);
   }
@@ -130,7 +141,7 @@ export async function startWorker({
   // Inbound mail: the webhook stores SNS notifications in mail_events; this drains them.
   const stopInbound = startInboundLoop(db, inbound, logger);
   // Newsletters and campaigns (Mail-5).
-  const stopBulk = startBulkLoop(bulk ? bulkFromEnv(db) : null, logger);
+  const stopBulk = startBulkLoop(newsletterDeps, logger);
 
   logger.info(
     { workerId, queues: Object.values(queues), llm: llmProvider?.name ?? 'none' },

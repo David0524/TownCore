@@ -16,3 +16,19 @@ export {
   type SendDecision,
 } from './select';
 export { issueWeather, type IssueWeather } from './weather';
+export {
+  LATE_CUTOFF_MINUTES,
+  localMinutes,
+  NewsletterError,
+  recentIssues,
+  rollUpStats,
+  runNewsletterTick,
+  runTownIssue,
+  sendWindow,
+  setNewsletterMode,
+  setNewsletterTester,
+  TEST_ISSUES_BEFORE_LIVE,
+  testIssuesSent,
+  type NewsletterMode,
+  type TickOutcome,
+} from './schedule';
