@@ -113,3 +113,9 @@ export {
   type RenderOptions,
 } from './inbox/render';
 export { INLINE_URL_TTL_MS, signAttachment, verifyAttachment } from './inbox/tokens';
+export {
+  DOWNLOAD_URL_TTL_S,
+  INLINE_IMAGE_TYPES,
+  s3AttachmentFiles,
+  type AttachmentFiles,
+} from './inbox/files';

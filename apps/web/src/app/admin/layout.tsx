@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { unreadCount } from '@towncore/mail';
 import { currentStaff } from '@/lib/admin/session';
+import { db } from '@/lib/db';
 import { networkCssVariables } from '@/lib/theme';
 import styles from './admin.module.css';
 import { signOut } from './actions';
@@ -14,6 +16,7 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const staff = await currentStaff();
+  const unread = staff ? await unreadCount(db(), staff.id) : 0;
   return (
     <div className={styles.shell}>
       <style dangerouslySetInnerHTML={{ __html: networkCssVariables() }} />
@@ -21,6 +24,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <span className={styles.brand}>TownCore admin</span>
         {staff ? (
           <>
+            <Link href="/admin/mail/inbox" data-testid="nav-inbox">
+              Inbox{unread ? ` (${unread})` : ''}
+            </Link>
             <Link href="/admin/review">Review queue</Link>
             <Link href="/admin/skipped">Skip log</Link>
             <Link href="/admin/mail/domains">Mail domains</Link>
