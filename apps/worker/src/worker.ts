@@ -25,6 +25,7 @@ import {
 } from './mail';
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
 import { refreshWeather } from './weather';
+import { geocodeDirectory, refreshDirectory } from './directory';
 import { queues, schedules } from './queues';
 import {
   enqueueStoryFinders,
@@ -124,6 +125,14 @@ export async function startWorker({
 
   await boss.work(queues.weather, async () => {
     await refreshWeather(db, fetcher, logger);
+  });
+
+  await boss.work(queues.directorySeed, async () => {
+    await refreshDirectory(db, logger);
+  });
+
+  await boss.work(queues.directoryGeocode, async () => {
+    await geocodeDirectory(db, fetcher, logger);
   });
 
   // The daily newsletter (M5): test list or every subscriber, once per town and local date.

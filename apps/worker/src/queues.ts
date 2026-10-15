@@ -11,6 +11,8 @@ export const queues = {
   mailTick: 'mail.tick',
   bulkHealth: 'mail.bulk-health',
   weather: 'weather.refresh',
+  directorySeed: 'directory.seed',
+  directoryGeocode: 'directory.geocode',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -30,4 +32,8 @@ export const schedules = [
   { queue: queues.weather, cron: '*/15 * * * *' },
   // Every 5 minutes, build and send each town's daily issue once its local send time passes (M5).
   { queue: queues.newsletter, cron: '*/5 * * * *' },
+  // Daily, rebuild each town's directory from its state license records (M6).
+  { queue: queues.directorySeed, cron: '20 9 * * *' },
+  // Every 15 minutes, geocode pending listings at the Census Geocoder's polite pace (M6).
+  { queue: queues.directoryGeocode, cron: '*/15 * * * *' },
 ] as const;

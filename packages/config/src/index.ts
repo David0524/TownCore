@@ -91,3 +91,10 @@ export {
   type Category,
 } from './design';
 export { creativeSchema, type Creative } from './creative';
+export {
+  categoryForLicense,
+  directoryCategories,
+  directoryCategory,
+  maxSponsoredPerCategory,
+  type DirectoryCategory,
+} from './directory';

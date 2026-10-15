@@ -156,6 +156,9 @@ importers:
       '@towncore/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@towncore/directory':
+        specifier: workspace:*
+        version: link:../../packages/directory
       '@towncore/email':
         specifier: workspace:*
         version: link:../../packages/email
@@ -235,7 +238,21 @@ importers:
         specifier: ^4.23.15
         version: 4.23.15
 
-  packages/directory: {}
+  packages/directory:
+    dependencies:
+      '@towncore/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@towncore/config':
+        specifier: workspace:*
+        version: link:../config
+      '@towncore/db':
+        specifier: workspace:*
+        version: link:../db
+    devDependencies:
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
 
   packages/email:
     dependencies:

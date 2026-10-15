@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -535,21 +536,46 @@ export const businesses = pgTable(
     townId: uuid('town_id')
       .notNull()
       .references(() => towns.id),
+    // Stable public path: name plus license number, e.g. "bagel-city-south-sea6010779".
+    slug: text('slug').notNull(),
     name: text('name').notNull(),
     category: text('category'),
+    /** Street address. Shown only once the listing is claimed (D-M6-2). */
     address: text('address'),
+    city: text('city'),
+    zip: text('zip'),
     phone: text('phone'),
     website: text('website'),
     licenseType: text('license_type'),
     licenseNumber: text('license_number'),
     licenseVerified: boolean('license_verified').notNull().default(false),
+    licenseExpiresAt: timestamp('license_expires_at', { withTimezone: true }),
     dataSource: text('data_source').notNull(),
+    /** The state record this listing was seeded from, kept current by each seeding run. */
+    sourceRecordId: uuid('source_record_id').references(() => records.id),
+    /** Listed only while the state license is active (D-M6-1). Never deleted. */
+    active: boolean('active').notNull().default(true),
+    // Census geocoding (D-M6-3). Coordinates of an unclaimed listing are never shown, since
+    // many are home addresses; they only decide whether it is inside city limits.
+    lat: doublePrecision('lat'),
+    lng: doublePrecision('lng'),
+    inCityLimits: boolean('in_city_limits'),
+    geocodeStatus: text('geocode_status'),
+    geocodedAt: timestamp('geocoded_at', { withTimezone: true }),
     claimedByEmail: text('claimed_by_email'),
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index('businesses_town_category_idx').on(t.townId, t.category)],
+  (t) => [
+    index('businesses_town_category_idx').on(t.townId, t.category),
+    uniqueIndex('businesses_town_slug_uq').on(t.townId, t.slug),
+    uniqueIndex('businesses_town_license_uq').on(t.townId, t.dataSource, t.licenseNumber),
+    check(
+      'businesses_geocode_status',
+      sql`${t.geocodeStatus} is null or ${t.geocodeStatus} in ('match', 'no_match')`,
+    ),
+  ],
 );
 
 export const placements = pgTable(

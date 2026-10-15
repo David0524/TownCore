@@ -3,6 +3,7 @@
 slug: boca-raton
 name: Boca Raton
 state: FL
+census_id: '1207300' # Census place GEOID for the city of Boca Raton (verified 2026-10-15 via the Census Geocoder)
 county: Palm Beach
 timezone: America/New_York
 site_name: Boca Town Square
@@ -31,6 +32,11 @@ sources:
   - kind: business_filings
     platform: fl-dbpr
     options: { city: BOCA RATON }
+  # Verified 2026-10-15: DBPR Hotels and Restaurants food service licensees, district 2 (Palm
+  # Beach, Broward, Martin), filtered to the location city. Feeds the directory (M6).
+  - kind: business_filings
+    platform: fl-dbpr
+    options: { city: BOCA RATON, files: [hrfood2.csv] }
   # Verified 2026-10-15: Florida Division of Corporations daily filings (new businesses).
   - kind: business_filings
     platform: fl-sunbiz

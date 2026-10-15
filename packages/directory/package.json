@@ -8,6 +8,15 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "directory:seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@towncore/adapters": "workspace:*",
+    "@towncore/config": "workspace:*",
+    "@towncore/db": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
   }
 }

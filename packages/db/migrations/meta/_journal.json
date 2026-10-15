@@ -169,6 +169,13 @@
       "when": 1792104543220,
       "tag": "0023_domain_removed",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792106406687,
+      "tag": "0024_directory_seed",
+      "breakpoints": true
     }
   ]
 }

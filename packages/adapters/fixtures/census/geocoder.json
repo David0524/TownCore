@@ -1,0 +1,37 @@
+{
+  "recordedAt": "2026-10-15T23:18:55.846Z",
+  "exchanges": [
+    {
+      "url": "https://geocoding.geo.census.gov/robots.txt",
+      "status": 404,
+      "headers": {
+        "content-type": "text/html;charset=utf-8"
+      },
+      "body": "<!doctype html><html lang=\"en\"><head><title>HTTP Status 404 – Not Found</title><style type=\"text/css\">body {font-family:Tahoma,Arial,sans-serif;} h1, h2, h3, b {color:white;background-color:#525D76;} h1 {font-size:22px;} h2 {font-size:16px;} h3 {font-size:14px;} p {font-size:12px;} a {color:black;} .line {height:1px;background-color:#525D76;border:none;}</style></head><body><h1>HTTP Status 404 – Not Found</h1></body></html>"
+    },
+    {
+      "url": "https://geocoding.geo.census.gov/geocoder/geographies/address?street=201+W+PALMETTO+PARK+RD&city=BOCA+RATON&state=FL&benchmark=Public_AR_Current&vintage=Current_Current&layers=Incorporated+Places&format=json&zip=33432",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"result\":{\"input\":{\"address\":{\"zip\":\"33432\",\"city\":\"BOCA RATON\",\"street\":\"201 W PALMETTO PARK RD\",\"state\":\"FL\"},\"vintage\":{\"isDefault\":true,\"id\":\"4\",\"vintageName\":\"Current_Current\",\"vintageDescription\":\"Current Vintage - Current Benchmark\"},\"benchmark\":{\"isDefault\":true,\"benchmarkDescription\":\"Public Address Ranges - Current Benchmark\",\"id\":\"4\",\"benchmarkName\":\"Public_AR_Current\"}},\"addressMatches\":[{\"tigerLine\":{\"side\":\"R\",\"tigerLineId\":\"115303124\"},\"geographies\":{\"Incorporated Places\":[{\"DISP_CLR\":3,\"STGEOMETRY_Area\":102336527.08754864,\"NECTAPCI\":\"N\",\"GEOID\":\"1207300\",\"CENTLAT\":\"+26.3742617\",\"AREAWATER\":6237074,\"BASENAME\":\"Boca Raton\",\"STATE\":\"12\",\"OID\":\"27890364983691\",\"LSADC\":\"25\",\"PLACE\":\"07300\",\"FUNCSTAT\":\"A\",\"INTPTLAT\":\"+26.3708090\",\"NAME\":\"Boca Raton city\",\"OBJECTID\":31903,\"PLACECC\":\"C1\",\"CENTLON\":\"-080.1062495\",\"STGEOMETRY_Length\":56694.463586550526,\"CBSAPCI\":\"Y\",\"AREALAND\":75570156,\"INTPTLON\":\"-080.1025580\",\"PLACENS\":\"02403887\",\"MTFCC\":\"G4110\"}]},\"coordinates\":{\"x\":-80.089843683144,\"y\":26.350526588683},\"addressComponents\":{\"zip\":\"33432\",\"streetName\":\"PALMETTO PARK\",\"preType\":\"\",\"city\":\"BOCA RATON\",\"preDirection\":\"W\",\"suffixDirection\":\"\",\"fromAddress\":\"201\",\"state\":\"FL\",\"suffixType\":\"RD\",\"toAddress\":\"299\",\"suffixQualifier\":\"\",\"preQualifier\":\"\"},\"matchedAddress\":\"201 W PALMETTO PARK RD, BOCA RATON, FL, 33432\"}]}}"
+    },
+    {
+      "url": "https://geocoding.geo.census.gov/geocoder/geographies/address?street=6006+SW+18+ST&city=BOCA+RATON&state=FL&benchmark=Public_AR_Current&vintage=Current_Current&layers=Incorporated+Places&format=json&zip=33433",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"result\":{\"input\":{\"address\":{\"zip\":\"33433\",\"city\":\"BOCA RATON\",\"street\":\"6006 SW 18 ST\",\"state\":\"FL\"},\"vintage\":{\"isDefault\":true,\"id\":\"4\",\"vintageName\":\"Current_Current\",\"vintageDescription\":\"Current Vintage - Current Benchmark\"},\"benchmark\":{\"isDefault\":true,\"benchmarkDescription\":\"Public Address Ranges - Current Benchmark\",\"id\":\"4\",\"benchmarkName\":\"Public_AR_Current\"}},\"addressMatches\":[{\"tigerLine\":{\"side\":\"L\",\"tigerLineId\":\"115485127\"},\"geographies\":{},\"coordinates\":{\"x\":-80.137605637253,\"y\":26.331811251861},\"addressComponents\":{\"zip\":\"33433\",\"streetName\":\"18TH\",\"preType\":\"\",\"city\":\"BOCA RATON\",\"preDirection\":\"SW\",\"suffixDirection\":\"\",\"fromAddress\":\"5984\",\"state\":\"FL\",\"suffixType\":\"ST\",\"toAddress\":\"6058\",\"suffixQualifier\":\"\",\"preQualifier\":\"\"},\"matchedAddress\":\"6006 SW 18TH ST, BOCA RATON, FL, 33433\"}]}}"
+    },
+    {
+      "url": "https://geocoding.geo.census.gov/geocoder/geographies/address?street=20583+BOCA+WEST+DR&city=BOCA+RATON&state=FL&benchmark=Public_AR_Current&vintage=Current_Current&layers=Incorporated+Places&format=json&zip=33434",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"result\":{\"input\":{\"address\":{\"zip\":\"33434\",\"city\":\"BOCA RATON\",\"street\":\"20583 BOCA WEST DR\",\"state\":\"FL\"},\"vintage\":{\"isDefault\":true,\"id\":\"4\",\"vintageName\":\"Current_Current\",\"vintageDescription\":\"Current Vintage - Current Benchmark\"},\"benchmark\":{\"isDefault\":true,\"benchmarkDescription\":\"Public Address Ranges - Current Benchmark\",\"id\":\"4\",\"benchmarkName\":\"Public_AR_Current\"}},\"addressMatches\":[]}}"
+    }
+  ]
+}

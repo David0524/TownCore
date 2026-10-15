@@ -40,6 +40,7 @@ describe('town config', () => {
       'agenda/civicplus',
       'city_news/civicplus',
       'business_filings/fl-dbpr',
+      'business_filings/fl-dbpr',
       'business_filings/fl-sunbiz',
       'weather/nws',
     ]);
