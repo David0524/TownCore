@@ -4,8 +4,19 @@ import { mastheadStyleNames, mastheadSvg } from '../src/masthead';
 import { motifLibrary, motifSvg } from '../src/motifs';
 
 describe('motif library', () => {
-  it('has every motif the theme schema allows', () => {
+  it('has every motif the theme schema allows, and nothing the schema does not', () => {
     for (const name of motifs) expect(motifLibrary).toHaveProperty(name);
+    expect(Object.keys(motifLibrary).sort()).toEqual([...motifs].sort());
+  });
+
+  it('draws every motif inside its 24×24 grid', () => {
+    for (const motif of Object.values(motifLibrary)) {
+      for (const d of motif.paths) {
+        for (const n of d.match(/-?\d+(\.\d+)?/g) ?? []) {
+          expect(Math.abs(Number(n)), `${motif.name}: ${d}`).toBeLessThanOrEqual(24);
+        }
+      }
+    }
   });
 
   it('motifs are single-color (currentColor only, no fills or literal colors)', () => {

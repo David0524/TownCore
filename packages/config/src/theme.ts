@@ -178,7 +178,21 @@ export const homeModules = [
 export type HomeModule = (typeof homeModules)[number];
 
 export const mastheadStyles = ['centered-serif', 'left-motif'] as const;
-export const motifs = ['palm-frond', 'lighthouse'] as const;
+// Must match the motif library in @towncore/brand (checked by a test); added by human review.
+export const motifs = [
+  'palm-frond',
+  'lighthouse',
+  'pine',
+  'mountain-ridge',
+  'river',
+  'bridge',
+  'clock-tower',
+  'water-tower',
+  'citrus',
+  'sailboat',
+  'oak',
+  'grain-elevator',
+] as const;
 
 export const themeSchema = z
   .strictObject({
