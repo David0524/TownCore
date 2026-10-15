@@ -215,16 +215,21 @@ test.describe('inbox', () => {
     test.skip(info.project.name === 'mobile', 'keyboard shortcuts are a desktop feature');
     await signIn(context, `keys-${info.project.name}`);
     const c = await conversation(`keys-${info.project.name}`);
+    const keysReady = (view: 'list' | 'thread') =>
+      expect(page.locator('html')).toHaveAttribute('data-inbox-keys', view);
     await page.goto(`${admin}/admin/mail/inbox`);
+    await keysReady('list');
     await page.keyboard.press('/');
     await expect(page.getByRole('searchbox', { name: 'Search' })).toBeFocused();
     await page.keyboard.type(c.domain.name);
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('inbox').locator('li')).toHaveCount(1);
+    await keysReady('list');
     await page.locator('body').click({ position: { x: 1, y: 1 } });
     await page.keyboard.press('j');
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(`${admin}/admin/mail/inbox/${c.thread.id}`);
+    await keysReady('thread');
     await page.keyboard.press('u');
     await expect(page).toHaveURL(`${admin}/admin/mail/inbox`);
   });

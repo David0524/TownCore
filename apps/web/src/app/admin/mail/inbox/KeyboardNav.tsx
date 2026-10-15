@@ -24,7 +24,12 @@ export function KeyboardNav() {
       event.preventDefault();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // Marks the page as ready for shortcuts (also lets tests wait for hydration).
+    document.documentElement.dataset.inboxKeys = 'list';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      delete document.documentElement.dataset.inboxKeys;
+    };
   }, []);
   return null;
 }
@@ -39,7 +44,11 @@ export function ThreadKeys({ backHref }: { backHref: string }) {
       if (event.key === 'u') window.location.assign(backHref);
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    document.documentElement.dataset.inboxKeys = 'thread';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      delete document.documentElement.dataset.inboxKeys;
+    };
   }, [backHref]);
   return null;
 }
