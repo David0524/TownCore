@@ -56,7 +56,8 @@ describe('tokens', () => {
     expect(verifyUnsubscribeToken('y'.repeat(40), t)).toBeNull();
     expect(verifyUnsubscribeToken(SECRET, t.replace(ID, ID.replace('0b9c', '1b9c')))).toBeNull();
     expect(verifyUnsubscribeToken(SECRET, `${ID}`)).toBeNull();
-    expect(verifyUnsubscribeToken(SECRET, `${t}.extra`)).toBeNull();
+    expect(verifyUnsubscribeToken(SECRET, `${t}~extra`)).toBeNull();
+    expect(t).not.toContain('.');
   });
 
   it('confirm tokens expire and are not unsubscribe tokens', () => {
