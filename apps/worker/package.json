@@ -9,7 +9,8 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "weather:once": "tsx src/weather-once.ts"
   },
   "dependencies": {
     "@towncore/adapters": "workspace:*",

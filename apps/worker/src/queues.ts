@@ -10,6 +10,7 @@ export const queues = {
   newsletter: 'newsletter',
   mailTick: 'mail.tick',
   bulkHealth: 'mail.bulk-health',
+  weather: 'weather.refresh',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -25,4 +26,6 @@ export const schedules = [
   { queue: queues.mailTick, cron: '*/5 * * * *' },
   // Every 15 minutes, bulk auto-pause checks and the daily warm-up step (Mail-5).
   { queue: queues.bulkHealth, cron: '*/15 * * * *' },
+  // Every 15 minutes, refresh each town's Today weather tile from NWS (docs/plans/M4b.md).
+  { queue: queues.weather, cron: '*/15 * * * *' },
 ] as const;

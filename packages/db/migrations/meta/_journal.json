@@ -134,6 +134,13 @@
       "when": 1792096417265,
       "tag": "0018_bulk",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792099017834,
+      "tag": "0019_town_weather",
+      "breakpoints": true
     }
   ]
 }

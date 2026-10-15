@@ -1,4 +1,4 @@
-import { sourceKinds, townTiers } from '@towncore/config';
+import { sourceKinds, townTiers, type WeatherSnapshot } from '@towncore/config';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -480,6 +480,18 @@ export const pins = pgTable(
   },
   (t) => [index('pins_town_expires_idx').on(t.townId, t.expiresAt)],
 );
+
+// The Today weather tile per town (docs/plans/M4b.md): the latest NWS snapshot, refreshed every
+// 15 minutes by the worker. Display data only; stories still come from weather records.
+export const townWeather = pgTable('town_weather', {
+  townId: uuid('town_id')
+    .primaryKey()
+    .references(() => towns.id),
+  snapshot: jsonb('snapshot').$type<WeatherSnapshot>(),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }).notNull(),
+});
 
 // First-party, cookieless engagement counters per article and day (D-M4-3). No cookies, no IP
 // addresses, no user identifiers: only counts.
