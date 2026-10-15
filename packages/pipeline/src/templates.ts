@@ -111,6 +111,16 @@ type License = {
   occupationCode?: string;
 };
 
+/**
+ * True for a DBPR row that is an actual license. "Construction Business Information" rows
+ * (occupation code QB) have no license number: they register the company a licensed
+ * qualifier works under, so they don't belong in a list of new licenses.
+ */
+export function isIssuedLicense(raw: unknown): boolean {
+  const l = (raw ?? {}) as License;
+  return Boolean(l.alternateLicenseNumber?.trim() || l.licenseNumber?.trim());
+}
+
 /** New contractor and electrician licenses (Florida DBPR) first issued in the week. */
 export function newLicensesRoundup(
   town: TownInfo,

@@ -33,6 +33,7 @@ export {
   type ScoreComponents,
 } from './scoring';
 export {
+  isIssuedLicense,
   isNewsworthyAlert,
   meetingsRoundup,
   newBusinessesRoundup,

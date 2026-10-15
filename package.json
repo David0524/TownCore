@@ -19,7 +19,8 @@
     "towns:sync": "pnpm --filter @towncore/db towns:sync",
     "sources:status": "pnpm --filter @towncore/adapters sources:status",
     "ingest:once": "pnpm --filter @towncore/adapters ingest:once",
-    "evals": "pnpm --filter @towncore/pipeline evals"
+    "evals": "pnpm --filter @towncore/pipeline evals",
+    "stories:once": "pnpm --filter @towncore/pipeline stories:once"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

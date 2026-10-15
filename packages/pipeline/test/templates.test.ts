@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isIssuedLicense,
   isNewsworthyAlert,
   meetingsRoundup,
   newBusinessesRoundup,
@@ -94,6 +95,22 @@ describe('newLicensesRoundup', () => {
       '- **DOE ROOFING LLC**: Certified Roofing Contractor, license CCC1234567',
     );
     expect(draft.dek).toContain('issued 1 new license');
+  });
+});
+
+describe('isIssuedLicense', () => {
+  it('rejects DBPR business-information rows, which carry no license number', () => {
+    expect(isIssuedLicense({ alternateLicenseNumber: 'CGC1542084' })).toBe(true);
+    expect(isIssuedLicense({ licenseNumber: '1542084' })).toBe(true);
+    expect(
+      isIssuedLicense({
+        occupation: 'Construction Business Information',
+        occupationCode: 'QB',
+        licenseNumber: '',
+        alternateLicenseNumber: '',
+      }),
+    ).toBe(false);
+    expect(isIssuedLicense(null)).toBe(false);
   });
 });
 
