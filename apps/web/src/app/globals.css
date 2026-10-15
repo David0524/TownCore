@@ -1,12 +1,24 @@
 /* Token-driven base styles. Every color, font and radius comes from a CSS custom property:
    town theme tokens (--ink, --accent, --accent-text, --tint, --surface, --background,
-   --font-headline, --font-body, --radius).
+   --font-headline, --font-body, --font-meta, --radius) and network tokens (--muted, --rule,
+   --sand, --alert, --cat-*). See lib/theme.ts.
    A test fails the build if a literal color, font or radius appears in apps/web/src. */
 
 :root {
   --measure: 42rem;
   --gutter: 1rem;
   --wide: 72rem;
+  /* Type scale by role (docs/plans/M4b.md, revisions 1 and 4); rem so it follows the reader's
+     text size setting. */
+  --fs-display: clamp(2.125rem, 1.4rem + 3vw, 3.625rem);
+  --fs-lead: clamp(1.625rem, 1.2rem + 2vw, 2.5rem);
+  --fs-secondary: 1.375rem;
+  --fs-brief: 1.25rem;
+  --fs-list: 1.0625rem;
+  --fs-dek: clamp(1.1875rem, 1.1rem + 0.4vw, 1.3125rem);
+  --fs-meta: 0.8125rem;
+  --hairline: 1px solid var(--rule);
+  --round: 50%;
 }
 
 *,
@@ -43,8 +55,10 @@ h1,
 h2,
 h3 {
   font-family: var(--font-headline);
+  font-weight: var(--headline-weight);
   color: var(--ink);
-  line-height: 1.2;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
   margin: 0 0 0.5em;
 }
 
@@ -82,6 +96,16 @@ a:hover {
 
 .muted {
   font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+/* Metadata (timestamps, datelines, counts, labels, credits) in the town's metadata face:
+   mono for coastal-modern, italic serif for heritage. Replaces small all-caps labels. */
+.meta {
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: var(--fs-meta);
+  color: var(--muted);
 }
 
 .rule {

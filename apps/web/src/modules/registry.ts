@@ -1,5 +1,12 @@
 import type { HomeModule } from '@towncore/config';
-import { BeatSections, BriefingColumn, LatestList, LeadStory, NewsletterCta } from './news';
+import {
+  BeatSections,
+  BriefingColumn,
+  LatestList,
+  LeadStory,
+  NewsletterCta,
+  TodayBento,
+} from './news';
 import type { HomeModuleComponent } from './types';
 
 // Modules whose data arrives in a later milestone. They render nothing until then, exactly
@@ -11,6 +18,7 @@ const awaitingData =
 
 // One component per module in the theme schema; the Record type fails the build on a gap.
 export const homeModules: Record<HomeModule, HomeModuleComponent> = {
+  'today-bento': TodayBento,
   'lead-story': LeadStory,
   'latest-list': LatestList,
   'beat-sections': BeatSections,

@@ -336,28 +336,28 @@ Every town runs the same components and page templates, but each gets its own th
 ```json
 {
   "palette": {
-    "ink": "#0E4A6B",
-    "accent": "#3E7A4C",
+    "ink": "#111418",
+    "accent": "#0E6FA8",
     "accentText": "#FFFFFF",
-    "tint": "#F2C9C4",
-    "surface": "#F2F6F8",
+    "tint": "#EAF3FA",
+    "surface": "#F3F5F7",
     "background": "#FFFFFF"
   },
   "family": "coastal-modern",
-  "type": "newsreader-publicsans",
+  "type": "instrumentserif-geist",
   "masthead": "centered-serif",
   "layout": {
     "header": "stacked-dateline",
     "nav": "beat-tabs",
     "grid": "main-right-rail",
-    "home": ["lead-story", "latest-list", "meetings-this-week", "directory-featured", "beat-sections", "events", "new-businesses", "real-estate"],
+    "home": ["lead-story", "today-bento", "latest-list", "meetings-this-week", "directory-featured", "beat-sections", "events", "new-businesses", "real-estate"],
     "article": "classic-rail",
     "directory": "list-map",
     "footer": "three-column"
   },
   "corners": "soft",
   "motif": "palm-frond",
-  "identityNotes": "Atlantic blue, sea-grape green, Mizner-era pink stucco as a light tint only"
+  "identityNotes": "Atlantic blue and white, airy and modern: a coastal city of beaches, Mizner-era landmarks and new growth. One brand blue; color comes from photos and the Today tiles."
 }
 ```
 

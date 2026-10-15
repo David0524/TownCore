@@ -67,7 +67,9 @@ export {
   parseTheme,
   themeSchema,
   themeTextPairs,
+  styleFamilies,
   typePairings,
+  type StyleFamily,
   type BeatSlug,
   type ContrastFailure,
   type HomeModule,
@@ -76,4 +78,12 @@ export {
   type TypePairing,
 } from './theme';
 export type { WeatherAlert, WeatherHour, WeatherSnapshot } from './weather';
+export {
+  beatCategory,
+  categoryColors,
+  darkColors,
+  deriveMuted,
+  systemColors,
+  type Category,
+} from './design';
 export { creativeSchema, type Creative } from './creative';

@@ -1,6 +1,7 @@
 import { creativeSchema, townContactEmail, type TownConfig } from '@towncore/config';
 import { getActiveCampaign, type Town } from '@towncore/db';
 import { db } from '@/lib/db';
+import { newsletterOpen } from '@/lib/newsletter';
 import { slots, type SlotName } from './registry';
 
 export { creativeSchema, type Creative } from '@towncore/config';
@@ -44,11 +45,11 @@ export async function resolveSlotFill(
     );
   }
   // 2. Sponsored directory placements: M6. 3. Programmatic: gated, later.
-  return houseAd(town, slot);
+  return houseAd(town, slot, { newsletter: await newsletterOpen(town) });
 }
 
 /** House ads promote the site itself. They're labeled as the site's own, never as editorial. */
-export function houseAd(town: Town, slot: SlotName): SlotFill {
+export function houseAd(town: Town, slot: SlotName, opts: { newsletter?: boolean } = {}): SlotFill {
   const contact = townContactEmail(town.config as TownConfig);
   const advertise: SlotFill = {
     source: 'house',
@@ -59,14 +60,23 @@ export function houseAd(town: Town, slot: SlotName): SlotFill {
     cta: 'Get in touch',
   };
   // The newsletter page shows the signup form, or "launching soon" until the town can send.
-  const newsletter: SlotFill = {
-    source: 'house',
-    label: `From ${town.siteName}`,
-    headline: 'The daily newsletter',
-    body: `${town.name} news from public records, every morning.`,
-    href: '/newsletter',
-    cta: 'Learn more',
-  };
+  const newsletter: SlotFill = opts.newsletter
+    ? {
+        source: 'house',
+        label: `From ${town.siteName}`,
+        headline: `Start every day knowing what ${town.name} decided.`,
+        body: 'Our free morning email, written from public records.',
+        href: '/newsletter',
+        cta: 'Sign up',
+      }
+    : {
+        source: 'house',
+        label: `From ${town.siteName}`,
+        headline: 'Our free morning email is launching soon',
+        body: `${town.name} news from public records, every morning.`,
+        href: '/newsletter',
+        cta: 'Learn more',
+      };
   const tips: SlotFill = {
     source: 'house',
     label: `From ${town.siteName}`,

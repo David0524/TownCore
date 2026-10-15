@@ -1,4 +1,4 @@
-// Every curated type pairing (CLAUDE.md §11a), self-hosted. Declaring all @font-face rules is
+// Every approved type set (CLAUDE.md §11a), self-hosted. Declaring all @font-face rules is
 // cheap: browsers only download the fonts a page actually uses, so each town gets its own pair.
 import '@fontsource-variable/newsreader';
 import '@fontsource-variable/public-sans';
@@ -14,3 +14,11 @@ import '@fontsource-variable/hanken-grotesk';
 import '@fontsource/spectral/400.css';
 import '@fontsource/spectral/700.css';
 import '@fontsource-variable/karla';
+// Type sets by role (docs/plans/M4b.md): display, text and metadata faces.
+import '@fontsource/instrument-serif/400.css';
+import '@fontsource-variable/geist';
+import '@fontsource-variable/geist-mono';
+import '@fontsource/libre-caslon-display/400.css';
+import '@fontsource/libre-caslon-text/400-italic.css';
+import '@fontsource-variable/bricolage-grotesque';
+import '@fontsource-variable/figtree';

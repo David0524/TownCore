@@ -1,0 +1,156 @@
+/* Weather (docs/plans/M4b.md): the Today tile is one of the few tinted surfaces on the page;
+   amber appears only while a real alert is active. */
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: var(--radius-tile);
+  background: var(--tint);
+  color: var(--ink);
+  margin: 0 0 2rem;
+}
+
+.tileTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.tileTop a {
+  text-decoration: none;
+}
+
+.place {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  letter-spacing: 0;
+}
+
+.now {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.temp {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 300;
+  font-size: clamp(3.5rem, 2.6rem + 3vw, 4.75rem);
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+}
+
+.condition {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.short {
+  font-weight: 500;
+}
+
+.hilo {
+  color: var(--muted);
+}
+
+.hours {
+  list-style: none;
+  margin: 0;
+  padding: 0.6rem 0 0;
+  border-top: var(--hairline);
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  text-align: center;
+}
+
+.hours li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hourTemp {
+  color: var(--ink);
+}
+
+.source {
+  margin: 0;
+}
+
+.zonePeriod {
+  margin: 0;
+  font-weight: 600;
+}
+
+.zoneText {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/* One line under the header, every page. */
+.line {
+  border-bottom: var(--hairline);
+}
+
+.lineInner {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0.45rem var(--gutter);
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  font-size: 0.9375rem;
+}
+
+.lineText {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.lineText:hover {
+  text-decoration: underline;
+}
+
+/* Amber alert bar: the only full-width color on the page. */
+.alert {
+  display: block;
+  background: var(--alert);
+  color: var(--alert-text);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.alertInner {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0.55rem var(--gutter);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+}
+
+.alertSource {
+  margin-left: auto;
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: 0.75rem;
+}
+
+.alert:hover strong {
+  text-decoration: underline;
+}

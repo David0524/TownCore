@@ -17,10 +17,30 @@ const withPalette = (palette: Partial<Theme['palette']>) =>
   JSON.stringify({ ...defaultTheme, palette: { ...defaultTheme.palette, ...palette } });
 
 describe('theme schema', () => {
-  it('accepts the Boca theme exactly as specified in CLAUDE.md §11a', () => {
+  it('accepts the Boca theme as specified in CLAUDE.md §11a (coastal-modern, M4b canvas)', () => {
     const theme = parseTheme(bocaThemeJson);
-    expect(theme.palette.ink).toBe('#0E4A6B');
+    expect(theme.family).toBe('coastal-modern');
+    expect(theme.type).toBe('instrumentserif-geist');
+    expect(theme.palette.ink).toBe('#111418');
+    expect(theme.palette.accent).toBe('#0E6FA8');
     expect(theme.layout.home[0]).toBe('lead-story');
+  });
+
+  it("rejects a type set outside the family's list, but allows legacy M1 pairings", () => {
+    expect(() =>
+      parseTheme(
+        JSON.stringify({ ...defaultTheme, family: 'heritage', type: 'bricolage-figtree' }),
+      ),
+    ).toThrow(/heritage family's type list/);
+    expect(
+      themeSchema.safeParse({ ...defaultTheme, family: 'heritage', type: 'bitter-hankengrotesk' })
+        .success,
+    ).toBe(true);
+  });
+
+  it('requires a family', () => {
+    const { family: _family, ...rest } = defaultTheme;
+    expect(themeSchema.safeParse(rest).success).toBe(false);
   });
 
   it('accepts the default fallback theme', () => {
@@ -91,6 +111,6 @@ describe('loadTowns', () => {
   it('loads Boca with its theme file', () => {
     const boca = loadTowns(townsDir).find((t) => t.config.slug === 'boca-raton')!;
     expect(boca.hasThemeFile).toBe(true);
-    expect(boca.theme.type).toBe('newsreader-publicsans');
+    expect(boca.theme.type).toBe('instrumentserif-geist');
   });
 });

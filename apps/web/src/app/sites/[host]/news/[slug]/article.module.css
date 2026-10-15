@@ -2,28 +2,27 @@
   margin-bottom: 1.5rem;
 }
 
-.kicker {
-  margin: 0 0 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 700;
-}
-
-.kicker a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
 .headline {
-  font-size: clamp(1.9rem, 5.5vw, 2.75rem);
+  font-size: clamp(2.125rem, 1.4rem + 3vw, 3.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
 }
 
 .largeHeadline {
-  font-size: clamp(2.1rem, 6.5vw, 3.25rem);
+  font-size: clamp(2.25rem, 1.4rem + 3.6vw, 4rem);
+  line-height: 0.98;
+  letter-spacing: -0.015em;
 }
 
 .dek {
-  font-size: 1.2rem;
+  font-size: var(--fs-dek);
+  line-height: 1.45;
+  color: var(--muted);
   margin: 0 0 1rem;
+}
+
+.visual {
+  margin: 0 0 1.75rem;
 }
 
 /* Locked: byline, dates, sources and corrections look the same in every town (§11a-2). */
@@ -37,13 +36,18 @@
   font-size: 0.875rem;
 }
 
+.body {
+  font-size: 1.1875rem;
+  line-height: 1.65;
+}
+
 .body :global(p) {
   margin: 0 0 1.1em;
 }
 
 .correction {
-  border-left: 4px solid var(--ink);
   background: var(--surface);
+  border-radius: var(--radius);
   padding: 0.75rem 1rem;
   margin: 0 0 1.5rem;
   font-size: 0.9375rem;
@@ -54,16 +58,19 @@
 }
 
 .sources {
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--ink);
+  padding-top: 0.9rem;
   margin: 2rem 0 1rem;
   font-size: 0.9375rem;
 }
 
 .sources h2 {
-  font-family: var(--font-body);
-  font-size: 1rem;
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-weight: 500;
+  font-size: var(--fs-meta);
+  letter-spacing: 0;
+  color: var(--muted);
   margin-bottom: 0.5rem;
 }
 

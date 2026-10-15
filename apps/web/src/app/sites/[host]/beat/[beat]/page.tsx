@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { beats } from '@towncore/config';
 import { ListBeacon } from '@/components/Beacon';
+import { SectionHeader } from '@/components/news/SectionHeader';
+import { StoryBlock } from '@/components/news/StoryBlock';
 import { StandardPage } from '@/lib/pages';
-import { formatTownDate, requireTown } from '@/lib/town';
+import { requireTown } from '@/lib/town';
 import { rankedBeatArticles } from '@/modules/data';
+import styles from './beat.module.css';
 
 type Props = { params: Promise<{ host: string; beat: string }> };
 
@@ -18,6 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return beat ? { title: beat.label } : {};
 }
 
+// Beat front, first pass (docs/plans/M4b.md §4): stories as briefs with labels and times. The
+// full beat front (coming up, documents posted, filters) is the next redesign step.
 export default async function BeatPage({ params }: Props) {
   const town = await requireTown(params);
   const beat = findBeat((await params).beat);
@@ -27,15 +31,14 @@ export default async function BeatPage({ params }: Props) {
   return (
     <StandardPage town={town}>
       <ListBeacon />
-      <h1>{beat.label}</h1>
+      <SectionHeader title={beat.label} as="h1" />
       {articles.length === 0 ? (
-        <p>No {beat.label.toLowerCase()} stories yet.</p>
+        <p className={styles.empty}>No {beat.label.toLowerCase()} stories yet.</p>
       ) : (
-        <ul>
+        <ul className={styles.list}>
           {articles.map((article) => (
             <li key={article.id}>
-              <Link href={`/news/${article.slug}`}>{article.headline}</Link>{' '}
-              <span className="muted">{formatTownDate(article.publishedAt!, town)}</span>
+              <StoryBlock story={article} town={town} variant="brief" />
             </li>
           ))}
         </ul>

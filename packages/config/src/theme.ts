@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { contrastRatio } from './brand';
+import { systemColors } from './design';
 
 // Town themes (CLAUDE.md §11a, §11a-2). One component library, a distinct look and layout per
 // town. A theme that fails the contrast check fails validation, so it can't be synced ("saved").
@@ -32,48 +33,95 @@ export const AA_TEXT = 4.5;
 export type ContrastFailure = { fg: PaletteKey; bg: PaletteKey; use: string; ratio: number };
 
 export function checkThemeContrast(p: Palette): ContrastFailure[] {
-  return themeTextPairs
+  const failures = themeTextPairs
     .map((pair) => ({
       ...pair,
       ratio: Math.round(contrastRatio(p[pair.fg], p[pair.bg]) * 100) / 100,
     }))
     .filter((pair) => pair.ratio < AA_TEXT);
+  // Sponsored units sit on the network's sand tile in every town; their text is the town's ink.
+  const sand = Math.round(contrastRatio(p.ink, systemColors.sand) * 100) / 100;
+  if (sand < AA_TEXT) {
+    failures.push({ fg: 'ink', bg: 'background', use: 'text on the sponsored tile', ratio: sand });
+  }
+  return failures;
 }
 
-/** Curated headline/body pairings (§11a). Add pairs only by human decision. */
-// headlineAdvanceEm: mean bold (700) glyph advance in em, measured in Chromium over sample site
-// names. The SVG masthead uses it to size the wordmark without stretching letter spacing.
+/**
+ * Type sets (§11a "type, by role"): display (wordmark and headlines), text/UI, and a metadata face
+ * for timestamps, datelines, counts and labels. Add sets only by human decision.
+ * - headlineWeight: the weight headlines and the wordmark use (single-weight display faces are 400;
+ *   never let the browser fake a bold).
+ * - headlineAdvanceEm: mean glyph advance at that weight, in em, measured in Chromium over sample
+ *   site names. The SVG masthead sizes the wordmark with it.
+ * - legacy: the six M1 pairings. They stay valid in any family until heritage and community ship.
+ */
+type TypeSet = {
+  headline: string;
+  body: string;
+  meta: string;
+  metaStyle: 'mono' | 'italic' | 'sans';
+  headlineWeight: 400 | 700 | 800;
+  headlineAdvanceEm: number;
+  legacy?: true;
+};
+const legacyPair = (headline: string, body: string, headlineAdvanceEm: number): TypeSet => ({
+  headline,
+  body,
+  meta: body,
+  metaStyle: 'sans',
+  headlineWeight: 700,
+  headlineAdvanceEm,
+  legacy: true,
+});
+
 export const typePairings = {
-  'newsreader-publicsans': {
-    headline: 'Newsreader Variable',
+  'instrumentserif-geist': {
+    headline: 'Instrument Serif',
+    body: 'Geist Variable',
+    meta: 'Geist Mono Variable',
+    metaStyle: 'mono',
+    headlineWeight: 400,
+    headlineAdvanceEm: 0.358,
+  },
+  'librecaslondisplay-publicsans': {
+    headline: 'Libre Caslon Display',
     body: 'Public Sans Variable',
-    headlineAdvanceEm: 0.496,
+    meta: 'Libre Caslon Text',
+    metaStyle: 'italic',
+    headlineWeight: 400,
+    headlineAdvanceEm: 0.407,
   },
-  'fraunces-worksans': {
-    headline: 'Fraunces Variable',
-    body: 'Work Sans Variable',
-    headlineAdvanceEm: 0.537,
+  'bricolage-figtree': {
+    headline: 'Bricolage Grotesque Variable',
+    body: 'Figtree Variable',
+    meta: 'Figtree Variable',
+    metaStyle: 'sans',
+    headlineWeight: 800,
+    headlineAdvanceEm: 0.518,
   },
-  'librecaslon-sourcesans3': {
-    headline: 'Libre Caslon Text',
-    body: 'Source Sans 3 Variable',
-    headlineAdvanceEm: 0.565,
-  },
-  'literata-ibmplexsans': {
-    headline: 'Literata Variable',
-    body: 'IBM Plex Sans Variable',
-    headlineAdvanceEm: 0.54,
-  },
-  'bitter-hankengrotesk': {
-    headline: 'Bitter Variable',
-    body: 'Hanken Grotesk Variable',
-    headlineAdvanceEm: 0.501,
-  },
-  'spectral-karla': { headline: 'Spectral', body: 'Karla Variable', headlineAdvanceEm: 0.501 },
-} as const;
+  'newsreader-publicsans': legacyPair('Newsreader Variable', 'Public Sans Variable', 0.496),
+  'fraunces-worksans': legacyPair('Fraunces Variable', 'Work Sans Variable', 0.537),
+  'librecaslon-sourcesans3': legacyPair('Libre Caslon Text', 'Source Sans 3 Variable', 0.565),
+  'literata-ibmplexsans': legacyPair('Literata Variable', 'IBM Plex Sans Variable', 0.54),
+  'bitter-hankengrotesk': legacyPair('Bitter Variable', 'Hanken Grotesk Variable', 0.501),
+  'spectral-karla': legacyPair('Spectral', 'Karla Variable', 0.501),
+} as const satisfies Record<string, TypeSet>;
 export type TypePairing = keyof typeof typePairings;
 
 export const cornerRadii = { square: '0', soft: '6px', round: '14px' } as const;
+
+/**
+ * Style families (docs/plans/M4b.md, revision 6): structural and stylistic defaults a town fills
+ * in with its own palette, wordmark and motif. Each lists the type sets it may use (legacy M1
+ * pairings are allowed anywhere until they retire).
+ */
+export const styleFamilies = {
+  'coastal-modern': { types: ['instrumentserif-geist'] },
+  heritage: { types: ['librecaslondisplay-publicsans'] },
+  community: { types: ['bricolage-figtree'] },
+} as const satisfies Record<string, { types: readonly string[] }>;
+export type StyleFamily = keyof typeof styleFamilies;
 
 /** Layout options per part that the web app implements (§11a-2). Add as they're built. */
 export const layoutOptions = {
@@ -87,6 +135,7 @@ export const layoutOptions = {
 } as const;
 
 export const homeModules = [
+  'today-bento',
   'lead-story',
   'latest-list',
   'beat-sections',
@@ -111,6 +160,7 @@ export const motifs = ['palm-frond', 'lighthouse'] as const;
 export const themeSchema = z
   .strictObject({
     palette,
+    family: z.enum(Object.keys(styleFamilies) as [StyleFamily, ...StyleFamily[]]),
     type: z.enum(Object.keys(typePairings) as [TypePairing, ...TypePairing[]]),
     masthead: z.enum(mastheadStyles),
     layout: z.strictObject({
@@ -130,6 +180,15 @@ export const themeSchema = z
     identityNotes: z.string().min(1),
   })
   .superRefine((theme, ctx) => {
+    const set = typePairings[theme.type] as TypeSet;
+    const allowed: readonly string[] = styleFamilies[theme.family].types;
+    if (!set.legacy && !allowed.includes(theme.type)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['type'],
+        message: `${theme.type} isn't on the ${theme.family} family's type list (${allowed.join(', ')})`,
+      });
+    }
     for (const failure of checkThemeContrast(theme.palette)) {
       ctx.addIssue({
         code: 'custom',
@@ -171,6 +230,7 @@ export const defaultTheme: Theme = {
     surface: '#EEF2F5',
     background: '#FFFFFF',
   },
+  family: 'community',
   type: 'literata-ibmplexsans',
   masthead: 'left-motif',
   layout: {
