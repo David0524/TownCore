@@ -52,3 +52,6 @@ jobs:
       - run: pnpm db:migrate
       - run: pnpm towns:sync
       - run: pnpm test
+      - run: pnpm build
+      - name: Worker boots from the build
+        run: pnpm --filter @towncore/worker smoke

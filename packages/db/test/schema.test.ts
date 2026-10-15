@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Db } from '../src/client.js';
 import { articles, corrections, records, sources, subscribers, towns } from '../src/schema.js';
 import { syncTowns } from '../src/towns.js';
-import { createTestDb } from './test-db.js';
+import { createTestDb } from '../src/testing.js';
 
 const townsDir = fileURLToPath(new URL('../../../towns', import.meta.url));
 

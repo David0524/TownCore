@@ -273,4 +273,5 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
 - 2026-10-15 — Logos are in progress; text wordmark until then, logo path read from town config.
 
 ## Status
-- Not started.
+- 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.
+- Next: **M1 Multi-tenant site** (plan: `docs/plans/M0.md`, PRs 4–5).

@@ -348,3 +348,10 @@ export const aiUsage = pgTable(
   },
   (t) => [index('ai_usage_town_created_idx').on(t.townId, t.createdAt)],
 );
+
+// Liveness of worker processes (one row per process, upserted by the heartbeat job).
+export const workerHeartbeats = pgTable('worker_heartbeats', {
+  workerId: text('worker_id').primaryKey(),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+  lastBeatAt: timestamp('last_beat_at', { withTimezone: true }).notNull(),
+});
