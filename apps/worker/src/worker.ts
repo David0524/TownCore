@@ -15,6 +15,7 @@ import { recordHeartbeat } from './heartbeat';
 import {
   bulkFromEnv,
   inboundFromEnv,
+  opsFromEnv,
   runBulkHealth,
   runMailTick,
   sesFromEnv,
@@ -116,8 +117,9 @@ export async function startWorker({
     await runMailTick(db, ses, logger);
   });
 
+  const opsDeps = opsFromEnv();
   await boss.work(queues.bulkHealth, async () => {
-    await runBulkHealth(db, logger);
+    await runBulkHealth(db, logger, new Date(), opsDeps);
   });
 
   await boss.work(queues.weather, async () => {

@@ -284,3 +284,53 @@ well under 0.3%; nothing in the brief's §7.3 changed. Choices made under bucket
   opt-in with stored consent evidence and one-click unsubscribe covers the core of CASL's
   express consent and GDPR consent, but GDPR also needs a privacy notice, access and erasure
   handling, and a lawful basis written down. The owner decides whether to accept such signups.
+
+## Mail-6 design (monitoring and operations)
+
+Built 2026-10-15, after the owner said "go ahead with Mail-6". The brief's acceptance: the owner
+can answer "is anything on fire?" from one page, and the runbook covers each procedure.
+Choices made under bucket B:
+
+- **One page: Admin → Mail health.** At the top, "All clear" or the open alerts (critical
+  first). Below:
+  - **The SES account:** enforcement status, production access, today's quota used, and 7-day
+    bounce and complaint rates over all mail beside SES's review levels (5% / 0.1%) and our
+    network pause (4% / 0.08%).
+  - **Every domain:** per stream (replies, bulk), 7-day sent, delivered, bounce rate and
+    complaint rate, plus domain status, bulk status, warm-up day and cap, and any pause reason.
+  - **The pipeline:** mail events pending and failed, the oldest waiting event, and the worker's
+    last heartbeat.
+  - **DMARC:** the last 30 days of aggregate reports per domain (see below).
+- **SES account status.** SES sends no event for an account-level pause, so every 15 minutes
+  the worker reads `GetAccount` (`EnforcementStatus`: HEALTHY, PROBATION or SHUTDOWN; production
+  access; 24-hour quota) and stores it. The app's IAM user gains `ses:GetAccount` (read-only).
+- **Alerts.** Every 15 minutes the worker works out the current conditions and keeps one open
+  `mail_alerts` row per condition. Each row resolves itself when its condition clears. The
+  conditions:
+  - critical: a domain's bulk mail is paused; bulk mail is paused for every town; SES isn't
+    HEALTHY;
+  - warning: account rates reach 60% of SES's review levels (3% bounces or 0.06% complaints,
+    at least 500 sent in 7 days); a domain's onboarding failed; mail events failed in the last
+    24 hours.
+  New and resolved alerts go out in one email per tick, and a still-open alert is repeated once
+  a day. The email goes to every active admin, from `alerts@towncore.net`, through the
+  conversational configuration set. It is internal staff mail like sign-in links: code refuses
+  any recipient outside towncore.net (Rule 10). Sending it needs towncore.net verified in SES,
+  an owner step in the runbook. Until then the alerts show on the page and in the worker log.
+- **DMARC reports.** Aggregate (`rua`) reports arrive as zip or gzip XML attachments. Mail to
+  `DMARC_REPORT_ADDRESS` on any onboarded domain is parsed into `dmarc_reports` (one row per
+  report: reporter, domain, date range, messages, and how many passed DKIM and SPF alignment)
+  instead of landing in the inbox. The page shows pass rates and the sources failing alignment.
+  Free libraries only (`fflate`, `fast-xml-parser`); no paid service. Recommended address:
+  `dmarc@<a town domain>`, e.g. dmarc@bocatownsquare.com; every town's DMARC record can point
+  there because all town domains share one SES account. That avoids the external-authorization
+  record.
+- **Removing a domain:** `pnpm mail:onboard remove <domain>`, a dry run by default.
+  - It lists exactly the DNS records we created (by their Vercel record ids) and the two SES
+    identities.
+  - With `--execute --approved` it deletes those records and identities, and marks the domain
+    `removed` (no inbound, no bulk, newsletter off).
+  - Mail history stays for the retention period the owner sets.
+- **Backups:** Railway's volume backups, point-in-time recovery (restores into a new sibling
+  service) and a nightly `pg_dump` are all documented in the runbook. Turning them on is an
+  owner step before real subscribers (D-MAIL-10).
