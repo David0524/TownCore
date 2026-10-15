@@ -139,6 +139,7 @@ export const homeModules = [
   'today-bento',
   'category-buttons',
   'coming-up',
+  'documents-posted',
   'lead-story',
   'latest-list',
   'beat-sections',

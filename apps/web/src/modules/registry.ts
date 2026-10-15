@@ -7,7 +7,7 @@ import {
   NewsletterCta,
   TodayBento,
 } from './news';
-import { CategoryButtons, ComingUp, GoodMorning } from './front';
+import { CategoryButtons, ComingUp, DocumentsPosted, GoodMorning } from './front';
 import type { HomeModuleComponent } from './types';
 
 // Modules whose data arrives in a later milestone. They render nothing until then, exactly
@@ -23,6 +23,7 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
   'today-bento': TodayBento,
   'category-buttons': CategoryButtons,
   'coming-up': ComingUp,
+  'documents-posted': DocumentsPosted,
   'lead-story': LeadStory,
   'latest-list': LatestList,
   'beat-sections': BeatSections,

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { clockTime } from '@/components/weather/format';
 import { beatColorVar } from '@/lib/theme';
-import { beatCounts, recentArticles, upcomingMeetings } from './data';
+import { beatCounts, cityPostings, recentArticles, upcomingMeetings } from './data';
 import type { HomeModuleComponent } from './types';
 import styles from './front.module.css';
 
@@ -95,6 +95,28 @@ export const ComingUp: HomeModuleComponent = async ({ town }) => {
         ))}
       </ol>
       <p className="meta">From the city&apos;s public meeting calendar.</p>
+    </section>
+  );
+};
+
+/** The city's own recent releases ("Posted by the city"), linked to the city's pages. */
+export const DocumentsPosted: HomeModuleComponent = async ({ town }) => {
+  const posts = await cityPostings(town.id);
+  if (posts.length === 0) return null;
+  return (
+    <section className={styles.coming} aria-labelledby="posted-h" data-module="documents-posted">
+      <SectionHeader title="Posted by the city" id="posted-h" />
+      <ol className={styles.meetings}>
+        {posts.map((p) => (
+          <li key={p.id}>
+            <span className="meta">{apDate(p.at, town.timezone)}</span>
+            <a href={p.url} rel="nofollow noopener" className={styles.meetingTitle}>
+              {p.title}
+            </a>
+          </li>
+        ))}
+      </ol>
+      <p className="meta">Links go to the city&apos;s website.</p>
     </section>
   );
 };

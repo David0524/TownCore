@@ -186,3 +186,27 @@ export function frontSplit(articles: RankableArticle[], modules: readonly string
   const also = modules.includes('today-bento') ? rest.slice(0, ALSO_TODAY) : [];
   return { lead, also, rest: rest.slice(also.length) };
 }
+
+/** The town's sources (kind and platform), for "where this beat's stories come from". */
+export const townSources = cache(async (townId: string) =>
+  db()
+    .select({ kind: sources.kind, platform: sources.platform })
+    .from(sources)
+    .where(eq(sources.townId, townId)),
+);
+
+/** The city's own recent releases, newest first, linked to the city's pages. */
+export const cityPostings = cache(async (townId: string, limit = 5) => {
+  const rows = await db()
+    .select({ id: records.id, title: records.title, url: records.url, at: records.occurredAt })
+    .from(records)
+    .where(and(eq(records.townId, townId), eq(records.type, 'release')))
+    .orderBy(desc(records.occurredAt))
+    .limit(limit);
+  return rows.filter((r) => r.title && r.url && r.at) as Array<{
+    id: string;
+    title: string;
+    url: string;
+    at: Date;
+  }>;
+});

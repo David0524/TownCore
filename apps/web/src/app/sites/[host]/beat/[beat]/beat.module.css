@@ -1,6 +1,27 @@
+.masthead {
+  margin: 0 0 2rem;
+}
+
+.covers {
+  margin: 0.75rem 0 0.35rem;
+  font-size: var(--fs-dek);
+  line-height: 1.45;
+}
+
+.email {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.email:hover {
+  text-decoration: underline;
+}
+
 .list {
   list-style: none;
-  margin: 0;
+  margin: 1.5rem 0 0;
   padding: 0;
 }
 
