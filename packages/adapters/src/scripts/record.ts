@@ -19,6 +19,9 @@ const parsed = JSON.parse(configJson) as {
   url?: string;
   kind?: string;
   config?: Record<string, unknown>;
+  /** Optional ISO dates, for adapters that fetch by date (e.g. daily files). */
+  since?: string;
+  now?: string;
 };
 // The recorder wraps the real fetch, and the Fetcher still enforces Rule 8 on every request.
 const recorder = recordingFetch(defaultFetch);
@@ -32,8 +35,8 @@ const records = await adapter.fetch(
     url: parsed.url ?? null,
     config: parsed.config ?? {},
   },
-  null,
-  { fetcher, now: new Date() },
+  parsed.since ? new Date(parsed.since) : null,
+  { fetcher, now: parsed.now ? new Date(parsed.now) : new Date() },
 );
 const out = fileURLToPath(new URL(`../../fixtures/${platform}/${name}.json`, import.meta.url));
 recorder.save(out);

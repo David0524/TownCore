@@ -25,3 +25,4 @@ export { nwsAdapter } from './nws';
 export { civicplusAdapter } from './civicplus';
 export { parseIcal, zonedTimeToUtc } from './lib/ical';
 export { flDbprAdapter } from './fl-dbpr';
+export { flSunbizAdapter } from './fl-sunbiz';

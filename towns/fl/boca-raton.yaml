@@ -31,6 +31,10 @@ sources:
   - kind: business_filings
     platform: fl-dbpr
     options: { city: BOCA RATON }
+  # Verified 2026-10-15: Florida Division of Corporations daily filings (new businesses).
+  - kind: business_filings
+    platform: fl-sunbiz
+    options: { city: BOCA RATON }
   # Verified 2026-10-15: NWS Miami zone FLZ168, Coastal Palm Beach County (names Boca Raton).
   - kind: weather
     platform: nws
