@@ -15,6 +15,7 @@ import {
   smallint,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -902,6 +903,13 @@ export const messages = pgTable(
     htmlBodySanitized: text('html_body_sanitized'),
     rawS3Key: text('raw_s3_key'),
     sesMessageId: text('ses_message_id'),
+    // Outbound only: other Message-IDs this message may be known by. SES replaces the
+    // Message-ID we set, so we keep ours here and match replies on either (Mail-4).
+    altMessageIds: text('alt_message_ids')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    deliveryError: text('delivery_error'),
     spamVerdict: text('spam_verdict'),
     virusVerdict: text('virus_verdict'),
     spfVerdict: text('spf_verdict'),
@@ -994,4 +1002,75 @@ export const threadReads = pgTable(
     readAt: timestamp('read_at', { withTimezone: true }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.threadId, t.staffId] })],
+);
+
+// Addresses we must not mail (brief §6, §7.2). Checked before every send in both streams:
+// hard bounces, complaints and manual blocks stop all mail to the address; an unsubscribe
+// (Mail-5) stops only bulk mail. Scope 'domain' applies to one town domain only.
+export const suppressionScope = pgEnum('suppression_scope', ['global', 'domain']);
+export const suppressionReason = pgEnum('suppression_reason', [
+  'hard_bounce',
+  'complaint',
+  'unsubscribe',
+  'manual',
+]);
+
+export const suppressions = pgTable(
+  'suppressions',
+  {
+    id: id(),
+    email: text('email').notNull(),
+    scope: suppressionScope('scope').notNull(),
+    domainId: uuid('domain_id').references(() => mailDomains.id, { onDelete: 'cascade' }),
+    reason: suppressionReason('reason').notNull(),
+    sourceEventId: uuid('source_event_id').references(() => mailEvents.id),
+    note: text('note'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('suppressions_email_reason_domain_uq')
+      .on(t.email, t.reason, t.domainId)
+      .nullsNotDistinct(),
+    index('suppressions_email_idx').on(t.email),
+    check('suppressions_email_lower', sql`${t.email} = lower(${t.email})`),
+    check('suppressions_scope_domain', sql`(${t.scope} = 'domain') = (${t.domainId} is not null)`),
+  ],
+);
+
+// One row per recipient per SES sending event (brief §6), parsed from mail_events, for
+// delivery status, suppression and domain health metrics.
+export const emailEvents = pgTable(
+  'email_events',
+  {
+    id: id(),
+    mailEventId: uuid('mail_event_id')
+      .notNull()
+      .references(() => mailEvents.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    subType: text('sub_type'),
+    sesMessageId: text('ses_message_id').notNull(),
+    recipient: text('recipient').notNull(),
+    configurationSet: text('configuration_set'),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('email_events_event_recipient_uq').on(t.mailEventId, t.recipient),
+    index('email_events_ses_idx').on(t.sesMessageId),
+  ],
+);
+
+// Reply signatures (brief §6): one per person, per role address, or the default (neither).
+// Rendered per town at send time with {{town_name}}, {{user_name}}, {{role}}, {{domain}}.
+export const signatures = pgTable(
+  'signatures',
+  {
+    id: id(),
+    staffId: uuid('staff_id').references(() => staff.id, { onDelete: 'cascade' }),
+    localPart: text('local_part'),
+    bodyTemplate: text('body_template').notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [unique('signatures_owner_uq').on(t.staffId, t.localPart).nullsNotDistinct()],
 );

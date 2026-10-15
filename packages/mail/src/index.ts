@@ -119,3 +119,47 @@ export {
   s3AttachmentFiles,
   type AttachmentFiles,
 } from './inbox/files';
+export {
+  bodyParts,
+  DEFAULT_SIGNATURE,
+  fromDisplayName,
+  mailbox,
+  parseRecipientList,
+  pickSignature,
+  renderSignature,
+  replyRecipients,
+  replySubject,
+  type SignatureVars,
+} from './outbound/compose';
+export { handleSendingEvent, SENDING_EVENT_TYPES, sendingEventSchema } from './outbound/events';
+export {
+  buildMime,
+  newMessageId,
+  sesMessageIdCandidates,
+  type OutboundAttachment,
+} from './outbound/mime';
+export {
+  MAX_ATTACHMENT_BYTES,
+  MAX_RECIPIENTS,
+  sendNew,
+  sendReply,
+  SendError,
+  SuppressedRecipientsError,
+  type Actor,
+  type Draft,
+  type SendDeps,
+  type SendResult,
+} from './outbound/send';
+export {
+  suppress,
+  suppressedAddresses,
+  type Stream,
+  type SuppressedAddress,
+} from './outbound/suppression';
+export {
+  logTransport,
+  sesTransport,
+  tagValue,
+  type MailTransport,
+  type SendRequest,
+} from './outbound/transport';

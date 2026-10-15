@@ -191,3 +191,31 @@ Built 2026-10-15, after the owner said "go ahead with Mail-3". Choices made unde
   `admin_actions` with the thread as target.
 - **Keyboard**: `j` / `k` move through the list, `Enter` opens, `/` focuses search; in a thread
   `u` goes back to the list.
+
+## Mail-4 design (replies and new messages)
+
+Built 2026-10-15, after the owner said "go ahead with Mail-4". Choices made under bucket B:
+
+- **Message-ID.** SES replaces any Message-ID we set with its own (`<id@email.amazonses.com>`
+  in us-east-1, `<id@<region>.amazonses.com>` elsewhere; per the SES "header fields" docs). We
+  still set our own, store the SES one as the message's `rfc_message_id` and keep ours plus the
+  other SES form in `alt_message_ids`; inbound threading matches any of them. The brief's
+  "verify empirically" step happens on the first live send: check the Message-ID a test inbox
+  receives and drop the form that never appears.
+- **Sending is synchronous.** Send stores the message (`sending`), uploads attachments to S3,
+  builds MIME (nodemailer) and calls SES `SendEmail` with raw content, the conversational
+  configuration set and `domain` / `stream=conversational` tags. Success sets `sent`; a failure
+  sets `failed` with the reason on the message. Pressing Send is the Rule 10 approval
+  (D-MAIL-11). In development and CI `MAIL_TRANSPORT=log` writes the message to the server log.
+- **From** is the exact town address of the conversation (or the chosen role address for a new
+  message), named "{site name} {Role}", e.g. "Boca Town Square Sales"; catch-all addresses use
+  the site name alone. Signatures: one per person and role, per person, per role address, or
+  the default, with `{{town_name}}`, `{{user_name}}`, `{{role}}`, `{{domain}}`.
+- **Suppressions** are checked before every send. Hard bounces, complaints and manual blocks
+  apply to both streams; unsubscribes (Mail-5) only to bulk. A suppressed recipient stops the
+  send with a warning; the person can confirm and send anyway, which is audited.
+- **Events.** SES sending events (Send, Delivery, DeliveryDelay, Bounce, Complaint, Reject) are
+  stored per recipient in `email_events` and move the message's status forward only
+  (complained > bounced > rejected > delivered > delayed > sent). Permanent bounces and
+  complaints (except `not-spam` feedback) add global suppressions.
+- **Limits:** 50 recipients, 10 MB of attachments per message.
