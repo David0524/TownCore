@@ -1,6 +1,6 @@
 # Plan: Mail (multi-domain email platform)
 
-Status: **draft, waiting on the owner's rulings (D-MAIL-1 to D-MAIL-14).**
+Status: **approved 2026-10-15. The owner asked for my best judgment, so every recommendation below is taken.**
 Date: 2026-10-15
 Brief: [`docs/mail/BRIEF.md`](../mail/BRIEF.md), the owner's spec, kept as uploaded.
 
