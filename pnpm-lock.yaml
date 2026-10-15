@@ -234,7 +234,20 @@ importers:
 
   packages/directory: {}
 
-  packages/email: {}
+  packages/email:
+    dependencies:
+      '@towncore/config':
+        specifier: workspace:*
+        version: link:../config
+      '@towncore/db':
+        specifier: workspace:*
+        version: link:../db
+      '@towncore/pipeline':
+        specifier: workspace:*
+        version: link:../pipeline
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
 
   packages/infra:
     dependencies:

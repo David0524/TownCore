@@ -1,19 +1,10 @@
-import { townContactEmail, type TownConfig } from '@towncore/config';
+import { creativeSchema, townContactEmail, type TownConfig } from '@towncore/config';
 import { getActiveCampaign, type Town } from '@towncore/db';
-import { z } from 'zod';
 import { db } from '@/lib/db';
 import { newsletterOpen } from '@/lib/newsletter';
 import { slots, type SlotName } from './registry';
 
-// What a campaign may put in a slot. Text-only in M1; images arrive with the image rules (M4/M9).
-export const creativeSchema = z.strictObject({
-  headline: z.string().min(1).max(90),
-  body: z.string().max(200).optional(),
-  href: z.url(),
-  cta: z.string().max(30).optional(),
-  advertiser: z.string().min(1).max(80),
-});
-export type Creative = z.infer<typeof creativeSchema>;
+export { creativeSchema, type Creative } from '@towncore/config';
 
 export type SlotFill = {
   source: 'campaign' | 'house';
@@ -68,7 +59,7 @@ export function houseAd(town: Town, slot: SlotName, opts: { newsletter?: boolean
     href: `mailto:${contact}?subject=${encodeURIComponent(`Advertising in ${town.siteName}`)}`,
     cta: 'Get in touch',
   };
-  // Until the town's newsletter can send (Mail-5), the ad says it's coming (D-M1-1).
+  // The newsletter page shows the signup form, or "launching soon" until the town can send.
   const newsletter: SlotFill = opts.newsletter
     ? {
         source: 'house',
@@ -83,7 +74,7 @@ export function houseAd(town: Town, slot: SlotName, opts: { newsletter?: boolean
         label: `From ${town.siteName}`,
         headline: 'Our free morning email is launching soon',
         body: `${town.name} news from public records, every morning.`,
-        href: '/about',
+        href: '/newsletter',
         cta: 'Learn more',
       };
   const tips: SlotFill = {
