@@ -23,6 +23,7 @@
     "stories:once": "pnpm --filter @towncore/pipeline stories:once",
     "mail:routing:sync": "pnpm --filter @towncore/db mail:routing:sync",
     "mail:onboard": "pnpm --silent --filter @towncore/mail onboard",
+    "weather:once": "pnpm --filter @towncore/worker weather:once",
     "mail:import": "pnpm --silent --filter @towncore/mail import"
   },
   "devDependencies": {

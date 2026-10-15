@@ -70,3 +70,4 @@ export {
   type CounterKind,
   type RankableArticle,
 } from './ranking-queries';
+export { getTownWeather, saveTownWeather, WEATHER_MAX_AGE_MS } from './weather';

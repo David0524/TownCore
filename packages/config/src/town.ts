@@ -46,6 +46,12 @@ const sourceSchema = z.strictObject({
   url: z.union([z.literal(TBD), z.url()]).optional(),
   // NWS forecast zone, e.g. FLZ168.
   zone: z.string().min(1).optional(),
+  // NWS forecast point "lat,lon" for the Today weather tile (hourly forecast), e.g. the city
+  // center. Weather sources only.
+  point: z
+    .string()
+    .regex(/^-?\d{1,2}(\.\d+)?,-?\d{1,3}(\.\d+)?$/, 'expected "lat,lon"')
+    .optional(),
   schedule: scheduleSchema.optional(),
   // Other platform-specific settings, validated by the adapter.
   options: z.record(z.string(), z.union([z.string(), z.number(), z.array(z.string())])).optional(),

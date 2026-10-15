@@ -22,6 +22,7 @@ import {
   type InboundConfig,
 } from './mail';
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
+import { refreshWeather } from './weather';
 import { queues, schedules } from './queues';
 import {
   enqueueStoryFinders,
@@ -116,6 +117,10 @@ export async function startWorker({
 
   await boss.work(queues.bulkHealth, async () => {
     await runBulkHealth(db, logger);
+  });
+
+  await boss.work(queues.weather, async () => {
+    await refreshWeather(db, fetcher, logger);
   });
 
   for (const { queue, cron } of schedules) {

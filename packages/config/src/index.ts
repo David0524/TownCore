@@ -75,3 +75,4 @@ export {
   type Theme,
   type TypePairing,
 } from './theme';
+export type { WeatherAlert, WeatherHour, WeatherSnapshot } from './weather';
