@@ -142,13 +142,14 @@ export const layoutOptions = {
     'stacked-dateline',
     'slim-left',
     'nameplate-double-rule',
+    'tinted-bar',
   ],
   nav: ['beat-tabs', 'hamburger-only', 'text-nav'],
   grid: ['single-column', 'main-right-rail'],
   article: ['classic-rail', 'wide-reading'],
   // Directory templates are built in M6 with real data (decision D-M1-2).
   directory: ['list-map', 'category-grid', 'search-first'],
-  footer: ['three-column', 'minimal'],
+  footer: ['three-column', 'minimal', 'community'],
 } as const;
 
 export const homeModules = [
@@ -193,7 +194,8 @@ export const themeSchema = z
         .array(z.enum(homeModules))
         .min(1)
         .refine((list) => new Set(list).size === list.length, 'home modules must be unique'),
-      // A full-width band above the grid. `good-morning` (if listed) spans it. Then, by family:
+      // A full-width band above the grid. `good-morning` and `category-buttons` at its start span
+      // it. Then, by family:
       // coastal-modern and community put the first module in the wide column and the rest beside
       // it; heritage puts `lead-story` in the center, the modules before it on the left and the
       // ones after it on the right. Stacks on phones in list order.

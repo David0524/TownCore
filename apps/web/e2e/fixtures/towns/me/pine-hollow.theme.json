@@ -1,0 +1,29 @@
+{
+  "palette": {
+    "ink": "#17201A",
+    "accent": "#234B35",
+    "accentText": "#FFFFFF",
+    "tint": "#EEF3EC",
+    "surface": "#F6EFE6",
+    "background": "#FFFFFF",
+    "secondary": "#E8A33D",
+    "secondaryText": "#17201A"
+  },
+  "family": "community",
+  "type": "bricolage-figtree",
+  "masthead": "left-motif",
+  "layout": {
+    "header": "tinted-bar",
+    "nav": "beat-tabs",
+    "grid": "main-right-rail",
+    "homeTop": ["category-buttons", "briefing-column", "newsletter-cta", "today-bento"],
+    "home": ["beat-sections", "documents-posted"],
+    "homeRail": ["coming-up"],
+    "article": "classic-rail",
+    "directory": "search-first",
+    "footer": "community"
+  },
+  "corners": "round",
+  "motif": "lighthouse",
+  "identityNotes": "Fictional test town: a small mountain town of pines, trails and a Saturday farmers market. Forest green with a warm amber; friendly and plain-spoken."
+}

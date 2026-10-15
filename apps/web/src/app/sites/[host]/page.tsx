@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 import type { HomeModule } from '@towncore/config';
-import { bandNeedsCta, homeModules, homeOrder } from '@/modules/registry';
+import { bandNeedsCta, homeModules, homeOrder, SPANNING_MODULES } from '@/modules/registry';
 import { themeFor } from '@/lib/theme';
 import { requireTown } from '@/lib/town';
 import { ListBeacon } from '@/components/Beacon';
@@ -28,7 +28,9 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
       rendered.push({ key: `${module}${mobileOnly ? '-mobile' : ''}`, node, mobileOnly });
   }
   const hello = top.includes('good-morning') ? await render('good-morning') : null;
-  const split = top.filter((m) => m !== 'good-morning');
+  // Section tiles at the start of the band span it (community), like the greeting.
+  const spanning = top.includes('category-buttons') ? await render('category-buttons') : null;
+  const split = top.filter((m) => !SPANNING_MODULES.has(m));
   const topNodes = (await Promise.all(split.map(render))).map((node, i) => ({
     key: split[i]!,
     node,
@@ -76,6 +78,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
         {phoneTitle}
         {hello}
         <Slot town={town} name="home.top" />
+        {spanning}
         {threeColumn ? (
           <div className={styles.band3} data-band="three-column">
             <div className={styles.bandCol} data-band-col="side">
@@ -90,19 +93,17 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
           </div>
         ) : (
           <div className={styles.band}>
-            {topNodes.map(({ key, node }, i) =>
-              node === null ? null : (
-                <Fragment key={key}>
-                  <div
-                    className={i === 0 ? styles.bandMain : styles.bandSide}
-                    data-band-col={i === 0 ? 'main' : 'side'}
-                  >
-                    {node}
-                  </div>
-                  {i === 0 && bandCta ? <div className="mobile-only">{bandCta}</div> : null}
-                </Fragment>
-              ),
-            )}
+            {topNodes[0]?.node != null ? (
+              <div className={styles.bandMain} data-band-col="main">
+                {topNodes[0].node}
+              </div>
+            ) : null}
+            {bandCta ? <div className="mobile-only">{bandCta}</div> : null}
+            {topNodes.slice(1).some(({ node }) => node !== null) ? (
+              <div className={styles.bandSide} data-band-col="side">
+                {nodeList(topNodes.slice(1), false)}
+              </div>
+            ) : null}
           </div>
         )}
       </>

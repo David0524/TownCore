@@ -262,3 +262,29 @@ a.lineText:hover {
     font-weight: 400;
   }
 }
+
+/* community: conditions in the brand color with white text at every width. */
+@media (min-width: 600px) {
+  :global([data-family='community']) .tile {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-radius: var(--radius-widget);
+  }
+
+  :global([data-family='community']) .tile a,
+  :global([data-family='community']) .tile :global(.meta),
+  :global([data-family='community']) .tile .hilo,
+  :global([data-family='community']) .tile .hourTemp,
+  :global([data-family='community']) .tile .place {
+    color: var(--accent-text);
+  }
+
+  :global([data-family='community']) .temp {
+    font-family: var(--font-headline);
+    font-weight: var(--headline-weight);
+  }
+
+  :global([data-family='community']) .hours {
+    border-top-color: var(--accent-text);
+  }
+}

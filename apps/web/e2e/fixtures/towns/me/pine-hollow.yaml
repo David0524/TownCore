@@ -1,0 +1,14 @@
+# FICTIONAL test town (decision D-M1-5) that shows the `community` style family (docs/plans/M4b.md
+# revision 6). Seeded only in dev and CI by `pnpm --filter @towncore/web seed:fixtures`.
+# .test is a reserved TLD that can never resolve publicly.
+slug: pine-hollow
+name: Pine Hollow
+state: ME
+county: Fictional
+timezone: America/New_York
+site_name: Pine Hollow Daily
+domain: pinehollow.test
+tier: small
+newsletter_send_time: '06:30'
+agencies: [Town of Pine Hollow]
+pricing: { sponsored_slot_usd: 79, enhanced_usd: 15 }

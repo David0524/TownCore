@@ -1,11 +1,13 @@
 import type { Theme } from '@towncore/config';
 import type { ComponentType } from 'react';
+import { Community } from './footers/Community';
 import { Minimal } from './footers/Minimal';
 import { ThreeColumn } from './footers/ThreeColumn';
 import { CenteredMasthead } from './headers/CenteredMasthead';
 import { LeftLogoInlineNav } from './headers/LeftLogoInlineNav';
 import { NameplateDoubleRule } from './headers/NameplateDoubleRule';
 import { SlimLeft } from './headers/SlimLeft';
+import { TintedBar } from './headers/TintedBar';
 import { StackedDateline } from './headers/StackedDateline';
 import { BeatTabs } from './navs/BeatTabs';
 import { HamburgerOnly } from './navs/HamburgerOnly';
@@ -22,10 +24,15 @@ export const headers: Record<Layout['header'], ComponentType<HeaderProps>> = {
   'stacked-dateline': StackedDateline,
   'slim-left': SlimLeft,
   'nameplate-double-rule': NameplateDoubleRule,
+  'tinted-bar': TintedBar,
 };
 
 /** Headers that show the weather themselves, so the page doesn't add a weather line. */
-export const headersWithWeather = new Set<Layout['header']>(['slim-left', 'nameplate-double-rule']);
+export const headersWithWeather = new Set<Layout['header']>([
+  'slim-left',
+  'nameplate-double-rule',
+  'tinted-bar',
+]);
 
 export const navs: Record<Layout['nav'], ComponentType> = {
   'beat-tabs': BeatTabs,
@@ -36,4 +43,5 @@ export const navs: Record<Layout['nav'], ComponentType> = {
 export const footers: Record<Layout['footer'], ComponentType<PartProps>> = {
   'three-column': ThreeColumn,
   minimal: Minimal,
+  community: Community,
 };

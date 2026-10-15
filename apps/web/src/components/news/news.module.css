@@ -347,3 +347,16 @@
     font-family: var(--font-meta);
   }
 }
+
+/* community: big display-face section titles without the ink rule. */
+@media (min-width: 600px) {
+  :global([data-family='community']) .sectionHeader {
+    border-bottom: 0;
+  }
+
+  :global([data-family='community']) .sectionHeader h1,
+  :global([data-family='community']) .sectionHeader h2 {
+    font-size: clamp(1.75rem, 1.3rem + 1.4vw, 2.5rem);
+    letter-spacing: -0.02em;
+  }
+}

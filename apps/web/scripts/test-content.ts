@@ -91,8 +91,8 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
       },
     ];
   }
-  // The fictional family showcases (Harbor Point, heritage) get a few short items so the
-  // front's columns and section lists have something to show.
+  // The fictional family showcases (Harbor Point, heritage; Pine Hollow, community) get a few
+  // short items so their fronts and section lists have something to show.
   const extra = (prefix: string): TestStory[] =>
     [
       ['government', 'Select board sets a sample public hearing date', 5],
@@ -113,6 +113,7 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
     }));
   return [
     ...(townSlug === 'harbor-point' ? extra('harbor') : []),
+    ...(townSlug === 'pine-hollow' ? extra('pine') : []),
     {
       slug: 'test-site-plan',
       headline: `[TEST] Fictional planning board reviews a sample site plan`,

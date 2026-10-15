@@ -12,6 +12,7 @@ const hosts = [
   'bocatownsquare.com',
   'www.bocatownsquare.com',
   'harborpoint.test',
+  'pinehollow.test',
   'unknown-town.example',
   // Staff admin host (APP_BASE_URL below), and the fixture town admin tests publish to.
   'admin.test',

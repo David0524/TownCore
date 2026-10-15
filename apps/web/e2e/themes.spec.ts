@@ -103,3 +103,45 @@ test('heritage puts the lead in the center column between Today and the briefs',
     'rgb(179, 38, 30)',
   );
 });
+
+test('three families render, with the locked elements identical', async ({ page, isMobile }) => {
+  const pine = 'http://pinehollow.test';
+  await page.goto(`${pine}/`);
+  await expect(page.locator('[data-family="community"]')).toHaveCount(1);
+  if (!isMobile) {
+    for (const part of ['header:tinted-bar', 'grid:main-right-rail', 'footer:community']) {
+      await expect(page.locator(`[data-part="${part}"]`), part).toHaveCount(1);
+    }
+    // The tinted bar is the brand color; the sign-up button is the warm secondary.
+    const bar = page.locator('[data-part="header:tinted-bar"] > div').first();
+    expect(await bar.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+      'rgb(35, 75, 53)',
+    );
+  }
+  await expect(page.locator('[data-module="briefing-column"]')).toContainText(
+    'Today in Pine Hollow',
+  );
+
+  // Locked across families: the sponsored-unit label style and the category dot colors.
+  const locked = async (url: string) => {
+    await page.goto(`${url}/`);
+    return page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement);
+      return {
+        sand: root.getPropertyValue('--sand').trim(),
+        alert: root.getPropertyValue('--alert').trim(),
+        news: root.getPropertyValue('--cat-news').trim(),
+        business: root.getPropertyValue('--cat-business').trim(),
+        family: document.querySelector('[data-family]')?.getAttribute('data-family'),
+      };
+    });
+  };
+  const looks = [];
+  for (const url of [towns.boca.url, towns.harbor.url, pine]) looks.push(await locked(url));
+  expect(new Set(looks.map((l) => l.family))).toEqual(
+    new Set(['coastal-modern', 'heritage', 'community']),
+  );
+  for (const look of looks.slice(1)) {
+    expect({ ...look, family: '' }).toEqual({ ...looks[0], family: '' });
+  }
+});

@@ -137,7 +137,7 @@ export const Briefs: HomeModuleComponent = async ({ town, modules }) => {
 };
 
 /** Newsletter-style dated list; good for smaller towns (CLAUDE.md §11a-2). */
-export const BriefingColumn: HomeModuleComponent = async ({ town }) => {
+export const BriefingColumn: HomeModuleComponent = async ({ town, theme }) => {
   const articles = (await recentArticles(town.id)).slice(0, 8);
   if (articles.length === 0) return null;
   const byDay = new Map<string, Article[]>();
@@ -147,7 +147,9 @@ export const BriefingColumn: HomeModuleComponent = async ({ town }) => {
   }
   return (
     <section className={`${styles.module} ${styles.briefing}`} data-module="briefing-column">
-      <SectionHeader title="The briefing" />
+      <SectionHeader
+        title={theme.family === 'community' ? `Today in ${town.name}` : 'The briefing'}
+      />
       {[...byDay].map(([day, dayArticles]) => (
         <div key={day}>
           <p className={`meta ${styles.day}`}>{day}</p>
