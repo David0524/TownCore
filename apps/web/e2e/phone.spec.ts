@@ -92,3 +92,86 @@ test.describe('tab pages', () => {
     await expect(page.getByTestId('search-results')).toContainText('No stories match');
   });
 });
+
+test.describe('Your town, app icons and the Home Screen card', () => {
+  test('the Your town sheet floats followed sections to the top, saved on the device', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!isMobile, 'phone chrome');
+    await page.goto(`${boca}/`);
+    await expect(page.getByTestId('your-town-sheet')).toBeHidden();
+    await page.getByRole('button', { name: 'Your Boca Raton' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Your Boca Raton' });
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('switch', { name: 'Business' }).check({ force: true });
+    await expect(sheet.getByRole('switch', { name: 'Business' })).toBeChecked();
+    await sheet.getByRole('button', { name: 'Done' }).click();
+    await expect(sheet).toBeHidden();
+
+    // After a reload the choice is applied before paint and Business leads the sections.
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-follow', 'business');
+    const order = await page
+      .locator('[data-module="beat-sections"] > [data-follow-beat]')
+      .evaluateAll((els) =>
+        els
+          .map((el) => ({
+            beat: el.getAttribute('data-follow-beat'),
+            y: el.getBoundingClientRect().y,
+          }))
+          .sort((a, b) => a.y - b.y)
+          .map((s) => s.beat),
+      );
+    if (order.includes('business')) expect(order[0]).toBe('business');
+  });
+
+  test('each town has a web app manifest and icons drawn from its theme', async ({ page }) => {
+    await page.goto(`${boca}/`);
+    await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+      'href',
+      '/manifest.webmanifest',
+    );
+    await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
+      'href',
+      '/apple-touch-icon.png',
+    );
+    for (const url of [boca, harbor]) {
+      // Through the browser, which resolves our test hosts to the local server.
+      const manifest = (await page.goto(`${url}/manifest.webmanifest`))!;
+      expect(manifest.status()).toBe(200);
+      const json = await manifest.json();
+      expect(json).toMatchObject({ start_url: '/', display: 'standalone' });
+      expect(JSON.stringify(json)).not.toMatch(/towncore/i);
+      for (const icon of ['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png']) {
+        const res = (await page.goto(`${url}${icon}`))!;
+        expect(res.status(), icon).toBe(200);
+        expect(res.headers()['content-type']).toBe('image/png');
+      }
+    }
+    const boca192 = await (await page.goto(`${boca}/icon-192.png`))!.body();
+    const harbor192 = await (await page.goto(`${harbor}/icon-192.png`))!.body();
+    expect(boca192.equals(harbor192)).toBe(false);
+  });
+
+  test('the Home Screen card appears from the second visit and stays dismissed', async ({
+    page,
+    context,
+    isMobile,
+  }) => {
+    test.skip(!isMobile, 'phone chrome');
+    await page.goto(`${boca}/`);
+    await expect(page.getByTestId('home-screen-card')).toHaveCount(0);
+    // A new tab is a new visit (one per browser session).
+    const second = await context.newPage();
+    await second.goto(`${boca}/`);
+    const card = second.getByTestId('home-screen-card');
+    await expect(card).toContainText('Put Boca Raton on your Home Screen');
+    await card.getByRole('button', { name: 'Not now' }).click();
+    await expect(card).toHaveCount(0);
+    const third = await context.newPage();
+    await third.goto(`${boca}/`);
+    await third.waitForLoadState('networkidle');
+    await expect(third.getByTestId('home-screen-card')).toHaveCount(0);
+  });
+});

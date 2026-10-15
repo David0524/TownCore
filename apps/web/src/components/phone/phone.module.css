@@ -48,6 +48,8 @@
 .barEnd {
   grid-column: 3;
   justify-self: end;
+  display: flex;
+  align-items: center;
 }
 
 .barTemp {
@@ -288,4 +290,65 @@ a.row:hover .rowLabel {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+/* "Put {Town} on your Home Screen": floats above the tab bar (no layout shift). */
+.homeScreen {
+  position: fixed;
+  z-index: 25;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: calc(var(--tab-bar) + env(safe-area-inset-bottom) + 0.5rem);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
+  border-radius: var(--radius-group);
+  background: var(--ios-grouped);
+  border: 0.5px solid var(--ios-separator);
+}
+
+.homeScreenText {
+  flex: 1;
+  min-width: 0;
+}
+
+.homeScreenTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.homeScreenHow {
+  margin: 0.15rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.homeScreenHow svg {
+  vertical-align: -2px;
+  color: var(--accent);
+}
+
+.homeScreenAdd,
+.homeScreenClose {
+  min-height: 44px;
+  padding: 0 0.6rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.homeScreenAdd {
+  border-radius: var(--radius-button);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  padding: 0 1rem;
+}
+
+.homeScreenClose {
+  color: var(--accent);
 }

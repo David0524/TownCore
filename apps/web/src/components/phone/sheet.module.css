@@ -1,0 +1,207 @@
+/* iOS sheet (canvas YourBocaSheet): rises from the bottom on grouped gray, with a grabber, a
+   centered 17pt title and a Done button. No animation, so reduced motion needs nothing more. */
+
+.open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.sheet {
+  position: fixed;
+  inset: auto 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100dvh - 3rem);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-group) var(--radius-group) 0 0;
+  background: var(--ios-grouped);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sheet::backdrop {
+  background: var(--ios-scrim);
+}
+
+@media (min-width: 600px) {
+  .sheet {
+    inset: 0;
+    margin: auto;
+    width: min(26rem, calc(100% - 2rem));
+    max-height: min(40rem, calc(100dvh - 4rem));
+    border-radius: var(--radius-group);
+  }
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  padding: 0.4rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+}
+
+.grabber {
+  align-self: center;
+  width: 36px;
+  height: 5px;
+  border-radius: var(--radius-capsule);
+  background: var(--ios-separator);
+}
+
+.titleBar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin: 0.25rem -0.5rem 0.5rem;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.done {
+  justify-self: end;
+  min-height: 44px;
+  padding: 0 0.6rem;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.intro {
+  margin: 0 0.25rem 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* iOS-style section header of a grouped list: the one place all caps is allowed (§11a). */
+.groupTitle {
+  margin: 0 1rem 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.group {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--radius-button);
+  background: var(--background);
+  overflow: hidden;
+}
+
+.group > li {
+  padding-left: 1rem;
+}
+
+.group > li + li .row {
+  border-top: 0.5px solid var(--ios-separator);
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding-right: 1rem;
+  color: var(--ink);
+  font-size: 1.0625rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.rowLabel {
+  flex: 1;
+}
+
+.value {
+  color: var(--muted);
+}
+
+.chevron {
+  display: inline-flex;
+  color: var(--ios-separator);
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-field);
+  flex: none;
+}
+
+.groupFooter {
+  margin: 0.4rem 1rem 1.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/* The switch: a real checkbox (keyboard, screen readers), drawn as the iOS switch. */
+.switchInput {
+  position: absolute;
+  opacity: 0;
+  width: 51px;
+  height: 31px;
+  right: 1rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 51px;
+  height: 31px;
+  border-radius: var(--radius-capsule);
+  background: var(--ios-switch-off);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: var(--round);
+  background: var(--background);
+  border: 0.5px solid var(--ios-separator);
+}
+
+.switchInput:checked + .switch {
+  background: var(--ios-switch-on);
+}
+
+.switchInput:checked + .switch::after {
+  left: 22px;
+}
+
+.switchInput:focus-visible + .switch {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}

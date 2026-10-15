@@ -4,6 +4,7 @@ import { bandNeedsCta, homeModules, homeOrder } from '@/modules/registry';
 import { themeFor } from '@/lib/theme';
 import { requireTown } from '@/lib/town';
 import { ListBeacon } from '@/components/Beacon';
+import { HomeScreenCard } from '@/components/phone/HomeScreenCard';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { greeting } from '@/modules/front';
 import { Slot } from '@/slots/Slot';
@@ -80,6 +81,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
       railModules={railNodes.length > 0 ? railNodes : null}
     >
       <ListBeacon />
+      <HomeScreenCard townName={town.name} />
       <h1 className="sr-only">
         {town.siteName}: local news for {town.name}, {town.state}
       </h1>

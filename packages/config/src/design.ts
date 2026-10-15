@@ -93,6 +93,11 @@ export const iosColors = {
   /** Tab bar: translucent over content, solid when the reader asks for less transparency. */
   chrome: 'rgba(249, 249, 249, 0.94)',
   chromeSolid: '#F9F9F9',
+  /** Switch track when on (iOS system green). Graphic only, never text. */
+  switchOn: '#34C759',
+  switchOff: '#E3E7EC',
+  /** Sheet backdrop. */
+  scrim: 'rgba(0, 0, 0, 0.4)',
 } as const;
 
 /** System stacks only: Apple devices get San Francisco and New York; we never ship their files. */
