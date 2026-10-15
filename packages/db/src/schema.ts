@@ -585,12 +585,30 @@ export const subscribers = pgTable(
       .references(() => towns.id),
     email: text('email').notNull(),
     status: subscriberStatus('status').notNull().default('pending'),
+    // Consent evidence (brief §7.3): where and when they asked, from which IP, and when they
+    // confirmed by double opt-in (or the approved import that brought them in).
     consentAt: timestamp('consent_at', { withTimezone: true }),
     source: text('source'),
+    consentSource: text('consent_source'),
+    consentIp: text('consent_ip'),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    unsubscribedAt: timestamp('unsubscribed_at', { withTimezone: true }),
+    lastEngagedAt: timestamp('last_engaged_at', { withTimezone: true }),
+    // Confirmation emails sent: rate limits (one per 10 minutes, three a day).
+    confirmSentAt: timestamp('confirm_sent_at', { withTimezone: true }),
+    confirmSendsToday: integer('confirm_sends_today').notNull().default(0),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex('subscribers_town_email_uq').on(t.townId, sql`lower(${t.email})`)],
+  (t) => [
+    uniqueIndex('subscribers_town_email_uq').on(t.townId, sql`lower(${t.email})`),
+    index('subscribers_town_status_idx').on(t.townId, t.status),
+    index('subscribers_consent_ip_idx').on(t.consentIp, t.createdAt),
+    check(
+      'subscribers_active_confirmed',
+      sql`${t.status} <> 'active' or ${t.confirmedAt} is not null`,
+    ),
+  ],
 );
 
 export const newsletterIssues = pgTable(
@@ -735,6 +753,13 @@ export const mailDomains = pgTable(
     failureReason: text('failure_reason'),
     // CAN-SPAM footer address; null means the company-wide MAIL_POSTAL_ADDRESS.
     postalAddress: text('postal_address'),
+    // Warm-up (Mail-5): the cap grows toward this target; breach days in a row hold or step back.
+    bulkTargetCap: integer('bulk_target_cap').notNull().default(50_000),
+    warmupBreaches: integer('warmup_breaches').notNull().default(0),
+    warmupCheckedOn: date('warmup_checked_on'),
+    // D-MAIL-11: an admin's standing approval for the daily newsletter on this domain.
+    newsletterApprovedAt: timestamp('newsletter_approved_at', { withTimezone: true }),
+    newsletterApprovedBy: uuid('newsletter_approved_by').references(() => staff.id),
     // A running onboarding holds this lease so two runs never work on one domain at once.
     leaseUntil: timestamp('lease_until', { withTimezone: true }),
     // Set by "Re-check" in /admin/mail/domains; the worker's next mail tick clears it.
@@ -1051,6 +1076,9 @@ export const emailEvents = pgTable(
     sesMessageId: text('ses_message_id').notNull(),
     recipient: text('recipient').notNull(),
     configurationSet: text('configuration_set'),
+    // From the message's domain_id and stream tags (Mail-5); null for mail sent before them.
+    domainId: uuid('domain_id').references(() => mailDomains.id, { onDelete: 'set null' }),
+    stream: text('stream'),
     occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
     createdAt: createdAt(),
   },
@@ -1074,3 +1102,123 @@ export const signatures = pgTable(
   },
   (t) => [unique('signatures_owner_uq').on(t.staffId, t.localPart).nullsNotDistinct()],
 );
+
+// Newsletters and bulk mail (docs/plans/MAIL.md, Mail-5).
+export const emailCampaignStatus = pgEnum('email_campaign_status', [
+  'draft',
+  'scheduled',
+  'sending',
+  'sent',
+  'paused',
+  'cancelled',
+]);
+export const emailCampaignKind = pgEnum('email_campaign_kind', ['campaign', 'newsletter']);
+export const campaignSendStatus = pgEnum('campaign_send_status', [
+  'queued',
+  'deferred_cap',
+  'sending',
+  'sent',
+  'delivered',
+  'bounced',
+  'complained',
+  'suppressed',
+  'failed',
+]);
+
+// One template that fans out to many towns with {{site_name}}, {{town_name}}, {{domain}}.
+export const emailCampaignTemplates = pgTable('email_campaign_templates', {
+  id: id(),
+  name: text('name').notNull(),
+  subjectTemplate: text('subject_template').notNull(),
+  bodyTemplate: text('body_template').notNull(),
+  createdBy: uuid('created_by').references(() => staff.id),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const emailCampaigns = pgTable(
+  'email_campaigns',
+  {
+    id: id(),
+    domainId: uuid('domain_id')
+      .notNull()
+      .references(() => mailDomains.id),
+    templateId: uuid('template_id').references(() => emailCampaignTemplates.id),
+    kind: emailCampaignKind('kind').notNull().default('campaign'),
+    newsletterIssueId: uuid('newsletter_issue_id').references(() => newsletterIssues.id),
+    subject: text('subject').notNull(),
+    html: text('html').notNull(),
+    text: text('text').notNull(),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+    status: emailCampaignStatus('status').notNull().default('draft'),
+    pausedReason: text('paused_reason'),
+    createdBy: uuid('created_by').references(() => staff.id),
+    // Rule 10 / D-MAIL-11: who approved this send (null for newsletter issues sent under the
+    // domain's standing approval).
+    approvedBy: uuid('approved_by').references(() => staff.id),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    expandedAt: timestamp('expanded_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('email_campaigns_status_idx').on(t.status, t.scheduledAt),
+    check(
+      'email_campaigns_approved',
+      sql`${t.status} in ('draft', 'cancelled') or ${t.kind} = 'newsletter' or ${t.approvedBy} is not null`,
+    ),
+  ],
+);
+
+export const emailCampaignSends = pgTable(
+  'email_campaign_sends',
+  {
+    id: id(),
+    campaignId: uuid('campaign_id')
+      .notNull()
+      .references(() => emailCampaigns.id, { onDelete: 'cascade' }),
+    subscriberId: uuid('subscriber_id')
+      .notNull()
+      .references(() => subscribers.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    // Warm-up order: most recently confirmed or engaged first.
+    priority: timestamp('priority', { withTimezone: true }),
+    status: campaignSendStatus('status').notNull().default('queued'),
+    sesMessageId: text('ses_message_id'),
+    error: text('error'),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique('email_campaign_sends_uq').on(t.campaignId, t.subscriberId),
+    index('email_campaign_sends_status_idx').on(t.campaignId, t.status),
+    index('email_campaign_sends_ses_idx').on(t.sesMessageId),
+  ],
+);
+
+// Per domain, day (UTC) and stream, from SES events: warm-up and auto-pause read this.
+export const domainHealthDaily = pgTable(
+  'domain_health_daily',
+  {
+    domainId: uuid('domain_id')
+      .notNull()
+      .references(() => mailDomains.id, { onDelete: 'cascade' }),
+    date: date('date').notNull(),
+    stream: text('stream').notNull(),
+    sent: integer('sent').notNull().default(0),
+    delivered: integer('delivered').notNull().default(0),
+    bounced: integer('bounced').notNull().default(0),
+    complained: integer('complained').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.domainId, t.date, t.stream] })],
+);
+
+// Network-wide mail switches, e.g. bulk_paused (brief §7.2).
+export const mailSettings = pgTable('mail_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedAt: updatedAt(),
+});
