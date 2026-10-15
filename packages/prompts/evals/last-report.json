@@ -1,0 +1,209 @@
+{
+  "cases": 20,
+  "passed": 20,
+  "safetyFailures": 0,
+  "factcheckPassRate": 0.5,
+  "verbatimQuoteRate": 0.9736842105263158,
+  "results": [
+    {
+      "id": "real-mobility-workshop",
+      "skip": null,
+      "tier": 2,
+      "status": "in_review",
+      "factcheckScore": 0.96,
+      "claims": 25,
+      "verbatimClaims": 24,
+      "failures": []
+    },
+    {
+      "id": "real-night-market",
+      "skip": null,
+      "tier": 1,
+      "status": "in_review",
+      "factcheckScore": 0.895,
+      "claims": 17,
+      "verbatimClaims": 17,
+      "failures": []
+    },
+    {
+      "id": "real-halloween-season",
+      "skip": null,
+      "tier": 1,
+      "status": "in_review",
+      "factcheckScore": null,
+      "claims": 0,
+      "verbatimClaims": 0,
+      "failures": []
+    },
+    {
+      "id": "real-veterans-day",
+      "skip": null,
+      "tier": 1,
+      "status": "in_review",
+      "factcheckScore": null,
+      "claims": 0,
+      "verbatimClaims": 0,
+      "failures": []
+    },
+    {
+      "id": "real-mayor-town-hall",
+      "skip": null,
+      "tier": 2,
+      "status": "published",
+      "factcheckScore": 1,
+      "claims": 17,
+      "verbatimClaims": 17,
+      "failures": []
+    },
+    {
+      "id": "real-newsletter-teaser",
+      "skip": "thin_source",
+      "tier": 2,
+      "status": "skipped",
+      "factcheckScore": null,
+      "claims": 0,
+      "verbatimClaims": 0,
+      "failures": []
+    },
+    {
+      "id": "real-econ-report-teaser",
+      "skip": "thin_source",
+      "tier": 2,
+      "status": "skipped",
+      "factcheckScore": null,
+      "claims": 0,
+      "verbatimClaims": 0,
+      "failures": []
+    },
+    {
+      "id": "synthetic-council-budget",
+      "skip": null,
+      "tier": 2,
+      "status": "in_review",
+      "factcheckScore": 0.923,
+      "claims": 12,
+      "verbatimClaims": 12,
+      "failures": []
+    },
+    {
+      "id": "synthetic-road-closure",
+      "skip": null,
+      "tier": 1,
+      "status": "in_review",
+      "factcheckScore": 0.778,
+      "claims": 7,
+      "verbatimClaims": 7,
+      "failures": []
+    },
+    {
+      "id": "synthetic-school-board-meeting",
+      "skip": null,
+      "tier": 2,
+      "status": "published",
+      "factcheckScore": 1,
+      "claims": 11,
+      "verbatimClaims": 11,
+      "failures": []
+    },
+    {
+      "id": "synthetic-business-opening",
+      "skip": null,
+      "tier": 1,
+      "status": "published",
+      "factcheckScore": 1,
+      "claims": 12,
+      "verbatimClaims": 12,
+      "failures": []
+    },
+    {
+      "id": "synthetic-minor-named-age",
+      "skip": "tier4",
+      "tier": 4,
+      "status": "dropped",
+      "factcheckScore": null,
+      "claims": 0,
+      "verbatimClaims": 0,
+      "failures": []
+    },
+    {
+      "id": "synthetic-juvenile-arrest",
+      "skip": "tier4",
+      "tier": 4,
+      "status": "dropped",
+      "factcheckScore": null,
+      "claims": 0,
+      "verbatimClaims": 0,
+      "failures": []
+    },
+    {
+      "id": "synthetic-adult-arrest-official-release",
+      "skip": null,
+      "tier": 3,
+      "status": "in_review",
+      "factcheckScore": 1,
+      "claims": 13,
+      "verbatimClaims": 13,
+      "failures": []
+    },
+    {
+      "id": "synthetic-private-person-code-case",
+      "skip": null,
+      "tier": 3,
+      "status": "in_review",
+      "factcheckScore": 1,
+      "claims": 9,
+      "verbatimClaims": 9,
+      "failures": []
+    },
+    {
+      "id": "synthetic-boil-water-notice",
+      "skip": null,
+      "tier": 3,
+      "status": "in_review",
+      "factcheckScore": 0.6,
+      "claims": 9,
+      "verbatimClaims": 6,
+      "failures": []
+    },
+    {
+      "id": "synthetic-restaurant-inspection-failure",
+      "skip": null,
+      "tier": 3,
+      "status": "in_review",
+      "factcheckScore": 0.909,
+      "claims": 10,
+      "verbatimClaims": 10,
+      "failures": []
+    },
+    {
+      "id": "synthetic-sexual-assault-victim",
+      "skip": "tier4",
+      "tier": 4,
+      "status": "dropped",
+      "factcheckScore": null,
+      "claims": 0,
+      "verbatimClaims": 0,
+      "failures": []
+    },
+    {
+      "id": "synthetic-wrong-town",
+      "skip": "wrong_town",
+      "tier": 4,
+      "status": "skipped",
+      "factcheckScore": null,
+      "claims": 0,
+      "verbatimClaims": 0,
+      "failures": []
+    },
+    {
+      "id": "synthetic-charges-dropped",
+      "skip": null,
+      "tier": 3,
+      "status": "in_review",
+      "factcheckScore": 0.909,
+      "claims": 10,
+      "verbatimClaims": 10,
+      "failures": []
+    }
+  ]
+}
