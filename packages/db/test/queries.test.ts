@@ -3,13 +3,14 @@ import { loadTowns } from '@towncore/config';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Db } from '../src/client';
 import {
+  getActiveCampaign,
   getTownByHost,
   getTownBySlug,
   listLiveTowns,
   listPublishedArticles,
   normalizeHost,
 } from '../src/queries';
-import { articles, records, sources, towns } from '../src/schema';
+import { articles, campaigns, records, sources, towns } from '../src/schema';
 import { createTestDb } from '../src/testing';
 import { syncTowns } from '../src/towns';
 import { eq } from 'drizzle-orm';
@@ -113,5 +114,60 @@ describe('town and article queries', () => {
     expect((await listPublishedArticles(db, townId, { limit: 1 })).map((a) => a.slug)).toEqual([
       'new',
     ]);
+  });
+
+  it('picks the active, in-window, highest-priority campaign for a slot', async () => {
+    const now = new Date('2026-06-01T12:00:00Z');
+    const day = 86_400_000;
+    const base = { townId, slot: 'home.top', creative: { headline: 'x' } };
+    await db.insert(campaigns).values([
+      {
+        ...base,
+        priority: 1,
+        status: 'active',
+        startsAt: new Date(now.getTime() - day),
+        creative: { headline: 'low' },
+      },
+      {
+        ...base,
+        priority: 5,
+        status: 'active',
+        startsAt: new Date(now.getTime() - day),
+        creative: { headline: 'high' },
+      },
+      {
+        ...base,
+        priority: 9,
+        status: 'paused',
+        startsAt: new Date(now.getTime() - day),
+        creative: { headline: 'paused' },
+      },
+      {
+        ...base,
+        priority: 9,
+        status: 'active',
+        startsAt: new Date(now.getTime() + day),
+        creative: { headline: 'future' },
+      },
+      {
+        ...base,
+        priority: 9,
+        status: 'active',
+        startsAt: new Date(now.getTime() - 2 * day),
+        endsAt: new Date(now.getTime() - day),
+        creative: { headline: 'ended' },
+      },
+      {
+        ...base,
+        slot: 'rail.box',
+        priority: 9,
+        status: 'active',
+        startsAt: new Date(now.getTime() - day),
+        creative: { headline: 'other slot' },
+      },
+    ]);
+    const campaign = await getActiveCampaign(db, townId, 'home.top', now);
+    expect(campaign?.creative).toEqual({ headline: 'high' });
+    expect(await getActiveCampaign(db, townId, 'article.inline', now)).toBeNull();
   });
 });

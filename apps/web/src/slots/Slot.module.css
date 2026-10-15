@@ -1,0 +1,73 @@
+/* Locked component (CLAUDE.md §11a-2, §11b): the same structure and label style in every town,
+   visibly distinct from editorial content. Height is reserved so fills never shift the page. */
+.slot {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--slot-h-mobile);
+  height: var(--slot-h-mobile);
+  overflow: hidden;
+  border: 1px dashed var(--ink);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin: 1.5rem 0;
+}
+
+@media (min-width: 64rem) {
+  .slot {
+    min-height: var(--slot-h-desktop);
+    height: var(--slot-h-desktop);
+  }
+}
+
+.label {
+  align-self: flex-start;
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  color: var(--background);
+  background: var(--ink);
+}
+
+.card {
+  flex: 1;
+  display: grid;
+  align-content: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.card:hover .headline {
+  text-decoration: underline;
+}
+
+.headline,
+.body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Text is clamped so a fill can never overflow its reserved height mid-line. */
+.headline {
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.35;
+  -webkit-line-clamp: 2;
+}
+
+.body {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  -webkit-line-clamp: 2;
+}
+
+.cta {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent);
+}

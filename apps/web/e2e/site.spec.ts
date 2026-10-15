@@ -11,7 +11,9 @@ test.describe('multi-tenant routing', () => {
       await expect(
         page.getByRole('banner').getByRole('link', { name: 'Boca Town Square' }),
       ).toBeVisible();
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Boca Town Square');
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        'Boca Town Square: local news for Boca Raton, FL',
+      );
     });
   }
 

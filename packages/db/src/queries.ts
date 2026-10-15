@@ -1,9 +1,10 @@
-import { and, arrayContains, desc, eq, or } from 'drizzle-orm';
+import { and, arrayContains, desc, eq, gt, isNull, lte, or } from 'drizzle-orm';
 import type { Db } from './client';
-import { articles, towns } from './schema';
+import { articles, campaigns, towns } from './schema';
 
 export type Town = typeof towns.$inferSelect;
 export type Article = typeof articles.$inferSelect;
+export type Campaign = typeof campaigns.$inferSelect;
 
 /**
  * Strips port, trailing dot and a leading "www." and lowercases. Returns null for anything
@@ -55,4 +56,28 @@ export async function listPublishedArticles(
     )
     .orderBy(desc(articles.publishedAt))
     .limit(limit);
+}
+
+/** The highest-priority active campaign running now in a town's slot, if any. */
+export async function getActiveCampaign(
+  db: Db,
+  townId: string,
+  slot: string,
+  now: Date = new Date(),
+): Promise<Campaign | null> {
+  const [campaign] = await db
+    .select()
+    .from(campaigns)
+    .where(
+      and(
+        eq(campaigns.townId, townId),
+        eq(campaigns.slot, slot),
+        eq(campaigns.status, 'active'),
+        lte(campaigns.startsAt, now),
+        or(isNull(campaigns.endsAt), gt(campaigns.endsAt, now)),
+      ),
+    )
+    .orderBy(desc(campaigns.priority), desc(campaigns.startsAt))
+    .limit(1);
+  return campaign ?? null;
 }
