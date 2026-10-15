@@ -381,6 +381,8 @@ export const articles = pgTable(
     claims: jsonb('claims'),
     factcheck: jsonb('factcheck'),
     candidateId: uuid('candidate_id'),
+    // story | roundup | alert | guide: sets its freshness half-life in ranking (CLAUDE.md §6a).
+    kind: text('kind').notNull().default('story'),
     // e.g. ["writer@v1", "factcheck@v1"]: the prompts that produced this article.
     promptVersions: text('prompt_versions').array(),
     // Why it's in the review queue: tier3 | sample | factcheck | model_error | minor_override.
@@ -456,6 +458,48 @@ export const articleLinks = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex('article_links_uq').on(t.fromArticleId, t.toArticleId, t.kind)],
+);
+
+// Pinned stories (CLAUDE.md §6a): staff pins, and auto-pins for severe weather and road closures.
+export const pins = pgTable(
+  'pins',
+  {
+    id: id(),
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    reason: text('reason').notNull(),
+    // Null for automatic pins.
+    createdBy: uuid('created_by').references(() => staff.id),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('pins_town_expires_idx').on(t.townId, t.expiresAt)],
+);
+
+// First-party, cookieless engagement counters per article and day (D-M4-3). No cookies, no IP
+// addresses, no user identifiers: only counts.
+export const articleStatsDaily = pgTable(
+  'article_stats_daily',
+  {
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    day: date('day').notNull(),
+    views: integer('views').notNull().default(0),
+    listImpressions: integer('list_impressions').notNull().default(0),
+    listClicks: integer('list_clicks').notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.articleId, t.day] }),
+    index('article_stats_town_day_idx').on(t.townId, t.day),
+  ],
 );
 
 export const corrections = pgTable(

@@ -2,6 +2,7 @@ import { Fragment, type ReactNode } from 'react';
 import { homeModules, homeOrder } from '@/modules/registry';
 import { themeFor } from '@/lib/theme';
 import { requireTown } from '@/lib/town';
+import { ListBeacon } from '@/components/Beacon';
 import { Slot } from '@/slots/Slot';
 import { TownGrid } from '@/layout/TownGrid';
 
@@ -22,6 +23,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
 
   return (
     <TownGrid town={town} kind={theme.layout.grid}>
+      <ListBeacon />
       <h1 className="sr-only">
         {town.siteName}: local news for {town.name}, {town.state}
       </h1>

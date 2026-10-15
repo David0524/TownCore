@@ -1,0 +1,14 @@
+# FICTIONAL test town, the only fixture that is live: the sitemap, news sitemap and RSS tests
+# need a town whose stories are listed (docs/plans/M4.md §1). Seeded only in dev and CI.
+# .test is a reserved TLD that can never resolve publicly.
+slug: feed-town
+name: Feed Town
+state: ME
+county: Fictional
+timezone: America/New_York
+site_name: The Feed Town Gazette
+domain: feedtown.test
+tier: small
+newsletter_send_time: '07:00'
+agencies: [Town of Feed Town]
+pricing: { sponsored_slot_usd: 99, enhanced_usd: 19 }
