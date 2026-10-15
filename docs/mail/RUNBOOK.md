@@ -166,8 +166,7 @@ pnpm mail:onboard retry testtown.com --execute     # after fixing whatever faile
 `{{town_name}}` and `{{domain}}`). "Send a test to me" goes only to the person pressing it. An
 admin presses "Approve send" (Rule 10), now or at a UTC time; the worker then sends in batches
 under the domain's daily cap. Templates make one draft per chosen town. The daily newsletter
-(M5) sends only on domains whose page shows "Daily newsletter: approved", a switch an admin
-turns on per domain.
+(M5) is managed in Admin → Newsletter (see "The daily newsletter" below).
 
 **Warm-up.** New domains start at 50 a day; the cap doubles every 3 healthy days up to the
 target (50,000 by default). A day over the thresholds holds the ramp; two in a row step it back.
@@ -182,6 +181,26 @@ pnpm mail:import --town boca-raton --file list.csv --consent-source "…" --appr
 ```
 
 Only an active admin can approve. Existing subscribers are never changed; the import is audited.
+
+## The daily newsletter (M5)
+
+Each town's issue is built by the worker once its local `newsletter_send_time` passes (one issue
+per town and local date; a retried tick never sends twice). It holds the weather, 5–8 new
+stories in homepage rank order, public meetings in the next 7 days, any corrections, and at most
+one paid unit. A day with fewer than 3 new stories and no weather alert is skipped, and those
+stories wait for the next issue. More than 3 hours late, the day is skipped.
+
+Admin → Newsletter → a town:
+1. **Test list.** Add the staff who should get test issues.
+2. **"Send to the test list"** (admin): daily issues go only to the test list, marked "[Test]".
+3. Read at least 3 test issues (the page counts them). "Send a test to me" sends the next issue
+   as it would look now, to you only.
+4. **"Go live"** (admin; needs 3 test issues): daily issues go to every active subscriber through
+   the bulk sender, under the warm-up cap. This is the standing approval (D-MAIL-11) and is
+   audited. "Send to the test list" or "Turn off" withdraws it at once.
+
+Past issues show their subject, content and counts (sent, delivered, bounced, complained; no
+opens are tracked).
 
 ## Unpausing a domain
 
