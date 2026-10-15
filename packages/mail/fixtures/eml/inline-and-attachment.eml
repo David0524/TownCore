@@ -1,0 +1,33 @@
+From: Lee <lee@example.org>
+To: "Boca Town Square" <news@testtown.com>
+Cc: editor@testtown.com, someone@example.org
+Subject: Photo of the flooding
+Date: Wed, 14 Oct 2026 10:00:00 -0400
+Message-ID: <photo-1@example.org>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="mixed"
+
+--mixed
+Content-Type: multipart/related; boundary="rel"
+
+--rel
+Content-Type: text/html; charset=utf-8
+
+<p>See the photo:</p><img src="cid:img1@example.org" alt="flood">
+
+--rel
+Content-Type: image/png
+Content-ID: <img1@example.org>
+Content-Disposition: inline; filename="flood.png"
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgAAACAAFUok9dAAAAAElFTkSuQmCC
+--rel--
+
+--mixed
+Content-Type: application/pdf; name="permit.pdf"
+Content-Disposition: attachment; filename="permit.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJSB0ZXN0Cg==
+--mixed--

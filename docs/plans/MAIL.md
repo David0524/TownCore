@@ -139,3 +139,30 @@ These follow the brief's phases 0–6 and take its acceptance criteria as writte
 ## New environment variables (added to `.env.example` in Mail-0)
 
 `AWS_REGION`, `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (app: send and inbound bucket only), `MAIL_S3_BUCKET`, `SES_CONFIG_SET_CONVERSATIONAL`, `SES_CONFIG_SET_BULK`, `VERCEL_DNS_TOKEN`, `VERCEL_TEAM_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DMARC_REPORT_ADDRESS`, `MAIL_TOKEN_SECRET` (unsubscribe and confirm tokens), `MAIL_POSTAL_ADDRESS`. The onboarding CLI's broader AWS credentials are only in the operator's local environment. They're documented in the runbook and never in `.env.example` values.
+
+---
+
+## Mail-2 design (inbound pipeline)
+
+Built 2026-10-15, after the owner said "go ahead with Mail-2". Choices made under bucket B:
+
+- **Webhook stores, worker processes.** `/api/mail/sns` (admin host only) checks the SNS
+  signature and topic, confirms subscriptions, and stores each notification once in
+  `mail_events` (unique on the SNS MessageId), then returns. The worker claims pending events
+  every few seconds (`FOR UPDATE SKIP LOCKED`), with retries and backoff. The web app doesn't
+  run pg-boss, so the events table is the queue; it is durable and survives restarts.
+- **One message per routed recipient.** SES sends one notification per incoming email and
+  lists every matching envelope recipient. Each recipient at our domains gets its own copy in
+  its own team's thread (`sales@` and `admin@` on one email are two conversations). A unique
+  index on (SES message id, envelope recipient) makes redelivery a no-op.
+- **Unknown recipients.** A domain that isn't onboarded, or isn't live for inbound, is logged
+  and dropped. Unknown addresses on a live domain go to the catch-all team.
+- **Spam and viruses.** SES spam `FAIL` puts a new conversation in `spam` status (a reply that
+  threads into an existing conversation keeps that conversation's status). Virus `FAIL`
+  stores the message as quarantined; its attachments are never extracted or shown.
+- **Threading.** First `In-Reply-To` / `References` against known Message-IDs on the same
+  domain; then the same contact, same town address and same normalized subject within 30 days
+  (not spam); otherwise a new thread.
+- **Receiving is per AWS account and region, not per stack.** Only one receipt rule set can be
+  active, so only one environment per account and region receives mail. `packages/infra`
+  creates the rule set in every stack but activates it only where `-c receiving=true`.

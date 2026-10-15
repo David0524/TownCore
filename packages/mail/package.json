@@ -14,9 +14,13 @@
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1152.0",
     "@towncore/config": "workspace:*",
-    "@towncore/db": "workspace:*"
+    "@towncore/db": "workspace:*",
+    "mailparser": "^3.9.39",
+    "sanitize-html": "^2.18.1"
   },
   "devDependencies": {
+    "@types/mailparser": "^3.9.0",
+    "@types/sanitize-html": "^2.16.2",
     "tsx": "^4.23.15"
   }
 }
