@@ -134,6 +134,13 @@ describe('story finder', () => {
     });
     await addRecord('business_filings', 'license', 'DOE ROOFING', {
       occurredAt: new Date('2026-10-11T00:00:00Z'),
+      raw: { occupation: 'Certified Roofing Contractor', alternateLicenseNumber: 'CCC1234567' },
+    });
+    // A "Construction Business Information" row has no license number and isn't a license.
+    await addRecord('business_filings', 'license', 'DOE ROOFING', {
+      occurredAt: new Date('2026-10-11T00:00:00Z'),
+      externalId: 'license:DOE ROOFING:QB',
+      raw: { occupation: 'Construction Business Information', occupationCode: 'QB' },
     });
     await addRecord('weather', 'alert', 'Flood Watch', { raw: { severity: 'Moderate' } });
     await addRecord('weather', 'alert', 'Rip Current Statement', { raw: { severity: 'Minor' } });
@@ -154,6 +161,7 @@ describe('story finder', () => {
     });
     expect(all['Meetings, week of 2026-10-19']?.c.recordIds).toHaveLength(1);
     expect(all['New businesses, week of 2026-10-05']?.c.recordIds).toHaveLength(1);
+    expect(all['New contractor licenses, week of 2026-10-05']?.c.recordIds).toHaveLength(1);
     expect(all['Flood Watch']?.c).toMatchObject({ kind: 'template', status: 'accepted' });
     expect(all['Rip Current Statement']).toBeUndefined();
 

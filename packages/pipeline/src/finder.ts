@@ -30,7 +30,7 @@ import {
 } from './followups';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { MIN_SOURCE_CHARS, scoreCandidate, titleSimilarity } from './scoring';
-import { isNewsworthyAlert } from './templates';
+import { isIssuedLicense, isNewsworthyAlert } from './templates';
 import { cannotBeArticle, decideTier } from './tiers';
 import { isoLocalDate, localDate, localWeekStart, startOfLocalDay } from './time';
 
@@ -195,7 +195,9 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       recordIds: filings.map((r) => r.id),
       now,
     });
-    const licenses = await townRecords(db, town.id, 'license', from, to);
+    const licenses = (await townRecords(db, town.id, 'license', from, to)).filter((r) =>
+      isIssuedLicense(r.raw),
+    );
     await roundup(db, town, report, {
       key: `roundup:new-licenses:${week}`,
       title: `New contractor licenses, week of ${week}`,
