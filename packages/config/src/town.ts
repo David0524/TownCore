@@ -55,6 +55,8 @@ export const townConfigSchema = z.strictObject({
   domain,
   extra_domains: z.array(domain).default([]),
   logo: z.string().min(1).optional(),
+  // Public contact shown on the site; defaults to news@{domain} (forwarded to the publisher inbox).
+  contact_email: z.email().optional(),
   tier: z.enum(townTiers),
   newsletter_send_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
   same_name_elsewhere: z.array(z.string().min(1)).default([]),
@@ -123,6 +125,11 @@ export function loadTowns(dir: string): LoadedTown[] {
     }
     return { config, theme, hasThemeFile };
   });
+}
+
+/** The site's public contact address. */
+export function townContactEmail(config: Pick<TownConfig, 'domain' | 'contact_email'>): string {
+  return config.contact_email ?? `news@${config.domain}`;
 }
 
 /** Lists config fields still set to TBD. A town can't go live until this is empty (M7). */

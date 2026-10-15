@@ -1,0 +1,14 @@
+# FICTIONAL test town (decision D-M1-5). Lives outside towns/ so towns:sync never puts it in
+# production; seeded only in dev and CI by `pnpm --filter @towncore/web seed:fixtures`.
+# .test is a reserved TLD that can never resolve publicly.
+slug: harbor-point
+name: Harbor Point
+state: ME
+county: Fictional
+timezone: America/New_York
+site_name: The Harbor Point Ledger
+domain: harborpoint.test
+tier: small
+newsletter_send_time: '07:00'
+agencies: [Town of Harbor Point]
+pricing: { sponsored_slot_usd: 99, enhanced_usd: 19 }

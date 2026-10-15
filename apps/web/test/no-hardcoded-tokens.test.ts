@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 // CLAUDE.md §11a: no component may hardcode a color, font or radius. Everything goes through
-// theme tokens (--ink, --font-headline, --radius, ...) or locked network tokens (--net-*).
+// theme tokens (--ink, --font-headline, --radius, ...).
 const srcDir = fileURLToPath(new URL('../src', import.meta.url));
 
 function files(dir: string): string[] {
@@ -28,7 +28,7 @@ const rules: Array<{ name: string; pattern: RegExp }> = [
 ];
 
 // Token sources: these files turn config into custom properties, so they may hold values.
-const allowed = new Set(['lib/theme.ts', 'lib/brand.ts']);
+const allowed = new Set(['lib/theme.ts']);
 
 describe('no hardcoded design tokens in apps/web/src', () => {
   const sources = files(srcDir).filter((file) => !allowed.has(relative(srcDir, file)));

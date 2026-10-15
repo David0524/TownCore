@@ -1,15 +1,6 @@
-import { brandColors, defaultTheme, typePairings } from '@towncore/config';
+import { defaultTheme, typePairings } from '@towncore/config';
 import { describe, expect, it } from 'vitest';
-import { networkCssVariables } from '../src/lib/brand';
 import { themeCssVariables, themeFor } from '../src/lib/theme';
-
-describe('networkCssVariables', () => {
-  it('declares every network color under the --net- prefix', () => {
-    for (const [name, hex] of Object.entries(brandColors)) {
-      expect(networkCssVariables).toContain(`--net-${name}:${hex};`);
-    }
-  });
-});
 
 describe('themeCssVariables', () => {
   it('maps palette, fonts and corners to custom properties', () => {

@@ -1,0 +1,70 @@
+/* beat-tabs: one row of tabs; scrolls sideways inside itself on small screens. */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tabs a {
+  display: block;
+  white-space: nowrap;
+  padding: 0.4rem 0.75rem;
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+}
+
+.tabs a:hover {
+  background: var(--surface);
+}
+
+.tabs a[aria-current='page'] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+/* hamburger-only: a disclosure menu, no JavaScript needed. */
+.menu {
+  position: relative;
+}
+
+.menu summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+}
+
+.menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.menuList {
+  position: absolute;
+  right: 0;
+  z-index: 10;
+  min-width: 14rem;
+  margin: 0.4rem 0 0;
+  padding: 0.5rem;
+  list-style: none;
+  background: var(--background);
+  border: 1px solid var(--tint);
+  border-radius: var(--radius);
+}
+
+.menuList a {
+  display: block;
+  padding: 0.4rem 0.5rem;
+  color: var(--ink);
+}

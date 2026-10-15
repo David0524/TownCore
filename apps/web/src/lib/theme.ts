@@ -4,7 +4,7 @@ import { cornerRadii, defaultTheme, themeSchema, typePairings, type Theme } from
 const serifFallback = "Georgia, 'Times New Roman', serif";
 const sansFallback = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-/** The town's theme, or the network default if it has none (or an invalid one slipped in). */
+/** The town's theme, or the default theme if it has none (or an invalid one slipped in). */
 export function themeFor(town: { slug: string; theme: unknown }): Theme {
   if (town.theme == null) return defaultTheme;
   const parsed = themeSchema.safeParse(town.theme);

@@ -1,0 +1,45 @@
+.header {
+  background: var(--background);
+  color: var(--ink);
+  border-bottom: 1px solid var(--tint);
+}
+
+.inner {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 1rem var(--gutter);
+}
+
+/* centered-masthead */
+.centered {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+/* left-logo-inline-nav */
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+
+/* stacked-dateline */
+.dateline {
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-size: 0.875rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.35rem 0;
+  margin-top: 0.75rem;
+}
+
+.navRow {
+  margin-top: 0.5rem;
+}

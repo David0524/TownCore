@@ -109,5 +109,9 @@ describe('town and article queries', () => {
       { ...base, slug: 'review', headline: 'Review', status: 'in_review' },
     ]);
     expect((await listPublishedArticles(db, townId)).map((a) => a.slug)).toEqual(['new', 'old']);
+    expect(await listPublishedArticles(db, townId, { beat: 'schools' })).toEqual([]);
+    expect((await listPublishedArticles(db, townId, { limit: 1 })).map((a) => a.slug)).toEqual([
+      'new',
+    ]);
   });
 });
