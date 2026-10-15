@@ -405,7 +405,7 @@ async function createStoryCandidates(
   }
 }
 
-function llmTown(town: TownRow, config: TownConfig) {
+export function llmTown(town: TownRow, config: TownConfig) {
   return {
     id: town.id,
     timezone: town.timezone,

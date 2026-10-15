@@ -1,10 +1,17 @@
-import { ne, towns, type Db } from '@towncore/db';
-import { runStoryFinder, type FinderReport, type Llm } from '@towncore/pipeline';
+import { and, eq, isNull, ne, storyCandidates, towns, type Db } from '@towncore/db';
+import {
+  runStoryFinder,
+  writeCandidate,
+  type FinderReport,
+  type Llm,
+  type WriteOutcome,
+} from '@towncore/pipeline';
 import type { PgBoss } from 'pg-boss';
 import type { Logger } from 'pino';
 import { queues } from './queues';
 
 export type StoryFinderJob = { townId: string };
+export type WriterJob = { candidateId: string };
 
 /** Enqueues one story-finder job per town that isn't paused (draft towns run, unpublished). */
 export async function enqueueStoryFinders(db: Db, boss: PgBoss, logger: Logger): Promise<number> {
@@ -22,11 +29,28 @@ export async function enqueueStoryFinders(db: Db, boss: PgBoss, logger: Logger):
 
 export async function runStoryFinderJob(
   db: Db,
+  boss: PgBoss,
   llm: Llm | undefined,
   logger: Logger,
   job: StoryFinderJob,
 ): Promise<FinderReport> {
   const report = await runStoryFinder(db, job.townId, { llm });
+  // Queue every accepted, unwritten candidate (also ones left waiting on an earlier run).
+  const ready = await db
+    .select({ id: storyCandidates.id })
+    .from(storyCandidates)
+    .where(
+      and(
+        eq(storyCandidates.townId, job.townId),
+        eq(storyCandidates.status, 'accepted'),
+        isNull(storyCandidates.articleId),
+      ),
+    );
+  for (const candidate of ready) {
+    await boss.send(queues.writer, { candidateId: candidate.id } satisfies WriterJob, {
+      singletonKey: candidate.id,
+    });
+  }
   if (report.capReached)
     logger.warn({ townId: job.townId }, 'AI daily cap reached; candidates wait');
   if (!llm && report.pending > 0) {
@@ -34,4 +58,15 @@ export async function runStoryFinderJob(
   }
   logger.info({ townId: job.townId, ...report }, 'story finder finished');
   return report;
+}
+
+export async function runWriterJob(
+  db: Db,
+  llm: Llm | undefined,
+  logger: Logger,
+  job: WriterJob,
+): Promise<WriteOutcome> {
+  const outcome = await writeCandidate(db, job.candidateId, { llm });
+  logger.info({ candidateId: job.candidateId, ...outcome }, 'writer finished');
+  return outcome;
 }

@@ -42,10 +42,12 @@ export function decideTier(input: {
   classification: Classification | null;
   /** All text the story is based on (records, and the draft once there is one). */
   text: string;
+  /** Starting tier when there is no classification (templated items). Default 2. */
+  baseTier?: Tier;
 }): TierDecision {
   const { sourceKinds, beat, classification: c, text } = input;
   const reasons: string[] = [];
-  let tier: Tier = (c?.proposed_tier as Tier | undefined) ?? 2;
+  let tier: Tier = (c?.proposed_tier as Tier | undefined) ?? input.baseTier ?? 2;
   let minorOverridable = false;
   if (c) reasons.push(`model proposed Tier ${c.proposed_tier}`);
   const atLeast = (min: Tier, reason: string) => {

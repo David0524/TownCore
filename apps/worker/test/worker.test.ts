@@ -152,6 +152,18 @@ describe('story finder', () => {
         .where(eq(storyCandidates.townId, town!.id));
       return row;
     });
-    expect(candidate).toMatchObject({ kind: 'template', status: 'accepted', title: 'Flood Watch' });
+    expect(candidate).toMatchObject({ kind: 'template', title: 'Flood Watch' });
+
+    // The writer job then publishes it (templated: no model needed).
+    const { articles } = await import('@towncore/db');
+    const article = await waitFor(async () => {
+      const [row] = await testDb.db.select().from(articles).where(eq(articles.townId, town!.id));
+      return row;
+    });
+    expect(article).toMatchObject({
+      status: 'published',
+      tier: 1,
+      headline: 'National Weather Service issues Flood Watch for the Boca Raton area',
+    });
   });
 });

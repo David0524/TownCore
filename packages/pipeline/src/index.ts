@@ -42,3 +42,22 @@ export {
   type TemplateRecord,
 } from './templates';
 export { cannotBeArticle, decideTier, mentionsMinor, type Tier, type TierDecision } from './tiers';
+export {
+  checkDraft,
+  namesIn,
+  normalize,
+  numbersIn,
+  type CheckedClaim,
+  type FactcheckReport,
+  type SourceText,
+} from './factcheck';
+export {
+  getReviewer,
+  placeholderSignedArticles,
+  publishArticle,
+  PublishBlocked,
+  slugify,
+  uniqueSlug,
+  type Reviewer,
+} from './publish';
+export { writeCandidate, type WriteOutcome } from './write';
