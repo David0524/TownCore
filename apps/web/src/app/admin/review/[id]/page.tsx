@@ -34,7 +34,7 @@ const errors: Record<string, string> = {
 };
 
 export default async function ReviewStory({ params, searchParams }: Props) {
-  const staff = await requireStaff();
+  await requireStaff();
   const { id } = await params;
   const { done, error } = await searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
@@ -70,12 +70,6 @@ export default async function ReviewStory({ params, searchParams }: Props) {
           {errors[error] ?? error}
         </p>
       ) : null}
-      {staff.placeholder ? (
-        <p className={styles.notice}>
-          You sign as the placeholder reviewer &ldquo;{staff.name}&rdquo;. That works while a site
-          is unpublished; a live site needs your real name (Account).
-        </p>
-      ) : null}
 
       <div className={styles.split}>
         <section aria-label="Draft">
@@ -90,7 +84,7 @@ export default async function ReviewStory({ params, searchParams }: Props) {
                 <form action={approveArticle}>
                   <input type="hidden" name="id" value={article.id} />
                   <button className={styles.button} type="submit">
-                    Approve and publish as &ldquo;Reviewed by {staff.name}&rdquo;
+                    Approve and publish as &ldquo;Reviewed by an editor&rdquo;
                   </button>
                 </form>
               </div>

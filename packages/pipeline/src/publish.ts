@@ -1,9 +1,9 @@
-import { and, articles, eq, inArray, like, staff, towns, type Db } from '@towncore/db';
+import { and, articles, eq, like, staff, towns, type Db } from '@towncore/db';
 import { buildByline } from './byline';
 
 // Publishing (CLAUDE.md §6 step 6). The DB constraints already enforce Rules 2, 4 and 5 on
-// every write; these checks add the ones that need context: a placeholder reviewer may never
-// appear on a live town (Rule 2, honest bylines).
+// every write; this adds the Tier 4 check. Bylines say "Reviewed by an editor" without a name,
+// so a staff member who hasn't set their real name can approve on any town.
 
 export class PublishBlocked extends Error {}
 
@@ -29,40 +29,16 @@ export async function publishArticle(
   if (!row) throw new PublishBlocked(`Unknown article ${articleId}`);
   const { article, town } = row;
   if (article.tier >= 4) throw new PublishBlocked('Tier 4 stories are never published (Rule 5).');
-  if (opts.reviewer?.placeholder && town.status === 'live') {
-    throw new PublishBlocked(
-      `"${opts.reviewer.name}" is a placeholder reviewer and can't sign stories on a live site (Rule 2).`,
-    );
-  }
   await db
     .update(articles)
     .set({
       status: 'published',
       publishedAt: article.publishedAt ?? opts.now ?? new Date(),
-      byline: buildByline(town.siteName, opts.reviewer?.name),
+      byline: buildByline(town.siteName, Boolean(opts.reviewer)),
       reviewerId: opts.reviewer?.id ?? article.reviewerId,
       reviewReason: null,
     })
     .where(eq(articles.id, articleId));
-}
-
-/**
- * Stories on this town signed by a placeholder reviewer. A town can't go live while any remain
- * (the launch approval step, M7, must call this).
- */
-export async function placeholderSignedArticles(db: Db, townId: string): Promise<string[]> {
-  const rows = await db
-    .select({ id: articles.id })
-    .from(articles)
-    .innerJoin(staff, eq(articles.reviewerId, staff.id))
-    .where(
-      and(
-        eq(articles.townId, townId),
-        eq(staff.placeholder, true),
-        inArray(articles.status, ['published', 'corrected']),
-      ),
-    );
-  return rows.map((r) => r.id);
 }
 
 /** Lowercase ASCII slug from a headline, at most 80 characters. */

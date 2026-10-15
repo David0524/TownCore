@@ -13,8 +13,6 @@ type Props = { searchParams: Promise<{ done?: string; error?: string }> };
 
 const errors: Record<string, string> = {
   state: 'That item is no longer waiting for review.',
-  placeholder:
-    'A placeholder reviewer can’t approve on a live site. Set your real name in Account.',
 };
 
 export default async function ReviewQueue({ searchParams }: Props) {
