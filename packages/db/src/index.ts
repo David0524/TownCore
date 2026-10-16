@@ -1,6 +1,6 @@
 export * as schema from './schema';
 export * from './schema';
-export { createDb, getDb, type Db } from './client';
+export { clientUrl, createDb, getDb, type Db } from './client';
 export { guideSourceKey, syncTowns, type SyncTownsResult } from './towns';
 export {
   loadRoutingTable,
