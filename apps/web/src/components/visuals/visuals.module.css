@@ -232,7 +232,7 @@
   left: 0.25rem;
   bottom: 0.25rem;
   padding: 0.0625rem 0.3125rem;
-  border-radius: 3px;
+  border-radius: var(--radius);
   background: color-mix(in srgb, var(--ink) 70%, transparent);
   color: var(--background);
   font-family: var(--font-meta);
