@@ -13,6 +13,7 @@ export function TownGrid({
   kind,
   measure = 'normal',
   top,
+  bottom,
   railModules,
   railHouseOffOnPhones,
   children,
@@ -22,8 +23,10 @@ export function TownGrid({
   measure?: 'normal' | 'wide';
   /** Full-width area above the columns. */
   top?: ReactNode;
-  /** Modules shown in the rail above rail.box (homepage). */
-  railModules?: ReactNode;
+  /** Full-width area below the columns. */
+  bottom?: ReactNode;
+  /** Modules shown in the rail (homepage). rail.box goes after the first (canvas "Homepage"). */
+  railModules?: ReactNode[] | ReactNode;
   /** Leave an unsold rail.box out on phones, where the rail stacks under a short page. */
   railHouseOffOnPhones?: boolean;
   children: ReactNode;
@@ -33,11 +36,13 @@ export function TownGrid({
       kind={kind}
       measure={measure}
       top={top}
+      bottom={bottom}
       rail={
         kind === 'main-right-rail' ? (
           <>
-            {railModules}
+            {Array.isArray(railModules) ? railModules[0] : railModules}
             <Slot town={town} name="rail.box" houseOffOnPhones={railHouseOffOnPhones} />
+            {Array.isArray(railModules) ? railModules.slice(1) : null}
           </>
         ) : null
       }

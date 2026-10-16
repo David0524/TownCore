@@ -4,9 +4,10 @@ import { NewsletterForm } from '@/components/NewsletterForm';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { StoryBlock } from '@/components/news/StoryBlock';
 import { ArticleVisual } from '@/components/visuals/ArticleVisual';
+import { StoryThumb } from '@/components/visuals/StoryThumb';
 import { WeatherTile } from '@/components/weather/WeatherTile';
 import { newsletterOpen } from '@/lib/newsletter';
-import { beats } from '@towncore/config';
+import { beats, townShortName, type TownConfig } from '@towncore/config';
 import type { Article } from '@towncore/db';
 import { formatTownDate } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
@@ -52,16 +53,21 @@ export const TodayBento: HomeModuleComponent = async ({ town, modules }) => {
   const { also } = frontSplit(articles, modules);
   const b = weather?.kind === 'snapshot' ? weather.snapshot.beach : undefined;
   const beach = b && (b.surf || b.water || b.tides || b.uv) ? b : null;
+  const wind = weather?.kind === 'snapshot' ? weather.snapshot.now : null;
   if (!weather && !sunset && also.length === 0) return null;
   return (
     <div className={styles.today} data-module="today-bento">
-      {weather ? <WeatherTile town={town} weather={weather} /> : null}
-      {/* Coastal towns: beach tiles with sunset in the same grid; others: sunset alone. */}
-      {beach ? (
-        <BeachTiles town={town} beach={beach} sunset={sunset} />
-      ) : sunset ? (
-        <SunsetTile town={town} sunset={sunset} />
-      ) : null}
+      {/* On phones the conditions move above the top story (canvas HomePhone), so weather is
+          above the fold; "Also today" stays where it is. */}
+      <div className={styles.conditions}>
+        {weather ? <WeatherTile town={town} weather={weather} /> : null}
+        {/* Coastal towns: the beach tile beside sunset; others: sunset alone. */}
+        {beach ? (
+          <BeachTiles town={town} beach={beach} sunset={sunset} wind={wind} />
+        ) : sunset ? (
+          <SunsetTile town={town} sunset={sunset} wind={wind} />
+        ) : null}
+      </div>
       {also.length > 0 ? (
         <section aria-labelledby="also-h">
           <h2 id="also-h" className={`meta ${styles.alsoHeading}`}>
@@ -70,7 +76,7 @@ export const TodayBento: HomeModuleComponent = async ({ town, modules }) => {
           <ul className={styles.list}>
             {also.map((article) => (
               <li key={article.id}>
-                <StoryBlock story={article} town={town} variant="list" />
+                <StoryBlock story={article} town={town} variant="today" />
               </li>
             ))}
           </ul>
@@ -82,7 +88,7 @@ export const TodayBento: HomeModuleComponent = async ({ town, modules }) => {
 
 const INFEED_EVERY = 6;
 
-export const LatestList: HomeModuleComponent = async ({ town, modules }) => {
+export const LatestList: HomeModuleComponent = async ({ town, theme, modules }) => {
   const items = frontSplit(await recentArticles(town.id), modules).rest.slice(0, 12);
   if (items.length === 0) return null;
 
@@ -91,7 +97,12 @@ export const LatestList: HomeModuleComponent = async ({ town, modules }) => {
   items.forEach((article, i) => {
     rows.push(
       <li key={article.id}>
-        <StoryBlock story={article} town={town} variant="brief" />
+        <StoryBlock
+          story={article}
+          town={town}
+          variant="brief"
+          visual={<StoryThumb town={town} theme={theme} article={article} />}
+        />
       </li>,
     );
     const position = i + 1;
@@ -109,7 +120,7 @@ export const LatestList: HomeModuleComponent = async ({ town, modules }) => {
 
   return (
     <section className={styles.module} data-module="latest-list">
-      <SectionHeader title="Latest" />
+      <SectionHeader title="Latest" href="/news" more="All news" />
       <ul className={styles.list}>{rows}</ul>
     </section>
   );
@@ -197,25 +208,45 @@ export const BeatSections: HomeModuleComponent = async ({ town, modules }) => {
  * The signup box (Mail-5). Until the town's mail domain can send bulk mail it keeps the
  * "launching soon" line with no email field (D-M1-1).
  */
-export const NewsletterCta: HomeModuleComponent = async ({ town }) => (
-  <section className={`${styles.module} ${styles.cta}`} data-module="newsletter-cta">
-    <span className={`${styles.ctaIcon} phone-only`} aria-hidden="true">
-      <EnvelopeIcon />
-    </span>
-    <h2>Get {town.name} news every morning</h2>
-    {(await newsletterOpen(town)) ? (
-      <>
+export const NewsletterCta: HomeModuleComponent = async ({ town }) => {
+  const config = town.config as TownConfig;
+  const at = sendTime(config.newsletter_send_time);
+  const what = `Weather, what City Hall decided and what's coming up. About five minutes${at ? `, ${at}` : ''}, free.`;
+  return (
+    <section className={`${styles.module} ${styles.cta}`} data-module="newsletter-cta">
+      <span className={`${styles.ctaIcon} phone-only`} aria-hidden="true">
+        <EnvelopeIcon />
+      </span>
+      <h2>
+        <span className="not-phone">The morning email for people who live here.</span>
+        <span className="phone-only">The morning email</span>
+      </h2>
+      {(await newsletterOpen(town)) ? (
+        <>
+          <p>
+            <span className="not-phone">{what} </span>
+            <span className="phone-only">
+              {townShortName(config)} in five minutes{at ? `, ${at}` : ''}. Free.{' '}
+            </span>
+            <Link href="/methods">How we report</Link>.
+          </p>
+          <NewsletterForm source="/" id="cta" />
+        </>
+      ) : (
         <p>
-          Our free daily newsletter, written from public records.{' '}
-          <Link href="/methods">How we report</Link>.
+          {what} Launching soon. <Link href="/methods">How we report</Link>.
         </p>
-        <NewsletterForm source="/" id="cta" />
-      </>
-    ) : (
-      <p>
-        Our free daily newsletter, written from public records, is launching soon.{' '}
-        <Link href="/methods">How we report</Link>.
-      </p>
-    )}
-  </section>
-);
+      )}
+    </section>
+  );
+};
+
+/** "06:30" → "6:30 a.m." (AP style). */
+function sendTime(hhmm: string | undefined): string | null {
+  const m = hhmm?.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const suffix = h < 12 ? 'a.m.' : 'p.m.';
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return m[2] === '00' ? `${hour} ${suffix}` : `${hour}:${m[2]} ${suffix}`;
+}

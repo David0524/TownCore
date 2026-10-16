@@ -1,5 +1,17 @@
 import type { PhotoSpec } from '@towncore/config';
-import { and, asc, desc, eq, isNull, lt, or, photoSubmissions, towns, type Db } from '@towncore/db';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  isNull,
+  lt,
+  or,
+  photoSubmissions,
+  towns,
+  type Db,
+} from '@towncore/db';
 
 // Reading approved photos (M9). Kept apart from the upload code, so the image router and the
 // pages can use it without loading the image library.
@@ -129,4 +141,25 @@ export async function ownerPhotos(db: Db, businessId: string) {
     .where(eq(photoSubmissions.businessId, businessId))
     .orderBy(desc(photoSubmissions.createdAt))
     .limit(20);
+}
+
+/**
+ * The homepage's photo of the week: the newest reader photo approved in the last `days` days,
+ * or null. Reading it doesn't count as a story using it.
+ */
+export async function photoOfTheWeek(db: Db, townId: string, now = new Date(), days = 14) {
+  const [row] = await db
+    .select()
+    .from(photoSubmissions)
+    .where(
+      and(
+        eq(photoSubmissions.townId, townId),
+        eq(photoSubmissions.kind, 'reader'),
+        eq(photoSubmissions.status, 'approved'),
+        gte(photoSubmissions.reviewedAt, new Date(now.getTime() - days * 86_400_000)),
+      ),
+    )
+    .orderBy(desc(photoSubmissions.reviewedAt))
+    .limit(1);
+  return row ?? null;
 }

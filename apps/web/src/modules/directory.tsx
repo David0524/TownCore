@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { categoryCounts, claimedListings, listingPlace, newFoodPlaces } from '@towncore/directory';
+import { businessPhotoFor, photoPath } from '@towncore/photos/queries';
 import { apDate } from '@towncore/pipeline';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { db } from '@/lib/db';
@@ -68,57 +69,87 @@ export const DirectoryCategories: HomeModuleComponent = async ({ town }) => {
   );
 };
 
-/** Home-service categories as chips, with the Top spot (an "open Top spot" tile when unsold). */
+/**
+ * Home-service categories as rows with their counts (canvas "Homepage": Find a local pro), with
+ * the Top spot slot (an "open Top spot" tile when unsold).
+ */
 export const FindAPro: HomeModuleComponent = async ({ town }) => {
   const counts = (await categoryCounts(db(), town.id)).filter((c) => c.category.group === 'home');
   if (counts.length === 0) return null;
   return (
     <section className={styles.coming} aria-labelledby="find-pro-h" data-module="find-a-pro">
-      <SectionHeader title="Find a licensed pro" href={directoryPath()} id="find-pro-h" />
-      <ul className={styles.buttons}>
+      <SectionHeader
+        title="Find a local pro"
+        href={directoryPath()}
+        more="Directory"
+        id="find-pro-h"
+      />
+      <Slot town={town} name="directory.topspot" />
+      <ul className={styles.rows}>
         {counts.map(({ category, count }) => (
           <li key={category.slug}>
-            <Link href={directoryPath(category.slug)} className={styles.button}>
+            <Link href={directoryPath(category.slug)} className={styles.row}>
               <span>{category.name}</span>
-              <span className="meta">{count}</span>
+              <span className="meta">
+                {count.toLocaleString('en-US')} <span aria-hidden="true">→</span>
+              </span>
             </Link>
           </li>
         ))}
       </ul>
-      <Slot town={town} name="directory.topspot" />
       <p className="meta">Every listing holds an active Florida license.</p>
     </section>
   );
 };
 
 /**
- * Places the state newly licensed to serve food (DBPR new establishments), with one sponsored
- * restaurant slot. A license approval is not proof a place has opened, so it says "licensed".
+ * Places the state newly licensed to serve food (DBPR new establishments), as a grid of cards
+ * (canvas "Homepage": New & now open) with the owner's own photo once one is approved, and one
+ * sponsored restaurant slot. A license approval is not proof a place has opened, so it says
+ * "licensed", not "now open".
  */
 export const NewNowOpen: HomeModuleComponent = async ({ town }) => {
-  const places = await newFoodPlaces(db(), town.id);
+  const places = await newFoodPlaces(db(), town.id, { limit: 8 });
   if (places.length === 0) return null;
+  const photos = await Promise.all(
+    places.map((p) => (p.listing ? businessPhotoFor(db(), p.listing.id) : null)),
+  );
   return (
     <section className={styles.coming} aria-labelledby="new-open-h" data-module="new-now-open">
       <SectionHeader title="New places to eat" id="new-open-h" />
-      <ol className={styles.meetings}>
-        {places.map((place) => (
-          <li key={place.id}>
-            <span className="meta">Licensed {apDate(place.approvedAt, 'UTC')}</span>
-            {place.listing ? (
-              <Link href={listingPath(place.listing)} className={styles.meetingTitle}>
-                {place.name}
-              </Link>
-            ) : (
-              <span className={styles.meetingTitle}>{place.name}</span>
-            )}
-            <span className={styles.where}>
-              {[place.licenseType, place.zip ? `${town.name} area · ${place.zip}` : null]
-                .filter(Boolean)
-                .join(' · ')}
-            </span>
-          </li>
-        ))}
+      <ol className={styles.cards}>
+        {places.map((place, i) => {
+          const photo = photos[i];
+          const name = place.listing ? (
+            <Link href={listingPath(place.listing)} className={styles.cardName}>
+              {place.name}
+            </Link>
+          ) : (
+            <span className={styles.cardName}>{place.name}</span>
+          );
+          return (
+            <li key={place.id} className={styles.placeCard}>
+              {photo ? (
+                <img
+                  src={photoPath(photo.id)}
+                  alt={photo.alt ?? ''}
+                  width={photo.width}
+                  height={photo.height}
+                  loading="lazy"
+                  decoding="async"
+                  className={styles.cardPhoto}
+                />
+              ) : null}
+              <span className="meta">Licensed {apDate(place.approvedAt, 'UTC')}</span>
+              {name}
+              <span className={styles.where}>
+                {[place.licenseType, place.zip ? `${town.name} area · ${place.zip}` : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            </li>
+          );
+        })}
       </ol>
       <Slot town={town} name="dining.featured" />
       <p className="meta">From the state&apos;s new food service licenses.</p>

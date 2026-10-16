@@ -12,11 +12,31 @@
   padding: 1.5rem var(--gutter) 2rem;
 }
 
-/* three-column */
-.columns {
+/* three-column (coastal-modern, canvas "Homepage"): an ink rule, the site name large on the
+   left, three link columns beside it. */
+.masthead {
   display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1.5rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--ink);
+}
+
+@media (min-width: 64rem) {
+  .masthead {
+    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  }
+}
+
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  color: var(--muted);
+}
+
+.about p {
+  margin: 0;
 }
 
 .columns h2 {
@@ -29,11 +49,17 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.25rem;
+  gap: 0.625rem;
 }
 
 .list a {
   color: var(--ink);
+  text-decoration: none;
+}
+
+.list a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* minimal */
@@ -59,29 +85,25 @@
   margin: 1rem 0 0;
 }
 
-/* three-column sign-off: the site name, oversized, under an ink rule (revision 4). */
-.signoff {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.5rem 1.5rem;
-  margin-top: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--ink);
-}
-
-.wordmark {
-  margin: 0;
+/* The site name, oversized (three-column). */
+.about .wordmark {
+  margin: 0 0 0.25rem;
+  color: var(--ink);
   font-family: var(--font-headline);
   font-weight: var(--headline-weight);
-  font-size: clamp(2rem, 1.2rem + 3vw, 3.5rem);
-  line-height: 1;
-  letter-spacing: -0.015em;
+  font-size: clamp(2.25rem, 1.4rem + 3vw, 3.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
 }
 
-.signoff .copyright {
-  margin: 0;
+/* coastal-modern's footer sits on the white page, like the rest of it. */
+:global([data-family='coastal-modern']) .footer {
+  background: var(--background);
+  border-top: 0;
+}
+
+:global([data-family='coastal-modern']) .inner {
+  padding-top: 3rem;
 }
 
 /* heritage: the paper closes on a double rule. */

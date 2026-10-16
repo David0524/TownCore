@@ -12,22 +12,20 @@
   "masthead": "centered-serif",
   "layout": {
     "header": "slim-left",
-    "nav": "beat-tabs",
+    "nav": "category-tabs",
     "grid": "main-right-rail",
     "homeTop": ["good-morning", "lead-story", "today-bento"],
     "home": [
       "category-buttons",
       "newsletter-cta",
-      "latest-list",
-      "beat-sections",
-      "directory-featured",
-      "find-a-pro",
-      "new-now-open",
       "events",
+      "latest-list",
+      "directory-featured",
       "new-businesses",
       "real-estate"
     ],
-    "homeRail": ["coming-up", "essentials"],
+    "homeRail": ["coming-up", "find-a-pro", "essentials"],
+    "homeBottom": ["photo-of-the-week", "new-now-open"],
     "article": "classic-rail",
     "directory": "list-map",
     "footer": "three-column"

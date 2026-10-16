@@ -12,66 +12,91 @@ export function uvCategory(index: number): string {
   return 'Extreme';
 }
 
+/** "E 10" from the hour's forecast wind ("E", "10 mph"), or null. */
+export function windShort(wind: { windDirection: string; windSpeed: string } | null | undefined) {
+  if (!wind) return null;
+  const speed = wind.windSpeed.match(/\d+(?:\s*to\s*\d+)?/)?.[0]?.replace(/\s*to\s*/, '–');
+  return speed ? `${wind.windDirection} ${speed}`.trim() : null;
+}
+
 /**
- * Small Today tiles for coastal towns (D-M4b-3): rip current risk and surf from the NWS surf zone
- * forecast, water temperature and the next tides from NOAA, and the EPA UV index. Each tile shows
- * only when its source answered; one line names every source, as each asks.
+ * The Today band's two small tiles for coastal towns (D-M4b-3; canvas "Homepage"): Beach, with
+ * the rip current risk from the NWS surf zone forecast, the water temperature and the next high
+ * tide from NOAA; and Sunset, with the EPA UV index and the hour's forecast wind. Each part shows
+ * only when its source answered, and one line names every source, as each asks.
  */
 export function BeachTiles({
   town,
   beach,
   sunset,
+  wind,
 }: {
   town: Town;
   beach: BeachConditions;
-  /** Today's sunset, shown as a tile in the same grid. */
+  /** Today's sunset, the second tile. */
   sunset: Date | null;
+  /** This hour's forecast wind, from the weather snapshot. */
+  wind?: { windDirection: string; windSpeed: string } | null;
 }) {
   const { surf, water, tides, uv } = beach;
   if (!surf && !water && !tides && !uv) return null;
   const tz = town.timezone;
+  const nextHigh = tides?.next.find((t) => t.type === 'high') ?? tides?.next[0];
+  const risk = surf?.ripRisk.toLowerCase();
+  const windNote = windShort(wind);
   return (
     <section className={styles.beach} aria-label="Beach conditions" data-testid="beach-tiles">
       <div className={styles.beachGrid}>
-        {surf ? (
-          <div className={styles.beachTile} data-testid="beach-rip">
-            <span className={styles.smallLabel}>Rip currents</span>
-            <span className={styles.smallValue}>{surf.ripRisk} risk</span>
-            <span className={styles.beachNote}>
-              {[surf.surfHeight ? `Surf ${lower(surf.surfHeight)}` : null, surf.period]
-                .filter(Boolean)
-                .join(' · ')}
+        <div className={`${styles.beachTile} ${styles.sand}`}>
+          <span className={styles.smallLabel}>Beach</span>
+          {surf ? (
+            <span
+              className={styles.smallValue}
+              data-testid="beach-rip"
+              title={surf.surfHeight ? `Surf ${lowerFirst(surf.surfHeight)}` : undefined}
+            >
+              <span
+                className={styles.riskDot}
+                data-risk={risk === 'low' ? 'low' : 'elevated'}
+                aria-hidden="true"
+              />
+              {surf.ripRisk} rip risk
             </span>
-          </div>
-        ) : null}
-        {water ? (
-          <div className={styles.beachTile} data-testid="beach-water">
-            <span className={styles.smallLabel}>Water</span>
-            <span className={styles.smallValue}>{water.fahrenheit}°</span>
-            <span className={styles.beachNote}>{shortStation(water.stationName)}</span>
-          </div>
-        ) : null}
-        {tides ? (
-          <div className={styles.beachTile} data-testid="beach-tides">
-            <span className={styles.smallLabel}>Tides</span>
-            {tides.next.map((t) => (
-              <span key={t.at} className={styles.tideLine}>
-                {t.type === 'high' ? 'High' : 'Low'} {clockTime(new Date(t.at), tz)}
-              </span>
-            ))}
-          </div>
-        ) : null}
-        {uv ? (
-          <div className={styles.beachTile} data-testid="beach-uv">
-            <span className={styles.smallLabel}>UV index</span>
-            <span className={styles.smallValue}>{uv.index}</span>
-            <span className={styles.beachNote}>{uvCategory(uv.index)}</span>
-          </div>
-        ) : null}
-        {sunset ? (
+          ) : null}
+          <span className={styles.beachNote}>
+            {[
+              water ? (
+                <span key="water" data-testid="beach-water">
+                  Water {water.fahrenheit}°
+                </span>
+              ) : null,
+              nextHigh ? (
+                <span key="tide" data-testid="beach-tides">
+                  {nextHigh.type === 'high' ? 'High' : 'Low'} tide{' '}
+                  {clockTime(new Date(nextHigh.at), tz)}
+                </span>
+              ) : null,
+            ]
+              .filter(Boolean)
+              .flatMap((node, i) => (i === 0 ? [node] : [' · ', node]))}
+          </span>
+        </div>
+        {sunset || uv || windNote ? (
           <div className={styles.beachTile} data-testid="sunset-tile">
             <span className={styles.smallLabel}>Sunset</span>
-            <span className={styles.smallValue}>{clockTime(sunset, tz)}</span>
+            {sunset ? <span className={styles.smallValue}>{clockTime(sunset, tz)}</span> : null}
+            <span className={styles.beachNote}>
+              {[
+                uv ? (
+                  <span key="uv" data-testid="beach-uv" title={uvCategory(uv.index)}>
+                    UV {uv.index} ({uvCategory(uv.index).toLowerCase()})
+                  </span>
+                ) : null,
+                windNote ? <span key="wind">Wind {windNote}</span> : null,
+              ]
+                .filter(Boolean)
+                .flatMap((node, i) => (i === 0 ? [node] : [' · ', node]))}
+            </span>
           </div>
         ) : null}
       </div>
@@ -103,6 +128,4 @@ export function BeachTiles({
   );
 }
 
-const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
-/** "Lake Worth Pier, Atlantic Ocean" → "Lake Worth Pier". */
-const shortStation = (name: string) => name.split(',')[0]!;
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);

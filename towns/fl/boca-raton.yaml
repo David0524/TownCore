@@ -2,6 +2,7 @@
 # Sources are added only once verified live (CLAUDE.md §14).
 slug: boca-raton
 name: Boca Raton
+short_name: Boca
 state: FL
 census_id: '1207300' # Census place GEOID for the city of Boca Raton (verified 2026-10-15 via the Census Geocoder)
 county: Palm Beach

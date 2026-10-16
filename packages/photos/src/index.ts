@@ -37,6 +37,7 @@ export {
   ownerPhotos,
   pendingPhotos,
   isApproved,
+  photoOfTheWeek,
   photoPath,
   photoSpec,
   REUSE_DAYS,

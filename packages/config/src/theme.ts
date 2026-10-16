@@ -144,7 +144,8 @@ export const layoutOptions = {
     'nameplate-double-rule',
     'tinted-bar',
   ],
-  nav: ['beat-tabs', 'hamburger-only', 'text-nav'],
+  // category-tabs: the reader categories (News, Events, Dining, Businesses…) that have content.
+  nav: ['beat-tabs', 'hamburger-only', 'text-nav', 'category-tabs'],
   grid: ['single-column', 'main-right-rail'],
   article: ['classic-rail', 'wide-reading'],
   // Directory templates are built in M6 with real data (decision D-M1-2).
@@ -172,6 +173,8 @@ export const homeModules = [
   'schools-sports',
   'weather-strip',
   'photo-of-the-day',
+  // The newest approved reader photo, full width with its credit (M9 uploads).
+  'photo-of-the-week',
   'directory-featured',
   'directory-categories',
   'find-a-pro',
@@ -220,6 +223,8 @@ export const themeSchema = z
       homeTop: z.array(z.enum(homeModules)).max(6).optional(),
       // Modules in the desktop rail, above rail.box; they follow the main column on phones.
       homeRail: z.array(z.enum(homeModules)).optional(),
+      // A full-width band below the grid (a photo, a grid of new places), before the footer.
+      homeBottom: z.array(z.enum(homeModules)).optional(),
       article: z.enum(layoutOptions.article),
       directory: z.enum(layoutOptions.directory),
       footer: z.enum(layoutOptions.footer),
@@ -231,13 +236,13 @@ export const themeSchema = z
     identityNotes: z.string().min(1),
   })
   .superRefine((theme, ctx) => {
-    const { home, homeTop = [], homeRail = [] } = theme.layout;
-    const all = [...homeTop, ...home, ...homeRail];
+    const { home, homeTop = [], homeRail = [], homeBottom = [] } = theme.layout;
+    const all = [...homeTop, ...home, ...homeRail, ...homeBottom];
     if (new Set(all).size !== all.length) {
       ctx.addIssue({
         code: 'custom',
         path: ['layout', 'home'],
-        message: 'a module may appear only once across homeTop, home and homeRail',
+        message: 'a module may appear only once across homeTop, home, homeRail and homeBottom',
       });
     }
     if (homeRail.length > 0 && theme.layout.grid !== 'main-right-rail') {

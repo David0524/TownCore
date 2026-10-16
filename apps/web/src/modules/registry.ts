@@ -10,6 +10,7 @@ import {
 } from './news';
 import { CategoryButtons, ComingUp, DocumentsPosted, Essentials, GoodMorning } from './front';
 import { DirectoryCategories, DirectoryFeatured, FindAPro, NewNowOpen } from './directory';
+import { PhotoOfTheWeek } from './photo';
 import type { HomeModuleComponent } from './types';
 
 // Modules whose data arrives in a later milestone. They render nothing until then, exactly
@@ -40,6 +41,7 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
   'schools-sports': awaitingData('schools sources, later'),
   'weather-strip': awaitingData('NWS, M2 (decision D-M1-3)'),
   'photo-of-the-day': awaitingData('reader submissions, M9'),
+  'photo-of-the-week': PhotoOfTheWeek,
   'directory-featured': DirectoryFeatured,
   'directory-categories': DirectoryCategories,
   'find-a-pro': FindAPro,

@@ -1,5 +1,6 @@
 import type { Theme } from '@towncore/config';
-import type { ComponentType } from 'react';
+import type { Town } from '@towncore/db';
+import type { ComponentType, ReactNode } from 'react';
 import { Community } from './footers/Community';
 import { Minimal } from './footers/Minimal';
 import { ThreeColumn } from './footers/ThreeColumn';
@@ -10,6 +11,7 @@ import { SlimLeft } from './headers/SlimLeft';
 import { TintedBar } from './headers/TintedBar';
 import { StackedDateline } from './headers/StackedDateline';
 import { BeatTabs } from './navs/BeatTabs';
+import { CategoryTabs } from './navs/CategoryTabs';
 import { HamburgerOnly } from './navs/HamburgerOnly';
 import { TextNav } from './navs/TextNav';
 import type { HeaderProps, PartProps } from './types';
@@ -34,13 +36,20 @@ export const headersWithWeather = new Set<Layout['header']>([
   'tinted-bar',
 ]);
 
-export const navs: Record<Layout['nav'], ComponentType> = {
+export const navs: Record<
+  Layout['nav'],
+  (props: { town: Town }) => ReactNode | Promise<ReactNode>
+> = {
   'beat-tabs': BeatTabs,
   'hamburger-only': HamburgerOnly,
   'text-nav': TextNav,
+  'category-tabs': CategoryTabs,
 };
 
-export const footers: Record<Layout['footer'], ComponentType<PartProps>> = {
+export const footers: Record<
+  Layout['footer'],
+  (props: PartProps) => ReactNode | Promise<ReactNode>
+> = {
   'three-column': ThreeColumn,
   minimal: Minimal,
   community: Community,

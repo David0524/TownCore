@@ -159,17 +159,7 @@ a.lineText:hover {
   text-decoration: underline;
 }
 
-/* Small Today tiles (sunset now; beach and tides when their sources are approved). */
-.small {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 0.85rem 1.1rem;
-  border-radius: var(--radius-tile);
-  background: var(--surface);
-}
-
+/* Labels and values inside the small Today tiles. */
 .smallLabel {
   font-size: 0.875rem;
   color: var(--muted);
@@ -209,11 +199,6 @@ a.lineText:hover {
     border-top: 0.5px solid var(--accent-text);
     font-size: 0.8125rem;
     font-weight: 500;
-  }
-
-  .small {
-    border-radius: var(--radius-widget);
-    background: var(--ios-grouped);
   }
 
   .alert {
@@ -289,7 +274,8 @@ a.lineText:hover {
   }
 }
 
-/* Beach tiles (D-M4b-3): small tiles, two across. */
+/* Beach and sunset tiles (D-M4b-3; canvas "Homepage"): two small tiles, the beach one wider,
+   on the sand and surface tints; labels in the text face, notes in mono. */
 .beach {
   display: grid;
   gap: 0.4rem;
@@ -297,28 +283,51 @@ a.lineText:hover {
 
 .beachGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.6rem;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 0.75rem;
 }
 
 .beachTile {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.75rem 0.9rem;
+  gap: 0.375rem;
+  padding: 0.875rem 1rem;
   border-radius: var(--radius-tile);
   background: var(--surface);
 }
 
-.beachNote,
-.tideLine {
-  font-size: 0.875rem;
-  color: var(--muted);
+.sand {
+  background: var(--sand);
 }
 
-.tideLine {
-  color: var(--ink);
-  font-weight: 500;
+.beachTile .smallLabel {
+  font-size: 0.8125rem;
+}
+
+.beachTile .smallValue {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.9375rem;
+}
+
+.riskDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--alert);
+  flex: none;
+}
+
+.riskDot[data-risk='low'] {
+  background: var(--cat-business);
+}
+
+.beachNote {
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 .beachSources {
@@ -326,8 +335,19 @@ a.lineText:hover {
 }
 
 @media (max-width: 599.98px) {
+  .beachGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+
   .beachTile {
     border-radius: var(--radius-widget);
     background: var(--ios-grouped);
+    min-height: 100px;
+    box-sizing: border-box;
+  }
+
+  .beachTile .smallValue {
+    font-size: 1.0625rem;
   }
 }

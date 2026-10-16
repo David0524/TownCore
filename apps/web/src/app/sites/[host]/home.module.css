@@ -54,3 +54,16 @@
     grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   }
 }
+
+/* Phones (canvas HomePhone): the band's columns step aside so the Today conditions, which
+   order themselves first, come before the top story; the rest keeps its order. */
+@media (max-width: 599.98px) {
+  .band {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .band > .bandSide {
+    display: contents;
+  }
+}
