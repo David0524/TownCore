@@ -1,0 +1,29 @@
+{
+  "recordedAt": "hand-written 2026-10-16 from the documented response shape (no access key yet); re-record live with fixtures:record",
+  "exchanges": [
+    {
+      "url": "https://api.unsplash.com/robots.txt",
+      "status": 200,
+      "headers": {
+        "content-type": "text/plain"
+      },
+      "body": "User-Agent: *\nDisallow: /\n"
+    },
+    {
+      "url": "https://api.unsplash.com/search/photos?query=recycling+bins&orientation=landscape&content_filter=high&per_page=10",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"total\": 3, \"total_pages\": 1, \"results\": [{\"id\": \"fixture1\", \"width\": 6000, \"height\": 4000, \"color\": \"#d9d9d9\", \"description\": null, \"alt_description\": \"green and blue recycling bins on a sidewalk\", \"urls\": {\"raw\": \"https://images.unsplash.com/photo-fixture-1?ixid=fixture1&ixlib=rb-4.1.0\", \"full\": \"\", \"regular\": \"\", \"small\": \"\", \"thumb\": \"\"}, \"links\": {\"self\": \"https://api.unsplash.com/photos/fixture1\", \"html\": \"https://unsplash.com/photos/fixture1\", \"download\": \"https://unsplash.com/photos/fixture1/download\", \"download_location\": \"https://api.unsplash.com/photos/fixture1/download?ixid=fixture1\"}, \"user\": {\"id\": \"u1\", \"username\": \"samplephotographer\", \"name\": \"Sample Photographer\", \"links\": {\"html\": \"https://unsplash.com/@samplephotographer\"}}}, {\"id\": \"fixture2\", \"width\": 6000, \"height\": 4000, \"color\": \"#d9d9d9\", \"description\": null, \"alt_description\": null, \"urls\": {\"raw\": \"https://images.unsplash.com/photo-fixture-2?ixid=fixture2&ixlib=rb-4.1.0\", \"full\": \"\", \"regular\": \"\", \"small\": \"\", \"thumb\": \"\"}, \"links\": {\"self\": \"https://api.unsplash.com/photos/fixture2\", \"html\": \"https://unsplash.com/photos/fixture2\", \"download\": \"https://unsplash.com/photos/fixture2/download\", \"download_location\": \"https://api.unsplash.com/photos/fixture2/download?ixid=fixture2\"}, \"user\": {\"id\": \"u2\", \"username\": \"undescribed\", \"name\": \"Undescribed Photographer\", \"links\": {\"html\": \"https://unsplash.com/@undescribed\"}}}, {\"id\": \"fixture3\", \"width\": 6000, \"height\": 4000, \"color\": \"#d9d9d9\", \"description\": null, \"alt_description\": \"a row of recycling containers\", \"urls\": {\"raw\": \"https://images.unsplash.com/photo-fixture-3?ixid=fixture3&ixlib=rb-4.1.0\", \"full\": \"\", \"regular\": \"\", \"small\": \"\", \"thumb\": \"\"}, \"links\": {\"self\": \"https://api.unsplash.com/photos/fixture3\", \"html\": \"https://unsplash.com/photos/fixture3\", \"download\": \"https://unsplash.com/photos/fixture3/download\", \"download_location\": \"https://api.unsplash.com/photos/fixture3/download?ixid=fixture3\"}, \"user\": {\"id\": \"u3\", \"username\": \"anotherphotographer\", \"name\": \"Another Photographer\", \"links\": {\"html\": \"https://unsplash.com/@anotherphotographer\"}}}]}"
+    },
+    {
+      "url": "https://api.unsplash.com/photos/fixture1/download?ixid=fixture1",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"url\": \"https://images.unsplash.com/photo-fixture-1?ixid=fixture1\"}"
+    }
+  ]
+}

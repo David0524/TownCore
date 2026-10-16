@@ -91,3 +91,27 @@ test('a live town lists guides in their own sitemap, never in feeds or the news 
   const month = new Date().toISOString().slice(0, 7);
   expect(await text(`/sitemaps/articles-${month}.xml`)).not.toContain('fixture-guide-recycling');
 });
+
+test('a guide can carry a credited stock photo, never mistaken for the scene', async ({ page }) => {
+  await page.goto(`${boca}/guides/${guide}`);
+  const stock = page.getByRole('main').locator('figure [data-visual="stock"]');
+  const img = stock.getByRole('img');
+  await expect(img).toHaveAttribute('alt', 'Stock photo: garbage bins lined up at the curb.');
+  // Hotlinked from Unsplash at a reserved 16:9 size.
+  await expect(img).toHaveAttribute(
+    'src',
+    /^https:\/\/images\.unsplash\.com\/photo-test-fixture\?/,
+  );
+  await expect(img).toHaveAttribute('width', '1200');
+  await expect(img).toHaveAttribute('height', '675');
+  const credit = stock.getByTestId('stock-credit');
+  await expect(credit).toHaveText('Stock photo. Photo by Sample Photographer on Unsplash');
+  await expect(credit.getByRole('link', { name: 'Sample Photographer' })).toHaveAttribute(
+    'href',
+    'https://unsplash.com/@sample?utm_source=boca_town_square&utm_medium=referral',
+  );
+  await expect(credit.getByRole('link', { name: 'Unsplash' })).toHaveAttribute(
+    'href',
+    'https://unsplash.com/?utm_source=boca_town_square&utm_medium=referral',
+  );
+});

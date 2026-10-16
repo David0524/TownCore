@@ -1700,7 +1700,8 @@ export const images = pgTable(
     attribution: text('attribution'),
     aiGenerated: boolean('ai_generated').notNull().default(false),
     approvedBy: uuid('approved_by').references(() => staff.id),
-    // When the maps job last tried to draw this article a map (null: not yet tried).
+    // When the router last ran with its network options, maps and stock photos (null: not since
+    // the article was last re-assigned; the worker's visuals jobs pick it up).
     mapCheckedAt: timestamp('map_checked_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
