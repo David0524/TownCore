@@ -8,6 +8,7 @@ export function CallButton({
   name,
   label,
   className = 'button',
+  children,
 }: {
   slug: string;
   phone: string;
@@ -15,6 +16,8 @@ export function CallButton({
   /** Shorter text for cards ("Call"); the full name stays in the accessible name. */
   label?: string;
   className?: string;
+  /** Replaces the text, e.g. an icon (the accessible name stays "Call {name}"). */
+  children?: React.ReactNode;
 }) {
   const onClick = () => {
     const body = JSON.stringify({ slug });
@@ -29,7 +32,7 @@ export function CallButton({
       onClick={onClick}
       aria-label={`Call ${name}`}
     >
-      {label ?? `Call ${name}`}
+      {children ?? label ?? `Call ${name}`}
     </a>
   );
 }

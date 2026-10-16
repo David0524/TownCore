@@ -3,11 +3,13 @@
 import {
   CardNotWaiting,
   ClaimNotPending,
+  decideBusinessRequest,
   decideClaim,
   decideNameChange,
   decideSponsorCard,
   dismissOutreach,
   OutreachError,
+  RequestNotPending,
   sendOutreach,
 } from '@towncore/directory';
 import { SendError, SuppressedRecipientsError } from '@towncore/mail';
@@ -123,4 +125,22 @@ export async function sendOutreachAction(form: FormData): Promise<void> {
   redirect(
     `/admin/mail/inbox/${result!.threadId}${result!.status === 'failed' ? '?error=' + encodeURIComponent(`Not sent: ${result!.error}`) : '?sent=1'}`,
   );
+}
+
+export async function decideRequestAction(form: FormData): Promise<void> {
+  const me = await requireStaff();
+  const decision = str(form, 'decision');
+  if (decision !== 'add' && decision !== 'reject') throw new Error('bad decision');
+  try {
+    await decideBusinessRequest(db(), {
+      requestId: str(form, 'requestId'),
+      staffId: me.id,
+      decision,
+    });
+  } catch (error) {
+    if (error instanceof RequestNotPending) done({ error: error.message });
+    throw error;
+  }
+  revalidatePath('/admin/directory');
+  done({ done: decision === 'add' ? 'Business added to Places' : 'Request rejected' });
 }

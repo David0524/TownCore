@@ -98,7 +98,17 @@ test('a category page has its slots, then organic listings with the claimed one 
   }
   await expect(page.locator('[data-slot="directory.topspot"]')).toContainText('#1 spot open');
   await expect(page.locator('[data-slot="directory.category.exclusive"]')).toContainText(
-    'Is yours listed? Claim it free',
+    'morning email',
+  );
+  // The owner panel invites claims and new businesses instead.
+  const owner = page.getByTestId('owner-bar');
+  await expect(owner.getByRole('link', { name: 'Claim your listing' })).toHaveAttribute(
+    'href',
+    '/directory/claim',
+  );
+  await expect(owner.getByRole('link', { name: 'Add your business' })).toHaveAttribute(
+    'href',
+    '/directory/add',
   );
   const names = await page
     .locator('section[aria-labelledby="organic"] [data-testid="place-card"] h3 a')

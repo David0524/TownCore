@@ -755,6 +755,39 @@ export const businessClaims = pgTable(
   ],
 );
 
+// "Add your business" (owner, 2026-10-16): a business that isn't listed asks to be. Nothing is
+// listed until staff check it and press Add; the listing then shows the details sent, since the
+// sender gave them as the business's public details.
+export const businessRequests = pgTable(
+  'business_requests',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    name: text('name').notNull(),
+    category: text('category').notNull(),
+    address: text('address'),
+    zip: text('zip'),
+    phone: text('phone'),
+    website: text('website'),
+    contactName: text('contact_name').notNull(),
+    email: text('email').notNull(),
+    note: text('note'),
+    status: text('status').notNull().default('pending'),
+    businessId: uuid('business_id').references(() => businesses.id),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    ip: text('ip'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('business_requests_town_status_idx').on(t.townId, t.status, t.createdAt),
+    index('business_requests_ip_created_idx').on(t.ip, t.createdAt),
+    check('business_requests_status', sql`${t.status} in ('pending', 'added', 'rejected')`),
+  ],
+);
+
 // Owner sign-in by email link (D-M6-11), per town site: single-use link tokens and sessions,
 // stored as SHA-256 hashes like staff sign-in.
 export const ownerLoginTokens = pgTable(
