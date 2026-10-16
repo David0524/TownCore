@@ -120,3 +120,9 @@ export {
   type OpsCondition,
   type TownHealth,
 } from './ops';
+export {
+  refreshTownWeather,
+  refreshWeather,
+  weatherTargets,
+  type WeatherTarget,
+} from './weather-refresh';
