@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Fetcher } from '../src/http/fetcher';
 import { replayFetch, type FixtureFile } from '../src/http/fixtures';
 import { missingEnv } from '../src/registry';
-import { isoDurationSeconds, youtubeAdapter, youtubeChannel } from '../src/youtube';
+import { isoDurationSeconds, titleTime, youtubeAdapter, youtubeChannel } from '../src/youtube';
 import type { SourceConfig } from '../src/types';
 
 // Recorded live from the City of Delray Beach channel (linked from delraybeach.legistar.com)
@@ -118,9 +118,10 @@ describe('youtube', () => {
     expect(commission!.text).toContain('Length: 4 h 10 min');
     expect(commission!.text).toContain('Channel: City of Delray Beach');
     expect(commission!.raw).toMatchObject({ videoId: 'XVM7k_LoURc', durationSeconds: 15_002 });
-    // An upload with no stream details falls back to its upload time.
+    // An upload with no stream details takes the meeting time in its title (5:00 PM Eastern on
+    // 9/22), not its upload time four days later (2026-09-26T02:28:09Z).
     expect(records.find((r) => r.externalId === 'video:FfwHj_t1UCU')!.occurredAt).toEqual(
-      new Date('2026-09-26T02:28:09Z'),
+      new Date('2026-09-22T21:00:00Z'),
     );
 
     // Uploads older than the 45-day window aren't looked up.
@@ -149,6 +150,20 @@ describe('youtube', () => {
     expect(records.find((r) => r.externalId === 'video:XVM7k_LoURc')!.raw).toMatchObject({
       embeddable: true,
     });
+  });
+
+  it('reads the meeting date and time from a title, in the town time zone', () => {
+    const tz = 'America/New_York';
+    expect(titleTime('City Commission Regular Meeting 09-22-2026 5:00 PM', tz)).toEqual(
+      new Date('2026-09-22T21:00:00Z'),
+    );
+    expect(titleTime('Commission Workshop Meeting 9/22/2026 3:00 p.m.', tz)).toEqual(
+      new Date('2026-09-22T19:00:00Z'),
+    );
+    // No time: noon local, so the local date can't slip.
+    expect(titleTime('CRA Meeting 12-01-2026', tz)).toEqual(new Date('2026-12-01T17:00:00Z'));
+    expect(titleTime('Budget Discussion for Fiscal Year 2026-27', tz)).toBeNull();
+    expect(titleTime('Meeting 13-45-2026', tz)).toBeNull();
   });
 
   it('needs its key; ingest skips the source while it is missing', async () => {

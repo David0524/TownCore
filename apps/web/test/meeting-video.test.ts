@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  bodyAcronyms,
   matchMeetingVideo,
   meetingBody,
   pickMeetingVideo,
@@ -61,6 +62,32 @@ describe('meeting videos', () => {
     ).toBeNull();
     const nextDay = video('City Commission Regular Meeting', '2026-10-15T21:00:00Z');
     expect(matchMeetingVideo({ at, body: 'City Commission' }, [nextDay], tz)).toBeNull();
+  });
+
+  it('takes the video of the same kind when a body meets twice in a day', () => {
+    // The workshop record's time is closer to the regular meeting's video; its kind decides.
+    const at = new Date('2026-10-13T21:00:00Z');
+    const meeting = { at, body: 'City Commission', title: 'Agenda: City Commission: Workshop' };
+    expect(matchMeetingVideo(meeting, [commission, workshop], tz)).toBe(workshop);
+    // A regular meeting never takes a workshop video, even when it's the only one that day.
+    const regular = { at, body: 'City Commission', title: 'Actions: City Commission: Regular' };
+    expect(matchMeetingVideo(regular, [workshop], tz)).toBeNull();
+  });
+
+  it("matches a body's acronym in a video title", () => {
+    expect(bodyAcronyms('Community Redevelopment Agency')).toEqual(['cra']);
+    expect(bodyAcronyms('Site Plan Review and Appearance Board')).toEqual(['sprab', 'spra']);
+    expect(bodyAcronyms('Planning and Zoning Board')).toEqual(['pzb', 'pz']);
+    expect(bodyAcronyms('City Commission')).toEqual([]);
+    const at = new Date('2026-10-13T22:00:00Z');
+    const cra = video('CRA Board Meeting 10-13-2026 6:00 PM', '2026-10-13T22:00:00Z');
+    const pzVideo = video('PZ Board Meeting 10-13-2026 6:00 PM', '2026-10-13T22:00:00Z');
+    expect(
+      matchMeetingVideo({ at, body: 'Community Redevelopment Agency' }, [pzVideo, cra], tz),
+    ).toBe(cra);
+    expect(matchMeetingVideo({ at, body: 'Planning and Zoning Board' }, [cra, pzVideo], tz)).toBe(
+      pzVideo,
+    );
   });
 
   it('prefers a cited video, then the platform link, then the channel; never a blocked embed', () => {

@@ -3,7 +3,8 @@
 //   1. a `meeting-video` record the story cites;
 //   2. a YouTube link the meeting platform gives for the meeting (CivicClerk's video field);
 //   3. a video on the town's channel (the `youtube` adapter) recorded the same local day, whose
-//      title names the same body ("City Commission").
+//      title names the same body ("City Commission", or its acronym, "CRA") and, for a workshop
+//      or regular meeting, the same kind.
 // Only videos whose owner allows embedding are embedded.
 
 export type MeetingVideo = { videoId: string; title: string; channel: string | null };
@@ -55,29 +56,54 @@ const words = (s: string) =>
 const localDay = (d: Date, timeZone: string) =>
   new Intl.DateTimeFormat('en-CA', { timeZone, dateStyle: 'short' }).format(d);
 
+/** Trailing nouns a body's acronym may leave out: "Planning and Zoning Board" is also "PZ". */
+const GENERIC = new Set(['board', 'committee']);
+
+/** Acronyms a body goes by: "Community Redevelopment Agency" → cra; "… Board" → also without B. */
+export function bodyAcronyms(body: string): string[] {
+  const parts = body
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w && !STOP.has(w));
+  if (parts.length < 2) return [];
+  const full = parts.map((w) => w[0]).join('');
+  const out = [full];
+  if (parts.length > 2 && GENERIC.has(parts[parts.length - 1]!)) out.push(full.slice(0, -1));
+  return out;
+}
+
+type Kind = 'workshop' | 'regular' | 'special' | null;
+const kindOf = (s: string | null | undefined): Kind =>
+  (s?.toLowerCase().match(/\b(workshop|regular|special)\b/)?.[1] as Kind) ?? null;
+
 /**
  * The channel video for a meeting: recorded the same local day, with every distinctive word of
- * the body's name in its title (so "Planning and Zoning Board" never matches "City Commission").
+ * the body's name in its title, or the body's acronym ("CRA"), so "Planning and Zoning Board"
+ * never matches "City Commission". When the meeting is a workshop, regular or special meeting,
+ * a video titled as a different kind is never it (a body can meet twice in a day).
  */
 export function matchMeetingVideo(
-  meeting: { at: Date; body: string },
+  meeting: { at: Date; body: string; title?: string | null },
   videos: RecordLike[],
   timeZone: string,
 ): RecordLike | null {
   const day = localDay(meeting.at, timeZone);
-  const body = words(meeting.body);
+  const body = words(meeting.body).filter((w) => w !== 'workshop');
   if (body.length === 0) return null;
+  const acronyms = bodyAcronyms(meeting.body.replace(/\bworkshop\b/i, ''));
+  const kind = kindOf(meeting.title) ?? kindOf(meeting.body);
   const candidates = videos.filter((v) => {
     if (!v.occurredAt || localDay(v.occurredAt, timeZone) !== day) return false;
     const title = new Set(words(v.title ?? ''));
-    return body.every((w) => title.has(w));
+    if (!body.every((w) => title.has(w)) && !acronyms.some((a) => title.has(a))) return false;
+    const videoKind = kindOf(v.title);
+    return !kind || !videoKind || videoKind === kind;
   });
-  // Closest to the meeting's start first (a body can meet twice in a day: workshop, then regular).
-  candidates.sort(
-    (a, b) =>
-      Math.abs(a.occurredAt!.getTime() - meeting.at.getTime()) -
-      Math.abs(b.occurredAt!.getTime() - meeting.at.getTime()),
-  );
+  // Same kind first, then closest to the meeting's start.
+  const score = (v: RecordLike) =>
+    (kind && kindOf(v.title) === kind ? 0 : 1) * 1e12 +
+    Math.abs(v.occurredAt!.getTime() - meeting.at.getTime());
+  candidates.sort((a, b) => score(a) - score(b));
   return candidates[0] ?? null;
 }
 
@@ -115,7 +141,7 @@ export function pickMeetingVideo(
     }
     if (!record.occurredAt) continue;
     const match = matchMeetingVideo(
-      { at: record.occurredAt, body: meetingBody(record) },
+      { at: record.occurredAt, body: meetingBody(record), title: record.title },
       videos,
       timeZone,
     );

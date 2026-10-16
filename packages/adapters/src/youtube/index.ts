@@ -1,4 +1,5 @@
 import { loadEnv } from '@towncore/config';
+import { zonedTimeToUtc } from '../lib/ical';
 import type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from '../types';
 
 // YouTube meeting videos through the YouTube Data API v3 (owner's decision, 2026-10-16), the only
@@ -14,7 +15,8 @@ import type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from '../
 // Each run costs 3 quota units (channel, uploads list, video details) of the free 10,000 a day.
 //
 // Source config: { handle?: '@cityofdelraybeachfl' | channelId?: 'UC…',
-//                  titleMatch?: regex source (default: meeting words), days?: number }
+//                  titleMatch?: regex source (default: meeting words), days?: number,
+//                  timezone?: string (for dates in titles; default America/New_York) }
 
 export const YOUTUBE_API = 'https://youtube.googleapis.com/youtube/v3';
 /** Titles that look like public meetings; a channel also posts promos and event clips. */
@@ -26,6 +28,7 @@ type Options = {
   channelId: string | null;
   titleMatch: RegExp;
   days: number;
+  timezone: string;
 };
 
 function options(source: SourceConfig): Options {
@@ -34,6 +37,7 @@ function options(source: SourceConfig): Options {
     channelId?: string;
     titleMatch?: string;
     days?: number;
+    timezone?: string;
   };
   const fromUrl = source.url ? youtubeChannel(source.url) : null;
   const handle = c.handle ?? fromUrl?.handle ?? null;
@@ -46,6 +50,7 @@ function options(source: SourceConfig): Options {
     channelId,
     titleMatch: c.titleMatch ? new RegExp(c.titleMatch, 'i') : MEETING_TITLE,
     days: c.days ?? 45,
+    timezone: c.timezone ?? 'America/New_York',
   };
 }
 
@@ -108,13 +113,32 @@ async function api<T>(ctx: AdapterContext, path: string, params: Record<string, 
   });
 }
 
-/** When the meeting happened: the stream's start, else the upload time. */
-export function videoTime(video: YouTubeVideo): Date | null {
+/**
+ * The meeting date and time a title states, read in the town's time zone: Delray's uploads are
+ * titled like "City Commission Regular Meeting 09-22-2026 5:00 PM". Without a time, noon.
+ */
+export function titleTime(title: string, timeZone: string): Date | null {
+  const m = title.match(
+    /\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})\b(?:\s*(?:at\s*)?(\d{1,2}):(\d{2})\s*([AP])\.?\s*M\b)?/i,
+  );
+  if (!m) return null;
+  const [month, day, year] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const hour = m[4] ? (Number(m[4]) % 12) + (m[6]!.toUpperCase() === 'P' ? 12 : 0) : 12;
+  return zonedTimeToUtc(year, month, day, hour, m[5] ? Number(m[5]) : 0, 0, timeZone);
+}
+
+/**
+ * When the meeting happened: the stream's start; for an upload, the date in its title (a meeting
+ * can be posted days later); else the upload time.
+ */
+export function videoTime(video: YouTubeVideo, timeZone: string): Date | null {
   const at =
-    video.liveStreamingDetails?.actualStartTime ??
-    video.liveStreamingDetails?.scheduledStartTime ??
-    video.snippet?.publishedAt;
-  return at ? new Date(at) : null;
+    video.liveStreamingDetails?.actualStartTime ?? video.liveStreamingDetails?.scheduledStartTime;
+  if (at) return new Date(at);
+  const titled = titleTime(video.snippet?.title ?? '', timeZone);
+  if (titled) return titled;
+  return video.snippet?.publishedAt ? new Date(video.snippet.publishedAt) : null;
 }
 
 async function fetchVideos(source: SourceConfig, ctx: AdapterContext): Promise<RawRecord[]> {
@@ -153,7 +177,7 @@ async function fetchVideos(source: SourceConfig, ctx: AdapterContext): Promise<R
     if (video.snippet?.liveBroadcastContent && video.snippet.liveBroadcastContent !== 'none') {
       continue;
     }
-    const at = videoTime(video);
+    const at = videoTime(video, opts.timezone);
     const seconds = isoDurationSeconds(video.contentDetails?.duration);
     const channelTitle = video.snippet?.channelTitle ?? channel.snippet?.title ?? null;
     records.push({
