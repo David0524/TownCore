@@ -137,6 +137,14 @@ export function houseAd(
     href: ask(`Quote requests: ${category?.name ?? 'directory'}`),
     cta: 'Learn more',
   };
+  const dining: SlotFill = {
+    source: 'house',
+    label: `From ${town.siteName}`,
+    headline: 'This spot could be your restaurant',
+    body: `Put your restaurant in front of ${town.name} readers looking for somewhere new.`,
+    href: ask('Featured restaurant'),
+    cta: 'Get in touch',
+  };
   // Neighboring slots on one page get different messages.
   const rotation: Record<SlotName, SlotFill> = {
     'home.top': advertise,
@@ -151,6 +159,7 @@ export function houseAd(
     'directory.topspot': topspot,
     'directory.category.top': claim,
     'directory.quote-request': leads,
+    'dining.featured': dining,
   };
   return rotation[slot];
 }

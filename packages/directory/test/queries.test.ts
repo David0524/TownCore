@@ -1,10 +1,13 @@
-import { businesses, towns, type Db } from '@towncore/db';
+import { businesses, records, sources, towns, type Db } from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   categoryCounts,
   categoryListings,
+  claimedListings,
   getListing,
+  newFoodPlaces,
+  relatedListings,
   listingPlace,
   searchListings,
   type Listing,
@@ -78,5 +81,59 @@ describe('directory queries', () => {
     const unclaimed = { ...claimed, claimedAt: null };
     expect(listingPlace(claimed, 'Quay')).toBe('1 Main St, Quay area, 33432');
     expect(listingPlace(unclaimed, 'Quay')).toBe('Quay area · 33432');
+  });
+
+  it('features claimed listings only', async () => {
+    expect((await claimedListings(db, townId)).map((l) => l.slug)).toEqual(['z']);
+  });
+
+  it('relates businesses the story names first, then its beat’s category', async () => {
+    const story = await relatedListings(db, townId, {
+      text: 'Crews from Alpha Plumbing replaced the main. Roof Co was not involved.',
+      beat: 'development',
+    });
+    // "Roof Co" is too short to match by name safely.
+    expect(story.named.map((l) => l.slug)).toEqual(['a']);
+    // No general contractors here, so the next development category with listings: roofers.
+    expect(story.category?.slug).toBe('roofers');
+    expect(story.listings.map((l) => l.slug)).toEqual(['r']);
+    const none = await relatedListings(db, townId, { text: 'Nothing here.', beat: 'schools' });
+    expect(none).toEqual({ named: [], category: null, listings: [] });
+  });
+
+  it('lists newly licensed food places once each, newest first, linked when listed', async () => {
+    const [source] = await db
+      .insert(sources)
+      .values({ townId, kind: 'business_filings', platform: 'fl-dbpr', adapter: 'fl-dbpr' })
+      .returning();
+    const now = new Date('2026-10-16T12:00:00Z');
+    const add = (id: string, at: string, raw: Record<string, string>) =>
+      db.insert(records).values({
+        sourceId: source!.id,
+        townId,
+        externalId: id,
+        type: 'new_food_license',
+        title: raw.businessName,
+        raw: { occupation: 'Permanent Food Service, seating', zip: '33432-1234', ...raw },
+        occurredAt: new Date(at),
+        contentHash: id,
+      });
+    await db.insert(businesses).values({
+      townId,
+      slug: 'taco-spot-sea1',
+      name: 'Taco Spot',
+      category: 'restaurants',
+      dataSource: 'fl-dbpr',
+      licenseNumber: 'SEA1',
+    });
+    await add('n1', '2026-10-01', { businessName: 'TACO SPOT', licenseNumber: 'SEA1' });
+    await add('n2', '2026-10-10', { businessName: 'NEW BAGELS', licenseNumber: 'SEA2' });
+    await add('n3', '2026-10-05', { businessName: 'TACO SPOT', licenseNumber: 'SEA1' });
+    await add('old', '2026-05-01', { businessName: 'OLD DINER', licenseNumber: 'SEA3' });
+    const places = await newFoodPlaces(db, townId, { now });
+    expect(places.map((p) => [p.name, p.listing?.slug ?? null, p.zip])).toEqual([
+      ['New Bagels', null, '33432'],
+      ['Taco Spot', 'taco-spot-sea1', '33432'],
+    ]);
   });
 });

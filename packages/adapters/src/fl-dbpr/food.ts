@@ -10,6 +10,12 @@ import type { RawRecord } from '../types';
 // location address. Rows are filtered on the location city.
 
 export const FOOD_FILE = /^hrfood[1-7]\.csv$/;
+/**
+ * New establishments approved this fiscal year, statewide (newfood.csv): the same layout with
+ * three leading columns (application number, type and approval date). These are dated, so they
+ * feed "new places to eat"; the hrfood files carry no first-licensed date.
+ */
+export const NEW_FOOD_FILE = /^newfood\.csv$/;
 
 const COLUMNS = [
   'board',
@@ -67,6 +73,45 @@ export function parseFoodRow(line: string): FoodRow | null {
   // Data rows start with board 200 (Hotels and Restaurants); this skips the header row.
   if (fields.length < 31 || fields[0]?.trim() !== '200') return null;
   return Object.fromEntries(COLUMNS.map((c, i) => [c, (fields[i] ?? '').trim()])) as FoodRow;
+}
+
+export type NewFoodRow = FoodRow & {
+  applicationNumber: string;
+  applicationType: string;
+  approvedDate: string;
+};
+
+export function parseNewFoodRow(line: string): NewFoodRow | null {
+  const fields = parseCsvLine(line);
+  if (fields.length < 34 || fields[3]?.trim() !== '200') return null;
+  const [applicationNumber = '', applicationType = '', approvedDate = '', ...rest] = fields.map(
+    (f) => f.trim(),
+  );
+  const row = Object.fromEntries(COLUMNS.map((c, i) => [c, rest[i] ?? ''])) as FoodRow;
+  return { ...row, applicationNumber, applicationType, approvedDate };
+}
+
+/** MM/DD/YYYY → Date (UTC midnight), or null. */
+function parseDate(value: string): Date | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  return m ? new Date(Date.UTC(+m[3]!, +m[1]! - 1, +m[2]!)) : null;
+}
+
+export function newFoodRecord(row: NewFoodRow, fileUrl: string): RawRecord {
+  const base = foodRecord(row, fileUrl);
+  return {
+    ...base,
+    externalId: `newfood:${row.applicationNumber}`,
+    type: 'new_food_license',
+    text: `${base.text} Application approved ${row.approvedDate}.`,
+    occurredAt: parseDate(row.approvedDate),
+    raw: {
+      ...(base.raw as object),
+      applicationNumber: row.applicationNumber,
+      applicationType: row.applicationType,
+      approvedDate: row.approvedDate,
+    },
+  };
 }
 
 export function foodRecord(row: FoodRow, fileUrl: string): RawRecord {

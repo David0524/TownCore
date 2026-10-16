@@ -37,6 +37,11 @@ sources:
   - kind: business_filings
     platform: fl-dbpr
     options: { city: BOCA RATON, files: [hrfood2.csv] }
+  # Verified 2026-10-16: DBPR new food service establishments approved this fiscal year
+  # (statewide newfood.csv, with approval dates), filtered to the location city.
+  - kind: business_filings
+    platform: fl-dbpr
+    options: { city: BOCA RATON, files: [newfood.csv] }
   # Verified 2026-10-15: Florida Division of Corporations daily filings (new businesses).
   - kind: business_filings
     platform: fl-sunbiz

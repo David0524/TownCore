@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 import { beats, townContactEmail, type TownConfig } from '@towncore/config';
 import { getPublishedArticle, getSourceRecords, listArticleCorrections } from '@towncore/db';
 import { ViewBeacon } from '@/components/Beacon';
+import { RelatedBusinesses } from '@/components/directory/RelatedBusinesses';
 import { BeatLabel } from '@/components/news/BeatLabel';
 import { TypographicCard } from '@/components/news/TypographicCard';
 import { Prose } from '@/components/Prose';
@@ -170,7 +171,7 @@ export default async function ArticlePage({ params }: Props) {
 
         {await NewsletterCta({ town, theme, modules: [] })}
 
-        <Slot town={town} name="article.related-businesses" />
+        <RelatedBusinesses town={town} article={article} />
 
         {more.length > 0 ? (
           <section className={styles.more} aria-labelledby="more-h">

@@ -1,10 +1,12 @@
-import { and, businesses, eq, type Db, type Town } from '@towncore/db';
+import { and, businesses, eq, records, sources, type Db, type Town } from '@towncore/db';
 
 // Fictional directory listings for the fixture towns (never Boca), so e2e covers the directory
 // pages: one category with enough listings to be indexed, one thin one, and a claimed listing.
 // Every name is invented and every license number starts with "TEST".
 
 export const TEST_DIRECTORY_SOURCE = 'test-fixture';
+/** Source platform for the fixture's new-food records, apart from test-content's own source. */
+const TEST_NEWFOOD_PLATFORM = 'test-directory';
 
 type Fixture = {
   name: string;
@@ -81,6 +83,50 @@ export async function seedTestDirectory(db: Db, town: Town): Promise<number> {
           : {}),
       };
     }),
+  );
+  // Two newly licensed food places for the new-now-open module: one already listed.
+  await db
+    .delete(records)
+    .where(and(eq(records.townId, town.id), eq(records.type, 'new_food_license')));
+  const [source] =
+    (await db
+      .select()
+      .from(sources)
+      .where(and(eq(sources.townId, town.id), eq(sources.platform, TEST_NEWFOOD_PLATFORM)))) ?? [];
+  const sourceId =
+    source?.id ??
+    (
+      await db
+        .insert(sources)
+        .values({
+          townId: town.id,
+          kind: 'business_filings',
+          platform: TEST_NEWFOOD_PLATFORM,
+          adapter: TEST_NEWFOOD_PLATFORM,
+        })
+        .returning()
+    )[0]!.id;
+  const day = 86_400_000;
+  const newPlaces = [
+    { name: 'HARBOR LIGHT CHOWDER HOUSE', license: 'TEST0008', daysAgo: 3 },
+    { name: 'LOBSTER POT TAKEOUT', license: 'TESTNEW1', daysAgo: 9 },
+  ];
+  await db.insert(records).values(
+    newPlaces.map((p, i) => ({
+      sourceId,
+      townId: town.id,
+      externalId: `test-newfood-${i}`,
+      type: 'new_food_license',
+      title: p.name,
+      raw: {
+        businessName: p.name,
+        licenseNumber: p.license,
+        occupation: 'Permanent Food Service, seating',
+        zip,
+      },
+      occurredAt: new Date(Date.now() - p.daysAgo * day),
+      contentHash: `test-newfood-${i}`,
+    })),
   );
   return fixtures.length;
 }
