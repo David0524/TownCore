@@ -22,3 +22,6 @@ import '@fontsource/libre-caslon-display/400.css';
 import '@fontsource/libre-caslon-text/400-italic.css';
 import '@fontsource-variable/bricolage-grotesque';
 import '@fontsource-variable/figtree';
+import '@fontsource-variable/outfit';
+// Charts and data graphics, network-wide: a face apart from every town's headlines (owner).
+import '@fontsource-variable/space-grotesk';

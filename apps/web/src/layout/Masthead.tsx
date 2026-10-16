@@ -20,6 +20,7 @@ export function Masthead({ town, theme, size }: PartProps & { size: 'large' | 's
               siteName: town.siteName,
               style: theme.masthead,
               motif: theme.motif,
+              fontFamily: 'var(--font-wordmark)',
               advanceEm: typePairings[theme.type].headlineAdvanceEm,
               fontWeight: typePairings[theme.type].headlineWeight,
             }),

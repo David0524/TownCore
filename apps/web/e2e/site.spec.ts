@@ -68,6 +68,8 @@ test('the Boca theme is applied (palette, type pairing, corners)', async ({ page
       h1: css(document.querySelector('h1'))?.color,
       h1Font: css(document.querySelector('h1'))?.fontFamily,
       radius: getComputedStyle(document.documentElement).getPropertyValue('--radius').trim(),
+      wordmark: getComputedStyle(document.documentElement).getPropertyValue('--font-wordmark'),
+      chart: getComputedStyle(document.documentElement).getPropertyValue('--font-chart'),
     };
   });
   if (isMobile) {
@@ -78,7 +80,11 @@ test('the Boca theme is applied (palette, type pairing, corners)', async ({ page
       radius: '10px',
     });
     expect(styles.bodyFont).toContain('-apple-system');
-    expect(styles.h1Font).toContain('New York');
+    // Headlines in San Francisco (owner, 2026-10-16); the wordmark keeps the town's face.
+    expect(styles.h1Font).toContain('-apple-system');
+    expect(styles.h1Font).not.toContain('New York');
+    expect(styles.wordmark).toContain('Outfit');
+    expect(styles.chart).toContain('Space Grotesk');
     return;
   }
   expect(styles).toMatchObject({
@@ -87,8 +93,10 @@ test('the Boca theme is applied (palette, type pairing, corners)', async ({ page
     h1: 'rgb(17, 20, 24)',
     radius: '6px', // corners: soft
   });
-  // coastal-modern type set: Instrument Serif display, Geist text.
-  expect(styles.h1Font).toContain('Instrument Serif');
+  // Boca's type set: Outfit display, Geist text; charts in their own face.
+  expect(styles.h1Font).toContain('Outfit');
+  expect(styles.wordmark).toContain('Outfit');
+  expect(styles.chart).toContain('Space Grotesk');
   expect(styles.bodyFont).toContain('Geist');
 });
 

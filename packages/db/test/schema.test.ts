@@ -37,7 +37,7 @@ async function expectViolation(promise: Promise<unknown>, constraint: string) {
 describe('towns:sync', () => {
   it('stores the Boca theme from its theme file', async () => {
     const town = await boca();
-    expect((town.theme as { type: string }).type).toBe('instrumentserif-geist');
+    expect((town.theme as { type: string }).type).toBe('outfit-geist');
   });
 
   it('creates Boca Raton as a draft town', async () => {
