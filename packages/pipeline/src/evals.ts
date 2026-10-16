@@ -201,3 +201,24 @@ export function stableUuid(seed: string): string {
   const h = createHash('sha256').update(seed).digest('hex');
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
+
+/**
+ * What got worse from `baseline` to `run` (CLAUDE.md §12: block changes that lower the fact-check
+ * pass rate or raise unsupported claims). Unsupported claims are claims not found verbatim.
+ */
+export function evalRegressions(baseline: EvalSummary, run: EvalSummary): string[] {
+  const out: string[] = [];
+  const unsupported = (s: EvalSummary) =>
+    s.results.reduce((n, r) => n + Math.max(0, r.claims - r.verbatimClaims), 0);
+  if (run.safetyFailures > baseline.safetyFailures)
+    out.push(`safety failures rose from ${baseline.safetyFailures} to ${run.safetyFailures}`);
+  if (run.factcheckPassRate < baseline.factcheckPassRate - 1e-9)
+    out.push(
+      `fact-check pass rate fell from ${(baseline.factcheckPassRate * 100).toFixed(0)}% to ${(run.factcheckPassRate * 100).toFixed(0)}%`,
+    );
+  if (unsupported(run) > unsupported(baseline))
+    out.push(`unsupported claims rose from ${unsupported(baseline)} to ${unsupported(run)}`);
+  if (run.passed < baseline.passed)
+    out.push(`cases passing fell from ${baseline.passed} to ${run.passed}`);
+  return out;
+}

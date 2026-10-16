@@ -6,7 +6,7 @@
 
 | Check | Result | Detail |
 | --- | --- | --- |
-| Readiness (Rule 7) | **Fail** | 0.2 real items a day; 3 needed (classified). |
+| Readiness (Rule 7) | **Fail** | 0.53 real items a day; 3 needed (estimate). |
 | No TBD fields in the town config | Pass | Every field is set. |
 | Name checks (§10b) | Pass | The Delray Ledger (delrayledger.com): no conflicts found |
 | Theme valid, WCAG AA contrast | Pass | Every text pair passes. |
@@ -35,22 +35,24 @@ Discovery: manual (--source flags and state sources).
 | business_filings | https://www.myfloridalicense.com/ | matched (fl-dbpr) | Florida DBPR contractor and trade licenses |
 | business_filings | https://www.myfloridalicense.com/ | matched (fl-dbpr) | Florida DBPR new food service approvals |
 | business_filings | https://sftp.floridados.gov/ | matched (fl-sunbiz) | Florida Division of Corporations daily filings |
+| agenda | https://delraybeach.legistar.com/Calendar.aspx | matched (legistar) | Legistar meetings (delraybeach.legistar.com, public Web API) |
 
 Adapter requests: `adapter-requests.md`.
 
 ## Readiness (Rule 7)
 
-0.2 real items a day over 30 days; 3 needed.
+0.53 real items a day over 30 days; 3 needed.
 
 | Source | Ingest | Records in window | Items | How counted |
 | --- | --- | --- | --- | --- |
-| business_filings (fl-dbpr) | ok | 0 | 0 | 0 records in 0 weeks: one weekly roundup a week |
-| business_filings (fl-dbpr) | ok | 3 | 2 | 3 records in 2 weeks: one weekly roundup a week |
+| business_filings (fl-dbpr) | ok | 0 | 0 | 0 records, none that count |
 | business_filings (fl-sunbiz) | ok | 40 | 4 | 40 records in 4 weeks: one weekly roundup a week |
+| business_filings (fl-dbpr) | ok | 3 | 2 | 3 records in 2 weeks: one weekly roundup a week |
+| agenda (legistar) | ok | 42 | 10 | 5 stories with enough text (not classified); 37 records in 5 weeks: one weekly roundup a week |
 
 ## Seeded content
 
-- Story finder: 1 roundups, 0 candidates, 0 accepted
+- Story finder: 0 roundups, 5 candidates, 0 accepted, 5 waiting for a model
 - Directory: 441 active listings from state license data
 - Guides: No guide topics mapped yet: map the network guide topics to official pages in the town YAML (guides:), verified live (D-M4-2).
 
@@ -98,7 +100,7 @@ Nearest towns: Boca Town Square (6 miles). Compare with their sites before appro
 
 ## Manual to-dos
 
-- [ ] Readiness is 0.2 a day, below 3 (Rule 7): find more official sources the bot may read, or build the adapter requests, then resume with --source kind=url.
+- [ ] Readiness is 0.53 a day, below 3 (Rule 7): find more official sources the bot may read, or build the adapter requests, then resume with --source kind=url.
 - [ ] Buy delrayledger.com (Rule 10): `pnpm launch "Delray Beach, FL" --resume --approve-spend`
 - [ ] Stripe test prices for this town: `pnpm directory:stripe sync --town delray-beach --execute`
 - [ ] Mail domain: SES identities and DNS on Vercel (Rule 10): `pnpm mail:onboard add delrayledger.com --execute --approved`

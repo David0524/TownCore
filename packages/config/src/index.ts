@@ -23,6 +23,7 @@ export {
 } from './brand';
 export {
   estimateCostUsd,
+  NETWORK_AI_DAILY_CAP_USD,
   WEB_SEARCH_USD,
   llmProviders,
   modelPrices,

@@ -55,6 +55,18 @@ pnpm launch "Delray Beach, FL" --resume --preview --redo theme --site … (re-ta
 - **Stale screenshots:** the web app caches each town for 60 seconds, so the first screenshots showed the network default theme. Capture now waits until the page shows the new theme (family and brand color). `--redo theme` re-takes screenshots and keeps the theme already made.
 - **Wrong font on assets:** identity assets were drawn in a fallback serif, because replacing the page dropped the element that defines `--font-headline`. The assets now name the headline face the page actually resolved.
 
+## Re-run with Delray's Legistar meetings (later the same night)
+
+The Legistar and CivicClerk adapters landed on main (#73), and their meetings census found Delray on Legistar. With `propose()` added to both adapters and readiness counting meeting recaps the way the story finder does, the run was resumed:
+
+```
+pnpm launch "Delray Beach, FL" --resume --preview --source agenda=https://delraybeach.legistar.com/Calendar.aspx --site …
+```
+
+- **Source:** `delraybeach.legistar.com` verified through the public Web API.
+- **Readiness:** 42 meeting records in 30 days, 5 of them recaps (minutes or recorded actions with enough text), across 5 weeks of meetings: 10 items. With the state sources, that's **0.53 real items a day**, still short of 3 (Rule 7).
+- **Theme and checks:** unchanged; every other check passes.
+
 ## What Delray needs before it can launch
 
 - Official sources the bot may read: at least 3 real items a day (Rule 7). The city site is closed to us. Options for the owner:

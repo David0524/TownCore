@@ -1,6 +1,7 @@
 import {
   estimateCostUsd,
   loadEnv,
+  NETWORK_AI_DAILY_CAP_USD,
   WEB_SEARCH_USD,
   providerModels,
   type Env,
@@ -147,6 +148,18 @@ export async function todaysUsage(
   return { costUsd: Number(row?.cost ?? 0), calls: row?.calls ?? 0 };
 }
 
+const startOfUtcDay = (d: Date) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+
+/** AI spend across every town since `from`. */
+export async function networkSpendSince(db: Db, from: Date): Promise<number> {
+  const [row] = await db
+    .select({ cost: sql<string>`coalesce(sum(${aiUsage.estCostUsd}), 0)` })
+    .from(aiUsage)
+    .where(gte(aiUsage.createdAt, from));
+  return Number(row?.cost ?? 0);
+}
+
 export type CallResult<T> = {
   value: T;
   model: string;
@@ -173,6 +186,14 @@ export async function callModel<T>(
   if (args.images?.length && !provider.images)
     throw new Error(`${prompt.id} sends images, which the ${providerName} provider can't read.`);
   const today = await todaysUsage(db, town, now);
+  // The network-wide cap first (D-M8-2): one town's runaway job can't spend for all.
+  const network = await networkSpendSince(db, startOfUtcDay(now));
+  if (network >= NETWORK_AI_DAILY_CAP_USD) {
+    throw new SpendCapReached(
+      town.id,
+      `network-wide $${network.toFixed(2)} of $${NETWORK_AI_DAILY_CAP_USD} today`,
+    );
+  }
   if (today.costUsd >= town.aiDailyCapUsd) {
     throw new SpendCapReached(town.id, `$${today.costUsd.toFixed(2)} of $${town.aiDailyCapUsd}`);
   }

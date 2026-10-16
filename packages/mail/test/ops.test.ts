@@ -168,7 +168,7 @@ describe('alerts against Postgres', () => {
     expect(sent).toHaveLength(1);
     expect(sent[0]!.to).toEqual(['ed@towncore.net']);
     const m = await simpleParser(sent[0]!.raw);
-    expect(m.subject).toBe('[Critical] Mail health: 7 alert(s)');
+    expect(m.subject).toBe('[Critical] TownCore alerts: 7 open');
     expect(m.text).toContain('CRITICAL: Bulk mail paused for boca.test: complaint rate 0.9%');
 
     // Same conditions an hour later: nothing new, nothing sent.
@@ -181,7 +181,7 @@ describe('alerts against Postgres', () => {
     await runAlerts(db, mail, later(2));
     expect(sent).toHaveLength(2);
     const m2 = await simpleParser(sent[1]!.raw);
-    expect(m2.subject).toBe('Mail health: 1 alert(s) resolved');
+    expect(m2.subject).toBe('TownCore alerts: 1 resolved');
     expect(m2.text).toContain('RESOLVED: Bulk mail paused for every town');
     await runAlerts(db, mail, later(3));
     expect(sent).toHaveLength(2);

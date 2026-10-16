@@ -646,4 +646,10 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
   Admin → Launches lists runs and takes a ready town live (admin only, every check re-run, domain bought, mail domain live) or pauses it, tested on a fixture town.
   - Delray: report with a community-family theme and screenshots clearly different from Boca's; every check passes except readiness (0.2 items a day): `www.delraybeachfl.gov` refuses our bot (HTTP 403), so only state sources count. The milestone's "passing report" needs a readable town: the owner picks Delray sources or another town.
   - Open (owner): approve a town in Admin → Launches; an Anthropic key for discovery and identity research; registrant contact and a Vercel token before any purchase; the Census Data API key isn't needed (bulk files).
-- Next: **M8 Ops** (`docs/plans/M8.md` to be written first).
+- 2026-10-16 — **M8 Ops: complete in CI** (plan `docs/plans/M8.md`, written and built overnight; decisions D-M8-1 to 5 took the recommendations).
+  - **Admin → Health:** every town's items a day, fact-check pass rate, review queue, corrections, source health, AI spend and cost per story, subscribers and paying businesses, with the open alerts first.
+  - **Alerts:** broken sources (critical for live towns), a town at its daily AI cap, cost per published story up more than 50% week over week, stories waiting over 24 hours in review, a silent worker and the network cap now share the mail alert table and emails ("TownCore alerts").
+  - **Spend caps:** a network-wide AI cap of $50 a day beside each town's.
+  - **Evals:** CI replays and must match the committed baseline; `pnpm evals --live` refuses to save a recording that lowers the fact-check pass rate or raises unsupported claims or safety failures, unless `--accept-regression "<reason>"`.
+  - Also in this PR: Legistar and CivicClerk `propose()` for launcher discovery; readiness counts meeting recaps like the story finder; the Delray re-run with its Legistar meetings (0.53 items a day, still short of Rule 7).
+- Next: **M9 Contributors and images** (`docs/plans/M9.md` to be written first).

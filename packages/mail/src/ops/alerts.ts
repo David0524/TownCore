@@ -201,15 +201,15 @@ export async function notifyAlerts(
   const cleared = due.filter((a) => a.resolvedAt);
   const critical = active.some((a) => a.severity === 'critical');
   const subject = active.length
-    ? `${critical ? '[Critical] ' : ''}Mail health: ${active.length} alert(s)${cleared.length ? `, ${cleared.length} resolved` : ''}`
-    : `Mail health: ${cleared.length} alert(s) resolved`;
+    ? `${critical ? '[Critical] ' : ''}TownCore alerts: ${active.length} open${cleared.length ? `, ${cleared.length} resolved` : ''}`
+    : `TownCore alerts: ${cleared.length} resolved`;
   const lines = [
     ...active.map(
       (a) => `${a.severity.toUpperCase()}: ${a.message} (since ${a.firstSeenAt.toISOString()})`,
     ),
     ...cleared.map((a) => `RESOLVED: ${a.message}`),
     '',
-    'Details: Admin → Mail health. Procedures: docs/mail/RUNBOOK.md.',
+    'Details: Admin → Health and Admin → Mail health. Procedures: docs/mail/RUNBOOK.md.',
   ];
   await sendStaffEmail(mail.transport, mail.configurationSet, {
     to,
@@ -243,8 +243,10 @@ export async function runAlerts(
   db: Db,
   mail: { transport: MailTransport; configurationSet: string } | null,
   now = new Date(),
+  /** Conditions from outside mail (M8: sources, spend, review queue, worker), same table. */
+  extra: Condition[] = [],
 ): Promise<AlertRun> {
-  const run = await syncAlerts(db, await currentConditions(db, now), now);
+  const run = await syncAlerts(db, [...(await currentConditions(db, now)), ...extra], now);
   run.notified = await notifyAlerts(db, mail, now);
   return run;
 }

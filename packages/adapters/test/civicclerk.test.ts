@@ -109,3 +109,28 @@ describe('civicclerk', () => {
     );
   });
 });
+
+describe('civicclerk discovery (launcher, M7)', () => {
+  it('proposes the tenant’s meetings from its portal or a town page linking to it', async () => {
+    const { civicclerkAdapter } = await import('../src/civicclerk');
+    const ctx = { fetcher: new Fetcher(), now: new Date('2026-10-16T12:00:00Z') };
+    expect(
+      await civicclerkAdapter.propose!(
+        'https://jupiterfl.portal.civicclerk.com/',
+        '',
+        'agenda',
+        ctx,
+      ),
+    ).toEqual([
+      {
+        kind: 'agenda',
+        url: 'https://jupiterfl.portal.civicclerk.com/',
+        label: 'CivicClerk meetings (jupiterfl.portal.civicclerk.com, public API)',
+      },
+    ]);
+    const town = '<a href="https://parklandfl.portal.civicclerk.com/">Meetings</a>';
+    expect(
+      (await civicclerkAdapter.propose!('https://www.example.gov/', town, 'agenda', ctx))[0]!.url,
+    ).toBe('https://parklandfl.portal.civicclerk.com/');
+  });
+});

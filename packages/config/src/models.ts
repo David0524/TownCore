@@ -49,6 +49,12 @@ export const modelPrices: Record<string, ModelPrice> = {
 };
 
 /**
+ * Network-wide AI spend a day, across every town (docs/plans/M8.md, D-M8-2). Reaching it stops
+ * model calls everywhere until midnight UTC and opens a critical alert.
+ */
+export const NETWORK_AI_DAILY_CAP_USD = 50;
+
+/**
  * Anthropic's server-side web search, USD per search (on top of tokens). Verified against the
  * Anthropic pricing page on 2026-10-16: $10 per 1,000 searches.
  */
