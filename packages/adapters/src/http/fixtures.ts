@@ -45,7 +45,8 @@ export function recordingFetch(real: FetchFn): { fetch: FetchFn; save: (path: st
       const buffer = Buffer.from(await response.arrayBuffer());
       const headers: Record<string, string> = {};
       response.headers.forEach((value, key) => {
-        if (['content-type', 'etag', 'last-modified'].includes(key)) headers[key] = value;
+        if (['content-type', 'etag', 'last-modified', 'location'].includes(key))
+          headers[key] = value;
       });
       const isText = TEXT_TYPES.test(headers['content-type'] ?? 'text/plain');
       exchanges.push({

@@ -106,6 +106,53 @@ describe('Fetcher', () => {
     await expect(deny.get('https://city.example/x')).rejects.toThrow(/robots/);
   });
 
+  it('checks robots.txt again on every redirect hop, including to another host', async () => {
+    const redirect = (from: string, to: string, status = 302) => ({
+      url: from,
+      status,
+      headers: { location: to },
+      body: '',
+    });
+    const exchanges = [
+      robots('User-agent: *\nDisallow: /private'),
+      redirect('https://city.example/video', 'https://media.example/watch/1'),
+      {
+        url: 'https://media.example/robots.txt',
+        status: 200,
+        headers: { 'content-type': 'text/plain' },
+        body: 'User-agent: *\nDisallow: /',
+      },
+      redirect('https://city.example/old', '/new', 301),
+      page('/new', 'moved'),
+      redirect('https://city.example/sneaky', '/private/doc'),
+      redirect('https://city.example/social', 'https://www.facebook.com/city'),
+      redirect('https://city.example/loop', '/loop'),
+    ];
+    const seen: string[] = [];
+    const replay = replayFetch({ recordedAt: '', exchanges });
+    const fetcher = new Fetcher({
+      fetchImpl: async (input, init) => {
+        seen.push(input);
+        expect(init?.redirect).toBe(input.endsWith('/robots.txt') ? 'follow' : 'manual');
+        return replay(input, init);
+      },
+      ...fakeClock(),
+    });
+    // A same-host relative redirect is followed.
+    await expect(fetcher.getText('https://city.example/old')).resolves.toBe('moved');
+    // Another host whose robots.txt disallows us: refused, its page never requested.
+    await expect(fetcher.get('https://city.example/video')).rejects.toThrow(
+      /media\.example\/watch\/1 \(redirected from https:\/\/city\.example\/video\): disallowed by robots/,
+    );
+    // A disallowed path on the same host, and a never-scrape host, are refused too.
+    await expect(fetcher.get('https://city.example/sneaky')).rejects.toThrow(/robots/);
+    await expect(fetcher.get('https://city.example/social')).rejects.toThrow(FetchPolicyError);
+    await expect(fetcher.get('https://city.example/loop')).rejects.toThrow(/too many redirects/);
+    expect(seen).not.toContain('https://media.example/watch/1');
+    expect(seen).not.toContain('https://city.example/private/doc');
+    expect(seen).not.toContain('https://www.facebook.com/city');
+  });
+
   it('sends the bot user agent and spaces requests to one host at least 1s apart', async () => {
     const clock = fakeClock();
     const seen: Array<{ url: string; at: number; ua: string | null }> = [];

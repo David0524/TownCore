@@ -3,7 +3,8 @@ import { documentedApi, isBlockedUrl, MIN_INTERVAL_MS, USER_AGENT } from './poli
 
 // The only way adapters may make HTTP requests (a lint rule bans bare fetch in this package).
 // Every request: never-scrape list → robots.txt (including Crawl-delay) → at most 1 request a
-// second per host → timeout + retries.
+// second per host → timeout + retries. Redirects are followed by hand, and every hop passes the
+// same checks, so a redirect can never lead to a host or path robots.txt disallows.
 
 export class FetchPolicyError extends Error {}
 
@@ -34,6 +35,9 @@ const ROBOTS_TTL_MS = 24 * 3_600_000;
 const MAX_INTERVAL_MS = 10_000;
 /** The longest robots.txt Crawl-delay we honor as asked; longer delays are capped here. */
 const MAX_CRAWL_DELAY_MS = 60_000;
+/** Redirect hops followed per request (RFC 9309 asks crawlers to follow at least five). */
+const MAX_REDIRECTS = 5;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 /** Retry-After as seconds or an HTTP date, capped at 60s. */
 export function retryAfterMs(value: string | null, now = Date.now()): number | null {
@@ -72,14 +76,26 @@ export class Fetcher {
 
   /** GET a URL politely. Throws FetchPolicyError if the URL is blocked or disallowed. */
   async get(url: string, headers: Record<string, string> = {}): Promise<Response> {
-    const target = new URL(url);
+    let target = new URL(url);
+    for (let hop = 0; ; hop++) {
+      await this.checkPolicy(target, url);
+      const response = await this.request(target, headers);
+      const location = response.headers.get('location');
+      if (!REDIRECT_STATUSES.has(response.status) || !location) return response;
+      if (hop === MAX_REDIRECTS) throw new Error(`GET ${url} failed: too many redirects`);
+      target = new URL(location, target);
+    }
+  }
+
+  /** Rule 8 for one URL: the never-scrape list, then robots.txt (documented APIs excepted). */
+  private async checkPolicy(target: URL, requested: string): Promise<void> {
+    const via = target.toString() === requested ? '' : ` (redirected from ${requested})`;
     const blocked = isBlockedUrl(target);
-    if (blocked) throw new FetchPolicyError(`Refusing to fetch ${url}: ${blocked}`);
+    if (blocked) throw new FetchPolicyError(`Refusing to fetch ${target}${via}: ${blocked}`);
     // Documented APIs that invite automated use skip robots.txt (Rule 8 exception); pages never do.
     if (!documentedApi(target) && !(await this.allowedByRobots(target))) {
-      throw new FetchPolicyError(`Refusing to fetch ${url}: disallowed by robots.txt`);
+      throw new FetchPolicyError(`Refusing to fetch ${target}${via}: disallowed by robots.txt`);
     }
-    return this.request(target, headers);
   }
 
   async getText(url: string, headers: Record<string, string> = {}): Promise<string> {
@@ -102,7 +118,8 @@ export class Fetcher {
       const robotsUrl = `${origin}/robots.txt`;
       let robots: Robots | 'allow-all' | 'disallow-all';
       try {
-        const response = await this.request(new URL(robotsUrl), {}, 1);
+        // RFC 9309: robots.txt itself may redirect (http → https, bare → www); follow those.
+        const response = await this.request(new URL(robotsUrl), {}, 1, 'follow');
         if (response.ok) {
           robots = robotsParser(robotsUrl, await response.text()) as Robots;
           this.applyCrawlDelay(target.host, robots);
@@ -123,6 +140,7 @@ export class Fetcher {
     target: URL,
     headers: Record<string, string>,
     attempts = this.retries,
+    redirect: 'manual' | 'follow' = 'manual',
   ): Promise<Response> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -131,7 +149,7 @@ export class Fetcher {
           this.fetchImpl(target.toString(), {
             headers: { 'user-agent': this.userAgent, ...headers },
             signal: AbortSignal.timeout(this.timeoutMs),
-            redirect: 'follow',
+            redirect,
           }),
         );
         if (response.status === 429) {
