@@ -14,6 +14,7 @@ export function TownGrid({
   measure = 'normal',
   top,
   railModules,
+  railHouseOffOnPhones,
   children,
 }: {
   town: Town;
@@ -23,6 +24,8 @@ export function TownGrid({
   top?: ReactNode;
   /** Modules shown in the rail above rail.box (homepage). */
   railModules?: ReactNode;
+  /** Leave an unsold rail.box out on phones, where the rail stacks under a short page. */
+  railHouseOffOnPhones?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -34,7 +37,7 @@ export function TownGrid({
         kind === 'main-right-rail' ? (
           <>
             {railModules}
-            <Slot town={town} name="rail.box" />
+            <Slot town={town} name="rail.box" houseOffOnPhones={railHouseOffOnPhones} />
           </>
         ) : null
       }

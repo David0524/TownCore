@@ -10,6 +10,7 @@ import {
   renderSignature,
   replyRecipients,
   replySubject,
+  suppressedAddresses,
   threadStatuses,
 } from '@towncore/mail';
 import Link from 'next/link';
@@ -20,7 +21,13 @@ import { db } from '@/lib/db';
 import styles from '../../../admin.module.css';
 import { sendReplyAction } from '../../compose/actions';
 import { Composer } from '../../compose/Composer';
-import { assignAction, moveTeamAction, noteAction, statusAction } from '../actions';
+import {
+  assignAction,
+  moveTeamAction,
+  noteAction,
+  statusAction,
+  suppressContactAction,
+} from '../actions';
 import { ThreadKeys } from '../KeyboardNav';
 
 export const metadata = { title: 'Conversation' };
@@ -56,6 +63,12 @@ export default async function Conversation({ params, searchParams }: Props) {
   await markRead(db(), id, me.id);
   const t = thread.thread;
   const hidden = <input type="hidden" name="threadId" value={t.id} />;
+  const [contactSuppressed] = thread.contactEmail
+    ? await suppressedAddresses(db(), [thread.contactEmail], {
+        domainId: t.domainId,
+        stream: 'conversational',
+      })
+    : [];
 
   // Reply defaults: answer the last message from outside; "Reply all" adds its other people.
   const [domainRows, sigRows] = await Promise.all([
@@ -168,6 +181,18 @@ export default async function Conversation({ params, searchParams }: Props) {
             {t.status === 'spam' ? 'Not spam' : 'Mark spam'}
           </button>
         </form>
+        {contactSuppressed ? (
+          <span className={styles.muted} data-testid="contact-suppressed">
+            Not emailed: {contactSuppressed.reason.replace('_', ' ')}
+          </span>
+        ) : thread.contactEmail ? (
+          <form action={suppressContactAction}>
+            {hidden}
+            <button className={`${styles.button} ${styles.secondary}`} type="submit">
+              Don&apos;t email {thread.contactEmail} again
+            </button>
+          </form>
+        ) : null}
       </div>
 
       {thread.messages.map((m) => {

@@ -6,11 +6,13 @@ import {
   InboxActionError,
   moveThreadToTeam,
   setThreadStatus,
+  suppress,
   threadStatuses,
   type ThreadStatus,
 } from '@towncore/mail';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { contacts, eq, logAdminAction, threads } from '@towncore/db';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 
@@ -57,4 +59,26 @@ export async function moveTeamAction(form: FormData) {
 export async function noteAction(form: FormData) {
   const body = String(form.get('body') ?? '');
   await run(form, (actor, id) => addNote(db(), actor, id, body));
+}
+
+/**
+ * The contact asked not to be emailed (for example a "no thanks" to outreach): a manual, global
+ * suppression. Staff sends to the address then need the "send anyway" confirmation.
+ */
+export async function suppressContactAction(form: FormData) {
+  await run(form, async (actor, id) => {
+    const [row] = await db()
+      .select({ email: contacts.email })
+      .from(threads)
+      .innerJoin(contacts, eq(contacts.id, threads.contactId))
+      .where(eq(threads.id, id));
+    if (!row) throw new InboxActionError('No contact on this conversation.');
+    await suppress(db(), { email: row.email, reason: 'manual', note: 'Asked not to be emailed' });
+    await logAdminAction(db(), {
+      staffId: actor.id,
+      action: 'mail.suppress',
+      target: { type: 'thread', id },
+      detail: { email: row.email },
+    });
+  });
 }

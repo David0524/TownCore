@@ -179,6 +179,55 @@ test('directory slots keep their reserved heights and never overflow (ad standar
   }
 });
 
+test('directory pages do not shift, and keep ads at or below 30% of a phone page (ad standards)', async ({
+  page,
+  isMobile,
+}) => {
+  // Short lists on phones: 5 plumbers, 2 roofers, a one-result and a no-result search.
+  for (const url of [
+    `${harbor}/directory`,
+    plumbers,
+    `${harbor}/directory/roofers`,
+    `${plumbers}?q=anchor`,
+    `${plumbers}?q=nothing-matches`,
+    unclaimed,
+    claimed,
+  ]) {
+    await page.goto(url);
+    const { density, cls } = await page.evaluate(
+      () =>
+        new Promise<{ density: number; cls: number }>((resolve) => {
+          let cls = 0;
+          new PerformanceObserver((list) => {
+            for (const entry of list.getEntries() as Array<
+              PerformanceEntry & { value: number; hadRecentInput: boolean }
+            >) {
+              if (!entry.hadRecentInput) cls += entry.value;
+            }
+          }).observe({ type: 'layout-shift', buffered: true });
+          setTimeout(() => {
+            // A listing's own call and quote buttons (directory.business.cta) are its contact
+            // details on its own page, not an ad unit.
+            const slotHeight = [...document.querySelectorAll('[data-slot]')]
+              .filter((el) => (el as HTMLElement).offsetParent !== null)
+              .filter((el) => el.getAttribute('data-slot') !== 'directory.business.cta')
+              .reduce((sum, el) => sum + el.getBoundingClientRect().height, 0);
+            resolve({ density: slotHeight / document.documentElement.scrollHeight, cls });
+          }, 1000);
+        }),
+    );
+    expect(cls, url).toBeLessThan(0.1);
+    // The density rule is for phones (Coalition for Better Ads); desktop has a rail. On a short
+    // list, unsold house ads in the rail box, quote slot and sponsored cards step aside on phones.
+    if (isMobile) expect(density, url).toBeLessThanOrEqual(0.3);
+  }
+  await page.goto(plumbers);
+  for (const name of ['rail.box', 'directory.quote-request', 'directory.category.top'])
+    await (isMobile
+      ? expect(page.locator(`[data-slot="${name}"]`), name).toBeHidden()
+      : expect(page.locator(`[data-slot="${name}"]`), name).toBeVisible());
+});
+
 test.describe.serial('a category campaign fills that category only', () => {
   const db = createDb(loadEnv().DATABASE_URL!, { max: 1 });
   let campaignId: string;
