@@ -48,6 +48,7 @@ export function sourceLabel(source: { kind: string; platform: string }): string 
     fire: 'fire department releases',
     events: 'official event calendars',
     weather: 'National Weather Service',
+    reference: 'official city, county and state information pages',
   };
   return byPlatform[source.platform] ?? byKind[source.kind] ?? source.kind;
 }

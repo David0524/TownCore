@@ -89,7 +89,8 @@ describe('towns:sync', () => {
       },
     };
     const first = await syncTowns(db, [withSource]);
-    expect(first).toMatchObject({ sources: 8, skippedSources: 0 });
+    // 8 YAML sources plus one reference source per guide topic.
+    expect(first).toMatchObject({ sources: 8 + loaded!.config.guides.length, skippedSources: 0 });
     await syncTowns(db, [withSource]);
     const town = await boca();
     const rows = await db.select().from(sources).where(eq(sources.townId, town.id));
@@ -108,6 +109,40 @@ describe('towns:sync', () => {
       schedule: '1h',
       url: 'https://www.myboca.us/RSSFeed.aspx?ModID=58&CID=29',
     });
+  });
+
+  it('gives each guide topic its own reference source, updated in place when its pages change', async () => {
+    const [loaded] = loadTowns(townsDir).filter((t) => t.config.slug === 'boca-raton');
+    const town = await boca();
+    const guideSources = async () =>
+      (await db.select().from(sources).where(eq(sources.townId, town.id))).filter(
+        (r) => r.kind === 'reference',
+      );
+    expect(await guideSources()).toHaveLength(loaded!.config.guides.length);
+    const trash = (await guideSources()).find((r) => r.key === 'reference:page:guide:trash-pickup');
+    expect(trash).toMatchObject({
+      platform: 'page',
+      adapter: 'page',
+      url: 'https://www.myboca.us/680/Garbage-Collection-Containers',
+      config: { topic: 'trash-pickup', pages: loaded!.config.guides[0]!.pages },
+    });
+
+    const moved = ['https://www.myboca.us/9999/Trash'];
+    await syncTowns(db, [
+      {
+        ...loaded!,
+        config: {
+          ...loaded!.config,
+          guides: loaded!.config.guides.map((g) =>
+            g.topic === 'trash-pickup' ? { ...g, pages: moved } : g,
+          ),
+        },
+      },
+    ]);
+    const after = (await guideSources()).filter((r) => r.key === trash!.key);
+    expect(after).toHaveLength(1);
+    expect(after[0]).toMatchObject({ id: trash!.id, url: moved[0], config: { pages: moved } });
+    await syncTowns(db, loadTowns(townsDir));
   });
 
   it('rejects a second town with the same domain', async () => {

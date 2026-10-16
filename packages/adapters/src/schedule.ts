@@ -22,6 +22,8 @@ const PLATFORM_DEFAULTS: Record<string, string> = {
   nws: '15m',
   'fl-dbpr': '7d',
   'fl-sunbiz': '6h',
+  // Guide pages: checked daily, so a changed official page refreshes its guide within a day.
+  page: '1d',
 };
 
 export function defaultSchedule(kind: SourceKind, platform: string): string {

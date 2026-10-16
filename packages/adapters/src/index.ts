@@ -23,6 +23,7 @@ export type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from './t
 export { DOCUMENTED_APIS, documentedApi } from './http/policy';
 export { nwsAdapter } from './nws';
 export { civicplusAdapter } from './civicplus';
+export { extractPage, pageAdapter } from './page';
 export { parseIcal, zonedTimeToUtc } from './lib/ical';
 export { flDbprAdapter } from './fl-dbpr';
 export { flSunbizAdapter } from './fl-sunbiz';
