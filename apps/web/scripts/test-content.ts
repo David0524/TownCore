@@ -211,7 +211,7 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
 
 export async function seedTestContent(
   db: Db,
-  town: { id: string; slug: string; siteName: string },
+  town: { id: string; slug: string; name: string; siteName: string },
 ) {
   const written: string[] = [];
   const topics: Array<{ id: string; streets: string[] }> = [];
@@ -333,6 +333,31 @@ export async function seedTestContent(
       written.push(article!.id);
       if (story.streets?.length) topics.push({ id: article!.id, streets: story.streets });
     }
+    // Two fictional events on the town's calendar tomorrow; the first is listed twice, as when
+    // two of the city's calendars carry the same event.
+    const tomorrow = new Date(Date.now() + 26 * 3_600_000);
+    const event = (n: number, title: string, at: Date) => ({
+      sourceId: source!.id,
+      townId: town.id,
+      externalId: `test-event-${n}`,
+      type: 'event',
+      title,
+      url: `https://example.com/test-event-${n}`,
+      occurredAt: at,
+      contentHash: `test-event-${n}`,
+      raw: {
+        end: new Date(at.getTime() + 90 * 60_000).toISOString(),
+        allDay: false,
+        location: `Sample Nature Center - 100 Test Road ${town.name.toUpperCase()} ZZ 00000`,
+      },
+    });
+    await tx
+      .insert(records)
+      .values([
+        event(1, '[TEST] Sample nature walk', tomorrow),
+        event(2, '[TEST] Sample nature walk', tomorrow),
+        event(3, '[TEST] Sample family science night', new Date(tomorrow.getTime() + 3_600_000)),
+      ]);
   });
   // Each test article gets its visual from the same router as real stories (§11c). Harbor Point
   // has a fictional street grid and a stand-in geocoder, so CI never calls the Census.

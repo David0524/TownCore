@@ -26,7 +26,7 @@ describe('theme schema', () => {
     expect(theme.layout.header).toBe('slim-left');
     expect(theme.layout.homeTop).toEqual(['good-morning', 'lead-story', 'today-bento']);
     expect(theme.layout.nav).toBe('category-tabs');
-    expect(theme.layout.homeRail).toEqual(['coming-up', 'find-a-pro', 'essentials']);
+    expect(theme.layout.homeRail).toEqual(['events', 'coming-up', 'find-a-pro', 'essentials']);
     expect(theme.layout.homeBottom).toEqual(['photo-of-the-week', 'new-now-open']);
   });
 

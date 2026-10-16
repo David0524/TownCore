@@ -89,8 +89,11 @@ describe('towns:sync', () => {
       },
     };
     const first = await syncTowns(db, [withSource]);
-    // 8 YAML sources plus one reference source per guide topic.
-    expect(first).toMatchObject({ sources: 8 + loaded!.config.guides.length, skippedSources: 0 });
+    // Boca's YAML sources, the extra calendar, and one reference source per guide topic.
+    expect(first).toMatchObject({
+      sources: loaded!.config.sources.length + 1 + loaded!.config.guides.length,
+      skippedSources: 0,
+    });
     await syncTowns(db, [withSource]);
     const town = await boca();
     const rows = await db.select().from(sources).where(eq(sources.townId, town.id));

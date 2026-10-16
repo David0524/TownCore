@@ -4,7 +4,7 @@ import { categoryCounts } from '@towncore/directory';
 import type { Town } from '@towncore/db';
 import { db } from '@/lib/db';
 import { directoryPath } from '@/lib/directory';
-import { beatCounts, upcomingMeetings } from './data';
+import { beatCounts, upcomingEvents, upcomingMeetings } from './data';
 
 // Reader categories (docs/plans/M4b.md, D-M4b-4): News, Events, Dining, Things to do,
 // Businesses, Homes and Schools. Beats stay the editorial unit; a category is a reader-facing
@@ -22,9 +22,10 @@ export type ReaderCategory = {
 const n = (value: number) => value.toLocaleString('en-US');
 
 export const readerCategories = cache(async (town: Town): Promise<ReaderCategory[]> => {
-  const [beats, meetings, listings] = await Promise.all([
+  const [beats, meetings, events, listings] = await Promise.all([
     beatCounts(town.id),
     upcomingMeetings(town.id, 7, 50),
+    upcomingEvents(town.id, town.name, 7, 200),
     categoryCounts(db(), town.id),
   ]);
   const newsCount = [...beats]
@@ -43,13 +44,13 @@ export const readerCategories = cache(async (town: Town): Promise<ReaderCategory
       color: categoryColors.news,
       count: `${n(newsCount)} this week`,
     });
-  if (meetings.length > 0)
+  if (meetings.length + events.length > 0)
     out.push({
       key: 'events',
       name: 'Events',
       href: '/events',
       color: categoryColors.events,
-      count: `${n(meetings.length)} this week`,
+      count: `${n(meetings.length + events.length)} this week`,
     });
   if (foodCount > 0) {
     const first = food.find((c) => c.category.slug === 'restaurants') ?? food[0]!;

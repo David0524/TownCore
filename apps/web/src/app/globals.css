@@ -99,8 +99,9 @@ a:hover {
   color: var(--muted);
 }
 
-/* Metadata (timestamps, datelines, counts, labels, credits) in the town's metadata face:
-   mono for coastal-modern, italic serif for heritage. Replaces small all-caps labels. */
+/* Metadata (timestamps, datelines, counts, labels, credits) in the town's metadata face: gray
+   text face for Boca, mono for other coastal-modern sets, italic serif for heritage. Replaces
+   small all-caps labels. */
 .meta {
   font-family: var(--font-meta);
   font-style: var(--meta-style);

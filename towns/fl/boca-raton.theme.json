@@ -18,13 +18,12 @@
     "home": [
       "category-buttons",
       "newsletter-cta",
-      "events",
       "latest-list",
       "directory-featured",
       "new-businesses",
       "real-estate"
     ],
-    "homeRail": ["coming-up", "find-a-pro", "essentials"],
+    "homeRail": ["events", "coming-up", "find-a-pro", "essentials"],
     "homeBottom": ["photo-of-the-week", "new-now-open"],
     "article": "classic-rail",
     "directory": "list-map",

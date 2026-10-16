@@ -10,6 +10,7 @@ import {
 } from './news';
 import { CategoryButtons, ComingUp, DocumentsPosted, Essentials, GoodMorning } from './front';
 import { DirectoryCategories, DirectoryFeatured, FindAPro, NewNowOpen } from './directory';
+import { UpcomingEvents } from './events';
 import { PhotoOfTheWeek } from './photo';
 import type { HomeModuleComponent } from './types';
 
@@ -37,7 +38,7 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
   'meetings-this-week': awaitingData('agenda and meeting sources, M2'),
   'new-businesses': awaitingData('business filings, M2/M6'),
   'real-estate': awaitingData('property sales and permits, M2'),
-  events: awaitingData('events sources, M2'),
+  events: UpcomingEvents,
   'schools-sports': awaitingData('schools sources, later'),
   'weather-strip': awaitingData('NWS, M2 (decision D-M1-3)'),
   'photo-of-the-day': awaitingData('reader submissions, M9'),

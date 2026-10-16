@@ -30,6 +30,7 @@ import {
   type ImageChoice,
 } from '@towncore/pipeline';
 import { db } from '@/lib/db';
+import { dedupeEvents, splitLocation } from '@/lib/events';
 import { pickMeetingVideo, type MeetingVideo } from '@/lib/meeting-video';
 import { refreshWeatherAfterView } from '@/lib/weather';
 
@@ -172,6 +173,67 @@ export const upcomingMeetings = cache(
       where: r.text?.match(/^Where: (.*)$/m)?.[1] ?? null,
       url: r.url,
     }));
+  },
+);
+
+export type UpcomingEvent = {
+  id: string;
+  title: string;
+  when: Date;
+  end: Date | null;
+  allDay: boolean;
+  venue: string | null;
+  street: string | null;
+  /** The city's own page for the event. */
+  url: string | null;
+};
+
+/**
+ * Events on the town's official event calendars (sources of kind `events`) from now through
+ * `days` days, soonest first, one per title and start when calendars overlap.
+ */
+export const upcomingEvents = cache(
+  async (
+    townId: string,
+    townName: string,
+    days = 14,
+    limit = 6,
+    oncePerTitle = false,
+  ): Promise<UpcomingEvent[]> => {
+    const now = new Date();
+    const rows = await db()
+      .select({
+        id: records.id,
+        title: records.title,
+        url: records.url,
+        occurredAt: records.occurredAt,
+        raw: records.raw,
+      })
+      .from(records)
+      .where(
+        and(
+          eq(records.townId, townId),
+          eq(records.type, 'event'),
+          gte(records.occurredAt, now),
+          lt(records.occurredAt, new Date(now.getTime() + days * 86_400_000)),
+        ),
+      )
+      .orderBy(records.occurredAt)
+      // Calendars overlap (an event can be on three), and recurring programs repeat.
+      .limit(Math.min(limit * 12, 2000));
+    const events = rows.map((r) => {
+      const raw = (r.raw ?? {}) as { end?: string | null; allDay?: boolean; location?: string };
+      return {
+        id: r.id,
+        title: r.title?.trim() || 'Event',
+        when: r.occurredAt!,
+        end: raw.end ? new Date(raw.end) : null,
+        allDay: raw.allDay === true,
+        ...splitLocation(raw.location, townName),
+        url: r.url,
+      };
+    });
+    return dedupeEvents(events, { oncePerTitle }).slice(0, limit);
   },
 );
 
