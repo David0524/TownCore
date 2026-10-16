@@ -20,3 +20,6 @@ cdk.out/
 
 # Downloaded public data (Census files for towns:rank)
 .cache/
+
+# Local photo storage (M9, without S3)
+.data/

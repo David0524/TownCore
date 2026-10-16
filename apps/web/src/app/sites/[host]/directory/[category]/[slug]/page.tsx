@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getListing, listingCategory, listingInTheNews, listingPlace } from '@towncore/directory';
+import { listingPhotos, photoPath } from '@towncore/photos/queries';
 import { apDate } from '@towncore/pipeline';
 import { CallButton } from '@/components/directory/CallButton';
 import { Grouped } from '@/components/phone/Grouped';
@@ -45,6 +46,8 @@ export default async function BusinessPage({ params }: Props) {
   const news = await listingInTheNews(db(), town.id, listing.name);
   const claimed = Boolean(listing.claimedAt);
   const claimHref = `/directory/claim/${listing.slug}`;
+  // The owner's own photos, once staff approved them (M9); a claimed listing only.
+  const photos = claimed ? await listingPhotos(db(), listing.id) : [];
 
   return (
     <StandardPage town={town}>
@@ -113,6 +116,23 @@ export default async function BusinessPage({ params }: Props) {
           </>
         ) : null}
       </dl>
+      {photos.length > 0 ? (
+        <ul className={styles.photos} data-testid="listing-photos">
+          {photos.map((p) => (
+            <li key={p.id}>
+              <img
+                src={photoPath(p.id)}
+                width={p.width}
+                height={p.height}
+                alt={p.alt ?? ''}
+                loading="lazy"
+                decoding="async"
+              />
+              <span className="meta">{p.credit}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {claimed && listing.description ? (
         <p className={`${styles.note} ${styles.pre}`} data-testid="listing-description">
           {listing.description}

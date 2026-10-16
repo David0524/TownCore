@@ -89,4 +89,24 @@ export type StockPhotoSpec = {
   photoUrl: string;
 };
 
-export type ImageSpec = DailyCountsSpec | MapSpec | StockPhotoSpec | { type: 'card' };
+/**
+ * A photo someone sent us (M9): a reader's or contributor's (`reader-photo`), a business's own
+ * (`business-photo`), or an AI illustration a person approved (`ai-illustration`). Served from
+ * the town's own domain at /photos/<photoId>.jpg, always with its credit line; a reader photo
+ * also shows its sender's caption, so it never passes as the scene of the story.
+ */
+export type PhotoSpec = {
+  type: 'photo';
+  photoId: string;
+  width: number;
+  height: number;
+  caption: string;
+  credit: string;
+  takenWhere: string | null;
+  takenWhen: string | null;
+};
+
+/** The label every AI illustration carries, on the page and in its alt text (§11c). */
+export const AI_ILLUSTRATION_LABEL = 'Illustration (AI-generated)';
+
+export type ImageSpec = DailyCountsSpec | MapSpec | StockPhotoSpec | PhotoSpec | { type: 'card' };

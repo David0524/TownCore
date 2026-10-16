@@ -31,6 +31,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <Link href="/admin/review">Review queue</Link>
             <Link href="/admin/skipped">Skip log</Link>
             <Link href="/admin/pins">Pins</Link>
+            <Link href="/admin/photos">Photos</Link>
             <Link href="/admin/newsletter">Newsletter</Link>
             <Link href="/admin/directory">Directory</Link>
             <Link href="/admin/launches">Launches</Link>

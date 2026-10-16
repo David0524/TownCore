@@ -1,5 +1,7 @@
 import {
+  AI_ILLUSTRATION_LABEL,
   beats,
+  entityKey,
   imageDefaults,
   roundupImageDefaults,
   type DailyCountsSpec,
@@ -20,7 +22,10 @@ import {
 } from '@towncore/adapters';
 import {
   and,
+  articleEntities,
   articles,
+  businesses,
+  entities,
   eq,
   images,
   ne,
@@ -39,6 +44,14 @@ import {
   mapAlt,
   type BasemapLines,
 } from './maps';
+import {
+  approvedIllustration,
+  approvedPhoto,
+  businessPhotoFor,
+  photoSpec,
+  takeReaderPhoto,
+  type PhotoSubmission,
+} from '@towncore/photos/queries';
 import { apDate, isoLocalDate, localMidnight } from './time';
 
 // The image router (CLAUDE.md §11c; docs/plans/M4.md §3). For each article it takes the first
@@ -47,10 +60,20 @@ import { apDate, isoLocalDate, localMidnight } from './time';
 // article's own text and records: no photos from other sites, no image model.
 
 /**
- * Options the router can build today (maps and stock photos need the deps below). Business,
- * reader and government photos and AI illustrations arrive with M9.
+ * Options the router can build today (maps and stock photos need the deps below). Photos people
+ * sent us and AI illustrations (M9) come from `photo_submissions`, only once a person approved
+ * them. Government images aren't built yet.
  */
-const BUILDABLE = new Set<ImageKind>(['map', 'stock', 'data-graphic', 'typographic-card']);
+const BUILDABLE = new Set<ImageKind>([
+  'map',
+  'stock',
+  'data-graphic',
+  'typographic-card',
+  'reader-photo',
+  'business-photo',
+  'ai-illustration',
+]);
+const PHOTO_OPTIONS = new Set<ImageKind>(['reader-photo', 'business-photo', 'ai-illustration']);
 
 /**
  * What the network options need: the polite Fetcher (Census Geocoder for maps, the Unsplash API
@@ -80,6 +103,9 @@ export type ImageChoice = {
   license: string;
   attribution: string | null;
   sourceUrl: string | null;
+  /** Set for an AI illustration, with the person who approved it (§11c). */
+  aiGenerated?: boolean;
+  approvedBy?: string | null;
 };
 
 type ArticleForImage = {
@@ -179,15 +205,21 @@ export function cardAlt(article: Pick<ArticleForImage, 'headline' | 'beat'>): st
 
 const OWN_WORK = 'own-work';
 
-/** Picks the article's visual: the first option on its list that can be built. */
+/**
+ * Picks the article's visual: the first option on its list that can be built. Photos people sent
+ * us are used only when the choice is recorded (`photos`), since taking a reader photo marks it
+ * used; a page drawing an article that has no recorded image yet skips them.
+ */
 export async function chooseArticleImage(
   db: Db,
   article: ArticleForImage,
   timeZone: string,
   deps?: ImageDeps & { town: TownForImage },
+  { photos = false }: { photos?: boolean } = {},
 ): Promise<ImageChoice> {
   for (const option of imageOptions(article)) {
     if (!BUILDABLE.has(option)) continue;
+    if (PHOTO_OPTIONS.has(option) && !photos) continue;
     if (option === 'map' && deps) {
       const map = await buildArticleMap(db, article, deps);
       if (map) {
@@ -198,6 +230,29 @@ export async function chooseArticleImage(
           license: OSM_LICENSE,
           attribution: OSM_ATTRIBUTION,
           sourceUrl: OSM_COPYRIGHT_URL,
+        };
+      }
+    }
+    if (option === 'reader-photo') {
+      const photo = await pickReaderPhoto(db, article);
+      if (photo) return photo;
+    }
+    if (option === 'business-photo') {
+      const photo = await pickBusinessPhoto(db, article);
+      if (photo) return photo;
+    }
+    if (option === 'ai-illustration' && article.id) {
+      const art = await approvedIllustration(db, article.id);
+      if (art) {
+        return {
+          kind: 'ai-illustration',
+          spec: photoSpec(art),
+          alt: `${AI_ILLUSTRATION_LABEL}: ${art.alt}`,
+          license: art.licenseVersion,
+          attribution: AI_ILLUSTRATION_LABEL,
+          sourceUrl: null,
+          aiGenerated: true,
+          approvedBy: art.reviewedBy,
         };
       }
     }
@@ -232,6 +287,82 @@ export async function chooseArticleImage(
     attribution: null,
     sourceUrl: null,
   };
+}
+
+const photoChoice = (
+  kind: 'reader-photo' | 'business-photo',
+  row: PhotoSubmission,
+): ImageChoice => ({
+  kind,
+  spec: photoSpec(row),
+  alt: row.alt!,
+  license: row.licenseVersion,
+  attribution: row.credit,
+  sourceUrl: null,
+});
+
+/**
+ * A reader's photo (§11c: community and weather): the one the story already shows while it's
+ * still approved, else the town's newest approved photo not used in the last week. The page
+ * prints the sender's own caption with it, so it never passes as the scene of the story.
+ */
+async function pickReaderPhoto(db: Db, article: ArticleForImage): Promise<ImageChoice | null> {
+  if (article.id) {
+    const [current] = await db
+      .select({ kind: images.kind, spec: images.spec })
+      .from(images)
+      .where(eq(images.articleId, article.id));
+    if (current?.kind === 'reader-photo' && current.spec.type === 'photo') {
+      const row = await approvedPhoto(db, article.townId, current.spec.photoId);
+      if (row) return photoChoice('reader-photo', row);
+    }
+  }
+  const row = await takeReaderPhoto(db, article.townId);
+  return row ? photoChoice('reader-photo', row) : null;
+}
+
+/**
+ * The business's own photo, for a story about one listing: the listing written from one of the
+ * story's records, or the one business the story names (two listings with that name: neither).
+ */
+async function pickBusinessPhoto(db: Db, article: ArticleForImage): Promise<ImageChoice | null> {
+  const found = new Set<string>();
+  if (article.sourceRecordIds.length > 0) {
+    const byRecord = await db
+      .select({ id: businesses.id })
+      .from(businesses)
+      .where(
+        and(
+          eq(businesses.townId, article.townId),
+          inArray(businesses.sourceRecordId, article.sourceRecordIds),
+        ),
+      );
+    for (const b of byRecord) found.add(b.id);
+  }
+  if (article.id) {
+    const named = await db
+      .select({ key: entities.key })
+      .from(articleEntities)
+      .innerJoin(entities, eq(entities.id, articleEntities.entityId))
+      .where(and(eq(articleEntities.articleId, article.id), eq(entities.kind, 'business')));
+    if (named.length > 0) {
+      const keys = new Set(named.map((n) => n.key));
+      const listings = await db
+        .select({ id: businesses.id, name: businesses.name })
+        .from(businesses)
+        .where(and(eq(businesses.townId, article.townId), eq(businesses.active, true)));
+      const byKey = new Map<string, string[]>();
+      for (const l of listings) {
+        const key = entityKey('business', l.name);
+        if (key && keys.has(key)) byKey.set(key, [...(byKey.get(key) ?? []), l.id]);
+      }
+      for (const ids of byKey.values()) if (ids.length === 1) found.add(ids[0]!);
+    }
+  }
+  // A story about several businesses has no one business's photo.
+  if (found.size !== 1) return null;
+  const row = await businessPhotoFor(db, [...found][0]!);
+  return row ? photoChoice('business-photo', row) : null;
 }
 
 /** A map for the story's first street address, at block level, or null. */
@@ -343,11 +474,13 @@ export async function assignArticleImage(
     { ...row.article, kind },
     row.timezone,
     deps && { ...deps, town: { name: row.townName, state: row.townState } },
+    { photos: true },
   );
   const values = {
     ...choice,
     articleId,
-    aiGenerated: false,
+    aiGenerated: choice.aiGenerated ?? false,
+    approvedBy: choice.approvedBy ?? null,
     updatedAt: new Date(),
     // When the router last ran with its network options (maps, stock photos). A run without
     // them (a story approved in review, a guide rewritten) clears it, so the worker's visuals

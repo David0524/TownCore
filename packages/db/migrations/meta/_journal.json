@@ -253,6 +253,13 @@
       "when": 1792122673080,
       "tag": "0035_launches",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792130941527,
+      "tag": "0036_photo_submissions",
+      "breakpoints": true
     }
   ]
 }

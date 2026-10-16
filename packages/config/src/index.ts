@@ -104,6 +104,7 @@ export {
   type DirectoryCategory,
 } from './directory';
 export {
+  AI_ILLUSTRATION_LABEL,
   imageDefaults,
   imageKinds,
   roundupImageDefaults,
@@ -112,6 +113,7 @@ export {
   type ImageKind,
   type ImageSpec,
   type MapSpec,
+  type PhotoSpec,
   type StockPhotoSpec,
 } from './images';
 export {

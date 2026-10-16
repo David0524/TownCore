@@ -38,6 +38,7 @@
     "@towncore/email": "workspace:*",
     "@towncore/launcher": "workspace:*",
     "@towncore/mail": "workspace:*",
+    "@towncore/photos": "workspace:*",
     "@towncore/prompts": "workspace:*",
     "micromark": "^4.0.3",
     "next": "16.4.1",
