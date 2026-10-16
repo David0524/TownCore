@@ -103,6 +103,25 @@ describe('civicclerk', () => {
     expect(records.find((r) => r.externalId === 'minutes:1560')).toBeDefined();
   });
 
+  it("adds a past meeting's Swagit transcript, never a missing one", async () => {
+    const records = await civicclerkAdapter.fetch(jupiter, null, ctx());
+    const transcript = records.find((r) => r.externalId === 'transcript:1491')!;
+    expect(transcript.type).toBe('transcript');
+    expect(transcript.url).toBe('https://jupiterfl.new.swagit.com/videos/403164');
+    expect(transcript.text).toMatch(/^When: Tuesday, October 6, 2026, 7:00 PM\n/);
+    expect(transcript.text).toContain('Machine-generated captions');
+    expect(transcript.text).toContain('THE TIME IS NOW 7 P.M.');
+    // Timestamps are dropped; the clerk's agenda markers stay.
+    expect(transcript.text).not.toMatch(/^\[\d{2}:\d{2}:\d{2}\]$/m);
+    expect(transcript.text).toContain('[1. Proclaiming October 5–9, 2026');
+    // The Oct. 13 transcript wasn't posted yet (HTTP 204); upcoming meetings have none.
+    expect(records.find((r) => r.externalId === 'transcript:1560')).toBeUndefined();
+    expect(records.find((r) => r.externalId === 'transcript:1504')).toBeUndefined();
+    // After the first run, only the last week's meetings are asked for.
+    const later = await civicclerkAdapter.fetch(jupiter, new Date('2026-10-15T00:00:00Z'), ctx());
+    expect(later.find((r) => r.type === 'transcript')).toBeUndefined();
+  });
+
   it('tidies the plain-text layout', () => {
     expect(tidyText('   AGENDA \r\n   TOWN   OF JUPITER\n\n\n\n1.  Item ')).toBe(
       'AGENDA\nTOWN OF JUPITER\n\n1. Item',

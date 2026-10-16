@@ -166,6 +166,31 @@ async function townRecords(
     );
 }
 
+/** Record types that are written up with a meeting's results, never on their own. */
+const COMPANION_TYPES = ['transcript'];
+
+/**
+ * A meeting's machine transcript, from the same source, goes to the writer alongside its
+ * minutes or recorded actions (`minutes:<id>` or `actions:<id>` → `transcript:<id>`): detail for
+ * the recap, never its only source. A story citing one goes to review (write.ts).
+ */
+async function companionRecords(db: Db, record: typeof records.$inferSelect): Promise<string[]> {
+  if (record.type !== 'minutes' && record.type !== 'meeting-actions') return [];
+  const meeting = record.externalId.split(':').slice(1).join(':');
+  if (!meeting) return [];
+  const rows = await db
+    .select({ id: records.id })
+    .from(records)
+    .where(
+      and(
+        eq(records.sourceId, record.sourceId),
+        inArray(records.type, COMPANION_TYPES),
+        eq(records.externalId, `transcript:${meeting}`),
+      ),
+    );
+  return rows.map((r) => r.id);
+}
+
 async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderReport) {
   const tz = town.timezone;
   const weekday = localDate(now, tz).weekday; // 0 = Sunday
@@ -324,7 +349,7 @@ async function createStoryCandidates(
       key: `record:${record.id}`,
       title: record.title,
       beat: sourceKind === 'police' || sourceKind === 'fire' ? 'public-safety' : 'government',
-      recordIds: [record.id],
+      recordIds: [record.id, ...(await companionRecords(db, record))],
       proposedTier: 2,
       // Charges dropped must always be covered, whatever the score or budget (§6a).
       mustWrite: dropped,
@@ -368,11 +393,14 @@ async function createStoryCandidates(
   const recent = await recentHeadlines(db, town.id, now);
   for (let i = 0; i < pending.length; i++) {
     const candidate = pending[i]!;
-    const rows = await db
-      .select({ record: records, sourceKind: sources.kind, sourceHealth: sources.health })
-      .from(records)
-      .innerJoin(sources, eq(records.sourceId, sources.id))
-      .where(inArray(records.id, candidate.recordIds));
+    // A companion transcript is detail for the writer; the candidate is judged on its minutes.
+    const rows = (
+      await db
+        .select({ record: records, sourceKind: sources.kind, sourceHealth: sources.health })
+        .from(records)
+        .innerJoin(sources, eq(records.sourceId, sources.id))
+        .where(inArray(records.id, candidate.recordIds))
+    ).filter((r) => !COMPANION_TYPES.includes(r.record.type));
     const text = rows.map((r) => `${r.record.title ?? ''}\n${r.record.text ?? ''}`).join('\n\n');
 
     let classification: Classification;

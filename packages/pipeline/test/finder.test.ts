@@ -245,7 +245,12 @@ describe('story finder', () => {
   });
 
   it('writes up meeting minutes and recorded actions as recaps, never bare agendas', async () => {
-    await addRecord('agenda', 'minutes', 'Minutes: Town Council Meeting');
+    const minutes = await addRecord('agenda', 'minutes', 'Minutes: Town Council Meeting', {
+      externalId: 'minutes:1491',
+    });
+    const transcript = await addRecord('agenda', 'transcript', 'Transcript: Town Council', {
+      externalId: 'transcript:1491',
+    });
     await addRecord('agenda', 'meeting-actions', 'Actions: City Commission: Regular Meeting');
     await addRecord('agenda', 'agenda', 'Agenda: City Commission: Regular Meeting');
     await addRecord('agenda', 'meeting', 'City Commission: Regular Meeting');
@@ -262,6 +267,9 @@ describe('story finder', () => {
     expect(all['Minutes: Town Council Meeting']?.status).toBe('accepted');
     expect(all['Actions: City Commission: Regular Meeting']?.c.beat).toBe('government');
     expect(all['Agenda: City Commission: Regular Meeting']).toBeUndefined();
+    // The meeting's transcript rides along with its minutes; it is never a candidate itself.
+    expect(all['Minutes: Town Council Meeting']?.c.recordIds).toEqual([minutes.id, transcript.id]);
+    expect(all['Transcript: Town Council']).toBeUndefined();
   });
 
   it('leaves candidates pending without a model, or once the daily cap is hit', async () => {
