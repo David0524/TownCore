@@ -109,6 +109,16 @@ export async function getPublishedArticle(
   return article ?? null;
 }
 
+/** Published (or corrected) articles by id, in the given order; others are left out. */
+export async function listArticlesByIds(db: Db, ids: string[]): Promise<Article[]> {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select()
+    .from(articles)
+    .where(and(inArray(articles.id, ids), isPublic));
+  return ids.map((id) => rows.find((r) => r.id === id)).filter((r): r is Article => !!r);
+}
+
 /** Source records an article cites (Rule 4), in the article's citation order. */
 export async function getSourceRecords(db: Db, ids: string[]): Promise<SourceRecord[]> {
   if (ids.length === 0) return [];

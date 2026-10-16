@@ -33,6 +33,7 @@ export type { SQL } from 'drizzle-orm';
 export {
   getActiveCampaign,
   getPublishedArticle,
+  listArticlesByIds,
   getSourceRecords,
   listArticleCorrections,
   listTownCorrections,

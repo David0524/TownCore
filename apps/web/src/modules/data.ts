@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import type { WeatherSnapshot } from '@towncore/config';
+import { TOPIC_INDEX_MIN_ARTICLES, type WeatherSnapshot } from '@towncore/config';
 import {
   activePinIds,
   and,
@@ -11,7 +11,12 @@ import {
   inArray,
   listRankableArticles,
   lt,
+  articleEntities,
+  articles,
+  entities,
   images,
+  not,
+  like,
   records,
   sources,
   sql,
@@ -247,3 +252,57 @@ export const articleImage = cache(
     return chooseArticleImage(db(), article, timeZone);
   },
 );
+
+/** The topics a story mentions (M4 PR D), for its "In this story" links. */
+export const storyTopics = cache(async (articleId: string) =>
+  db()
+    .select({ name: entities.name, slug: entities.slug, kind: entities.kind })
+    .from(articleEntities)
+    .innerJoin(entities, eq(articleEntities.entityId, entities.id))
+    .where(eq(articleEntities.articleId, articleId))
+    .orderBy(entities.name),
+);
+
+/**
+ * A topic and its published stories, newest first. `indexable` counts real stories only (test
+ * fixtures never count), against the D-M4-5 threshold.
+ */
+export async function topicPage(townId: string, slug: string) {
+  const [entity] = await db()
+    .select()
+    .from(entities)
+    .where(and(eq(entities.townId, townId), eq(entities.slug, slug)));
+  if (!entity) return null;
+  const stories = await db()
+    .select({ article: articles })
+    .from(articleEntities)
+    .innerJoin(articles, eq(articleEntities.articleId, articles.id))
+    .where(
+      and(
+        eq(articleEntities.entityId, entity.id),
+        inArray(articles.status, ['published', 'corrected']),
+      ),
+    )
+    .orderBy(desc(articles.publishedAt));
+  const list = stories.map((s) => ({ ...s.article, publishedAt: s.article.publishedAt! }));
+  const real = list.filter((a) => !a.slug.startsWith('test-')).length;
+  return { entity, stories: list, indexable: real >= TOPIC_INDEX_MIN_ARTICLES };
+}
+
+/** Topic pages with enough real stories to be indexed (for the sitemap). */
+export async function indexableTopics(townId: string): Promise<string[]> {
+  const rows = await db()
+    .select({ slug: entities.slug, n: sql<number>`count(*)::int` })
+    .from(entities)
+    .innerJoin(articleEntities, eq(articleEntities.entityId, entities.id))
+    .innerJoin(articles, eq(articleEntities.articleId, articles.id))
+    .where(
+      and(
+        eq(entities.townId, townId),
+        inArray(articles.status, ['published', 'corrected']),
+        not(like(articles.slug, 'test-%')),
+      ),
+    )
+    .groupBy(entities.slug);
+  return rows.filter((r) => r.n >= TOPIC_INDEX_MIN_ARTICLES).map((r) => r.slug);
+}

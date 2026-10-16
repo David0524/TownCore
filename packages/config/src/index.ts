@@ -109,3 +109,10 @@ export {
   type ImageKind,
   type ImageSpec,
 } from './images';
+export {
+  entityKey,
+  entityKindLabels,
+  entityKinds,
+  TOPIC_INDEX_MIN_ARTICLES,
+  type EntityKind,
+} from './entities';

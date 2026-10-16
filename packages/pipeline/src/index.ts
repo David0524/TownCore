@@ -99,3 +99,10 @@ export {
   recordCountLabels,
   type ImageChoice,
 } from './images';
+export {
+  acceptEntities,
+  extractEntitiesForTown,
+  linkArticleEntities,
+  relatedArticleIds,
+  type ExtractReport,
+} from './entities';

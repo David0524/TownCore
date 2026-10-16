@@ -2,7 +2,12 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Fragment } from 'react';
 import { beats, townContactEmail, type TownConfig } from '@towncore/config';
-import { getPublishedArticle, getSourceRecords, listArticleCorrections } from '@towncore/db';
+import {
+  getPublishedArticle,
+  getSourceRecords,
+  listArticleCorrections,
+  listArticlesByIds,
+} from '@towncore/db';
 import { ViewBeacon } from '@/components/Beacon';
 import { RelatedBusinesses } from '@/components/directory/RelatedBusinesses';
 import { BeatLabel } from '@/components/news/BeatLabel';
@@ -15,7 +20,9 @@ import { themeFor } from '@/lib/theme';
 import { formatTownDate, requireTown, resolveTown } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
 import { rssAlternate } from '@/lib/discovery';
-import { articleImage, rankedBeatArticles, roundupFigure } from '@/modules/data';
+import { articleImage, rankedBeatArticles, roundupFigure, storyTopics } from '@/modules/data';
+import { relatedArticleIds } from '@towncore/pipeline';
+import Link from 'next/link';
 import { NewsletterCta } from '@/modules/news';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { ShareButton } from '@/components/news/ShareButton';
@@ -70,17 +77,24 @@ export default async function ArticlePage({ params }: Props) {
 
   const theme = themeFor(town);
   const template = theme.layout.article;
-  const [sourceRecords, corrections, figure, sameBeat, image] = await Promise.all([
-    getSourceRecords(db(), article.sourceRecordIds),
-    listArticleCorrections(db(), article.id),
-    roundupFigure(article),
-    rankedBeatArticles(town.id, article.beat),
-    articleImage(article, town.timezone),
-  ]);
-  // Three more from the same section; test fixtures never appear beside real stories.
-  const more = sameBeat
-    .filter((a) => a.id !== article.id && !a.slug.startsWith('test-'))
-    .slice(0, 3);
+  const [sourceRecords, corrections, figure, sameBeat, image, topics, relatedIds] =
+    await Promise.all([
+      getSourceRecords(db(), article.sourceRecordIds),
+      listArticleCorrections(db(), article.id),
+      roundupFigure(article),
+      rankedBeatArticles(town.id, article.beat),
+      articleImage(article, town.timezone),
+      storyTopics(article.id),
+      relatedArticleIds(db(), article.id),
+    ]);
+  // Test fixtures never appear beside real stories.
+  const fixture = (a: { slug: string }) =>
+    a.slug.startsWith('test-') && !article.slug.startsWith('test-');
+  // Related coverage (M4 PR D): follow-ups and stories sharing the most topics.
+  const related = (await listArticlesByIds(db(), relatedIds)).filter((a) => !fixture(a));
+  // Then up to three more from the same section, none already listed.
+  const shown = new Set([article.id, ...related.map((a) => a.id)]);
+  const more = sameBeat.filter((a) => !shown.has(a.id) && !fixture(a)).slice(0, 3);
   const beat = beats.find((b) => b.slug === article.beat);
   const blocks = markdownBlocks(article.bodyMd);
   const slotAfter = new Set(inlineSlotPositions(blocks));
@@ -159,6 +173,19 @@ export default async function ArticlePage({ params }: Props) {
           <Slot town={town} name="article.realestate" />
         ) : null}
 
+        {topics.length > 0 ? (
+          <nav className={styles.topics} aria-label="In this story" data-testid="story-topics">
+            <span className="meta">In this story</span>
+            <ul>
+              {topics.map((t) => (
+                <li key={t.slug}>
+                  <Link href={`/topics/${t.slug}`}>{t.name}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ) : null}
+
         <section className={styles.sources} data-testid="sources">
           <h2>Sources</h2>
           {sourceRecords.length === 0 ? (
@@ -192,6 +219,19 @@ export default async function ArticlePage({ params }: Props) {
         {await NewsletterCta({ town, theme, modules: [] })}
 
         <RelatedBusinesses town={town} article={article} />
+
+        {related.length > 0 ? (
+          <section className={styles.more} aria-labelledby="related-h" data-testid="related">
+            <SectionHeader title="Related coverage" id="related-h" />
+            <ul className={styles.moreList}>
+              {related.map((story) => (
+                <li key={story.id}>
+                  <StoryBlock story={story} town={town} variant="list" />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {more.length > 0 ? (
           <section className={styles.more} aria-labelledby="more-h">
