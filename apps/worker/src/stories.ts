@@ -1,4 +1,6 @@
+import { loadEnv } from '@towncore/config';
 import { and, eq, isNull, ne, storyCandidates, towns, type Db } from '@towncore/db';
+import { draftOutreach } from '@towncore/directory';
 import {
   extractEntitiesForTown,
   runStoryFinder,
@@ -57,6 +59,12 @@ export async function runStoryFinderJob(
     const entities = await extractEntitiesForTown(db, llm, job.townId, { limit: 10 });
     logger.info({ townId: job.townId, ...entities }, 'entity extraction');
   }
+  // Draft emails to businesses our stories name (§11 business triggers). Drafts only: a person
+  // reviews each one and presses Send in Admin → Directory (Rule 10).
+  const outreach = await draftOutreach(db, job.townId, {
+    postalAddress: loadEnv().MAIL_POSTAL_ADDRESS ?? null,
+  });
+  if (outreach.created) logger.info({ townId: job.townId, ...outreach }, 'outreach drafted');
   if (report.capReached)
     logger.warn({ townId: job.townId }, 'AI daily cap reached; candidates wait');
   if (!llm && report.pending > 0) {

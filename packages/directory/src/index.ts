@@ -112,3 +112,14 @@ export {
   sendMonthlyReports,
   type ProofTotals,
 } from './reports';
+export {
+  dismissOutreach,
+  draftOutreach,
+  OUTREACH_LOCAL_PART,
+  OutreachError,
+  outreachMessage,
+  pendingOutreach,
+  sendOutreach,
+  type OutreachReport,
+  type PendingOutreach,
+} from './outreach';

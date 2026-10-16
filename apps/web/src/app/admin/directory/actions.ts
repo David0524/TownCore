@@ -6,9 +6,14 @@ import {
   decideClaim,
   decideNameChange,
   decideSponsorCard,
+  dismissOutreach,
+  OutreachError,
+  sendOutreach,
 } from '@towncore/directory';
+import { SendError, SuppressedRecipientsError } from '@towncore/mail';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { sendDeps } from '@/lib/admin/mail-send';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import { directoryMailDeps } from '@/lib/owner';
@@ -76,4 +81,46 @@ export async function decideCardAction(form: FormData): Promise<void> {
   }
   revalidatePath('/admin/directory');
   done({ done: decision === 'approve' ? 'Card approved and live' : 'Card rejected' });
+}
+
+/**
+ * Sends an outreach draft (§11 business triggers). Pressing Send is the human approval Rule 10
+ * needs; the message goes out through the inbox like any staff message, from sales@.
+ */
+export async function sendOutreachAction(form: FormData): Promise<void> {
+  const me = await requireStaff();
+  const draftId = str(form, 'draftId');
+  if (form.get('decision') === 'dismiss') {
+    try {
+      await dismissOutreach(db(), { draftId, staffId: me.id });
+    } catch (error) {
+      if (error instanceof OutreachError) done({ error: error.message });
+      throw error;
+    }
+    revalidatePath('/admin/directory');
+    done({ done: 'Draft dismissed' });
+  }
+  const deps = sendDeps();
+  if ('unavailable' in deps) done({ error: deps.unavailable });
+  let result: Awaited<ReturnType<typeof sendOutreach>>;
+  try {
+    result = await sendOutreach(deps as Exclude<typeof deps, { unavailable: string }>, me, {
+      draftId,
+      to: str(form, 'to'),
+      subject: str(form, 'subject'),
+      body: String(form.get('body') ?? ''),
+      confirmSuppressed: form.get('confirmSuppressed') === 'on',
+    });
+  } catch (error) {
+    if (error instanceof SuppressedRecipientsError)
+      done({ error: error.message, confirm: draftId });
+    if (error instanceof OutreachError || error instanceof SendError)
+      done({ error: (error as Error).message });
+    throw error;
+  }
+  revalidatePath('/admin/directory');
+  // A failed delivery stays in its inbox conversation, where it can be sent again.
+  redirect(
+    `/admin/mail/inbox/${result!.threadId}${result!.status === 'failed' ? '?error=' + encodeURIComponent(`Not sent: ${result!.error}`) : '?sent=1'}`,
+  );
 }

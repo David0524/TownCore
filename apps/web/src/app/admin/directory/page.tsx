@@ -3,13 +3,19 @@ import {
   listClaims,
   listPlacements,
   pendingNameChanges,
+  pendingOutreach,
   pendingSponsorCards,
 } from '@towncore/directory';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import { listingPath } from '@/lib/directory';
 import styles from '../admin.module.css';
-import { decideCardAction, decideClaimAction, decideNameAction } from './actions';
+import {
+  decideCardAction,
+  decideClaimAction,
+  decideNameAction,
+  sendOutreachAction,
+} from './actions';
 
 export const metadata = { title: 'Directory' };
 
@@ -22,17 +28,17 @@ const publicUrl = (domain: string, path: string) => `https://${domain}${path}`;
 export default async function DirectoryAdmin({
   searchParams,
 }: {
-  searchParams: Promise<{ done?: string; error?: string }>;
+  searchParams: Promise<{ done?: string; error?: string; confirm?: string }>;
 }) {
   await requireStaff();
-  const { done, error } = await searchParams;
+  const { done, error, confirm } = await searchParams;
   const [waiting, decided, names, paid] = await Promise.all([
     listClaims(db(), { statuses: ['pending'] }),
     listClaims(db(), { statuses: ['approved', 'rejected'], limit: 20 }),
     pendingNameChanges(db()),
     listPlacements(db()),
   ]);
-  const cards = await pendingSponsorCards(db());
+  const [cards, outreach] = await Promise.all([pendingSponsorCards(db()), pendingOutreach(db())]);
   const townRows = names.length
     ? await Promise.all(
         [...new Set(names.map((n) => n.townId))].map(
@@ -194,6 +200,67 @@ export default async function DirectoryAdmin({
             ))}
           </tbody>
         </table>
+      </div>
+
+      <h2 id="outreach">Outreach drafts ({outreach.length})</h2>
+      <p className={styles.muted}>
+        Drafted when a published story names a listed business (§11). Nothing is sent until you
+        press Send; replies come back to the inbox from sales@. For an unclaimed listing, add an
+        address from the business&apos;s own website, or dismiss the draft. Never guess one.
+      </p>
+      {outreach.length === 0 ? <p>No drafts are waiting.</p> : null}
+      <div data-testid="outreach-drafts">
+        {outreach.map((d) => (
+          <form key={d.id} action={sendOutreachAction} className={styles.form}>
+            <input type="hidden" name="draftId" value={d.id} />
+            <p>
+              <a
+                href={publicUrl(
+                  d.town.domain,
+                  listingPath({ category: d.business.category ?? '', slug: d.business.slug }),
+                )}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {d.business.name}
+              </a>{' '}
+              · {d.town.name} · {d.business.claimed ? 'claimed' : 'unclaimed'} · in{' '}
+              <a
+                href={publicUrl(d.town.domain, `/news/${d.article.slug}`)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {d.article.headline}
+              </a>
+            </p>
+            <label htmlFor={`to-${d.id}`}>To</label>
+            <input
+              id={`to-${d.id}`}
+              name="to"
+              type="email"
+              defaultValue={d.toEmail ?? ''}
+              placeholder="Address from the business’s own website"
+            />
+            <label htmlFor={`subject-${d.id}`}>Subject</label>
+            <input id={`subject-${d.id}`} name="subject" defaultValue={d.subject} />
+            <label htmlFor={`body-${d.id}`}>Message</label>
+            <textarea id={`body-${d.id}`} name="body" rows={10} defaultValue={d.body} />
+            {confirm === d.id ? (
+              <label>
+                <input type="checkbox" name="confirmSuppressed" /> Send anyway to the suppressed
+                address
+              </label>
+            ) : null}
+            <div className={styles.actions}>
+              <button type="submit" name="decision" value="send" className={styles.button}>
+                Send
+              </button>
+              <button type="submit" name="decision" value="dismiss" className={styles.secondary}>
+                Dismiss
+              </button>
+            </div>
+          </form>
+        ))}
       </div>
 
       <h2>Paid placements</h2>

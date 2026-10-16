@@ -806,6 +806,39 @@ export const proofReports = pgTable(
   (t) => [uniqueIndex('proof_reports_business_month_uq').on(t.businessId, t.month)],
 );
 
+// Outreach drafts (CLAUDE.md §11 "business triggers"; M6 PR F): when a published story names a
+// listed business, the system drafts an email to it. Nothing is sent until a staff member
+// reviews it and presses Send (Rule 10); sending opens a conversation in the shared inbox.
+export const outreachDrafts = pgTable(
+  'outreach_drafts',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id, { onDelete: 'cascade' }),
+    /** The claimed owner's address; empty for unclaimed listings until staff add one. */
+    toEmail: text('to_email'),
+    subject: text('subject').notNull(),
+    body: text('body').notNull(),
+    status: text('status').$type<'draft' | 'sent' | 'dismissed'>().notNull().default('draft'),
+    threadId: uuid('thread_id').references(() => threads.id),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('outreach_drafts_business_article_uq').on(t.businessId, t.articleId),
+    index('outreach_drafts_status_idx').on(t.status),
+    check('outreach_drafts_status', sql`${t.status} in ('draft', 'sent', 'dismissed')`),
+  ],
+);
+
 export const subscribers = pgTable(
   'subscribers',
   {

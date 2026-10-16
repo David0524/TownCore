@@ -1,3 +1,4 @@
+import { eq, outreachDrafts, sql } from '@towncore/db';
 import { inboxFacets, listThreads } from '@towncore/mail';
 import Link from 'next/link';
 import { inboxHref, parseInboxFilter, type InboxSearchParams } from '@/lib/admin/inbox';
@@ -33,9 +34,13 @@ export default async function Inbox({ searchParams }: Props) {
   const me = await requireStaff();
   const params = await searchParams;
   const filter = parseInboxFilter(params);
-  const [{ rows, total, page, pageSize }, facets] = await Promise.all([
+  const [{ rows, total, page, pageSize }, facets, [drafts]] = await Promise.all([
     listThreads(db(), me.id, filter),
     inboxFacets(db()),
+    db()
+      .select({ n: sql<number>`count(*)::int` })
+      .from(outreachDrafts)
+      .where(eq(outreachDrafts.status, 'draft')),
   ]);
   const pages = Math.max(1, Math.ceil(total / pageSize));
   return (
@@ -44,6 +49,14 @@ export default async function Inbox({ searchParams }: Props) {
       <h1>Inbox</h1>
       <p>
         <Link href="/admin/mail/compose">New message</Link>
+        {drafts?.n ? (
+          <>
+            {' · '}
+            <Link href="/admin/directory#outreach" data-testid="outreach-link">
+              {drafts.n} outreach {drafts.n === 1 ? 'draft' : 'drafts'} to review
+            </Link>
+          </>
+        ) : null}
       </p>
       <form className={styles.filters} method="get" role="search">
         <label>
