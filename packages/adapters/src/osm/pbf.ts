@@ -6,7 +6,8 @@ import { ProtoReader } from './protobuf';
 // [4-byte length][BlobHeader][Blob] frames; each OSMData blob is a zlib-compressed
 // PrimitiveBlock holding nodes (plain or dense) and ways. Relations are not needed here.
 
-export type OsmNode = { id: number; lat: number; lon: number };
+/** A node; `tags` only when it has any (most nodes are bare points of ways). */
+export type OsmNode = { id: number; lat: number; lon: number; tags?: Record<string, string> };
 export type OsmWay = { id: number; tags: Record<string, string>; refs: number[] };
 export type PrimitiveBlock = { nodes: OsmNode[]; ways: OsmWay[] };
 
@@ -97,8 +98,8 @@ export function decodePrimitiveBlock(data: Uint8Array): PrimitiveBlock {
     const gr = new ProtoReader(g);
     while (!gr.done) {
       const { field, wire } = gr.tag();
-      if (field === 1) nodes.push(decodeNode(gr.bytes(), deg));
-      else if (field === 2) nodes.push(...decodeDense(gr.bytes(), deg));
+      if (field === 1) nodes.push(decodeNode(gr.bytes(), deg, strings));
+      else if (field === 2) nodes.push(...decodeDense(gr.bytes(), deg, strings));
       else if (field === 3) ways.push(decodeWay(gr.bytes(), strings));
       else gr.skip(wire);
     }
@@ -108,42 +109,63 @@ export function decodePrimitiveBlock(data: Uint8Array): PrimitiveBlock {
 
 type Deg = (v: number, axis: 'lat' | 'lon') => number;
 
-function decodeNode(buf: Uint8Array, deg: Deg): OsmNode {
+function decodeNode(buf: Uint8Array, deg: Deg, strings: string[]): OsmNode {
   const r = new ProtoReader(buf);
   let id = 0;
   let lat = 0;
   let lon = 0;
+  let keys: number[] = [];
+  let vals: number[] = [];
   while (!r.done) {
     const { field, wire } = r.tag();
     if (field === 1) id = r.svarint();
+    else if (field === 2) keys = r.packed();
+    else if (field === 3) vals = r.packed();
     else if (field === 8) lat = r.svarint();
     else if (field === 9) lon = r.svarint();
     else r.skip(wire);
   }
-  return { id, lat: deg(lat, 'lat'), lon: deg(lon, 'lon') };
+  const node: OsmNode = { id, lat: deg(lat, 'lat'), lon: deg(lon, 'lon') };
+  if (keys.length > 0) {
+    node.tags = {};
+    keys.forEach((k, i) => (node.tags![strings[k]!] = strings[vals[i]!]!));
+  }
+  return node;
 }
 
-function decodeDense(buf: Uint8Array, deg: Deg): OsmNode[] {
+function decodeDense(buf: Uint8Array, deg: Deg, strings: string[]): OsmNode[] {
   const r = new ProtoReader(buf);
   let ids: number[] = [];
   let lats: number[] = [];
   let lons: number[] = [];
+  // keys_vals: for each node in order, key and value string indexes, then a 0.
+  let keysVals: number[] = [];
   while (!r.done) {
     const { field, wire } = r.tag();
     if (field === 1) ids = r.packed(true);
     else if (field === 8) lats = r.packed(true);
     else if (field === 9) lons = r.packed(true);
+    else if (field === 10) keysVals = r.packed();
     else r.skip(wire);
   }
   const out: OsmNode[] = [];
   let id = 0;
   let lat = 0;
   let lon = 0;
+  let kv = 0;
   for (let i = 0; i < ids.length; i++) {
     id += ids[i]!;
     lat += lats[i]!;
     lon += lons[i]!;
-    out.push({ id, lat: deg(lat, 'lat'), lon: deg(lon, 'lon') });
+    const node: OsmNode = { id, lat: deg(lat, 'lat'), lon: deg(lon, 'lon') };
+    if (kv < keysVals.length) {
+      while (kv < keysVals.length && keysVals[kv] !== 0) {
+        (node.tags ??= {})[strings[keysVals[kv]!]!] = strings[keysVals[kv + 1]!]!;
+        kv += 2;
+      }
+      kv++; // the 0 that ends this node's tags
+    }
+    out.push(node);
   }
   return out;
 }

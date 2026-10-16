@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { directoryCategory } from '@towncore/config';
 import { categoryListings, enhancedListingIds, MIN_INDEXABLE } from '@towncore/directory';
+import { PlaceCard } from '@/components/directory/PlaceCard';
+import places from '@/components/directory/places.module.css';
 import { Grouped } from '@/components/phone/Grouped';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
@@ -69,9 +71,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       <LargeTitle title={categoryTitle(town, category)} as="h1" always />
       <Slot town={town} name="directory.category.exclusive" context={context} />
       <p className={`muted ${styles.intro}`}>
-        {category.group === 'food'
-          ? `${total} ${total === 1 ? 'place holds' : 'places hold'} an active Florida food service license (${category.name.toLowerCase()}) at a ${town.name} address, which can be outside city limits.`
-          : `${total} ${total === 1 ? 'business holds' : 'businesses hold'} an active Florida license as ${category.name.toLowerCase()} with a ${town.name} mailing address, which can be outside city limits. Check any license with the state before you hire.`}
+        {category.group === 'home'
+          ? `${total} ${total === 1 ? 'business holds' : 'businesses hold'} an active Florida license as ${category.name.toLowerCase()} with a ${town.name} mailing address, which can be outside city limits. Check any license with the state before you hire.`
+          : `${total} ${total === 1 ? 'place' : 'places'} in the ${town.name} area${
+              category.licenses.length > 0
+                ? ', from Florida food service licenses and OpenStreetMap'
+                : ', from OpenStreetMap'
+            }. An area address can be outside city limits.`}
       </p>
       <Slot town={town} name="directory.topspot" context={context} />
       <SponsoredCards town={town} category={category} houseOffOnPhones={shortOnPhones} />
@@ -95,6 +101,37 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         <p data-testid="category-empty">
           {q ? `No ${category.name.toLowerCase()} match “${q}”.` : 'No businesses listed yet.'}
         </p>
+      ) : category.group !== 'home' ? (
+        <>
+          <h2 className="sr-only" id="organic">
+            {q ? `Matching “${q}”` : `All ${category.name.toLowerCase()}`}
+          </h2>
+          <ul className={places.grid} aria-labelledby="organic">
+            {listings.map((listing) => (
+              <li key={listing.id}>
+                <PlaceCard
+                  listing={listing}
+                  label={enhanced.has(listing.id) ? 'Enhanced (paid)' : null}
+                />
+              </li>
+            ))}
+          </ul>
+          {listings.some((l) => l.osmRef) ? (
+            <p className={`meta ${places.credit}`} data-testid="osm-credit">
+              Places data ©{' '}
+              <a href="https://www.openstreetmap.org/copyright" rel="noopener">
+                OpenStreetMap contributors
+              </a>
+              {total > listings.length
+                ? `. Showing ${listings.length} of ${total}; search by name to find others.`
+                : '.'}
+            </p>
+          ) : total > listings.length ? (
+            <p className="meta">
+              Showing {listings.length} of {total}. Search by name to find others.
+            </p>
+          ) : null}
+        </>
       ) : (
         <Grouped
           title={q ? `Matching “${q}”` : `All ${category.name.toLowerCase()}`}

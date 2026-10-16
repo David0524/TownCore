@@ -1,7 +1,9 @@
 import type { BeatSlug } from './theme';
 
 // Directory categories (M6, docs/plans/M6.md §1): one list for every town. Each category says
-// which state licenses put a business in it. Order here is the order readers see.
+// which state licenses put a business in it, and which OpenStreetMap tags (owner, 2026-10-16:
+// storefronts mapped in OpenStreetMap are listed with their public address, phone and website).
+// Order here is the order readers see.
 //
 // DBPR professional licenses are matched as "<board>:<occupation code>" (codes in
 // packages/adapters/src/fl-dbpr/codes.ts); food service licenses as "food:<type>:<rank>"
@@ -12,8 +14,10 @@ export type DirectoryCategory = {
   name: string;
   /** Singular, for "Boca's featured plumber" and "Top spot open: …". */
   singular: string;
-  group: 'home' | 'food';
+  group: 'home' | 'food' | 'shops' | 'health' | 'services' | 'fun';
   licenses: readonly string[];
+  /** OpenStreetMap tags ("amenity=restaurant") that put a mapped place in this category. */
+  osm?: readonly string[];
   /** Story beats whose articles show this category under related businesses (§11b). */
   beats: readonly BeatSlug[];
 };
@@ -89,6 +93,7 @@ export const directoryCategories: readonly DirectoryCategory[] = [
     singular: 'restaurant',
     group: 'food',
     licenses: ['food:2010:SEAT'],
+    osm: ['amenity=restaurant'],
     beats: ['business'],
   },
   {
@@ -97,6 +102,7 @@ export const directoryCategories: readonly DirectoryCategory[] = [
     singular: 'takeout spot',
     group: 'food',
     licenses: ['food:2010:NOST'],
+    osm: ['amenity=fast_food', 'amenity=food_court'],
     beats: ['business'],
   },
   {
@@ -115,6 +121,247 @@ export const directoryCategories: readonly DirectoryCategory[] = [
     licenses: ['food:2014:MFDV'],
     beats: ['community'],
   },
+  // Everyday categories from OpenStreetMap (no state license behind them).
+  {
+    slug: 'coffee-and-bakeries',
+    name: 'Coffee, bakeries and sweets',
+    singular: 'coffee shop',
+    group: 'food',
+    licenses: [],
+    osm: [
+      'amenity=cafe',
+      'amenity=ice_cream',
+      'shop=bakery',
+      'shop=coffee',
+      'shop=pastry',
+      'shop=confectionery',
+      'shop=chocolate',
+    ],
+    beats: ['business'],
+  },
+  {
+    slug: 'bars-and-nightlife',
+    name: 'Bars and nightlife',
+    singular: 'bar',
+    group: 'food',
+    licenses: [],
+    osm: ['amenity=bar', 'amenity=pub', 'amenity=nightclub', 'amenity=biergarten'],
+    beats: ['business'],
+  },
+  {
+    slug: 'grocery-and-markets',
+    name: 'Grocery and markets',
+    singular: 'grocery store',
+    group: 'food',
+    licenses: [],
+    osm: [
+      'shop=supermarket',
+      'shop=greengrocer',
+      'shop=butcher',
+      'shop=seafood',
+      'shop=deli',
+      'shop=wine',
+      'shop=alcohol',
+      'shop=health_food',
+      'amenity=marketplace',
+    ],
+    beats: ['business'],
+  },
+  {
+    slug: 'shopping',
+    name: 'Shopping',
+    singular: 'shop',
+    group: 'shops',
+    licenses: [],
+    osm: [
+      'shop=clothes',
+      'shop=shoes',
+      'shop=boutique',
+      'shop=gift',
+      'shop=jewelry',
+      'shop=books',
+      'shop=department_store',
+      'shop=mall',
+      'shop=furniture',
+      'shop=electronics',
+      'shop=sports',
+      'shop=toys',
+      'shop=variety_store',
+      'shop=florist',
+      'shop=hardware',
+      'shop=doityourself',
+      'shop=garden_centre',
+      'shop=mobile_phone',
+      'shop=bicycle',
+      'shop=art',
+      'shop=interior_decoration',
+      'shop=bag',
+      'shop=watches',
+      'shop=music',
+    ],
+    beats: ['business'],
+  },
+  {
+    slug: 'health-and-medical',
+    name: 'Health and medical',
+    singular: 'medical office',
+    group: 'health',
+    licenses: [],
+    osm: [
+      'amenity=doctors',
+      'amenity=dentist',
+      'amenity=clinic',
+      'amenity=pharmacy',
+      'shop=optician',
+      'shop=medical_supply',
+      'healthcare=physiotherapist',
+      'healthcare=optometrist',
+    ],
+    beats: ['community'],
+  },
+  {
+    slug: 'beauty-and-wellness',
+    name: 'Beauty and wellness',
+    singular: 'salon',
+    group: 'health',
+    licenses: [],
+    osm: [
+      'shop=hairdresser',
+      'shop=beauty',
+      'shop=cosmetics',
+      'shop=massage',
+      'shop=tattoo',
+      'leisure=spa',
+      'amenity=spa',
+    ],
+    beats: ['business'],
+  },
+  {
+    slug: 'fitness',
+    name: 'Fitness and sports',
+    singular: 'gym',
+    group: 'health',
+    licenses: [],
+    osm: ['leisure=fitness_centre', 'leisure=dance', 'sport=yoga'],
+    beats: ['community'],
+  },
+  {
+    slug: 'automotive',
+    name: 'Automotive',
+    singular: 'auto shop',
+    group: 'services',
+    licenses: [],
+    osm: [
+      'shop=car',
+      'shop=car_repair',
+      'shop=tyres',
+      'shop=car_parts',
+      'amenity=car_wash',
+      'shop=motorcycle',
+    ],
+    beats: ['business'],
+  },
+  {
+    slug: 'banks-and-finance',
+    name: 'Banks and finance',
+    singular: 'bank',
+    group: 'services',
+    licenses: [],
+    osm: ['amenity=bank', 'office=accountant', 'office=financial', 'office=insurance'],
+    beats: ['business'],
+  },
+  {
+    slug: 'real-estate',
+    name: 'Real estate',
+    singular: 'real estate office',
+    group: 'services',
+    licenses: [],
+    osm: ['office=estate_agent'],
+    beats: ['development'],
+  },
+  {
+    slug: 'professional-services',
+    name: 'Professional services',
+    singular: 'professional office',
+    group: 'services',
+    licenses: [],
+    osm: [
+      'office=lawyer',
+      'office=architect',
+      'office=it',
+      'office=travel_agent',
+      'shop=travel_agency',
+    ],
+    beats: ['business'],
+  },
+  {
+    slug: 'personal-services',
+    name: 'Personal services',
+    singular: 'service',
+    group: 'services',
+    licenses: [],
+    osm: [
+      'shop=laundry',
+      'shop=dry_cleaning',
+      'shop=tailor',
+      'shop=copyshop',
+      'shop=storage_rental',
+    ],
+    beats: ['business'],
+  },
+  {
+    slug: 'pets',
+    name: 'Pets',
+    singular: 'pet business',
+    group: 'services',
+    licenses: [],
+    osm: ['shop=pet', 'shop=pet_grooming', 'amenity=veterinary'],
+    beats: ['community'],
+  },
+  {
+    slug: 'childcare-and-education',
+    name: 'Childcare and education',
+    singular: 'school',
+    group: 'services',
+    licenses: [],
+    osm: [
+      'amenity=kindergarten',
+      'amenity=childcare',
+      'amenity=language_school',
+      'amenity=music_school',
+      'amenity=driving_school',
+      'amenity=prep_school',
+    ],
+    beats: ['schools'],
+  },
+  {
+    slug: 'hotels',
+    name: 'Hotels and lodging',
+    singular: 'hotel',
+    group: 'fun',
+    licenses: [],
+    osm: ['tourism=hotel', 'tourism=motel', 'tourism=guest_house'],
+    beats: ['business'],
+  },
+  {
+    slug: 'entertainment',
+    name: 'Entertainment and attractions',
+    singular: 'attraction',
+    group: 'fun',
+    licenses: [],
+    osm: [
+      'amenity=cinema',
+      'amenity=theatre',
+      'amenity=arts_centre',
+      'tourism=museum',
+      'tourism=gallery',
+      'leisure=bowling_alley',
+      'leisure=amusement_arcade',
+      'leisure=escape_game',
+      'leisure=miniature_golf',
+    ],
+    beats: ['community'],
+  },
 ];
 
 const byLicense = new Map(
@@ -124,6 +371,29 @@ const byLicense = new Map(
 /** The category for a license key ("06:CGC", "food:2010:SEAT"), or null if it isn't listed. */
 export function categoryForLicense(key: string): DirectoryCategory | null {
   return byLicense.get(key) ?? null;
+}
+
+const byOsmTag = new Map(
+  directoryCategories.flatMap((c) => (c.osm ?? []).map((tag) => [tag, c] as const)),
+);
+
+/**
+ * The category for a mapped place's tags, or null. Only named places count; amenity and shop
+ * are checked before the rest, so a café inside a hotel is filed as a café.
+ */
+export function categoryForOsmTags(
+  tags: Readonly<Record<string, string>>,
+): DirectoryCategory | null {
+  if (!tags.name) return null;
+  for (const key of ['amenity', 'shop', 'healthcare', 'leisure', 'office', 'tourism', 'sport']) {
+    const value = tags[key];
+    if (!value) continue;
+    for (const v of value.split(';')) {
+      const hit = byOsmTag.get(`${key}=${v.trim()}`);
+      if (hit) return hit;
+    }
+  }
+  return null;
 }
 
 export function directoryCategory(slug: string): DirectoryCategory | null {

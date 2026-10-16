@@ -1,6 +1,6 @@
 import type { DirectoryCategory } from '@towncore/config';
 import type { Town } from '@towncore/db';
-import { listingPlace, type Listing } from '@towncore/directory';
+import { contactShown, listingPlace, type Listing } from '@towncore/directory';
 import { siteUrl } from './discovery';
 
 // Town-site helpers for the directory (M6 PR B, docs/plans/M6.md §2).
@@ -10,6 +10,9 @@ export const directoryPath = (category?: string, slug?: string) =>
 
 export const listingPath = (listing: Pick<Listing, 'category' | 'slug'>) =>
   directoryPath(listing.category ?? 'other', listing.slug);
+
+/** The mapped place on openstreetmap.org ("node/123"), for the ODbL credit and a check. */
+export const osmPlaceUrl = (ref: string) => `https://www.openstreetmap.org/${ref}`;
 
 /** The state's own public license lookup, so readers can check a license themselves. */
 export const LICENSE_LOOKUP = 'https://www.myfloridalicense.com/portalsearches/VerifyLicensee';
@@ -32,10 +35,10 @@ const schemaTypes: Record<string, string> = {
 
 /**
  * LocalBusiness JSON-LD (CLAUDE.md §11 "SEO"). Like the page, it carries the street address and
- * phone only once the owner has claimed the listing (D-M6-2).
+ * phone only once claimed or for a mapped storefront (contactShown; D-M6-2).
  */
 export function localBusinessJsonLd(town: Town, listing: Listing): Record<string, unknown> {
-  const claimed = Boolean(listing.claimedAt);
+  const claimed = contactShown(listing);
   return {
     '@context': 'https://schema.org',
     '@type': schemaTypes[listing.category ?? ''] ?? 'LocalBusiness',

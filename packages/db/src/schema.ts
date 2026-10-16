@@ -691,12 +691,19 @@ export const businesses = pgTable(
     serviceArea: text('service_area'),
     pendingName: text('pending_name'),
     ownerUpdatedAt: timestamp('owner_updated_at', { withTimezone: true }),
+    // OpenStreetMap (owner, 2026-10-16): the mapped place this listing comes from or was matched
+    // to ("node/123"), its cuisine, and whether its street address may be shown before a claim.
+    // A mapped storefront's address is public; a license address can be a home (D-M6-2).
+    osmRef: text('osm_ref'),
+    cuisine: text('cuisine'),
+    addressPublic: boolean('address_public').notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     index('businesses_town_category_idx').on(t.townId, t.category),
     uniqueIndex('businesses_town_slug_uq').on(t.townId, t.slug),
+    uniqueIndex('businesses_town_osm_uq').on(t.townId, t.osmRef),
     uniqueIndex('businesses_town_license_uq').on(t.townId, t.dataSource, t.licenseNumber),
     check(
       'businesses_geocode_status',

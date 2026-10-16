@@ -26,7 +26,7 @@
     "homeRail": ["events", "coming-up", "find-a-pro", "essentials"],
     "homeBottom": ["photo-of-the-week", "new-now-open"],
     "article": "classic-rail",
-    "directory": "list-map",
+    "directory": "category-grid",
     "footer": "three-column"
   },
   "corners": "soft",

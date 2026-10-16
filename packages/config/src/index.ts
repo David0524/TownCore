@@ -96,6 +96,7 @@ export {
 export { creativeSchema, type Creative } from './creative';
 export {
   categoryForLicense,
+  categoryForOsmTags,
   directoryCategories,
   directoryCategory,
   directoryProducts,
