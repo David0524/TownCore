@@ -6,6 +6,7 @@ import {
   foodColors,
   cornerRadii,
   darkColors,
+  deriveDeep,
   deriveMuted,
   iosColors,
   iosFonts,
@@ -58,6 +59,7 @@ export function themeCssVariables(theme: Theme): string {
     '--ink': palette.ink,
     '--accent': palette.accent,
     '--accent-text': palette.accentText,
+    '--accent-deep': deriveDeep(palette),
     '--secondary': palette.secondary ?? palette.accent,
     '--secondary-text': palette.secondary
       ? (palette.secondaryText ?? palette.accentText)

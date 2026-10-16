@@ -3,6 +3,7 @@ import { contrastRatio } from '../src/brand';
 import {
   categoryColors,
   darkColors,
+  deriveDeep,
   deriveMuted,
   iosColors,
   phoneSecondaryLabel,
@@ -37,6 +38,21 @@ describe('network design tokens', () => {
     for (const bg of [harbor.background, harbor.surface, harbor.tint, systemColors.sand]) {
       expect(contrastRatio(muted, bg)).toBeGreaterThanOrEqual(4.5);
     }
+  });
+
+  it('promotions sit on a deep brand shade that keeps the brand text readable', () => {
+    const boca = {
+      ink: '#111418',
+      background: '#FFFFFF',
+      accent: '#0E6FA8',
+      accentText: '#FFFFFF',
+    };
+    const deep = deriveDeep(boca);
+    expect(contrastRatio(boca.accentText, deep)).toBeGreaterThan(
+      contrastRatio(boca.accentText, boca.accent),
+    );
+    const light = { ...boca, accent: '#F2C14E', accentText: '#111418' };
+    expect(contrastRatio(light.accentText, deriveDeep(light))).toBeGreaterThanOrEqual(4.5);
   });
 
   it('dark-mode text passes on the dark page and tiles', () => {

@@ -6,8 +6,8 @@ import styles from './Slot.module.css';
 
 /**
  * A monetization slot: reserved height, fill order, and the locked label (mono, above the unit).
- * Paid units sit on the network's sand tile; house ads on the town's surface. Both are visibly
- * not editorial, and neither ever renders empty.
+ * Paid units sit on the network's sand tile; the site's own house ads are designed promotions
+ * in the town's brand. Both are visibly not editorial, and neither ever renders empty.
  */
 export async function Slot({
   town,
@@ -68,9 +68,25 @@ export function SlotUnit({
         href={fill.href}
         {...(external ? { rel: 'sponsored noopener', target: '_blank' } : {})}
       >
-        <strong className={styles.headline}>{fill.headline}</strong>
-        {fill.body ? <span className={styles.body}>{fill.body}</span> : null}
-        {fill.cta ? <span className={styles.cta}>{fill.cta} →</span> : null}
+        <span className={styles.text}>
+          <strong className={styles.headline}>{fill.headline}</strong>
+          {fill.body ? <span className={styles.body}>{fill.body}</span> : null}
+        </span>
+        {fill.offers?.length ? (
+          <span className={styles.offers} data-testid="slot-offers">
+            {fill.offers.map((o) => (
+              <span key={o.rank} className={styles.offer}>
+                <span className={styles.rank}>{o.rank}</span>
+                <span className={styles.price}>{o.price}</span>
+              </span>
+            ))}
+          </span>
+        ) : null}
+        {fill.cta ? (
+          <span className={styles.cta}>
+            {fill.cta} <span aria-hidden="true">›</span>
+          </span>
+        ) : null}
       </a>
     </aside>
   );

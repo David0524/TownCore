@@ -106,6 +106,25 @@ export function deriveMuted(palette: {
 }
 
 /**
+ * The deep brand shade behind the site's own promotions (house ads): the brand color taken
+ * halfway toward the ink, or toward the page when the brand carries dark text, so the brand's
+ * own text color reads even better on it than on the brand itself.
+ */
+export function deriveDeep(palette: {
+  ink: string;
+  background: string;
+  accent: string;
+  accentText: string;
+}): string {
+  const toward =
+    contrastRatio(palette.accentText, palette.ink) >
+    contrastRatio(palette.accentText, palette.background)
+      ? palette.ink
+      : palette.background;
+  return mix(palette.accent, toward, 0.5);
+}
+
+/**
  * Phone chrome (below 600px, every town; docs/plans/M4b.md revision 5): iOS system colors and
  * Apple's system font stacks. The town's brand stays the tint. Secondary label is iOS's
  * #6E6E73 (it passes AA on white and grouped gray), darkened per town when a tint needs it.

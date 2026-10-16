@@ -22,6 +22,8 @@ export type SlotFill = {
   body?: string | undefined;
   href: string;
   cta?: string | undefined;
+  /** House ads that sell featured spots show each open spot and its price, as tiles. */
+  offers?: Array<{ rank: string; price: string }> | undefined;
 };
 
 /**
@@ -95,13 +97,17 @@ export function houseAd(
   // first month free (owner, 2026-10-16, after bocatownsquare.com).
   const offer = featuredOffer(town);
   const freeLine = offer.trial ? ` ${capitalize(offer.trial)}.` : '';
+  const pricing = (town.config as TownConfig).pricing;
+  const tiles = (ranks: readonly FeaturedRank[]) =>
+    ranks.map((r) => ({ rank: `#${r}`, price: `$${pricing.featured_usd[r - 1]}/mo` }));
   const advertise: SlotFill = {
     source: 'house',
     label: `From ${town.siteName}`,
     headline: 'Get your business featured',
     body: `Featured spots in ${town.siteName}'s directory from ${offer.from} a month.${freeLine}`,
     href: advertisePath(),
-    cta: 'See the spots',
+    cta: offer.trial ? `Try ${offer.trialDays} days free` : 'See the spots',
+    offers: tiles([1, 2, 3]),
   };
   // The newsletter page shows the signup form, or "launching soon" until the town can send.
   const newsletter: SlotFill = opts.newsletter
@@ -162,6 +168,7 @@ export function houseAd(
         body: `Above every other ${category?.singular ?? 'listing'}. ${restOffer.list} a month${restOffer.trial ? `, ${restOffer.trial}` : ''}.`,
         href: advertisePath(category),
         cta: 'Get featured',
+        offers: tiles(rest),
       }
     : claim;
   const leads: SlotFill = {
@@ -186,7 +193,8 @@ export function houseAd(
   const rotation: Record<SlotName, SlotFill> = {
     'home.top': advertise,
     'home.infeed': newsletter,
-    'home.directory': advertise,
+    // The banner at the top already sells featured spots; the directory module invites a claim.
+    'home.directory': claim,
     'home.events': advertise,
     'rail.box': tips,
     'article.inline': newsletter,

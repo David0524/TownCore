@@ -6,9 +6,9 @@ import type { PartProps } from '../types';
 import styles from './footers.module.css';
 
 /**
- * coastal-modern's footer (canvas "Homepage"): under an ink rule, the site name large with what
- * the paper is and its contact address, then three columns of links: the sections, the pages
- * about the paper, and the ways to take part.
+ * coastal-modern's footer (canvas "Homepage", restyled after bocatownsquare.com): a gray band
+ * with the site name, what the paper is and its contact address, then three titled columns of
+ * links: the sections, the pages about the paper, and the ways to take part.
  */
 export async function ThreeColumn({ town }: PartProps) {
   const contact = townContactEmail(town.config as TownConfig);
@@ -31,6 +31,7 @@ export async function ThreeColumn({ town }: PartProps) {
   ];
   const column = (label: string, items: Array<{ href: string; label: string }>) => (
     <nav aria-label={label}>
+      <p className={styles.colTitle}>{label}</p>
       <ul className={styles.list}>
         {items.map((item) => (
           <li key={item.href}>
@@ -59,7 +60,7 @@ export async function ThreeColumn({ town }: PartProps) {
             </p>
           </div>
           {column('Sections', sections)}
-          {column(`About ${town.siteName}`, about)}
+          {column('About us', about)}
           {column('Take part', takePart)}
         </div>
         <p className={styles.copyright}>
