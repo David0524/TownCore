@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
-import { E2E_MAIL_TOKEN_SECRET } from './e2e/newsletter-secret';
+import { E2E_MAIL_TOKEN_SECRET, E2E_STRIPE_WEBHOOK_SECRET } from './e2e/newsletter-secret';
 
 // Specs that seed data (admin) need DATABASE_URL; use the repo .env locally (CI sets it).
 const envFile = new URL('../../.env', import.meta.url);
@@ -52,6 +52,10 @@ export default defineConfig({
       MAIL_TRANSPORT: 'log',
       MAIL_TOKEN_SECRET: E2E_MAIL_TOKEN_SECRET,
       MAIL_POSTAL_ADDRESS: '1 Test Street, Letter Town, ME 04000',
+      // Stripe test mode with placeholder values: no request ever reaches Stripe in e2e; the
+      // webhook test signs its own events with this secret.
+      STRIPE_SECRET_KEY: 'sk_test_e2e_placeholder',
+      STRIPE_WEBHOOK_SECRET: E2E_STRIPE_WEBHOOK_SECRET,
     },
     timeout: 60_000,
   },

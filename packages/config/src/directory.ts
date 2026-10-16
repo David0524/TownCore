@@ -132,3 +132,38 @@ export function directoryCategory(slug: string): DirectoryCategory | null {
 
 /** Sponsored listings per category per town (§11: max 3). */
 export const maxSponsoredPerCategory = 3;
+
+/**
+ * What businesses can buy (D-M6-6). Prices come from each town's `pricing`; a product without
+ * a price there stays off. Category exclusive and newsletter sponsorship are built but off
+ * until the owner prices them. Paid placements are always labeled (Rule 6) and never change
+ * organic order.
+ */
+export const directoryProducts = {
+  enhanced: {
+    name: 'Enhanced listing',
+    priceKey: 'enhanced_usd',
+    enabled: true,
+    perCategory: null,
+  },
+  sponsored_slot: {
+    name: 'Sponsored slot',
+    priceKey: 'sponsored_slot_usd',
+    enabled: true,
+    perCategory: maxSponsoredPerCategory,
+  },
+  exclusive: { name: 'Category exclusive', priceKey: null, enabled: false, perCategory: 1 },
+  newsletter: { name: 'Newsletter sponsorship', priceKey: null, enabled: false, perCategory: null },
+  spotlight: { name: 'Business spotlight', priceKey: null, enabled: false, perCategory: null },
+} as const;
+export type DirectoryProduct = keyof typeof directoryProducts;
+
+/** Monthly price in whole dollars for a town, or null when the product is off there. */
+export function productPrice(
+  pricing: Record<string, number> | undefined,
+  product: DirectoryProduct,
+): number | null {
+  const def = directoryProducts[product];
+  if (!def.enabled || !def.priceKey) return null;
+  return pricing?.[def.priceKey] ?? null;
+}

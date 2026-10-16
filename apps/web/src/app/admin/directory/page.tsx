@@ -1,5 +1,5 @@
 import { eq, towns } from '@towncore/db';
-import { listClaims, pendingNameChanges } from '@towncore/directory';
+import { listClaims, listPlacements, pendingNameChanges } from '@towncore/directory';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import { listingPath } from '@/lib/directory';
@@ -21,10 +21,11 @@ export default async function DirectoryAdmin({
 }) {
   await requireStaff();
   const { done, error } = await searchParams;
-  const [waiting, decided, names] = await Promise.all([
+  const [waiting, decided, names, paid] = await Promise.all([
     listClaims(db(), { statuses: ['pending'] }),
     listClaims(db(), { statuses: ['approved', 'rejected'], limit: 20 }),
     pendingNameChanges(db()),
+    listPlacements(db()),
   ]);
   const townRows = names.length
     ? await Promise.all(
@@ -142,6 +143,47 @@ export default async function DirectoryAdmin({
                     </button>
                   </form>
                 </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Paid placements</h2>
+      <p className={styles.muted}>
+        Stripe test mode (D-M6-5). A held placement was paid after its category filled up: it is
+        never shown. Refund it in the Stripe dashboard or move it to the next opening.
+      </p>
+      {paid.length === 0 ? <p>No placements yet.</p> : null}
+      <div className={styles.scroll}>
+        <table className={styles.table} data-testid="placements">
+          <thead>
+            <tr>
+              <th>Listing</th>
+              <th>Product</th>
+              <th>Status</th>
+              <th>Buyer</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paid.map((p) => (
+              <tr key={p.id}>
+                <td>
+                  {p.business.name}
+                  <div className={styles.muted}>{p.townName}</div>
+                </td>
+                <td>
+                  {p.product}
+                  {p.category ? <div className={styles.muted}>{p.category}</div> : null}
+                </td>
+                <td className={p.status === 'held' ? styles.bad : undefined}>
+                  {p.status}
+                  {p.endsAt ? <div className={styles.muted}>ends {when(p.endsAt)}</div> : null}
+                  {p.stripeSubscriptionId ? (
+                    <div className={styles.muted}>{p.stripeSubscriptionId}</div>
+                  ) : null}
+                </td>
+                <td>{p.buyerEmail}</td>
               </tr>
             ))}
           </tbody>

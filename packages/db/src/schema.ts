@@ -69,6 +69,8 @@ export const placementStatus = pgEnum('placement_status', [
   'active',
   'canceled',
   'expired',
+  // Paid, but over the category's inventory: never shown; staff refund it in Stripe (D-M6-5).
+  'held',
 ]);
 export const leadKind = pgEnum('lead_kind', ['call', 'form']);
 export const subscriberStatus = pgEnum('subscriber_status', [
@@ -676,14 +678,55 @@ export const placements = pgTable(
     product: placementProduct('product').notNull(),
     category: text('category'),
     stripeSubscriptionId: text('stripe_subscription_id'),
+    stripeCustomerId: text('stripe_customer_id'),
+    stripeCheckoutSessionId: text('stripe_checkout_session_id'),
+    stripePriceId: text('stripe_price_id'),
+    /** The owner who bought it (their claim's email). */
+    buyerEmail: text('buyer_email'),
     startsAt: timestamp('starts_at', { withTimezone: true }),
     endsAt: timestamp('ends_at', { withTimezone: true }),
     status: placementStatus('status').notNull().default('pending'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index('placements_town_product_idx').on(t.townId, t.product, t.category)],
+  (t) => [
+    index('placements_town_product_idx').on(t.townId, t.product, t.category),
+    uniqueIndex('placements_checkout_session_uq').on(t.stripeCheckoutSessionId),
+    uniqueIndex('placements_subscription_uq').on(t.stripeSubscriptionId),
+  ],
 );
+
+// Stripe Products and Prices per town and product (M6 PR D), made by `pnpm directory:stripe
+// sync` from each town's pricing. A changed price makes a new Price; the old row goes inactive.
+export const stripePrices = pgTable(
+  'stripe_prices',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    product: placementProduct('product').notNull(),
+    stripeProductId: text('stripe_product_id').notNull(),
+    stripePriceId: text('stripe_price_id').notNull().unique(),
+    unitAmountCents: integer('unit_amount_cents').notNull(),
+    livemode: boolean('livemode').notNull().default(false),
+    active: boolean('active').notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [index('stripe_prices_town_product_idx').on(t.townId, t.product, t.active)],
+);
+
+// Every Stripe webhook event, stored once by its id (deliveries are at least once). Only
+// verified events are stored; processing is idempotent and retried while processed_at is null.
+export const stripeEvents = pgTable('stripe_events', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  livemode: boolean('livemode').notNull(),
+  payload: jsonb('payload').notNull(),
+  receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
+  processedAt: timestamp('processed_at', { withTimezone: true }),
+  error: text('error'),
+});
 
 export const leads = pgTable(
   'leads',

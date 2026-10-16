@@ -1,16 +1,31 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { ownerListings } from '@towncore/directory';
+import { listingOffers, ownerListings } from '@towncore/directory';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
 import { listingPath } from '@/lib/directory';
 import { currentOwner } from '@/lib/owner';
+import { stripe } from '@/lib/stripe';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 import styles from '../../directory/directory.module.css';
 
 export const metadata: Metadata = { title: 'Edit your listing', robots: { index: false } };
+
+const PAYMENT_MESSAGES: Record<string, string> = {
+  paid: 'Thanks. Your placement turns on as soon as Stripe confirms the payment, usually within a minute.',
+  canceled: 'Checkout was canceled; nothing was charged.',
+  sold_out: 'That placement just sold out in your category.',
+  already_active: 'You already have that placement.',
+  unavailable: 'Paid placements aren’t open on this site yet.',
+  no_billing: 'There’s no billing account for you yet.',
+};
+
+const OFFER_NOTES: Record<string, string> = {
+  enhanced: 'Your hours, website and description on your listing card in the category list.',
+  sponsored_slot: 'A labeled card at the top of your category, linking to your listing.',
+};
 
 type Props = {
   params: Promise<{ host: string; slug: string }>;
@@ -26,6 +41,7 @@ export default async function EditListing({ params, searchParams }: Props) {
   const listing = (await ownerListings(db(), town.id, email)).find((l) => l.slug === slug);
   if (!listing) notFound();
   const { s, e } = await searchParams;
+  const offers = stripe() ? await listingOffers(db(), town.id, listing) : [];
   const errors = (Array.isArray(e) ? e : e ? [e] : []).slice(0, 5);
   return (
     <StandardPage town={town}>
@@ -38,6 +54,11 @@ export default async function EditListing({ params, searchParams }: Props) {
         <p role="status" data-testid="owner-saved">
           Saved.
           {s === 'review' ? ' The new business name shows once our staff check it.' : ''}
+        </p>
+      ) : null}
+      {s && PAYMENT_MESSAGES[s] ? (
+        <p role="status" data-testid="owner-payment">
+          {PAYMENT_MESSAGES[s]}
         </p>
       ) : null}
       {errors.length ? (
@@ -87,6 +108,48 @@ export default async function EditListing({ params, searchParams }: Props) {
           Save
         </button>
       </form>
+      {offers.length > 0 ? (
+        <section aria-labelledby="promote-h" data-testid="promote">
+          <h2 id="promote-h">Promote this listing</h2>
+          <p className={styles.note}>
+            Paid placements are always labeled &quot;Sponsored&quot; and never change the order of
+            the regular listings. Billed monthly through Stripe; cancel any time.
+          </p>
+          <ul className={styles.offers}>
+            {offers.map((offer) => (
+              <li key={offer.product}>
+                <strong>{offer.name}</strong> · ${offer.monthlyUsd}/month
+                <span className="meta">
+                  {OFFER_NOTES[offer.product] ?? ''}
+                  {offer.left !== null ? ` ${offer.left} of 3 left in this category.` : ''}
+                </span>
+                {offer.placement ? (
+                  <span className="meta" data-testid={`placement-${offer.product}`}>
+                    {offer.placement.status === 'held'
+                      ? 'Paid, but this category filled up first. We’ll refund you or offer the next opening.'
+                      : `Active${offer.placement.endsAt ? ` until ${offer.placement.endsAt.toISOString().slice(0, 10)}` : ''}.`}
+                  </span>
+                ) : offer.left === 0 ? (
+                  <span className="meta">Sold out.</span>
+                ) : (
+                  <form method="post" action={`/owner/${listing.slug}/checkout`}>
+                    <input type="hidden" name="product" value={offer.product} />
+                    <button type="submit" className="button">
+                      Buy {offer.name.toLowerCase()}
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+          <form method="post" action="/owner/billing">
+            <input type="hidden" name="slug" value={listing.slug} />
+            <button type="submit" className={`button ${styles.secondary}`}>
+              Manage billing
+            </button>
+          </form>
+        </section>
+      ) : null}
     </StandardPage>
   );
 }
