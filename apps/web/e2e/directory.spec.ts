@@ -20,10 +20,21 @@ async function jsonLd(page: Page) {
   return blocks.map((b) => JSON.parse(b) as Record<string, unknown>);
 }
 
-test('the directory home lists categories with counts', async ({ page }) => {
+test('the directory home shows every kind and opens on one, listed', async ({ page }) => {
   await page.goto(`${harbor}/directory`);
   const main = page.getByRole('main');
   await expect(main.getByRole('heading', { name: 'Places', level: 1 })).toBeVisible();
+  // It opens on restaurants, marked in the bar, with the restaurants listed below.
+  const bar = page.getByTestId('category-bar');
+  await expect(bar.locator('[aria-current="page"]')).toContainText('Restaurants');
+  await expect(page.getByTestId('directory-opening').getByTestId('place-card')).not.toHaveCount(0);
+  // Picking another kind keeps the bar, now marking that kind.
+  await bar.getByRole('link', { name: /Plumbers/ }).click();
+  await expect(page).toHaveURL(/\/directory\/plumbers$/);
+  await expect(page.getByTestId('category-bar').locator('[aria-current="page"]')).toContainText(
+    'Plumbers',
+  );
+  await page.goto(`${harbor}/directory`);
   await expect(main.getByRole('link', { name: /Plumbers\s*5 places/ })).toHaveAttribute(
     'href',
     '/directory/plumbers',
@@ -90,7 +101,7 @@ test('a category page has its slots, then organic listings with the claimed one 
     'Is yours listed? Claim it free',
   );
   const names = await page
-    .locator('#organic ~ ul a, section[aria-labelledby="organic"] li a')
+    .locator('section[aria-labelledby="organic"] [data-testid="place-card"] h3 a')
     .allTextContents();
   expect(names[0]).toContain('Anchor Plumbing Co');
   expect(names).toHaveLength(5);

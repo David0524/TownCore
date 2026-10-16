@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import styles from './news.module.css';
 
-/** A section title in the display face over a 1px ink rule, with an optional "More" link. */
+/** A section title in the display face, with an optional "More" link in the brand color. */
 export function SectionHeader({
   title,
   href,

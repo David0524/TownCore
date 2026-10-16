@@ -1,4 +1,4 @@
-import type { DirectoryCategory } from '@towncore/config';
+import { directoryCategories, type DirectoryCategory, type FoodColor } from '@towncore/config';
 import type { Town } from '@towncore/db';
 import { contactShown, listingPlace, type Listing } from '@towncore/directory';
 import { siteUrl } from './discovery';
@@ -7,6 +7,38 @@ import { siteUrl } from './discovery';
 
 export const directoryPath = (category?: string, slug?: string) =>
   ['/directory', category, slug].filter(Boolean).join('/');
+
+/** The directory's groups, in the order pages show them. */
+export const DIRECTORY_GROUPS = [
+  { key: 'food', title: 'Food and drink' },
+  { key: 'shops', title: 'Shopping' },
+  { key: 'home', title: 'Home services' },
+  { key: 'health', title: 'Health, beauty and fitness' },
+  { key: 'services', title: 'Services' },
+  { key: 'fun', title: 'Hotels and things to do' },
+] as const;
+
+const FLAVORS: FoodColor[] = ['ocean', 'saffron', 'basil', 'tomato', 'berry', 'cocoa'];
+
+/**
+ * A category's color pair (the network food colors), the same wherever its icon appears: the
+ * homepage grid, the directory's category bar, its page.
+ */
+export function categoryFlavor(slug: string): FoodColor {
+  const i = directoryCategories.findIndex((c) => c.slug === slug);
+  return FLAVORS[(i < 0 ? 0 : i) % FLAVORS.length]!;
+}
+
+/** The category the directory opens on: restaurants when there are any, else the biggest. */
+export function defaultCategory<T extends { category: DirectoryCategory; count: number }>(
+  counts: readonly T[],
+): T | null {
+  return (
+    counts.find((c) => c.category.slug === 'restaurants') ??
+    [...counts].sort((a, b) => b.count - a.count)[0] ??
+    null
+  );
+}
 
 export const listingPath = (listing: Pick<Listing, 'category' | 'slug'>) =>
   directoryPath(listing.category ?? 'other', listing.slug);

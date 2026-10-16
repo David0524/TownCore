@@ -24,9 +24,26 @@ const PATHS: Record<string, string> = {
   house: 'M4 11l8-7 8 7M6 9.5V20h12V9.5M10 20v-5h4v5',
   scissors: 'M6 6.5a2.5 2.5 0 1 0 0 .01M6 17.5a2.5 2.5 0 1 0 0 .01M8 8l12 10M8 16l12-10',
   takeout: 'M6 8h12l-1 12H7L6 8ZM9 8V6a3 3 0 0 1 6 0v2',
+  hammer: 'M14 4l6 6-2.5 2.5-6-6L14 4ZM11.5 6.5L4 14l3 3 7.5-7.5M15 7l-2.5 2.5',
+  roof: 'M3 12l9-7 9 7M6 10v9h12v-9M3 12h3M18 12h3',
+  bolt: 'M13 3L5 13.5h6L10 21l8-10.5h-6L13 3Z',
+  drop: 'M12 3.5s-6 6.5-6 10.5a6 6 0 0 0 12 0c0-4-6-10.5-6-10.5ZM9.5 14.5a2.5 2.5 0 0 0 2.5 2.5',
+  snow: 'M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5',
+  waves:
+    'M3 9c2 0 2-1.5 4.5-1.5S9.5 9 12 9s2-1.5 4.5-1.5S18.5 9 21 9M3 14c2 0 2-1.5 4.5-1.5S9.5 14 12 14s2-1.5 4.5-1.5S18.5 14 21 14M3 19c2 0 2-1.5 4.5-1.5S9.5 19 12 19s2-1.5 4.5-1.5S18.5 19 21 19',
+  sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4',
+  shield: 'M12 3l7 3v5.5c0 4.5-3 7.8-7 9.5-4-1.7-7-5-7-9.5V6l7-3ZM9 12l2 2 4-4',
 };
 
 const BY_CATEGORY: Record<string, string> = {
+  'general-contractors': 'hammer',
+  roofers: 'roof',
+  electricians: 'bolt',
+  plumbers: 'drop',
+  hvac: 'snow',
+  'pool-and-spa': 'waves',
+  solar: 'sun',
+  'alarm-systems': 'shield',
   'coffee-and-bakeries': 'coffee',
   'bars-and-nightlife': 'bar',
   'grocery-and-markets': 'grocery',

@@ -91,7 +91,7 @@ export default async function TownLayout({ children, params }: Props) {
           }
         />
         <AlertBar town={town} weather={weather} />
-        <div className="not-phone">
+        <div className="not-phone site-header">
           <Header town={town} theme={theme} nav={<Nav town={town} />} weather={weather} />
         </div>
         {/* Weather above the fold everywhere (§11a): the header or the phone bar shows this

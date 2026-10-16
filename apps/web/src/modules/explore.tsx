@@ -5,7 +5,7 @@ import { listPublishedGuides } from '@towncore/db';
 import { CategoryIcon, type IconKey } from '@/components/directory/CategoryIcon';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { db } from '@/lib/db';
-import { directoryPath } from '@/lib/directory';
+import { categoryFlavor, directoryPath } from '@/lib/directory';
 import { articlePath } from '@/lib/discovery';
 import type { HomeModuleComponent } from './types';
 import styles from './explore.module.css';
@@ -128,7 +128,8 @@ export const DirectoryGrid: HomeModuleComponent = async ({ town }) => {
           key: 'home',
           name: 'Home services',
           count: homeTotal,
-          href: `${directoryPath()}#dir-home`,
+          // The biggest trade; the directory's bar lists the rest beside it.
+          href: directoryPath([...home].sort((a, b) => b.count - a.count)[0]!.category.slug),
           icon: 'tools',
         });
       continue;
@@ -158,7 +159,9 @@ export const DirectoryGrid: HomeModuleComponent = async ({ town }) => {
       />
       <ul className={styles.tiles}>
         {tiles.map((tile, i) => {
-          const flavor = FLAVORS[i % FLAVORS.length]!;
+          const flavor = tile.category
+            ? categoryFlavor(tile.category.slug)
+            : FLAVORS[i % FLAVORS.length]!;
           return (
             <li key={tile.key}>
               <Link href={tile.href} className={styles.tile}>
