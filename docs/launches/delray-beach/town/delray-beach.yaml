@@ -1,0 +1,40 @@
+# The Delray Ledger, from pnpm launch (CLAUDE.md §10). Schema: packages/config/src/town.ts.
+# Draft town: sources are added as step 3 verifies them; it goes live only from Admin → Launches.
+slug: delray-beach
+name: 'Delray Beach'
+state: FL
+census_id: '1217100' # Census place GEOID (Delray Beach city, 2026 Gazetteer)
+county: 'Palm Beach'
+timezone: America/New_York
+site_name: 'The Delray Ledger'
+domain: delrayledger.com
+extra_domains: []
+tier: mid # 69,809 people (Vintage 2025 estimate)
+newsletter_send_time: '06:30'
+same_name_elsewhere: [] # wrong-town checks
+agencies:
+  - 'City of Delray Beach'
+  # step 3 adds the police and fire agencies it finds
+sources:
+  - kind: weather
+    platform: nws
+    zone: FLZ068
+    point: 26.4559,-80.0904
+  # Florida DBPR contractor and trade licenses (verified by launch step 3)
+  - kind: business_filings
+    platform: fl-dbpr
+    options:
+      city: DELRAY BEACH
+  # Florida DBPR new food service approvals (verified by launch step 3)
+  - kind: business_filings
+    platform: fl-dbpr
+    options:
+      city: DELRAY BEACH
+      files:
+        - newfood.csv
+  # Florida Division of Corporations daily filings (verified by launch step 3)
+  - kind: business_filings
+    platform: fl-sunbiz
+    options:
+      city: DELRAY BEACH
+pricing: { sponsored_slot_usd: 199, enhanced_usd: 39 } # Boca's prices until the owner sets this town's

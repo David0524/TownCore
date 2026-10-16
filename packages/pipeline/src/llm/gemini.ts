@@ -64,6 +64,8 @@ export function geminiProvider(
     async generate(request) {
       if (request.webSearch)
         throw new Error('Web search runs only on the Anthropic provider (D-M7-2).');
+      if (request.images?.length)
+        throw new Error('Image input runs only on the Anthropic provider.');
       for (let attempt = 0; ; attempt++) {
         try {
           return await once(request);

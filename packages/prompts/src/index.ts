@@ -6,5 +6,7 @@ export { discoverSchema, discoverV1, type DiscoverResult } from './v1/discover';
 export { entitiesSchema, entitiesV1, type EntitiesResult } from './v1/entities';
 export { factcheckSchema, factcheckV1, type FactcheckResult } from './v1/factcheck';
 export { guideSchema, guideV1, type GuideDraft } from './v1/guide';
+export { themeReviewSchema, themeReviewV1, type ThemeReview } from './v1/theme-review';
+export { themeChoiceSchema, themeV1, type ThemeChoice } from './v1/theme';
 export { updateSchema, updateV1, type UpdateNote } from './v1/update';
 export { writerSchema, writerV1, type WriterDraft } from './v1/writer';

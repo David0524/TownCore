@@ -1,11 +1,13 @@
 // pnpm launch "Delray Beach, FL" [--short-name Delray] [--nickname "Atlantic"] [--outlet "Name"]...
-//   [--source kind=url]... [--resume] [--pick N] [--approve-spend]
+//   [--source kind=url]... [--site http://localhost:3000 [--chromium path]] [--resume] [--pick N] [--approve-spend]
+// --preview (dry runs): past a failed readiness check, keep going to show the theme and report;
+// the town still can't go live (Rule 7).
 // Launches a town from an approved candidate (CLAUDE.md §10). A dry run unless --approve-spend:
 // nothing is bought, sent or deployed. Step 2 proposes names and waits for --pick; a domain is
 // bought only with --approve-spend and the domain typed back at the price shown (Rule 10).
 import { createInterface } from 'node:readline/promises';
 import { Fetcher } from '@towncore/adapters';
-import { launchStepLabels, loadEnv, requireEnv } from '@towncore/config';
+import { launchStepLabels, loadEnv, requireEnv, type LaunchStep } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
 import { createDb } from '@towncore/db';
 import { providerFromEnv, resolveProviderName, type Llm } from '@towncore/pipeline';
@@ -19,7 +21,17 @@ const flag = (name: string) => {
 };
 const flags = (name: string) =>
   args.flatMap((a, i) => (a === `--${name}` && args[i + 1] ? [args[i + 1]!] : []));
-const VALUE_FLAGS = ['--domain', '--short-name', '--nickname', '--outlet', '--pick', '--source'];
+const VALUE_FLAGS = [
+  '--domain',
+  '--short-name',
+  '--nickname',
+  '--outlet',
+  '--pick',
+  '--source',
+  '--site',
+  '--chromium',
+  '--redo',
+];
 const town = args.find(
   (a, i) => !a.startsWith('--') && a.includes(',') && !VALUE_FLAGS.includes(args[i - 1] ?? ''),
 );
@@ -72,6 +84,15 @@ try {
       resolve: (t) => resolveTown(t, { fetcher }),
       fetcher,
       ...(llm ? { llm } : {}),
+      // Step 6b screenshots the draft town on a running web app (pnpm --filter web start).
+      ...(flag('site')
+        ? {
+            shots: {
+              siteUrl: flag('site')!,
+              ...(flag('chromium') ? { executablePath: flag('chromium')! } : {}),
+            },
+          }
+        : {}),
       names: {
         fetcher,
         places: (state) => statePlaces(state, { fetcher }),
@@ -91,6 +112,8 @@ try {
       ...(sources.length ? { sources } : {}),
       ...(pick ? { pick: Number(pick) } : {}),
       approveSpend: args.includes('--approve-spend'),
+      ...(args.includes('--preview') ? { preview: true } : {}),
+      ...(flag('redo') ? { redo: flag('redo') as LaunchStep } : {}),
       resume: args.includes('--resume'),
     },
   );

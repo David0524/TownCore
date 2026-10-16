@@ -21,6 +21,11 @@ import type { Llm } from '@towncore/pipeline';
 import type { DiscoverDetail } from './discover';
 import { DEFAULT_TOWNS_DIR, namesStep, type NameDeps, type NamesDetail } from './names-step';
 import { adaptersStep, readinessStep, sourcesStep } from './sources-step';
+import type { ReadinessDetail } from './readiness';
+import type { ShotTarget } from './screenshots';
+import { themeStep, type ThemeDetail } from './theme-step';
+import { provisionStep, seedStep } from './seed-step';
+import { DEFAULT_FRICTION_LOG, reportStep } from './report-step';
 
 // `pnpm launch "Delray Beach, FL"` (CLAUDE.md §10; docs/plans/M7.md §2). A launch starts only
 // from an approved town (§10a), is a dry run unless the operator approves spending, and records
@@ -47,6 +52,13 @@ export type LaunchOptions = {
   pick?: number;
   /** Step 3: `kind=url` sources to verify, added to (or instead of) discovery. */
   sources?: string[];
+  /**
+   * Dry runs only: when readiness fails, keep going to show the theme and report. The report's
+   * Rule 7 check still fails, so the town can't go live.
+   */
+  preview?: boolean;
+  /** Re-run this step and every step after it (e.g. `theme` to retake screenshots). */
+  redo?: LaunchStep;
 };
 
 export type LaunchDeps = {
@@ -56,10 +68,14 @@ export type LaunchDeps = {
   names?: NameDeps;
   /** Steps 3–5: the polite fetcher for discovery and ingest. */
   fetcher?: Fetcher;
-  /** Steps 3 and 5: the model layer (discovery needs a provider with web search). */
+  /** Steps 3, 5 and 6b: the model layer (discovery needs web search, the review needs images). */
   llm?: Llm;
+  /** Step 6b: a running web app to screenshot the draft town (--site). */
+  shots?: Omit<ShotTarget, 'domain'>;
   launchDir?: string;
   townsDir?: string;
+  /** docs/launch-friction.md (CLAUDE.md §10). */
+  frictionLog?: string;
   now?: () => Date;
 };
 
@@ -113,11 +129,50 @@ const STEPS: Partial<Record<LaunchStep, StepRun>> = {
       launchDir: deps.launchDir ?? DEFAULT_LAUNCH_DIR,
     });
   },
+  async seed({ deps, launch, done }) {
+    return seedStep({
+      db: deps.db,
+      ...(deps.llm ? { llm: deps.llm } : {}),
+      names: done.names as NamesDetail,
+      now: deps.now?.() ?? new Date(),
+      launchStartedAt: launch.createdAt,
+    });
+  },
+  async provision({ deps, done }) {
+    return provisionStep({ db: deps.db, names: done.names as NamesDetail });
+  },
+  async report({ deps, launch, done }) {
+    return reportStep({
+      db: deps.db,
+      done: done as never,
+      launchStartedAt: launch.createdAt,
+      launchDir: deps.launchDir ?? DEFAULT_LAUNCH_DIR,
+      frictionLog: deps.frictionLog ?? DEFAULT_FRICTION_LOG,
+      now: deps.now?.() ?? new Date(),
+    });
+  },
+  async theme({ deps, launch, done }) {
+    if (!deps.names) throw new Error('No place data configured for this run.');
+    return themeStep({
+      db: deps.db,
+      ...(deps.llm ? { llm: deps.llm } : {}),
+      places: deps.names.places,
+      town: done.resolve as ResolvedTown,
+      names: done.names as NamesDetail,
+      readiness: done.readiness as ReadinessDetail | undefined,
+      launchStartedAt: launch.createdAt,
+      launchDir: deps.launchDir ?? DEFAULT_LAUNCH_DIR,
+      ...(deps.shots ? { shots: deps.shots } : {}),
+      previous: done.theme as ThemeDetail | undefined,
+    });
+  },
   async readiness({ deps, launch, done }) {
+    const opts = launch.options as LaunchOptions;
     return readinessStep({
       deps: sourceDeps(deps),
       names: done.names as NamesDetail,
       launchStartedAt: launch.createdAt,
+      preview: Boolean(opts.preview) && launch.dryRun,
     });
   },
 };
@@ -174,7 +229,7 @@ export async function runLaunch(deps: LaunchDeps, opts: LaunchOptions): Promise<
     .where(
       and(
         eq(launches.geoid, candidate.geoid),
-        inArray(launches.status, ['running', 'stopped', 'failed']),
+        inArray(launches.status, ['running', 'stopped', 'failed', 'ready']),
       ),
     )
     .orderBy(desc(launches.createdAt))
@@ -245,6 +300,10 @@ export async function runLaunch(deps: LaunchDeps, opts: LaunchOptions): Promise<
     await again(after('names'));
   else if (names?.picked && opts.approveSpend && names.purchase?.status === 'not bought')
     await again(['names']);
+  if (opts.redo) await again(after(opts.redo));
+  // Screenshots asked for (--site) after a run without them: theme and what follows run again.
+  const themed = done.theme as ThemeDetail | undefined;
+  if (deps.shots && themed && themed.shots.length === 0) await again(after('theme'));
   // New --source flags re-run discovery and what depends on it.
   const discovery = done.sources as DiscoverDetail | undefined;
   if (discovery && opts.sources && JSON.stringify(opts.sources) !== JSON.stringify(discovery.flags))
@@ -325,10 +384,33 @@ export async function runLaunch(deps: LaunchDeps, opts: LaunchOptions): Promise<
         })
         .where(eq(launches.id, launch!.id))
         .returning();
+      // Once a name is picked, a stopped launch still gets a report: what it found and why it
+      // stopped (a town short of Rule 7 sees its readiness table and the to-dos).
+      if ((done.names as NamesDetail | undefined)?.picked && step !== 'report') {
+        const partial = await reportStep({
+          db,
+          done: { ...done, ...(found !== undefined ? { [step]: found } : {}) } as never,
+          launchStartedAt: launch!.createdAt,
+          launchDir: deps.launchDir ?? DEFAULT_LAUNCH_DIR,
+          frictionLog: deps.frictionLog ?? DEFAULT_FRICTION_LOG,
+          now: now(),
+          stopped: `${launchStepLabels[step]}: ${message}`,
+        }).catch(() => null);
+        if (partial) files.push(...partial.files);
+      }
       break;
     }
   }
-  return { launch: launch!, steps: await stepRecords(db, launch!.id), files };
+  const steps = await stepRecords(db, launch!.id);
+  if (launch!.status === 'running' && steps.every((s) => s.status === 'done')) {
+    // Every step finished: the run waits for an admin in Admin → Launches (§10 step 9).
+    [launch] = await db
+      .update(launches)
+      .set({ status: 'ready', stoppedReason: null, updatedAt: now() })
+      .where(eq(launches.id, launch!.id))
+      .returning();
+  }
+  return { launch: launch!, steps, files };
 }
 
 async function stepRecords(db: Db, launchId: string) {

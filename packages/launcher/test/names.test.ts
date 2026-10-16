@@ -249,6 +249,7 @@ describe('step 2 in a launch', () => {
   let drop: () => Promise<void>;
   const launchDir = mkdtempSync(join(tmpdir(), 'names-launch-'));
   const townsDir = mkdtempSync(join(tmpdir(), 'names-towns-'));
+  const frictionLog = join(mkdtempSync(join(tmpdir(), 'names-friction-')), 'launch-friction.md');
   const registry = fakeRegistry({
     cdx: { 'delraycourier.com': CDX_DELRAYNEWS.slice(0, 3) },
     pages: { 'delraycourier.com': SHOP_PAGE },
@@ -259,6 +260,7 @@ describe('step 2 in a launch', () => {
     db,
     launchDir,
     townsDir,
+    frictionLog,
     resolve: async () => DELRAY,
     names: {
       fetcher: registry.fetcher,

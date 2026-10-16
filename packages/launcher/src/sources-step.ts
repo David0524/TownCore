@@ -8,7 +8,7 @@ import {
   type TownSourceConfig,
 } from '@towncore/config';
 import type { Fetcher } from '@towncore/adapters';
-import { aiUsage, and, eq, gte, like, sql, syncTowns, towns, type Db } from '@towncore/db';
+import { aiUsage, and, eq, gte, sql, syncTowns, towns, type Db } from '@towncore/db';
 import { callModel, type Llm, type LlmTown } from '@towncore/pipeline';
 import { discoverV1 } from '@towncore/prompts';
 import { stringify } from 'yaml';
@@ -46,11 +46,8 @@ export async function launchLlmTown(
     .select({ cost: sql<string>`coalesce(sum(${aiUsage.estCostUsd}), 0)` })
     .from(aiUsage)
     .where(
-      and(
-        eq(aiUsage.townId, town.id),
-        like(aiUsage.job, 'launch.%'),
-        gte(aiUsage.createdAt, launchStartedAt),
-      ),
+      // A draft town's AI use is all launch work: discovery, readiness, seeding, the theme.
+      and(eq(aiUsage.townId, town.id), gte(aiUsage.createdAt, launchStartedAt)),
     );
   const spent = Number(row?.cost ?? 0);
   if (spent >= LAUNCH_AI_CAP_USD)
@@ -237,6 +234,8 @@ export async function readinessStep(input: {
   deps: SourceStepDeps;
   names: NamesDetail;
   launchStartedAt: Date;
+  /** Dry-run preview: a failing score is recorded and the run goes on (it can't go live). */
+  preview?: boolean;
 }): Promise<{ detail: ReadinessDetail }> {
   const { deps } = input;
   const choice = picked(input.names);
@@ -257,7 +256,7 @@ export async function readinessStep(input: {
     ...(llm ? { llm } : {}),
     now: deps.now(),
   });
-  if (!detail.passed)
+  if (!detail.passed && !input.preview)
     throw Object.assign(
       new ReadinessFailed(
         `${detail.itemsPerDay} real items a day, below the ${detail.minimum} a ${draft.config.tier} town needs (Rule 7). Add sources with --source kind=url and --resume.`,

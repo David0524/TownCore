@@ -17,6 +17,8 @@ export type LlmRequest = {
   maxOutputTokens: number;
   /** Let the model search the web (launcher discovery only), at most this many searches. */
   webSearch?: { maxUses: number };
+  /** Images sent with the input (the launcher's screenshot review), base64 PNG or JPEG. */
+  images?: Array<{ mediaType: 'image/png' | 'image/jpeg'; data: string; label: string }>;
 };
 
 export type StopKind = 'end' | 'max_tokens' | 'refusal' | 'other';
@@ -35,5 +37,7 @@ export interface LlmProvider {
   readonly name: 'anthropic' | 'gemini' | 'replay';
   /** Whether `webSearch` requests are supported. */
   readonly webSearch?: boolean;
+  /** Whether `images` are supported. */
+  readonly images?: boolean;
   generate(request: LlmRequest): Promise<LlmResponse>;
 }

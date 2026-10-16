@@ -1,0 +1,24 @@
+# DRAFT from pnpm launch, step 1 (resolve). Moves to towns/fl/delray-beach.yaml once
+# a name and domain are chosen (step 2). Schema: packages/config/src/town.ts (CLAUDE.md §10).
+slug: delray-beach
+name: 'Delray Beach'
+state: FL
+census_id: '1217100' # Census place GEOID (Delray Beach city, 2026 Gazetteer)
+county: 'Palm Beach'
+timezone: America/New_York
+site_name: TBD # step 2: the name the owner picks
+domain: TBD # step 2
+extra_domains: []
+tier: mid # 69,809 people (Vintage 2025 estimate)
+newsletter_send_time: '06:30'
+same_name_elsewhere: [] # wrong-town checks
+agencies:
+  - 'City of Delray Beach'
+  # step 3 adds the police and fire agencies it finds
+sources:
+  # step 3 discovers the rest; every URL is fetched and matched to an adapter before it's added
+  - kind: weather
+    platform: nws
+    zone: FLZ068 # NWS MFL, from api.weather.gov/points
+    point: '26.4559,-80.0904'
+pricing: { sponsored_slot_usd: 199, enhanced_usd: 39 } # Boca's prices until the owner sets this town's
