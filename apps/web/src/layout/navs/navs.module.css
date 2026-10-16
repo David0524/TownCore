@@ -107,3 +107,19 @@
   height: 7px;
   flex: none;
 }
+
+/* category-tabs: plain text links with room between them (coastal-modern's slim header). */
+.categories {
+  gap: 0.5rem 1.6rem;
+}
+
+.categories a {
+  padding: 0.4rem 0;
+  font-weight: 500;
+}
+
+.categories a:hover {
+  background: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

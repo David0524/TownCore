@@ -170,7 +170,7 @@ export type NewPlace = {
   approvedAt: Date;
   zip: string | null;
   /** The directory listing, once seeding has picked the license up. */
-  listing: Pick<Listing, 'slug' | 'category'> | null;
+  listing: Pick<Listing, 'id' | 'slug' | 'category'> | null;
 };
 
 /**
@@ -200,6 +200,7 @@ export async function newFoodPlaces(
   const listings = licenses.length
     ? await db
         .select({
+          id: businesses.id,
           slug: businesses.slug,
           category: businesses.category,
           licenseNumber: businesses.licenseNumber,
@@ -223,7 +224,7 @@ export async function newFoodPlaces(
       licenseType: r.occupation ?? 'Food service',
       approvedAt: row.at,
       zip: r.zip?.slice(0, 5) || null,
-      listing: listing ? { slug: listing.slug, category: listing.category } : null,
+      listing: listing ? { id: listing.id, slug: listing.slug, category: listing.category } : null,
     });
     if (places.length === limit) break;
   }

@@ -137,6 +137,12 @@
   margin: 0 auto;
 }
 
+/* coastal-modern: in the desktop rail the box sits flush left, like the modules around it. */
+:global([data-family='coastal-modern'] aside) .box .unit,
+:global([data-family='coastal-modern'] aside) .box .label {
+  margin-left: 0;
+}
+
 /* A house ad left out on a short phone page to keep ad density at or below 30% (§11b). */
 @media (max-width: 599.98px) {
   .phoneOff {

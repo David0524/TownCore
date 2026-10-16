@@ -6,18 +6,24 @@ import { requireTown } from '@/lib/town';
 import { ListBeacon } from '@/components/Beacon';
 import { HomeScreenCard } from '@/components/phone/HomeScreenCard';
 import { LargeTitle } from '@/components/phone/LargeTitle';
-import { greeting } from '@/modules/front';
+import { CategoryCapsules, greeting } from '@/modules/front';
 import { Slot } from '@/slots/Slot';
 import { TownGrid } from '@/layout/TownGrid';
 import styles from './home.module.css';
 
 // The homepage is the theme's module lists, not a fixed template (CLAUDE.md §11a-2): an optional
-// full-width band (homeTop), the main column (home) and the rail (homeRail).
+// full-width band (homeTop), the main column (home), the rail (homeRail) and an optional
+// full-width band below them (homeBottom).
 export default async function HomePage({ params }: { params: Promise<{ host: string }> }) {
   const town = await requireTown(params);
   const theme = themeFor(town);
-  const { home: list, homeTop: top = [], homeRail: rail = [] } = theme.layout;
-  const modules = [...top, ...list, ...rail];
+  const {
+    home: list,
+    homeTop: top = [],
+    homeRail: rail = [],
+    homeBottom: bottom = [],
+  } = theme.layout;
+  const modules = [...top, ...list, ...rail, ...bottom];
   const render = (module: HomeModule) => homeModules[module]({ town, theme, modules });
 
   // Render each module now so empty ones (null) drop out before we place inline slots.
@@ -36,6 +42,9 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
     node,
   }));
   const railNodes = (await Promise.all(rail.map(render))).filter((node) => node !== null);
+  const bottomNodes = (await Promise.all(bottom.map(render)))
+    .map((node, i) => ({ key: bottom[i]!, node }))
+    .filter(({ node }) => node !== null);
   const bandCta = bandNeedsCta(list, top) ? await render('newsletter-cta') : null;
   const hasNews =
     rendered.some(({ key }) => !key.startsWith('newsletter-cta')) ||
@@ -55,6 +64,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
       search={{}}
     />
   );
+  const capsules = <CategoryCapsules town={town} />;
 
   // heritage: lead in the center, the modules before it on the left and after it on the right,
   // divided by column rules. Other families: the first module wide, the rest beside it.
@@ -76,6 +86,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
     top.length > 0 ? (
       <>
         {phoneTitle}
+        {capsules}
         {hello}
         <Slot town={town} name="home.top" />
         {spanning}
@@ -113,7 +124,19 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
     <TownGrid
       town={town}
       kind={theme.layout.grid}
-      top={band ?? phoneTitle}
+      top={
+        band ?? (
+          <>
+            {phoneTitle}
+            {capsules}
+          </>
+        )
+      }
+      bottom={
+        bottomNodes.length > 0
+          ? bottomNodes.map(({ key, node }) => <Fragment key={key}>{node}</Fragment>)
+          : null
+      }
       railModules={railNodes.length > 0 ? railNodes : null}
     >
       <ListBeacon />

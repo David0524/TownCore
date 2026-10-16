@@ -1,4 +1,4 @@
-import { beats, type TownConfig } from '@towncore/config';
+import { townShortName, type TownConfig } from '@towncore/config';
 import { listPublishedGuides } from '@towncore/db';
 import { apDate } from '@towncore/pipeline';
 import Link from 'next/link';
@@ -6,8 +6,9 @@ import { SectionHeader } from '@/components/news/SectionHeader';
 import { clockTime } from '@/components/weather/format';
 import { db } from '@/lib/db';
 import { articlePath } from '@/lib/paths';
-import { beatColorVar } from '@/lib/theme';
-import { beatCounts, cityPostings, recentArticles, upcomingMeetings } from './data';
+import type { Town } from '@towncore/db';
+import { readerCategories } from './categories';
+import { cityPostings, recentArticles, upcomingMeetings } from './data';
 import type { HomeModuleComponent } from './types';
 import styles from './front.module.css';
 
@@ -21,7 +22,7 @@ export function greeting(now: Date, timeZone: string): string {
   return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 }
 
-/** "Good morning, Boca Raton" with the date and when the newsroom last published. */
+/** "Good morning, Boca" (the town's short name) with the date and when the newsroom last published. */
 export const GoodMorning: HomeModuleComponent = async ({ town }) => {
   const now = new Date();
   const newest = (await recentArticles(town.id)).reduce<Date | null>(
@@ -35,7 +36,7 @@ export const GoodMorning: HomeModuleComponent = async ({ town }) => {
   return (
     <div className={`${styles.greeting} not-phone`} data-module="good-morning">
       <p className={styles.hello}>
-        {greeting(now, town.timezone)}, {town.name}
+        {greeting(now, town.timezone)}, {townShortName(town.config as TownConfig)}
       </p>
       <p className="meta">
         {weekday}, {apDate(now, town.timezone)}
@@ -45,24 +46,33 @@ export const GoodMorning: HomeModuleComponent = async ({ town }) => {
   );
 };
 
-/** Hairline buttons for each section with new stories this week: a dot, a name, a count. */
+/**
+ * The reader categories as cards (canvas "Homepage": Explore), each with its color, what's in
+ * it and an arrow; on phones a two-column "Explore" grid. Only categories with content show
+ * (D-M4b-4).
+ */
 export const CategoryButtons: HomeModuleComponent = async ({ town }) => {
-  const counts = await beatCounts(town.id);
-  const shown = beats.filter((b) => (counts.get(b.slug) ?? 0) > 0);
-  if (shown.length === 0) return null;
+  const categories = await readerCategories(town);
+  if (categories.length === 0) return null;
+  const short = townShortName(town.config as TownConfig);
   return (
-    <nav aria-label="Sections with new stories" data-module="category-buttons">
+    <nav aria-label={`Explore ${short}`} data-module="category-buttons">
+      <h2 className={`${styles.exploreTitle} phone-only`}>Explore {short}</h2>
       <ul className={styles.buttons}>
-        {shown.map((beat) => (
-          <li key={beat.slug} data-follow-beat={beat.slug}>
-            <Link href={`/beat/${beat.slug}`} className={styles.button}>
-              <span
-                className={styles.dot}
-                style={{ background: beatColorVar(beat.slug) }}
-                aria-hidden="true"
-              />
-              <span>{beat.label}</span>
-              <span className="meta">{counts.get(beat.slug)} new</span>
+        {categories.map((c) => (
+          <li key={c.key} data-category={c.key}>
+            <Link href={c.href} className={styles.button}>
+              <span className={styles.buttonTop}>
+                <span className={styles.dot} style={{ background: c.color }} aria-hidden="true" />
+                <span className={`meta ${styles.count}`}>{c.count}</span>
+              </span>
+              <span className={styles.buttonName}>
+                {c.name}
+                <span className={styles.arrow} aria-hidden="true">
+                  →
+                </span>
+              </span>
+              <span className={`${styles.sub} phone-only`}>{c.count}</span>
             </Link>
           </li>
         ))}
@@ -71,29 +81,57 @@ export const CategoryButtons: HomeModuleComponent = async ({ town }) => {
   );
 };
 
-/** Public meetings on the city calendar in the next 7 days, linking to the city's own page. */
+/** Phones: the categories as filled capsules in one row under the search field. */
+export async function CategoryCapsules({ town }: { town: Town }) {
+  const categories = await readerCategories(town);
+  if (categories.length === 0) return null;
+  return (
+    <nav aria-label="Categories" className="phone-only" data-testid="category-capsules">
+      <ul className={styles.capsules}>
+        {categories.map((c) => (
+          <li key={c.key}>
+            <Link href={c.href} className={styles.capsule}>
+              <span className={styles.square} style={{ background: c.color }} aria-hidden="true" />
+              {c.name}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/**
+ * Public meetings on the city calendar in the next 7 days (canvas "Homepage": City Hall this
+ * week): the day, the meeting linking to the city's own page, and its time and room.
+ */
 export const ComingUp: HomeModuleComponent = async ({ town }) => {
   const meetings = await upcomingMeetings(town.id);
   if (meetings.length === 0) return null;
-  const day = (d: Date) =>
-    new Intl.DateTimeFormat('en-US', { timeZone: town.timezone, weekday: 'short' }).format(d);
+  const part = (d: Date, o: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat('en-US', { timeZone: town.timezone, ...o }).format(d);
+  const day = (d: Date) => `${part(d, { weekday: 'short' })} ${part(d, { day: 'numeric' })}`;
   return (
     <section className={styles.coming} aria-labelledby="coming-h" data-module="coming-up">
-      <SectionHeader title="Coming up at City Hall" id="coming-h" />
-      <ol className={styles.meetings}>
+      <SectionHeader title="City Hall this week" href="/events" more="Calendar" id="coming-h" />
+      <ol className={`${styles.meetings} ${styles.dated}`}>
         {meetings.map((m) => (
           <li key={m.id}>
-            <span className="meta">
-              {day(m.when)}. {apDate(m.when, town.timezone)} · {clockTime(m.when, town.timezone)}
+            <span className={`meta ${styles.day}`}>{day(m.when)}</span>
+            <span className={styles.meetingBody}>
+              {m.url ? (
+                <a href={m.url} rel="nofollow noopener" className={styles.meetingTitle}>
+                  {m.title}
+                </a>
+              ) : (
+                <span className={styles.meetingTitle}>{m.title}</span>
+              )}
+              <span className={styles.where}>
+                {[clockTime(m.when, town.timezone), m.where ? placeName(m.where) : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
             </span>
-            {m.url ? (
-              <a href={m.url} rel="nofollow noopener" className={styles.meetingTitle}>
-                {m.title}
-              </a>
-            ) : (
-              <span className={styles.meetingTitle}>{m.title}</span>
-            )}
-            {m.where ? <span className={styles.where}>{m.where}</span> : null}
           </li>
         ))}
       </ol>
@@ -101,6 +139,11 @@ export const ComingUp: HomeModuleComponent = async ({ town }) => {
     </section>
   );
 };
+
+/** "City Hall - 1st Floor Conference Room #1 - 201 W Palmetto Park Road …" → its first part. */
+function placeName(where: string): string {
+  return where.split(/\s[-–]\s/)[0]!.trim();
+}
 
 /**
  * Essentials (M4 PR F): quick links to the town's evergreen guides, in the order its config

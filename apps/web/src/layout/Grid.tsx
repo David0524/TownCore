@@ -3,20 +3,23 @@ import type { ReactNode } from 'react';
 import styles from './Grid.module.css';
 
 /**
- * The page grid. `top` is a full-width area above the columns (the homepage band); it sits
- * inside <main> so its stories count as page content.
+ * The page grid. `top` and `bottom` are full-width areas above and below the columns (the
+ * homepage bands); they sit inside <main> so their stories count as page content.
  */
 export function Grid({
   kind,
   children,
   rail,
   top,
+  bottom,
   measure = 'normal',
 }: {
   kind: Theme['layout']['grid'];
   children: ReactNode;
   rail?: ReactNode;
   top?: ReactNode;
+  /** Full-width area below the columns (the homepage's bottom band). */
+  bottom?: ReactNode;
   measure?: 'normal' | 'wide';
 }) {
   if (kind === 'main-right-rail') {
@@ -29,6 +32,7 @@ export function Grid({
             {rail}
           </aside>
         </div>
+        {bottom ? <div className={styles.bottom}>{bottom}</div> : null}
       </main>
     );
   }
@@ -41,6 +45,7 @@ export function Grid({
       >
         {children}
       </div>
+      {bottom ? <div className={styles.bottom}>{bottom}</div> : null}
     </main>
   );
 }

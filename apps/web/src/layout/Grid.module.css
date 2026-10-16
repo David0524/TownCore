@@ -41,6 +41,24 @@
   .rail {
     grid-template-columns: minmax(0, 1fr) 300px;
   }
+
+  /* coastal-modern: the rail lines up with the band's 8 + 4 columns (canvas "Homepage"). */
+  :global([data-family='coastal-modern']) .rail {
+    grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  }
+}
+
+/* Full-width band below the columns. Its modules sit in the page width, except a full-bleed
+   one (the photo of the week, data-bleed). */
+.bottom {
+  padding: 0 0 1rem;
+}
+
+.bottom > :global([data-module]:not([data-bleed])) {
+  max-width: var(--wide);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  box-sizing: border-box;
 }
 
 .main {

@@ -59,6 +59,29 @@
   margin-top: 0.5rem;
 }
 
+.conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Phones: the Today wrapper steps aside so its conditions can lead the band (see home.module.css)
+   while "Also today" keeps its place after the lead and the signup. */
+@media (max-width: 599.98px) {
+  .today {
+    display: contents;
+  }
+
+  .conditions {
+    order: -1;
+    margin-bottom: 1.5rem;
+  }
+
+  .today > section {
+    margin: 0 0 2rem;
+  }
+}
+
 .alsoHeading {
   margin: 0;
   padding-bottom: 0.5rem;

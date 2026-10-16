@@ -61,9 +61,21 @@ export function TypographicCard({
   beat: string;
   headline: string;
   figure?: CardFigure | null;
-  ratio?: 'wide' | 'photo';
+  /** `thumb`: a small 3:2 tile beside a list row: the motif, the glyph and any figure. */
+  ratio?: 'wide' | 'photo' | 'thumb';
 }) {
   const label = beats.find((b) => b.slug === beat)?.label ?? beat;
+  if (ratio === 'thumb') {
+    return (
+      <div className={`${styles.card} ${styles.cardThumb}`} aria-hidden="true" data-visual="thumb">
+        <span className={styles.cardMotif} dangerouslySetInnerHTML={{ __html: motifSvg(theme) }} />
+        {figure ? <span className={styles.thumbNumber}>{figure.figure}</span> : <span />}
+        <span className={styles.cardGlyph}>
+          <Glyph beat={beat} />
+        </span>
+      </div>
+    );
+  }
   return (
     <div
       className={`${styles.card} ${ratio === 'wide' ? styles.cardWide : styles.cardPhoto}`}

@@ -22,32 +22,99 @@
   list-style: none;
   margin: 0 0 2.5rem;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.75rem;
 }
 
 .button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 44px;
-  padding: 0.5rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 1rem;
   border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  border-radius: var(--radius-tile);
   color: var(--ink);
   text-decoration: none;
-  font-weight: 500;
 }
 
 .button:hover {
   border-color: var(--ink);
 }
 
+.buttonTop,
+.buttonName {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.buttonName {
+  align-items: baseline;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.count {
+  font-size: 0.6875rem;
+}
+
+.arrow {
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: var(--round);
+  flex: none;
+}
+
+.exploreTitle {
+  margin: 0 0 0.625rem;
+}
+
+.capsules {
+  list-style: none;
+  margin: 0 calc(-1 * var(--gutter)) 1rem;
+  padding: 0 var(--gutter);
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.capsules::-webkit-scrollbar {
+  display: none;
+}
+
+.capsules li {
+  flex: none;
+}
+
+.capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 44px;
+  padding: 0 0.875rem 0 0.625rem;
+  border-radius: var(--radius-capsule);
+  background: var(--ios-fill);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.square {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-field);
   flex: none;
 }
 
@@ -68,6 +135,96 @@
   border-bottom: var(--hairline);
 }
 
+/* A grid of place cards (New places to eat): name, license and area, a photo when we have one. */
+.cards {
+  list-style: none;
+  margin: 1.25rem 0 1.5rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 1.5rem;
+}
+
+.placeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-top: 0.75rem;
+  border-top: var(--hairline);
+}
+
+.cardPhoto {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin-bottom: 0.25rem;
+  background: var(--surface);
+}
+
+.cardName {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.cardName:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 599.98px) {
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .placeCard {
+    padding: 0.75rem 0;
+    border-top: 0;
+    border-bottom: var(--hairline);
+  }
+}
+
+/* Plain rows with a count at the end (Find a local pro). */
+.rows {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0.75rem 0;
+  border-bottom: var(--hairline);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.row:hover > span:first-child {
+  text-decoration: underline;
+}
+
+/* Day in its own column beside the meeting (City Hall this week). */
+.dated li {
+  grid-template-columns: 4rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.meetingBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
 .meetingTitle {
   color: var(--ink);
   font-weight: 500;
@@ -84,46 +241,57 @@ a.meetingTitle:hover {
   color: var(--muted);
 }
 
-/* Phones: filled capsules in one horizontal row (canvas HomePhone). */
+/* Phones: "Explore" as a two-column grid of grouped cards (canvas HomePhone). */
 @media (max-width: 599.98px) {
   .buttons {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    margin: 0 calc(-1 * var(--gutter)) 1.5rem;
-    padding: 0 var(--gutter);
-    scrollbar-width: none;
-  }
-
-  .buttons::-webkit-scrollbar {
-    display: none;
-  }
-
-  .buttons li {
-    flex: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+    margin-bottom: 1.75rem;
   }
 
   .button {
-    min-height: 44px;
-    padding: 0 0.9rem;
+    gap: 0.625rem;
+    padding: 0.75rem;
     border: 0;
-    border-radius: var(--radius-capsule);
-    background: var(--ios-fill);
-    font-size: 0.9375rem;
-    font-weight: 500;
-    white-space: nowrap;
+    border-radius: var(--radius-group);
+    background: var(--ios-grouped);
   }
 
   .button:hover {
     border-color: transparent;
   }
 
-  .button :global(.meta) {
-    font-size: 0.8125rem;
+  .buttonTop {
+    display: block;
   }
 
-  .dot {
-    width: 10px;
-    height: 10px;
+  .buttonTop .dot {
+    display: block;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-field);
+  }
+
+  .buttonTop .count {
+    display: none;
+  }
+
+  .buttonName {
+    font-size: 1.0625rem;
+  }
+
+  .button {
+    gap: 0.625rem;
+  }
+
+  .sub {
+    margin-top: -0.5rem;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+
+  .arrow {
+    display: none;
   }
 }
 

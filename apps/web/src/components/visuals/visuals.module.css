@@ -202,3 +202,20 @@
 .stockCredit {
   margin: 0;
 }
+
+/* List-row thumbnails (Latest): 3:2, never taller than the row. */
+.thumbImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.thumbMap {
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: var(--radius);
+}

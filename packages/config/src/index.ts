@@ -45,6 +45,7 @@ export {
   parseTownConfig,
   scheduleSchema,
   townContactEmail,
+  townShortName,
   sourceKinds,
   TBD,
   townConfigSchema,

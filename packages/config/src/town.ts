@@ -83,6 +83,8 @@ export type TownSourceConfig = z.infer<typeof sourceSchema>;
 export const townConfigSchema = z.strictObject({
   slug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
   name: z.string().min(1),
+  // What locals call the town, for friendly lines like "Good morning, Boca". Defaults to name.
+  short_name: z.string().min(1).max(30).optional(),
   state: z.string().regex(/^[A-Z]{2}$/),
   census_id: z.string().min(1).optional(),
   county: z.string().min(1),
@@ -187,6 +189,11 @@ export function loadTowns(dir: string): LoadedTown[] {
 }
 
 /** The site's public contact address. */
+/** What locals call the town ("Boca"), else its name. */
+export function townShortName(config: Pick<TownConfig, 'name' | 'short_name'>): string {
+  return config.short_name ?? config.name;
+}
+
 export function townContactEmail(config: Pick<TownConfig, 'domain' | 'contact_email'>): string {
   return config.contact_email ?? `news@${config.domain}`;
 }
