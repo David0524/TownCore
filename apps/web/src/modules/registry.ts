@@ -9,6 +9,7 @@ import {
   TodayBento,
 } from './news';
 import { CategoryButtons, ComingUp, DocumentsPosted, GoodMorning } from './front';
+import { DirectoryCategories, DirectoryFeatured, FindAPro, NewNowOpen } from './directory';
 import type { HomeModuleComponent } from './types';
 
 // Modules whose data arrives in a later milestone. They render nothing until then, exactly
@@ -38,8 +39,10 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
   'schools-sports': awaitingData('schools sources, later'),
   'weather-strip': awaitingData('NWS, M2 (decision D-M1-3)'),
   'photo-of-the-day': awaitingData('reader submissions, M9'),
-  'directory-featured': awaitingData('directory, M6'),
-  'directory-categories': awaitingData('directory, M6'),
+  'directory-featured': DirectoryFeatured,
+  'directory-categories': DirectoryCategories,
+  'find-a-pro': FindAPro,
+  'new-now-open': NewNowOpen,
   'jobs-classifieds': awaitingData('classifieds, later'),
 };
 

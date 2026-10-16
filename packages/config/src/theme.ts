@@ -172,6 +172,8 @@ export const homeModules = [
   'photo-of-the-day',
   'directory-featured',
   'directory-categories',
+  'find-a-pro',
+  'new-now-open',
   'jobs-classifieds',
   'newsletter-cta',
 ] as const;

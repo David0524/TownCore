@@ -6,6 +6,10 @@ export { DBPR, seedDirectory, type SeedResult } from './seed';
 export {
   categoryCounts,
   categoryListings,
+  claimedListings,
+  newFoodPlaces,
+  relatedListings,
+  type NewPlace,
   getListing,
   listingCategory,
   listingInTheNews,

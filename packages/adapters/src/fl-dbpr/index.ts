@@ -3,14 +3,22 @@ import { NotModified } from '../http/fetcher';
 import { parseCsvLine, streamLines } from '../lib/csv';
 import type { RawRecord, SourceAdapter, SourceConfig } from '../types';
 import { dbprOccupations, dbprPrimaryStatus, dbprSecondaryStatus } from './codes';
-import { FOOD_FILE, foodRecord, parseFoodRow } from './food';
+import {
+  FOOD_FILE,
+  foodRecord,
+  NEW_FOOD_FILE,
+  newFoodRecord,
+  parseFoodRow,
+  parseNewFoodRow,
+} from './food';
 
 // Florida Department of Business and Professional Regulation licensee files (CLAUDE.md §9:
 // state-level adapter, written once, reused by every Florida town). Free public records under
 // Chapter 119, F.S., refreshed weekly: https://www2.myfloridalicense.com/public-records-read-medisclaimer/
 // Each file is statewide; rows are filtered to the town's city. Conditional GET skips unchanged
 // files. Source config: { city: "BOCA RATON", files?: string[] }. Food service files
-// (hrfood1–7.csv) use the Hotels and Restaurants layout in ./food.ts.
+// (hrfood1–7.csv, and newfood.csv for new establishments) use the Hotels and Restaurants
+// layout in ./food.ts.
 
 const EXTRACTS = 'https://www2.myfloridalicense.com/sto/file_download/extracts/';
 
@@ -131,7 +139,13 @@ export const flDbprAdapter: SourceAdapter = {
       if (!response.ok || !response.body)
         throw new Error(`GET ${url} failed: HTTP ${response.status}`);
       const food = FOOD_FILE.test(file);
+      const newFood = NEW_FOOD_FILE.test(file);
       for await (const line of streamLines(response.body)) {
+        if (newFood) {
+          const row = parseNewFoodRow(line);
+          if (row && row.city.toUpperCase() === city) records.push(newFoodRecord(row, url));
+          continue;
+        }
         if (food) {
           const row = parseFoodRow(line);
           if (row && row.city.toUpperCase() === city) records.push(foodRecord(row, url));

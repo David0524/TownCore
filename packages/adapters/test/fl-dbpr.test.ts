@@ -93,6 +93,23 @@ describe('fl-dbpr food service files', () => {
     expect(kinds).toContain('Catering');
   });
 
+  it('reads new establishments with their approval date', async () => {
+    const newFixture = fileURLToPath(
+      new URL('../fixtures/fl-dbpr/boca-newfood.json', import.meta.url),
+    );
+    const records = await flDbprAdapter.fetch(
+      { ...source, config: { city: 'BOCA RATON', files: ['newfood.csv'] } },
+      null,
+      ctx(replayFetch(newFixture)),
+    );
+    expect(records).toHaveLength(20);
+    const juici = records.find((r) => r.title === 'JUICI PATTIES')!;
+    expect(juici).toMatchObject({ type: 'new_food_license', externalId: 'newfood:1795329' });
+    expect(juici.occurredAt!.toISOString()).toBe('2026-09-04T00:00:00.000Z');
+    expect(juici.text).toContain('Application approved 09/04/2026.');
+    expect((juici.raw as { licenseNumber: string }).licenseNumber).toMatch(/^NOS\d+$/);
+  });
+
   it('ignores the header row', () => {
     expect(parseFoodRow('"Board Code","License Type Code","Licensee Name"')).toBeNull();
   });

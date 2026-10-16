@@ -17,7 +17,13 @@
     "nav": "text-nav",
     "grid": "single-column",
     "homeTop": ["today-bento", "newsletter-cta", "coming-up", "lead-story", "briefs"],
-    "home": ["beat-sections", "documents-posted"],
+    "home": [
+      "beat-sections",
+      "directory-featured",
+      "find-a-pro",
+      "new-now-open",
+      "documents-posted"
+    ],
     "article": "wide-reading",
     "directory": "category-grid",
     "footer": "minimal"

@@ -223,3 +223,61 @@ test.describe.serial('a category campaign fills that category only', () => {
     await expect(page.locator('[data-slot="home.top"]')).toHaveAttribute('data-fill', 'house');
   });
 });
+
+test.describe('directory on the homepage and articles', () => {
+  test('homepage modules: featured, find a pro, new places to eat', async ({ page }) => {
+    await page.goto(`${harbor}/`);
+    const featured = page.locator('[data-module="directory-featured"]');
+    await expect(featured.locator('[data-slot="home.directory"]')).toBeVisible();
+    // Only claimed listings are featured; unclaimed ones are one click away.
+    await expect(featured.getByRole('link', { name: 'Anchor Plumbing Co' })).toHaveAttribute(
+      'href',
+      '/directory/plumbers/anchor-plumbing-co-test0001',
+    );
+    await expect(
+      featured.getByRole('link', { name: 'Browse 8 licensed businesses' }),
+    ).toBeVisible();
+
+    const pro = page.locator('[data-module="find-a-pro"]');
+    await expect(pro.getByRole('link', { name: /Plumbers\s*5/ })).toHaveAttribute(
+      'href',
+      '/directory/plumbers',
+    );
+    await expect(pro.getByRole('link', { name: /Restaurants/ })).toHaveCount(0);
+    await expect(pro.locator('[data-slot="directory.topspot"]')).toContainText(
+      'Top spots are open',
+    );
+
+    const eat = page.locator('[data-module="new-now-open"]');
+    await expect(eat.getByRole('listitem')).toHaveCount(2);
+    await expect(eat.getByRole('link', { name: 'Harbor Light Chowder House' })).toHaveAttribute(
+      'href',
+      '/directory/restaurants/harbor-light-chowder-house-test0008',
+    );
+    // Not yet in the directory: shown without a link.
+    await expect(eat).toContainText('Lobster Pot Takeout');
+    await expect(eat.getByRole('link', { name: 'Lobster Pot Takeout' })).toHaveCount(0);
+    await expect(eat.locator('[data-slot="dining.featured"]')).toContainText(
+      'This spot could be your restaurant',
+    );
+  });
+
+  test('a development story lists licensed contractors after the sponsor slot', async ({
+    page,
+  }) => {
+    await page.goto(`${harbor}/news/test-site-plan`);
+    const related = page.getByTestId('related-businesses');
+    await expect(related.getByRole('heading')).toHaveText(/Licensed roofers in Harbor Point/);
+    await expect(related.getByRole('link', { name: 'Ferry Lane Roofing' })).toBeVisible();
+    await expect(page.locator('[data-slot="article.related-businesses"]')).toBeVisible();
+  });
+
+  test('a business story lists restaurants', async ({ page }) => {
+    await page.goto(`${harbor}/news/test-harbor-business`);
+    await expect(
+      page
+        .getByTestId('related-businesses')
+        .getByRole('link', { name: 'Harbor Light Chowder House' }),
+    ).toBeVisible();
+  });
+});

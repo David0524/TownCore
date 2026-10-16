@@ -1,5 +1,21 @@
 import { directoryCategories, directoryCategory, type DirectoryCategory } from '@towncore/config';
-import { and, articles, asc, businesses, desc, eq, ilike, or, sql, type Db } from '@towncore/db';
+import { displayName } from './names';
+import {
+  and,
+  articles,
+  asc,
+  businesses,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  or,
+  records,
+  sql,
+  type Db,
+} from '@towncore/db';
 
 // Read side of the directory (M6 PR B): what town sites show. Only active listings appear.
 // Organic order is verified license, then completeness, then the most recently claimed, then
@@ -134,4 +150,126 @@ export function listingPlace(listing: Listing, townName: string): string {
 /** The listing's category, or null if config no longer has it. */
 export function listingCategory(listing: Listing): DirectoryCategory | null {
   return listing.category ? directoryCategory(listing.category) : null;
+}
+
+/** Claimed listings, most recently claimed first: what the homepage can feature without bias. */
+export async function claimedListings(db: Db, townId: string, limit = 4): Promise<Listing[]> {
+  return db
+    .select()
+    .from(businesses)
+    .where(and(active(townId), isNotNull(businesses.claimedAt)))
+    .orderBy(desc(businesses.claimedAt), asc(businesses.name))
+    .limit(limit);
+}
+
+export type NewPlace = {
+  id: string;
+  name: string;
+  licenseType: string;
+  approvedAt: Date;
+  zip: string | null;
+  /** The directory listing, once seeding has picked the license up. */
+  listing: Pick<Listing, 'slug' | 'category'> | null;
+};
+
+/**
+ * Food service licenses the state approved recently (DBPR newfood.csv), newest first. A new
+ * license is not proof a place is open yet, so callers say "newly licensed", not "now open".
+ */
+export async function newFoodPlaces(
+  db: Db,
+  townId: string,
+  { days = 60, limit = 6, now = new Date() }: { days?: number; limit?: number; now?: Date } = {},
+): Promise<NewPlace[]> {
+  const since = new Date(now.getTime() - days * 86_400_000);
+  const rows = await db
+    .select({ id: records.id, title: records.title, raw: records.raw, at: records.occurredAt })
+    .from(records)
+    .where(
+      and(
+        eq(records.townId, townId),
+        eq(records.type, 'new_food_license'),
+        gte(records.occurredAt, since),
+      ),
+    )
+    .orderBy(desc(records.occurredAt))
+    .limit(limit * 2);
+  const raw = (r: (typeof rows)[number]) => (r.raw ?? {}) as Record<string, string>;
+  const licenses = rows.map((r) => raw(r).licenseNumber).filter((l): l is string => Boolean(l));
+  const listings = licenses.length
+    ? await db
+        .select({
+          slug: businesses.slug,
+          category: businesses.category,
+          licenseNumber: businesses.licenseNumber,
+        })
+        .from(businesses)
+        .where(and(active(townId), inArray(businesses.licenseNumber, licenses)))
+    : [];
+  const byLicense = new Map(listings.map((l) => [l.licenseNumber, l]));
+  const seen = new Set<string>();
+  const places: NewPlace[] = [];
+  for (const row of rows) {
+    const r = raw(row);
+    // One place can be approved twice (a new owner, a combined application); show it once.
+    const key = r.licenseNumber || row.id;
+    if (seen.has(key) || !row.at) continue;
+    seen.add(key);
+    const listing = byLicense.get(r.licenseNumber ?? '');
+    places.push({
+      id: row.id,
+      name: displayName(r.businessName || row.title || r.licenseeName || ''),
+      licenseType: r.occupation ?? 'Food service',
+      approvedAt: row.at,
+      zip: r.zip?.slice(0, 5) || null,
+      listing: listing ? { slug: listing.slug, category: listing.category } : null,
+    });
+    if (places.length === limit) break;
+  }
+  return places;
+}
+
+/**
+ * Directory businesses for the end of an article (§11b `article.related-businesses`): listings
+ * the story names first, then the categories matched to its beat (contractors for development,
+ * restaurants for business). Organic order within each; sponsors sit in the slot above, labeled.
+ */
+export async function relatedListings(
+  db: Db,
+  townId: string,
+  { text, beat, limit = 3 }: { text: string; beat: string | null; limit?: number },
+): Promise<{ named: Listing[]; category: DirectoryCategory | null; listings: Listing[] }> {
+  // Names distinctive enough to match safely (two words, 8+ characters), found in the story.
+  const named = await db
+    .select()
+    .from(businesses)
+    .where(
+      and(
+        active(townId),
+        sql`length(${businesses.name}) >= 8`,
+        sql`position(' ' in ${businesses.name}) > 0`,
+        sql`position(lower(${businesses.name}) in lower(${text})) > 0`,
+      ),
+    )
+    .orderBy(...organicOrder)
+    .limit(limit);
+  const rest = limit - named.length;
+  const exclude = named.length
+    ? sql`${businesses.id} not in (${sql.join(
+        named.map((n) => sql`${n.id}`),
+        sql`, `,
+      )})`
+    : undefined;
+  // The first of the beat's categories (in config order) that has listings.
+  for (const category of directoryCategories) {
+    if (rest <= 0 || !beat || !(category.beats as readonly string[]).includes(beat)) continue;
+    const listings = await db
+      .select()
+      .from(businesses)
+      .where(and(active(townId), eq(businesses.category, category.slug), exclude))
+      .orderBy(...organicOrder)
+      .limit(rest);
+    if (listings.length) return { named, category, listings };
+  }
+  return { named, category: null, listings: [] };
 }

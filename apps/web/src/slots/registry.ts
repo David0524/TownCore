@@ -65,6 +65,12 @@ export const slots = {
     height: { mobile: 120, desktop: 104 },
     paidLabel: 'Sponsored',
   },
+  // One sponsored restaurant inside the new-now-open module (docs/plans/M4b.md).
+  'dining.featured': {
+    format: 'card',
+    height: { mobile: 120, desktop: 104 },
+    paidLabel: 'Sponsored',
+  },
   'directory.quote-request': {
     format: 'card',
     height: { mobile: 128, desktop: 112 },
