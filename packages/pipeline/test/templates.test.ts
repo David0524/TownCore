@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  hasInspectionFailures,
+  inspectionsRoundup,
   isIssuedLicense,
   isNewsworthyAlert,
   meetingsRoundup,
   newBusinessesRoundup,
   newLicensesRoundup,
+  permitsRoundup,
   weatherAlert,
   type TemplateRecord,
 } from '../src/templates';
@@ -150,5 +153,141 @@ describe('weather alerts', () => {
     );
     expect(draft.bodyMd).toContain('> Monitor later forecasts.');
     expect(draft.sourceRecordIds).toEqual(['w']);
+  });
+});
+
+describe('inspectionsRoundup', () => {
+  const visit = (id: string, raw: Record<string, unknown>) =>
+    rec({ id, type: 'inspection', title: String(raw.business), raw });
+  const rows = [
+    visit('a', {
+      business: 'ZED DINER',
+      address: '1 MAIN ST',
+      date: '10/20/2026',
+      total: 14,
+      highPriority: 6,
+      severity: 'closure',
+      disposition: 'Emergency order recommended',
+    }),
+    visit('b', {
+      business: 'ALPHA CAFE',
+      address: '2 B ST',
+      date: '10/21/2026',
+      total: 9,
+      highPriority: 3,
+      severity: 'complaint',
+      visit: 2,
+    }),
+    visit('c', {
+      business: 'BETA BAGELS',
+      address: '3 C ST',
+      date: '10/22/2026',
+      total: 4,
+      highPriority: 0,
+      severity: 'warning',
+    }),
+    visit('d', {
+      licenseNumber: '4',
+      business: 'GAMMA GRILL',
+      date: '10/20/2026',
+      total: 1,
+      severity: 'ok',
+    }),
+    visit('e', {
+      licenseNumber: '4',
+      business: 'GAMMA GRILL',
+      date: '10/22/2026',
+      total: 0,
+      severity: 'ok',
+    }),
+  ];
+
+  it('groups visits by outcome, names closures and complaints with counts, and cites every record', () => {
+    const draft = inspectionsRoundup(town, week, rows);
+    expect(draft.headline).toBe(
+      'Restaurant inspections with a Boca Raton address, Oct. 19–Oct. 25',
+    );
+    expect(draft.dek).toBe(
+      'State inspectors visited 4 food service establishments; 1 ordered closed and 1 with an administrative complaint recommended.',
+    );
+    expect(draft.bodyMd).toContain('## Ordered closed');
+    expect(draft.bodyMd).toContain(
+      '- **Zed Diner**: 1 Main St; inspected 10/20/2026; 14 violations, 6 high priority.',
+    );
+    expect(draft.bodyMd).toContain('inspected 10/21/2026 (call-back visit)');
+    expect(draft.bodyMd).toContain('## Warnings and follow-ups');
+    expect(draft.bodyMd).toContain('1 establishment needed no further action');
+    // Two visits to one place count once.
+    expect(draft.bodyMd.match(/Gamma Grill/g)).toHaveLength(1);
+    expect(draft.bodyMd).toMatch(/snapshot of conditions/);
+    expect(draft.sourceRecordIds).toEqual(['a', 'b', 'c', 'd', 'e']);
+    expect(draft.beat).toBe('business');
+  });
+
+  it('flags weeks that name failures for review', () => {
+    expect(hasInspectionFailures(rows.map((r) => r.raw))).toBe(true);
+    expect(hasInspectionFailures(rows.slice(2).map((r) => r.raw))).toBe(false);
+    const clean = inspectionsRoundup(town, week, rows.slice(3));
+    expect(clean.dek).toBe('State inspectors visited 1 food service establishment.');
+    expect(clean.bodyMd).not.toContain('## Ordered closed');
+  });
+
+  it('notes a same-week call-back that found the problems fixed', () => {
+    const draft = inspectionsRoundup(town, week, [
+      visit('x', {
+        licenseNumber: '9',
+        business: 'DELTA DELI',
+        date: '10/20/2026',
+        total: 6,
+        highPriority: 2,
+        severity: 'complaint',
+      }),
+      visit('y', {
+        licenseNumber: '9',
+        business: 'DELTA DELI',
+        date: '10/21/2026',
+        total: 0,
+        visit: 2,
+        severity: 'ok',
+      }),
+    ]);
+    expect(draft.bodyMd).toContain(
+      '- **Delta Deli**: inspected 10/20/2026; 6 violations, 2 high priority; a call-back visit on 10/21/2026 found it in compliance.',
+    );
+    expect(draft.bodyMd).not.toContain('## Met inspection standards');
+  });
+});
+
+describe('permitsRoundup', () => {
+  const permit = (id: string, title: string, lines: string[]) =>
+    rec({ id, type: 'permit', title, text: lines.join('\n'), url: `https://data.x.gov/d/${id}` });
+  const rows = [
+    permit('p1', 'Building Permit: New at 5641 RALEIGH ST', [
+      'Type: Building Permit',
+      'Estimated cost: 1000',
+      'Contractor: MTCI PRIVATE PROVIDER SERVICES LLC',
+    ]),
+    permit('p2', 'Building Permit: Addition at 12 NE 4 AVE', [
+      'Type: Building Permit',
+      'Estimated cost: $250,000',
+    ]),
+    permit('p3', 'Demolition Permit at 724 PALM DR', ['Type: Demolition Permit']),
+  ];
+
+  it('lists permits by estimated cost with contractor and link, then counts by type', () => {
+    const draft = permitsRoundup(town, week, rows);
+    expect(draft.headline).toBe('Building permits in Boca Raton, Oct. 19–Oct. 25');
+    expect(draft.dek).toBe(
+      '3 permits with a combined estimated cost of $251,000, according to the official permit records.',
+    );
+    const list = draft.bodyMd.split('## All permits')[1]!;
+    expect(list.indexOf('12 NE 4 Ave')).toBeLessThan(list.indexOf('5641 Raleigh St'));
+    expect(draft.bodyMd).toContain(
+      '- **Building Permit: New at 5641 Raleigh St**: estimated cost $1,000; contractor Mtci Private Provider Services LLC. [Record](https://data.x.gov/d/p1)',
+    );
+    expect(draft.bodyMd).toContain('- **Demolition Permit at 724 Palm Dr** [Record]');
+    expect(draft.bodyMd).toContain('## By type\n\n- Building Permit: 2\n- Demolition Permit: 1');
+    expect(draft.beat).toBe('development');
+    expect(draft.sourceRecordIds).toEqual(['p1', 'p2', 'p3']);
   });
 });

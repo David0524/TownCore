@@ -81,3 +81,5 @@ export {
   unsplashLink,
   type UnsplashPhoto,
 } from './unsplash';
+export { parseDatasetUrl, socrataAdapter, socrataDate } from './socrata';
+export { arcgisAdapter, arcgisQueryUrl, arcgisRecords } from './arcgis';

@@ -171,3 +171,4 @@ export {
   type LibraryIllustration,
 } from './illustrations';
 export { illustrationLibrary } from './illustrations-library';
+export { titleCase } from './names';

@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_FILES, flDbprAdapter, parseDbprRow } from '../src/fl-dbpr';
 import { parseFoodRow } from '../src/fl-dbpr/food';
+import { inspectionSeverity, parseInspectionRow } from '../src/fl-dbpr/inspections';
 import { Fetcher, NotModified, type FetchFn } from '../src/http/fetcher';
 import { replayFetch } from '../src/http/fixtures';
 import { parseCsvLine, streamLines } from '../src/lib/csv';
@@ -112,6 +113,85 @@ describe('fl-dbpr food service files', () => {
 
   it('ignores the header row', () => {
     expect(parseFoodRow('"Board Code","License Type Code","Licensee Name"')).toBeNull();
+  });
+});
+
+describe('fl-dbpr food service inspections', () => {
+  // Trimmed from the live 2fdinspi.csv on 2026-10-16 (header, 30 other rows, 60 Boca rows).
+  const inspections = fileURLToPath(
+    new URL('../fixtures/fl-dbpr/boca-inspections.json', import.meta.url),
+  );
+  const src = {
+    ...source,
+    kind: 'inspections' as const,
+    config: { city: 'BOCA RATON', files: ['2fdinspi.csv'] },
+  };
+
+  it('turns Boca inspection visits into records with what was cited', async () => {
+    const records = await flDbprAdapter.fetch(src, null, ctx(replayFetch(inspections)));
+    expect(records).toHaveLength(60);
+    expect(new Set(records.map((r) => r.externalId)).size).toBe(60);
+    for (const r of records) {
+      expect(r.type).toBe('inspection');
+      expect(r.externalId).toMatch(/^inspection:\d+$/);
+      expect(r.occurredAt).toBeInstanceOf(Date);
+      expect(r.url).toBe(
+        'https://www2.myfloridalicense.com/sto/file_download/extracts/2fdinspi.csv',
+      );
+      expect(r.text).toMatch(/^Florida food service inspection \(.+\) on \d{2}\/\d{2}\/2026 at /);
+      expect(r.text).toMatch(/Result: .+\. Violations cited: \d+ \(\d+ high priority/);
+    }
+    const serious = records.filter((r) => (r.raw as { severity: string }).severity !== 'ok');
+    expect(serious.length).toBeGreaterThanOrEqual(25);
+    const cited = records.find((r) => /Categories cited: /.test(r.text ?? ''))!;
+    expect(cited.text).not.toMatch(/Category \d{2}/);
+  });
+
+  it('reads one row and rates outcomes', () => {
+    const cells = [
+      'D2',
+      '50',
+      'Palm Beach',
+      '2010',
+      '6012345',
+      'TEST CAFE',
+      '1 MAIN ST',
+      'BOCA RATON',
+      '33432',
+      '9',
+      '2',
+      'Food',
+      'Routine - Food',
+      'Call Back - Complied',
+      '10/01/2026',
+      '',
+      '',
+      '3',
+      '1',
+      '1',
+      '1',
+      'Y',
+    ];
+    const counts = Array.from({ length: 58 }, (_, i) => (i === 2 ? '2' : i === 34 ? '1' : '0'));
+    const row = parseInspectionRow(
+      [...cells, ...counts, '111', '222'].map((c) => `"${c}"`).join(','),
+    )!;
+    expect(row).toMatchObject({
+      business: 'TEST CAFE',
+      visit: 2,
+      total: 3,
+      highPriority: 1,
+      visitId: '222',
+    });
+    expect(row.violations).toEqual({ '03': 2, '35': 1 });
+    expect(parseInspectionRow('"District","County Number"')).toBeNull();
+    expect(inspectionSeverity('Emergency order recommended')).toBe('closure');
+    expect(inspectionSeverity('Emergency Order Callback Complied')).toBe('ok');
+    expect(inspectionSeverity('Emergency Order Callback Not Complied')).toBe('closure');
+    expect(inspectionSeverity('Call Back - Admin. complaint recommended')).toBe('complaint');
+    expect(inspectionSeverity('Administrative complaint recommended')).toBe('complaint');
+    expect(inspectionSeverity('Warning Issued')).toBe('warning');
+    expect(inspectionSeverity('Inspection Completed - No Further Action')).toBe('ok');
   });
 });
 
