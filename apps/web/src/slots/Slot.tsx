@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { Town } from '@towncore/db';
-import { resolveSlotFill, type SlotContext } from './fill';
+import { resolveSlotFill, type SlotContext, type SlotFill } from './fill';
 import { SLOT_LABEL_PX, slots, type SlotName } from './registry';
 import styles from './Slot.module.css';
 
@@ -18,7 +18,11 @@ export async function Slot({
   name: SlotName;
   context?: SlotContext;
 }) {
-  const fill = await resolveSlotFill(town, name, new Date(), context);
+  return <SlotUnit name={name} fill={await resolveSlotFill(town, name, new Date(), context)} />;
+}
+
+/** One filled unit in the locked slot style (also used for each of several sponsor cards). */
+export function SlotUnit({ name, fill }: { name: SlotName; fill: SlotFill }) {
   const { height, format } = slots[name];
   const style = {
     '--slot-h-mobile': `${height.mobile + SLOT_LABEL_PX}px`,

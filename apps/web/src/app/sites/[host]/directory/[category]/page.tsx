@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { directoryCategory } from '@towncore/config';
-import { categoryListings, MIN_INDEXABLE } from '@towncore/directory';
+import { categoryListings, enhancedListingIds, MIN_INDEXABLE } from '@towncore/directory';
 import { Grouped } from '@/components/phone/Grouped';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
@@ -11,6 +11,7 @@ import { rssAlternate } from '@/lib/discovery';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
+import { SponsoredCards } from '@/slots/SponsoredCards';
 import styles from '../directory.module.css';
 
 type Props = {
@@ -45,7 +46,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const category = directoryCategory((await params).category);
   if (!category) notFound();
   const q = queryOf((await searchParams).q);
-  const { listings, total } = await categoryListings(db(), town.id, category.slug, { q });
+  const [{ listings, total }, enhanced] = await Promise.all([
+    categoryListings(db(), town.id, category.slug, { q }),
+    enhancedListingIds(db(), town.id),
+  ]);
   const context = { category };
 
   return (
@@ -61,7 +65,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           : `${total} ${total === 1 ? 'business holds' : 'businesses hold'} an active Florida license as ${category.name.toLowerCase()} with a ${town.name} mailing address, which can be outside city limits. Check any license with the state before you hire.`}
       </p>
       <Slot town={town} name="directory.topspot" context={context} />
-      <Slot town={town} name="directory.category.top" context={context} />
+      <SponsoredCards town={town} category={category} />
       <form method="get" role="search" className={styles.search}>
         <label htmlFor="category-q" className="sr-only">
           Search {category.name.toLowerCase()} by name
@@ -90,7 +94,19 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             key: listing.id,
             href: listingPath(listing),
             label: listing.name,
-            detail: listingDetail(town, listing),
+            detail: enhanced.has(listing.id) ? (
+              <>
+                {listingDetail(town, listing)}
+                <br />
+                {[listing.phone, listing.hours?.split('\n')[0], listing.description?.slice(0, 120)]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </>
+            ) : (
+              listingDetail(town, listing)
+            ),
+            // Paid presentation is labeled; it never changes where the listing sits (Rule 6).
+            value: enhanced.has(listing.id) ? 'Enhanced (paid)' : undefined,
           }))}
           footer={
             total > listings.length

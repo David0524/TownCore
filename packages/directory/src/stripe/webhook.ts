@@ -1,6 +1,7 @@
 import { directoryProducts, type DirectoryProduct } from '@towncore/config';
 import { and, eq, isNull, placements, stripeEvents, type Db } from '@towncore/db';
 import type Stripe from 'stripe';
+import { endPlacementCampaigns, syncPlacementCampaigns } from '../creatives';
 import { placesTaken } from './checkout';
 
 // Stripe webhooks (M6 PR D). Stripe delivers each event at least once and in any order, so:
@@ -183,6 +184,9 @@ async function apply(db: Db, event: Stripe.Event, now: Date) {
           updatedAt: now,
         })
         .where(eq(placements.id, placement.id));
+      // The sponsor card follows its placement: down when it stops, same end date while on.
+      if (status === 'active') await syncPlacementCampaigns(db, placement.id, endsAt(sub), now);
+      else await endPlacementCampaigns(db, placement.id, now);
       return;
     }
     default:

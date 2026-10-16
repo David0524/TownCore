@@ -4,10 +4,13 @@ import { loadEnv } from '@towncore/config';
 import {
   and,
   businesses,
+  campaigns,
   createDb,
   eq,
   ownerSessions,
   placements,
+  staff,
+  staffSessions,
   stripeEvents,
   stripePrices,
   towns,
@@ -162,5 +165,118 @@ test('a signed checkout.session.completed turns the owner’s placement on', asy
   await db
     .update(businesses)
     .set({ claimedAt: null, claimedByEmail: null })
+    .where(eq(businesses.id, listing!.id));
+});
+
+test('a paid sponsor card goes live only after staff approve it; Enhanced is labeled', async ({
+  page,
+  context,
+  browser,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'runs once, on desktop');
+  const [town] = await db.select().from(towns).where(eq(towns.slug, 'harbor-point'));
+  const slug = 'harbor-light-chowder-house-test0008';
+  const [listing] = await db
+    .select()
+    .from(businesses)
+    .where(and(eq(businesses.townId, town!.id), eq(businesses.slug, slug)));
+  const email = 'owner-card@chowder.test';
+  await db.delete(campaigns).where(eq(campaigns.category, 'restaurants'));
+  await db.delete(placements).where(eq(placements.businessId, listing!.id));
+  await db
+    .update(businesses)
+    .set({ claimedAt: new Date(), claimedByEmail: email, phone: '(207) 555-0177' })
+    .where(eq(businesses.id, listing!.id));
+  await db.insert(placements).values([
+    {
+      businessId: listing!.id,
+      townId: town!.id,
+      product: 'sponsored_slot',
+      category: 'restaurants',
+      status: 'active',
+      stripeSubscriptionId: `sub_card_${Date.now()}`,
+      buyerEmail: email,
+    },
+    {
+      businessId: listing!.id,
+      townId: town!.id,
+      product: 'enhanced',
+      status: 'active',
+      stripeSubscriptionId: `sub_enh_${Date.now()}`,
+      buyerEmail: email,
+    },
+  ]);
+
+  // The owner writes the card.
+  const token = randomBytes(24).toString('base64url');
+  await db.insert(ownerSessions).values({
+    townId: town!.id,
+    email,
+    tokenHash: hash(token),
+    expiresAt: new Date(Date.now() + 3_600_000),
+  });
+  await context.addCookies([{ name: 'tc_owner', value: token, url: 'http://harborpoint.test/' }]);
+  await page.goto(`http://harborpoint.test/owner/${slug}`);
+  const card = page.getByTestId('sponsor-card');
+  await card.getByRole('textbox', { name: 'Headline' }).fill('Chowder made fresh every morning');
+  await card
+    .getByRole('textbox', { name: 'Short text (optional)' })
+    .fill('On the wharf since 1952.');
+  await card.getByRole('button', { name: 'Send for review' }).click();
+  await expect(page.getByTestId('card-waiting')).toContainText('Chowder made fresh every morning');
+
+  // Not live yet: the category still shows the house ad.
+  await page.goto('http://harborpoint.test/directory/restaurants');
+  await expect(page.getByTestId('sponsored-cards')).toHaveCount(0);
+  await expect(page.locator('[data-slot="directory.category.top"]')).toHaveAttribute(
+    'data-fill',
+    'house',
+  );
+
+  // Staff approve it.
+  const staffContext = await browser.newContext();
+  const [member] = await db
+    .insert(staff)
+    .values({ email: `cards-${Date.now()}@towncore.net`, name: 'Card reviewer', role: 'admin' })
+    .returning();
+  const staffToken = randomBytes(24).toString('base64url');
+  await db.insert(staffSessions).values({
+    staffId: member!.id,
+    tokenHash: hash(staffToken),
+    expiresAt: new Date(Date.now() + 3_600_000),
+  });
+  await staffContext.addCookies([
+    { name: 'tc_admin', value: staffToken, url: 'http://admin.test/admin' },
+  ]);
+  const adminPage = await staffContext.newPage();
+  await adminPage.goto('http://admin.test/admin/directory');
+  const row = adminPage
+    .getByTestId('cards-waiting')
+    .getByRole('row', { name: /Chowder made fresh every morning/ });
+  await row.getByRole('button', { name: 'Approve card' }).click();
+  await expect(adminPage.getByRole('status')).toHaveText('Card approved and live');
+  await staffContext.close();
+
+  // Live: labeled Sponsored, linking to the listing; Enhanced is labeled in place.
+  await page.goto('http://harborpoint.test/directory/restaurants');
+  const sponsored = page.getByTestId('sponsored-cards').locator('[data-slot]');
+  await expect(sponsored).toHaveCount(1);
+  await expect(sponsored).toHaveAttribute('data-fill', 'campaign');
+  await expect(sponsored.getByTestId('slot-label')).toHaveText(
+    'Sponsored · Harbor Light Chowder House',
+  );
+  await expect(sponsored.getByRole('link')).toHaveAttribute(
+    'href',
+    `/directory/restaurants/${slug}`,
+  );
+  const organic = page.locator('section[aria-labelledby="organic"]');
+  await expect(organic).toContainText('Enhanced (paid)');
+  await expect(organic).toContainText('(207) 555-0177');
+
+  await db.delete(campaigns).where(eq(campaigns.category, 'restaurants'));
+  await db.delete(placements).where(eq(placements.businessId, listing!.id));
+  await db
+    .update(businesses)
+    .set({ claimedAt: null, claimedByEmail: null, phone: null })
     .where(eq(businesses.id, listing!.id));
 });
