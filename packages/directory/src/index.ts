@@ -7,6 +7,7 @@ export {
   categoryCounts,
   categoryListings,
   claimedListings,
+  enhancedListingIds,
   newFoodPlaces,
   relatedListings,
   type NewPlace,
@@ -78,3 +79,16 @@ export {
   placementStatusFor,
   type WebhookResult,
 } from './stripe/webhook';
+export {
+  CARD_LIMITS,
+  CardNotWaiting,
+  decideSponsorCard,
+  endPlacementCampaigns,
+  pendingSponsorCards,
+  SPONSOR_SLOT,
+  sponsorCards,
+  submitSponsorCard,
+  type PendingCard,
+  type SponsorCard,
+  type SubmitResult,
+} from './creatives';

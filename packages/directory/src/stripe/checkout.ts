@@ -180,7 +180,7 @@ export type ProductOffer = {
   /** Places left in the listing's category, or null when there is no cap. */
   left: number | null;
   /** The listing's current placement of this product, if any. */
-  placement: { status: string; endsAt: Date | null } | null;
+  placement: { id: string; status: string; endsAt: Date | null } | null;
 };
 
 /** What the owner can buy for a listing, with availability and what they already have. */
@@ -197,7 +197,7 @@ export async function listingOffers(
     const price = await currentPrice(db, townId, product);
     if (!price) continue;
     const [current] = await db
-      .select({ status: placements.status, endsAt: placements.endsAt })
+      .select({ id: placements.id, status: placements.status, endsAt: placements.endsAt })
       .from(placements)
       .where(
         and(

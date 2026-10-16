@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { listingOffers, ownerListings } from '@towncore/directory';
+import { CARD_LIMITS, listingOffers, ownerListings, sponsorCards } from '@towncore/directory';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
 import { listingPath } from '@/lib/directory';
@@ -20,6 +20,10 @@ const PAYMENT_MESSAGES: Record<string, string> = {
   already_active: 'You already have that placement.',
   unavailable: 'Paid placements aren’t open on this site yet.',
   no_billing: 'There’s no billing account for you yet.',
+  card_sent: 'Thanks. Your card is waiting for review; we’ll put it up once it’s checked.',
+  card_headline: `Write a headline of up to ${CARD_LIMITS.headline} characters.`,
+  card_body: `Keep the text under ${CARD_LIMITS.body} characters.`,
+  card_no_placement: 'Your sponsored slot isn’t active yet.',
 };
 
 const OFFER_NOTES: Record<string, string> = {
@@ -42,6 +46,10 @@ export default async function EditListing({ params, searchParams }: Props) {
   if (!listing) notFound();
   const { s, e } = await searchParams;
   const offers = stripe() ? await listingOffers(db(), town.id, listing) : [];
+  const sponsored = offers.find((o) => o.product === 'sponsored_slot')?.placement;
+  const cards = sponsored?.status === 'active' ? await sponsorCards(db(), sponsored.id) : null;
+  const liveCard = cards?.find((c) => c.status === 'live');
+  const latest = cards?.[0];
   const errors = (Array.isArray(e) ? e : e ? [e] : []).slice(0, 5);
   return (
     <StandardPage town={town}>
@@ -142,6 +150,54 @@ export default async function EditListing({ params, searchParams }: Props) {
               </li>
             ))}
           </ul>
+          {cards ? (
+            <section id="card" aria-labelledby="card-h" data-testid="sponsor-card">
+              <h3 id="card-h">Your sponsored card</h3>
+              <p className={styles.note}>
+                It shows at the top of your category, labeled &quot;Sponsored&quot;, and links to
+                your listing. Our staff check each version before it goes up; a live card stays up
+                while a new version is reviewed.
+              </p>
+              {liveCard ? (
+                <p className="meta" data-testid="card-live">
+                  Live: {liveCard.headline}
+                </p>
+              ) : null}
+              {latest?.status === 'waiting' ? (
+                <p className="meta" data-testid="card-waiting">
+                  Waiting for review: {latest.headline}
+                </p>
+              ) : null}
+              {latest?.status === 'rejected' ? (
+                <p className="meta" data-testid="card-rejected">
+                  Not approved: {latest.note}
+                </p>
+              ) : null}
+              <form method="post" action={`/owner/${listing.slug}/card`} className={styles.claim}>
+                <label>
+                  Headline
+                  <input
+                    name="headline"
+                    required
+                    maxLength={CARD_LIMITS.headline}
+                    defaultValue={latest?.headline ?? ''}
+                  />
+                </label>
+                <label>
+                  Short text (optional)
+                  <textarea
+                    name="body"
+                    rows={2}
+                    maxLength={CARD_LIMITS.body}
+                    defaultValue={latest?.body ?? ''}
+                  />
+                </label>
+                <button type="submit" className="button">
+                  Send for review
+                </button>
+              </form>
+            </section>
+          ) : null}
           <form method="post" action="/owner/billing">
             <input type="hidden" name="slug" value={listing.slug} />
             <button type="submit" className={`button ${styles.secondary}`}>
