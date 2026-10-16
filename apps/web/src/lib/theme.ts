@@ -2,6 +2,8 @@ import {
   beatCategory,
   brandColors,
   categoryColors,
+  darkFoodColors,
+  foodColors,
   cornerRadii,
   darkColors,
   deriveMuted,
@@ -69,6 +71,12 @@ export function themeCssVariables(theme: Theme): string {
     '--alert': systemColors.alert,
     '--alert-text': systemColors.alertText,
     ...Object.fromEntries(Object.entries(categoryColors).map(([k, v]) => [`--cat-${k}`, v])),
+    ...Object.fromEntries(
+      Object.entries(foodColors).flatMap(([k, v]) => [
+        [`--food-${k}`, v.tint],
+        [`--food-${k}-ink`, v.ink],
+      ]),
+    ),
     '--font-headline': `'${fonts.headline}', ${serifFallback}`,
     '--font-body': `'${fonts.body}', ${sansFallback}`,
     '--font-meta': `'${fonts.meta}', ${metaFallback}`,
@@ -104,6 +112,12 @@ export function themeCssVariables(theme: Theme): string {
     '--muted': darkColors.muted,
     '--rule': darkColors.rule,
     '--sand': darkColors.sand,
+    ...Object.fromEntries(
+      Object.entries(darkFoodColors).flatMap(([k, v]) => [
+        [`--food-${k}`, v.tint],
+        [`--food-${k}-ink`, v.ink],
+      ]),
+    ),
   };
   return (
     css(':root', vars) +

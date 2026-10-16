@@ -177,8 +177,8 @@ export function houseAd(
   const dining: SlotFill = {
     source: 'house',
     label: `From ${town.siteName}`,
-    headline: 'This spot could be your restaurant',
-    body: `Put your restaurant in front of ${town.name} readers. From ${offer.from} a month.${freeLine}`,
+    headline: 'Your restaurant here',
+    body: `In front of ${town.name} readers from ${offer.from} a month.${freeLine}`,
     href: advertisePath(),
     cta: 'Get featured',
   };

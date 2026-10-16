@@ -430,3 +430,24 @@ export const storyMeetingVideo = cache(
     return pickMeetingVideo(sourceRecords, videos, timeZone, meetings);
   },
 );
+
+/**
+ * The latest NWS zone forecast as its periods ("Tonight", "Saturday"…), as NWS wrote them, for
+ * the weather page. Null without a forecast in the last two days.
+ */
+export const townForecast = cache(async (townId: string) => {
+  const [forecast] = await db()
+    .select({ text: records.text, url: records.url, occurredAt: records.occurredAt })
+    .from(records)
+    .where(and(eq(records.townId, townId), eq(records.type, 'forecast')))
+    .orderBy(desc(records.occurredAt))
+    .limit(1);
+  if (!forecast?.text || !forecast.occurredAt) return null;
+  if (Date.now() - forecast.occurredAt.getTime() > 48 * 3_600_000) return null;
+  const periods = forecast.text
+    .split('\n')
+    .map((line) => line.match(/^([^:]+): (.+)$/))
+    .filter((m): m is RegExpMatchArray => Boolean(m))
+    .map((m) => ({ name: m[1]!, text: m[2]! }));
+  return periods.length ? { periods, url: forecast.url, issuedAt: forecast.occurredAt } : null;
+});

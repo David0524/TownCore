@@ -84,6 +84,9 @@ export type { BeachConditions, WeatherAlert, WeatherHour, WeatherSnapshot } from
 export {
   beatCategory,
   categoryColors,
+  darkFoodColors,
+  foodColors,
+  type FoodColor,
   darkColors,
   deriveMuted,
   iosColors,

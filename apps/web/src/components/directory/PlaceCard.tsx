@@ -3,6 +3,8 @@ import { directoryCategory } from '@towncore/config';
 import Link from 'next/link';
 import { listingPath } from '@/lib/directory';
 import { CallButton } from './CallButton';
+import { foodLook, friendlyName } from './food';
+import { FoodDot } from './FoodTile';
 import styles from './places.module.css';
 
 /**
@@ -15,13 +17,24 @@ export function PlaceCard({ listing, label }: { listing: Listing; label?: string
   const kind = raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : null;
   // A license address can be a home: street and contact only when they may show (D-M6-2).
   const contact = contactShown(listing);
+  const category = directoryCategory(listing.category ?? '');
+  // Places to eat wear their flavor: a small drawn badge from the cuisine (decoration only).
+  const look =
+    category?.group === 'food'
+      ? foodLook({ cuisine: listing.cuisine, name: listing.name, licenseType: listing.licenseType })
+      : null;
   return (
     <article className={styles.card} data-testid="place-card">
       {label ? <span className={styles.label}>{label}</span> : null}
-      <h3 className={styles.name}>
-        <Link href={listingPath(listing)}>{listing.name}</Link>
-      </h3>
-      {kind ? <p className={styles.kind}>{kind}</p> : null}
+      <div className={look ? styles.head : undefined}>
+        {look ? <FoodDot look={look} /> : null}
+        <div>
+          <h3 className={styles.name}>
+            <Link href={listingPath(listing)}>{friendlyName(listing.name)}</Link>
+          </h3>
+          {kind ? <p className={styles.kind}>{kind}</p> : null}
+        </div>
+      </div>
       {contact && listing.address ? (
         <p className={styles.where}>
           <svg viewBox="0 0 16 16" aria-hidden="true" className={styles.icon}>

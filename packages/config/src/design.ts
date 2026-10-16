@@ -41,6 +41,31 @@ export const systemColors = {
 } as const;
 
 /** Dark-mode roles (built now, shipped later): near-black page, lifted tiles. */
+/**
+ * Food tiles (owner, 2026-10-16: "add some color"): a soft tint and a deep ink per flavor of
+ * place, the same network-wide, for the drawn icon tiles on new places to eat. Decoration only:
+ * every ink is at least 4.5:1 on its tint, and text never sits on a tile.
+ */
+export const foodColors = {
+  tomato: { tint: '#FDE7E0', ink: '#A8321C' },
+  saffron: { tint: '#FCEFD0', ink: '#7E5000' },
+  basil: { tint: '#E2F1DF', ink: '#2C6B30' },
+  ocean: { tint: '#DDEFF7', ink: '#0D5E80' },
+  berry: { tint: '#F6E3EF', ink: '#8E2A66' },
+  cocoa: { tint: '#F0E6DD', ink: '#6E4326' },
+} as const;
+export type FoodColor = keyof typeof foodColors;
+
+/** The same flavors on a dark page. */
+export const darkFoodColors: Record<FoodColor, { tint: string; ink: string }> = {
+  tomato: { tint: '#3A1E17', ink: '#F4A08B' },
+  saffron: { tint: '#352A12', ink: '#F0C66B' },
+  basil: { tint: '#1C2E1D', ink: '#9BD39A' },
+  ocean: { tint: '#14293A', ink: '#8CC9E6' },
+  berry: { tint: '#331B2B', ink: '#E7A2CB' },
+  cocoa: { tint: '#2E231B', ink: '#D9B08F' },
+};
+
 export const darkColors = {
   background: '#0E1013',
   surface: '#1A1D21',

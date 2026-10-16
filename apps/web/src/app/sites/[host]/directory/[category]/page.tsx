@@ -3,10 +3,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { directoryCategory } from '@towncore/config';
 import {
+  categoryCuisines,
   categoryListings,
   enhancedListingIds,
   MIN_INDEXABLE,
   openFeaturedRanks,
+  worthALook,
 } from '@towncore/directory';
 import { PlaceCard } from '@/components/directory/PlaceCard';
 import places from '@/components/directory/places.module.css';
@@ -24,7 +26,7 @@ import styles from '../directory.module.css';
 
 type Props = {
   params: Promise<{ host: string; category: string }>;
-  searchParams: Promise<{ q?: string | string[]; quote?: string }>;
+  searchParams: Promise<{ q?: string | string[]; cuisine?: string | string[]; quote?: string }>;
 };
 
 const queryOf = (raw: string | string[] | undefined) =>
@@ -56,12 +58,18 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const town = await requireTown(params);
   const category = directoryCategory((await params).category);
   if (!category) notFound();
-  const { q: rawQ, quote: quoteStatus } = await searchParams;
+  const { q: rawQ, cuisine: rawCuisine, quote: quoteStatus } = await searchParams;
   const q = queryOf(rawQ);
-  const [{ listings, total }, enhanced, openRanks] = await Promise.all([
-    categoryListings(db(), town.id, category.slug, { q }),
+  const cuisine = queryOf(rawCuisine);
+  // Places to eat, shop or visit get ways in beyond A–Z (owner, 2026-10-16): cuisines to browse
+  // and a few complete listings worth a look, on the unfiltered page.
+  const browsing = category.group !== 'home' && !q && !cuisine;
+  const [{ listings, total }, enhanced, openRanks, cuisines, picks] = await Promise.all([
+    categoryListings(db(), town.id, category.slug, { q, cuisine }),
     enhancedListingIds(db(), town.id),
     openFeaturedRanks(db(), town.id, category.slug),
+    category.group !== 'home' ? categoryCuisines(db(), town.id, category.slug) : [],
+    browsing ? worthALook(db(), town.id, category.slug) : [],
   ]);
   // House ads offer only the featured spots still open here.
   const context = { category, openRanks };
@@ -109,14 +117,62 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           Search
         </button>
       </form>
+      {cuisines.length > 1 ? (
+        <nav aria-label={`Browse ${category.name.toLowerCase()} by cuisine`}>
+          <ul className={places.chips} data-testid="cuisines">
+            {cuisine ? (
+              <li>
+                <Link href={directoryPath(category.slug)} className={places.chip}>
+                  All
+                </Link>
+              </li>
+            ) : null}
+            {cuisines.map((c) => (
+              <li key={c.cuisine}>
+                <Link
+                  href={`${directoryPath(category.slug)}?cuisine=${encodeURIComponent(c.cuisine.toLowerCase())}`}
+                  className={places.chip}
+                  aria-current={
+                    cuisine.toLowerCase() === c.cuisine.toLowerCase() ? 'true' : undefined
+                  }
+                >
+                  {c.cuisine} <span className={places.chipCount}>{c.count}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : null}
+      {picks.length >= 2 ? (
+        <section aria-labelledby="worth-h" data-testid="worth-a-look">
+          <h2 id="worth-h" className={places.heading}>
+            Worth a look
+          </h2>
+          <p className="meta">
+            A few {category.name.toLowerCase()} with full details, a different cuisine each,
+            changing daily. Never paid.
+          </p>
+          <ul className={places.grid}>
+            {picks.map((listing) => (
+              <li key={listing.id}>
+                <PlaceCard listing={listing} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {listings.length === 0 ? (
         <p data-testid="category-empty">
           {q ? `No ${category.name.toLowerCase()} match “${q}”.` : 'No businesses listed yet.'}
         </p>
       ) : category.group !== 'home' ? (
         <section aria-labelledby="organic">
-          <h2 className="sr-only" id="organic">
-            {q ? `Matching “${q}”` : `All ${category.name.toLowerCase()}`}
+          <h2 className={picks.length >= 2 ? places.heading : 'sr-only'} id="organic">
+            {q
+              ? `Matching “${q}”`
+              : cuisine
+                ? `${cuisine.charAt(0).toUpperCase()}${cuisine.slice(1)}: ${total.toLocaleString('en-US')} ${category.name.toLowerCase()}`
+                : `All ${category.name.toLowerCase()}`}
           </h2>
           <ul className={places.grid}>
             {listings.map((listing) => (

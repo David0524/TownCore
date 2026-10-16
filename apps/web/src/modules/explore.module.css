@@ -1,0 +1,180 @@
+/* Quick links (owner, 2026-10-16, from bocatownsquare.com): one white bar of five destinations,
+   each a colored square icon, a name and a line under it. */
+.bar {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border: var(--hairline);
+  border-radius: var(--radius-widget);
+  background: var(--background);
+}
+
+.bar li + li {
+  border-left: var(--hairline);
+}
+
+.link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  color: var(--ink);
+  text-decoration: none;
+  min-height: 44px;
+}
+
+.link:hover .name {
+  text-decoration: underline;
+}
+
+.square {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-button);
+  background: var(--square);
+  color: var(--background);
+}
+
+.square svg,
+.round svg {
+  width: 1.375rem;
+  height: 1.375rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.text {
+  display: grid;
+  min-width: 0;
+}
+
+.name {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.sub {
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  color: var(--muted);
+}
+
+/* The directory on the homepage: colored category tiles, then a free-listing invitation. */
+.tiles {
+  list-style: none;
+  margin: 1rem 0 0.75rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.tile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 0.875rem 1rem;
+  border: var(--hairline);
+  border-radius: var(--radius-widget);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.tile .name {
+  font-size: 0.9375rem;
+  text-wrap: balance;
+}
+
+.tile:hover {
+  background: var(--surface);
+}
+
+.round {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--round);
+  background: var(--tint-bg);
+  color: var(--tint-ink);
+}
+
+.add {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1.5px dashed var(--accent);
+  border-radius: var(--radius-widget);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.add strong {
+  font-weight: 600;
+}
+
+.add span {
+  color: var(--muted);
+}
+
+.add .chevron {
+  margin-left: auto;
+}
+
+.plus {
+  width: 1.375rem;
+  height: 1.375rem;
+  flex: none;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+@media (max-width: 63.99rem) {
+  .bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bar li + li {
+    border-left: 0;
+  }
+
+  .tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 599.98px) {
+  /* Phones already have the tab bar and section capsules for this. */
+  .quick {
+    display: none;
+  }
+
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .tile {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+}
