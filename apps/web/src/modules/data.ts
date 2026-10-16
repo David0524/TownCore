@@ -1,5 +1,10 @@
 import { cache } from 'react';
-import { TOPIC_INDEX_MIN_ARTICLES, type WeatherSnapshot } from '@towncore/config';
+import {
+  GAME_RECORD,
+  TOPIC_INDEX_MIN_ARTICLES,
+  type Game,
+  type WeatherSnapshot,
+} from '@towncore/config';
 import {
   activePinIds,
   and,
@@ -477,3 +482,33 @@ export const townForecast = cache(async (townId: string) => {
     .map((m) => ({ name: m[1]!, text: m[2]! }));
   return periods.length ? { periods, url: forecast.url, issuedAt: forecast.occurredAt } : null;
 });
+
+export type GameItem = Game & { id: string; when: Date; url: string | null };
+
+/**
+ * Team games (docs/plans/sports.md) between two dates: schedules and finals from the town's
+ * sports sources, in time order. Team level only, so nothing here names a player.
+ */
+export const townGames = cache(
+  async (townId: string, from: Date, to: Date, limit = 200): Promise<GameItem[]> => {
+    const rows = await db()
+      .select({
+        id: records.id,
+        url: records.url,
+        occurredAt: records.occurredAt,
+        raw: records.raw,
+      })
+      .from(records)
+      .where(
+        and(
+          eq(records.townId, townId),
+          eq(records.type, GAME_RECORD),
+          gte(records.occurredAt, from),
+          lt(records.occurredAt, to),
+        ),
+      )
+      .orderBy(records.occurredAt)
+      .limit(limit);
+    return rows.map((r) => ({ ...(r.raw as Game), id: r.id, url: r.url, when: r.occurredAt! }));
+  },
+);

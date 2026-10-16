@@ -358,6 +358,48 @@ export async function seedTestContent(
         event(2, '[TEST] Sample nature walk', tomorrow),
         event(3, '[TEST] Sample family science night', new Date(tomorrow.getTime() + 3_600_000)),
       ]);
+    // Harbor Point's teams (docs/plans/sports.md): a final from two days ago and two games ahead,
+    // so the Sports page and module have something to show. Fictional schools, team level only.
+    if (town.slug === 'harbor-point') {
+      const game = (n: number, at: Date, g: Record<string, unknown>) => ({
+        sourceId: source!.id,
+        townId: town.id,
+        externalId: `test-game-${n}`,
+        type: 'game',
+        title: `${String(g.away)} at ${String(g.home)}`,
+        url: `https://example.com/test-game-${n}`,
+        occurredAt: at,
+        contentHash: `test-game-${n}`,
+        raw: { level: 'Varsity', venue: null, note: null, local: ['Harbor Point'], ...g },
+      });
+      await tx.insert(records).values([
+        game(1, new Date(Date.now() - 2 * 86_400_000), {
+          sport: 'Football',
+          home: 'Harbor Point',
+          away: 'Gull Rock',
+          homeScore: 21,
+          awayScore: 14,
+          status: 'final',
+        }),
+        game(2, new Date(Date.now() + 2 * 86_400_000), {
+          sport: 'Football',
+          home: 'Cape Lantern',
+          away: 'Harbor Point',
+          homeScore: null,
+          awayScore: null,
+          status: 'scheduled',
+          venue: 'Cape Lantern Stadium',
+        }),
+        game(3, new Date(Date.now() + 3 * 86_400_000), {
+          sport: 'Girls Volleyball',
+          home: 'Harbor Point',
+          away: 'Ferry Lane',
+          homeScore: null,
+          awayScore: null,
+          status: 'scheduled',
+        }),
+      ]);
+    }
   });
   // Each test article gets its visual from the same router as real stories (§11c). Harbor Point
   // has a fictional street grid and a stand-in geocoder, so CI never calls the Census.
