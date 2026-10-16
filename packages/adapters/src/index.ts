@@ -32,7 +32,7 @@ export { civicplusAdapter } from './civicplus';
 export { legistarAdapter, legistarClient } from './legistar';
 export { civicclerkAdapter, civicclerkTenant } from './civicclerk';
 export { fetchSwagitTranscript, swagitVideo, tidyTranscript } from './swagit';
-export { isoDurationSeconds, youtubeAdapter, youtubeChannel } from './youtube';
+export { isoDurationSeconds, titleTime, youtubeAdapter, youtubeChannel } from './youtube';
 export { extractPage, pageAdapter } from './page';
 export { parseIcal, zonedTimeToUtc } from './lib/ical';
 export { flDbprAdapter } from './fl-dbpr';

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  bodyAcronyms,
   matchMeetingVideo,
   meetingBody,
   pickMeetingVideo,
@@ -63,6 +64,32 @@ describe('meeting videos', () => {
     expect(matchMeetingVideo({ at, body: 'City Commission' }, [nextDay], tz)).toBeNull();
   });
 
+  it('takes the video of the same kind when a body meets twice in a day', () => {
+    // The workshop record's time is closer to the regular meeting's video; its kind decides.
+    const at = new Date('2026-10-13T21:00:00Z');
+    const meeting = { at, body: 'City Commission', title: 'Agenda: City Commission: Workshop' };
+    expect(matchMeetingVideo(meeting, [commission, workshop], tz)).toBe(workshop);
+    // A regular meeting never takes a workshop video, even when it's the only one that day.
+    const regular = { at, body: 'City Commission', title: 'Actions: City Commission: Regular' };
+    expect(matchMeetingVideo(regular, [workshop], tz)).toBeNull();
+  });
+
+  it("matches a body's acronym in a video title", () => {
+    expect(bodyAcronyms('Community Redevelopment Agency')).toEqual(['cra']);
+    expect(bodyAcronyms('Site Plan Review and Appearance Board')).toEqual(['sprab', 'spra']);
+    expect(bodyAcronyms('Planning and Zoning Board')).toEqual(['pzb', 'pz']);
+    expect(bodyAcronyms('City Commission')).toEqual([]);
+    const at = new Date('2026-10-13T22:00:00Z');
+    const cra = video('CRA Board Meeting 10-13-2026 6:00 PM', '2026-10-13T22:00:00Z');
+    const pzVideo = video('PZ Board Meeting 10-13-2026 6:00 PM', '2026-10-13T22:00:00Z');
+    expect(
+      matchMeetingVideo({ at, body: 'Community Redevelopment Agency' }, [pzVideo, cra], tz),
+    ).toBe(cra);
+    expect(matchMeetingVideo({ at, body: 'Planning and Zoning Board' }, [cra, pzVideo], tz)).toBe(
+      pzVideo,
+    );
+  });
+
   it('prefers a cited video, then the platform link, then the channel; never a blocked embed', () => {
     expect(pickMeetingVideo([actions], [commission], tz)).toEqual({
       videoId: commission.raw.videoId,
@@ -81,5 +108,82 @@ describe('meeting videos', () => {
     const swagit = { ...actions, raw: { video: 'https://jupiterfl.new.swagit.com/videos/1' } };
     expect(pickMeetingVideo([swagit], [], tz)).toBeNull();
     expect(pickMeetingVideo([{ ...actions, type: 'release' }], [commission], tz)).toBeNull();
+  });
+
+  // Titles and times from Delray Beach's channel and its Legistar calendar (Sept.–Oct. 2026).
+  it("pairs Delray's real titles: acronyms, budget workshops, an upload dated by its title", () => {
+    const sprab = video('SPRAB Meeting 09-23-2026 5:01 PM', '2026-09-23T21:03:04Z');
+    expect(
+      matchMeetingVideo(
+        { at: new Date('2026-09-23T21:01:00Z'), body: 'Site Plan Review and Appearance Board' },
+        [sprab],
+        tz,
+      ),
+    ).toBe(sprab);
+    const cra = video('CRA Meeting 09-24-2026 4:00 PM', '2026-09-24T19:55:11Z');
+    expect(
+      matchMeetingVideo(
+        { at: new Date('2026-09-24T20:00:00Z'), body: 'City Commission' },
+        [cra],
+        tz,
+      ),
+    ).toBeNull();
+    const budget = video(
+      'City Commission Budget Workshop Mtg 09-01-2026 04:00 PM',
+      '2026-09-01T19:55:43Z',
+    );
+    expect(
+      matchMeetingVideo(
+        {
+          at: new Date('2026-09-01T20:00:00Z'),
+          body: 'City Commission',
+          title: 'City Commission: Budget Workshop Meeting',
+        },
+        [budget],
+        tz,
+      ),
+    ).toBe(budget);
+    // Sept. 22: workshop streamed at 2:56 PM; the regular meeting uploaded later, dated 5 PM.
+    const workshopVideo = video(
+      'Commission Workshop Meeting 09-22-2026 3:00 PM',
+      '2026-09-22T18:56:18Z',
+    );
+    const regularVideo = video(
+      'City Commission Regular Meeting 09-22-2026 5:00 PM',
+      '2026-09-22T21:00:00Z',
+    );
+    const regular = {
+      at: new Date('2026-09-22T21:01:00Z'),
+      body: 'City Commission',
+      title: 'City Commission: Final Public Budget Hearing/Regular Meeting',
+    };
+    expect(matchMeetingVideo(regular, [workshopVideo], tz)).toBeNull();
+    expect(matchMeetingVideo(regular, [workshopVideo, regularVideo], tz)).toBe(regularVideo);
+  });
+
+  it('gives a video to one meeting only', () => {
+    // Untitled meetings carry no kind, so time decides.
+    const early = { at: new Date('2026-10-13T19:30:00Z'), body: 'City Commission' };
+    const late = { at: new Date('2026-10-13T21:00:00Z'), body: 'City Commission' };
+    const lateVideo = video('City Commission Meeting 10-13-2026 5:00 PM', '2026-10-13T21:07:21Z');
+    // The one video is closer to the 5 PM meeting, so the 3:30 meeting gets none.
+    expect(matchMeetingVideo(early, [lateVideo], tz, [late])).toBeNull();
+    expect(matchMeetingVideo(late, [lateVideo], tz, [early])).toBe(lateVideo);
+    const earlyVideo = video('City Commission Meeting 10-13-2026 3:30 PM', '2026-10-13T19:28:15Z');
+    expect(matchMeetingVideo(early, [lateVideo, earlyVideo], tz, [late])).toBe(earlyVideo);
+    // Another body's meeting that day doesn't compete.
+    expect(
+      matchMeetingVideo(early, [lateVideo], tz, [{ ...late, body: 'Historic Preservation Board' }]),
+    ).toBe(lateVideo);
+    // pickMeetingVideo takes the town's meetings from the caller.
+    const lateRecord = {
+      type: 'meeting',
+      title: null,
+      occurredAt: late.at,
+      raw: { body: 'City Commission' },
+    };
+    const earlyActions = { ...actions, title: null, occurredAt: early.at };
+    expect(pickMeetingVideo([earlyActions], [lateVideo], tz, [lateRecord])).toBeNull();
+    expect(pickMeetingVideo([earlyActions], [lateVideo], tz)?.videoId).toBe(lateVideo.raw.videoId);
   });
 });
