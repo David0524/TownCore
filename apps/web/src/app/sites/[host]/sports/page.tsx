@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { apDate } from '@towncore/pipeline';
-import { EventCard, type EventCardData } from '@/components/events/EventCard';
+import { EventCard } from '@/components/events/EventCard';
 import styles from '@/components/events/events.module.css';
 import places from '@/components/directory/places.module.css';
 import { LargeTitle } from '@/components/phone/LargeTitle';
