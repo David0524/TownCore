@@ -5,7 +5,7 @@ when a step repeats across towns, automate it.
 
 ## Delray Beach, FL (2026-10-16)
 
-- Readiness is 0.2 a day, below 3 (Rule 7): find more official sources the bot may read, or build the adapter requests, then resume with --source kind=url.
+- Readiness is 0.53 a day, below 3 (Rule 7): find more official sources the bot may read, or build the adapter requests, then resume with --source kind=url.
 - Buy delrayledger.com (Rule 10): `pnpm launch "Delray Beach, FL" --resume --approve-spend`
 - Stripe test prices for this town: `pnpm directory:stripe sync --town delray-beach --execute`
 - Mail domain: SES identities and DNS on Vercel (Rule 10): `pnpm mail:onboard add delrayledger.com --execute --approved`

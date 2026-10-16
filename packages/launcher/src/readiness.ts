@@ -19,8 +19,9 @@ import { classifyV1 } from '@towncore/prompts';
 
 // Launch step 5 (CLAUDE.md §10, Rule 7): ingest the last 30 days of every source into the draft
 // town, then count the real items a day the pipeline would make from them, without writing any:
-//   - each city, police or fire release with enough text is one story; with a model configured it
-//     must also be classified about this town and not Tier 4 (count-only: nothing is written);
+//   - each release, and each meeting's minutes or recorded actions (a recap), with enough text is
+//     one story; with a model configured it must also be classified about this town and not
+//     Tier 4 (count-only: nothing is written);
 //   - meetings, events and each business-filing source make one weekly roundup per week they
 //     have items (the finder's templated roundups, D-M3-6);
 //   - weather and evergreen guides don't count.
@@ -30,7 +31,8 @@ import { classifyV1 } from '@towncore/prompts';
 const MIN_STORY_CHARS = 400;
 /** Most releases classified per launch, to bound model cost. */
 const MAX_CLASSIFIED = 60;
-const STORY_KINDS: SourceKind[] = ['city_news', 'police', 'fire', 'schools'];
+/** Record types written up as individual stories (the story finder's STORY_TYPES). */
+const STORY_TYPES = ['release', 'minutes', 'meeting-actions'];
 const ROUNDUP_KINDS: SourceKind[] = [
   'agenda',
   'events',
@@ -106,57 +108,60 @@ export async function measureReadiness(input: {
         ),
       );
     const kind = source.kind as SourceKind;
+    // Stories: the record types the finder writes up one by one (releases, and meeting minutes
+    // or recorded actions as recaps). Everything else on a roundup source is one roundup a week.
+    const stories = recent.filter(
+      (r) => STORY_TYPES.includes(r.type) && (r.text ?? '').length >= MIN_STORY_CHARS,
+    );
+    const rest = recent.filter((r) => !STORY_TYPES.includes(r.type));
+    const parts: string[] = [];
     let items = 0;
-    let how: string;
-    if (STORY_KINDS.includes(kind)) {
-      const stories = recent.filter(
-        (r) => r.type === 'release' && (r.text ?? '').length >= MIN_STORY_CHARS,
-      );
-      if (!input.llm) {
-        items = stories.length;
-        how = `${stories.length} of ${recent.length} releases have enough text (not classified)`;
-      } else {
-        let kept = 0;
-        let checked = 0;
-        for (const record of stories) {
-          if (classified >= MAX_CLASSIFIED) break;
-          classified++;
-          checked++;
-          try {
-            const { value } = await callModel(input.llm, {
-              job: 'launch.readiness',
-              town: llmTown(town, config),
-              prompt: classifyV1,
-              input: classifyInput(town, config, [{ record, sourceKind: kind }]),
-            });
-            const tier = decideTier({
-              sourceKinds: [kind],
-              beat: value.beat,
-              classification: value,
-              text: `${record.title ?? ''}\n${record.text ?? ''}`,
-            });
-            if (value.about_this_town && tier.tier < 4) kept++;
-          } catch (error) {
-            if (error instanceof SpendCapReached) {
-              mode = 'estimate';
-              break;
-            }
-            if (error instanceof LlmOutputError) continue;
-            throw error;
+    if (stories.length && !input.llm) {
+      items += stories.length;
+      parts.push(`${stories.length} stories with enough text (not classified)`);
+    } else if (stories.length && input.llm) {
+      let kept = 0;
+      let checked = 0;
+      for (const record of stories) {
+        if (classified >= MAX_CLASSIFIED) break;
+        classified++;
+        checked++;
+        try {
+          const { value } = await callModel(input.llm, {
+            job: 'launch.readiness',
+            town: llmTown(town, config),
+            prompt: classifyV1,
+            input: classifyInput(town, config, [{ record, sourceKind: kind }]),
+          });
+          const tier = decideTier({
+            sourceKinds: [kind],
+            beat: value.beat,
+            classification: value,
+            text: `${record.title ?? ''}\n${record.text ?? ''}`,
+          });
+          if (value.about_this_town && tier.tier < 4) kept++;
+        } catch (error) {
+          if (error instanceof SpendCapReached) {
+            mode = 'estimate';
+            break;
           }
+          if (error instanceof LlmOutputError) continue;
+          throw error;
         }
-        // Releases past the classification limit count at the rate of the ones checked.
-        const rate = checked ? kept / checked : 0;
-        items = Math.round(kept + rate * (stories.length - checked));
-        how = `${kept} of ${checked} classified releases are about this town${stories.length > checked ? `, ${stories.length - checked} more counted at that rate` : ''}`;
       }
-    } else if (ROUNDUP_KINDS.includes(kind)) {
-      const weeks = new Set(recent.map((r) => weekKey(r.occurredAt!)));
-      items = weeks.size;
-      how = `${recent.length} records in ${weeks.size} weeks: one weekly roundup a week`;
-    } else {
-      how = `${kind} sources don't count toward readiness`;
+      // Stories past the classification limit count at the rate of the ones checked.
+      const rate = checked ? kept / checked : 0;
+      items += Math.round(kept + rate * (stories.length - checked));
+      parts.push(
+        `${kept} of ${checked} classified stories are about this town${stories.length > checked ? `, ${stories.length - checked} more counted at that rate` : ''}`,
+      );
     }
+    if (ROUNDUP_KINDS.includes(kind) && rest.length) {
+      const weeks = new Set(rest.map((r) => weekKey(r.occurredAt!)));
+      items += weeks.size;
+      parts.push(`${rest.length} records in ${weeks.size} weeks: one weekly roundup a week`);
+    }
+    const how = parts.join('; ') || `${recent.length} records, none that count`;
     bySource.push({
       sourceId: source.id,
       kind,

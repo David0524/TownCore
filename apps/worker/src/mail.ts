@@ -1,3 +1,4 @@
+import { opsConditions } from '@towncore/pipeline';
 import { loadEnv } from '@towncore/config';
 import { eq, isNotNull, loadRoutingTable, mailDomains, or, type Db } from '@towncore/db';
 import {
@@ -214,9 +215,10 @@ export async function runBulkHealth(
       logger.error({ err: error }, 'SES GetAccount failed');
     }
   }
-  const alerts = await runAlerts(db, ops.alertMail, now);
-  for (const c of alerts.opened) logger.warn(c, 'mail alert opened');
-  for (const key of alerts.resolved) logger.info({ key }, 'mail alert resolved');
+  // Operations conditions (M8) share the alert table and emails with the mail ones.
+  const alerts = await runAlerts(db, ops.alertMail, now, await opsConditions(db, now));
+  for (const c of alerts.opened) logger.warn(c, 'alert opened');
+  for (const key of alerts.resolved) logger.info({ key }, 'alert resolved');
 }
 
 /**

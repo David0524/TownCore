@@ -10,6 +10,7 @@ export {
   requestKey,
   resolveProviderName,
   SpendCapReached,
+  networkSpendSince,
   todaysUsage,
   type CallResult,
   type Effort,
@@ -108,3 +109,14 @@ export {
   type ExtractReport,
 } from './entities';
 export { createGuideCandidates, pagesHash, writeGuide, type GuideOutcome } from './guides';
+export {
+  COST_MIN_STORIES,
+  COST_RISE,
+  HEARTBEAT_STALE_MS,
+  networkSpendToday,
+  opsConditions,
+  REVIEW_WAIT_HOURS,
+  townHealth,
+  type OpsCondition,
+  type TownHealth,
+} from './ops';

@@ -2,18 +2,25 @@
 //   pnpm evals          replays recorded model responses (offline; CI). No recording: skips.
 //   pnpm evals --live   calls the configured model provider and records its responses.
 // Runs against a throwaway test database; never touches the dev or production data.
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { civicplusAdapter, Fetcher, replayFetch, type SourceConfig } from '@towncore/adapters';
 import { loadTowns } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
 import { getTownBySlug, syncTowns } from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
-import { loadEvalCases, runEvals } from '../src/evals';
+import { evalRegressions, loadEvalCases, runEvals, type EvalSummary } from '../src/evals';
 import { providerFromEnv, recordingProvider, replayProvider, type Llm } from '../src/llm';
 
 loadDotEnv();
 const live = process.argv.includes('--live');
+// A live run that's worse than the committed baseline is saved only with a stated reason (D-M8-5).
+const acceptAt = process.argv.indexOf('--accept-regression');
+const acceptReason = acceptAt >= 0 ? process.argv[acceptAt + 1]?.trim() : undefined;
+if (acceptAt >= 0 && !acceptReason) {
+  console.error('--accept-regression needs a reason: --accept-regression "why this is acceptable"');
+  process.exit(1);
+}
 const root = (p: string) => fileURLToPath(new URL(`../../../${p}`, import.meta.url));
 const evalsDir = root('packages/prompts/evals');
 const recordedDir = `${evalsDir}/recorded`;
@@ -95,12 +102,30 @@ try {
       `verbatim quotes ${(summary.verbatimQuoteRate * 100).toFixed(0)}%`,
   );
 
+  const baselinePath = `${evalsDir}/last-report.json`;
+  const baseline = existsSync(baselinePath)
+    ? (JSON.parse(readFileSync(baselinePath, 'utf8')) as EvalSummary)
+    : null;
+  const regressions = baseline ? evalRegressions(baseline, summary) : [];
+  for (const r of regressions) console.log(`REGRESSION: ${r}`);
   if (live && save) {
-    mkdirSync(recordedDir, { recursive: true });
-    save(`${recordedDir}/${llm.providerName}.json`);
-    writeFileSync(`${evalsDir}/last-report.json`, `${JSON.stringify(summary, null, 2)}\n`);
-    console.log(`Recorded responses to prompts/evals/recorded/${llm.providerName}.json`);
+    if (regressions.length && !acceptReason) {
+      console.error(
+        '\nNot saved: this run is worse than the committed baseline (CLAUDE.md §12). Fix the prompt, or re-run with --accept-regression "<reason>".',
+      );
+      process.exitCode = 1;
+    } else {
+      mkdirSync(recordedDir, { recursive: true });
+      save(`${recordedDir}/${llm.providerName}.json`);
+      const report = acceptReason
+        ? { ...summary, acceptedRegression: { reason: acceptReason, regressions } }
+        : summary;
+      writeFileSync(baselinePath, `${JSON.stringify(report, null, 2)}\n`);
+      console.log(`Recorded responses to prompts/evals/recorded/${llm.providerName}.json`);
+    }
   }
+  // A replay must match its baseline exactly: a drift means the recording and report disagree.
+  if (!live && regressions.length) process.exitCode = 1;
   // Safety failures always fail. Replays are deterministic, so any failure fails too.
   if (summary.safetyFailures > 0 || (!live && summary.passed < summary.cases)) process.exitCode = 1;
 } finally {

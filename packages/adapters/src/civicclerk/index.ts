@@ -284,6 +284,23 @@ export const civicclerkAdapter: SourceAdapter = {
 
   fetch: (source, since, ctx) => fetchEvents(source, since, ctx),
 
+  // Launcher discovery (M7): a {tenant}.portal.civicclerk.com page, or a town page linking to
+  // one, gives that tenant's meetings; the API is health-checked before it's used.
+  async propose(url, html, kind) {
+    if (kind !== 'agenda') return [];
+    const tenant =
+      civicclerkTenant(url) ??
+      html.match(/https?:\/\/([a-z0-9-]+)\.portal\.civicclerk\.com/i)?.[1]?.toLowerCase();
+    if (!tenant) return [];
+    return [
+      {
+        kind,
+        url: `https://${tenant}.portal.civicclerk.com/`,
+        label: `CivicClerk meetings (${tenant}.portal.civicclerk.com, public API)`,
+      },
+    ];
+  },
+
   async healthCheck(source, ctx) {
     try {
       const { tenant } = options(source);

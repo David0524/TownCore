@@ -37,4 +37,8 @@ sources:
     platform: fl-sunbiz
     options:
       city: DELRAY BEACH
+  # Legistar meetings (delraybeach.legistar.com, public Web API) (verified by launch step 3)
+  - kind: agenda
+    platform: legistar
+    url: https://delraybeach.legistar.com/
 pricing: { sponsored_slot_usd: 199, enhanced_usd: 39 } # Boca's prices until the owner sets this town's

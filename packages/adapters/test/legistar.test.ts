@@ -150,3 +150,31 @@ describe('legistar', () => {
     });
   });
 });
+
+describe('legistar discovery (launcher, M7)', () => {
+  it('proposes the client’s meetings from its own page or a city page linking to it', async () => {
+    const { legistarAdapter } = await import('../src/legistar');
+    const ctx = { fetcher: new Fetcher(), now: new Date('2026-10-16T12:00:00Z') };
+    expect(
+      await legistarAdapter.propose!(
+        'https://delraybeach.legistar.com/Calendar.aspx',
+        '',
+        'agenda',
+        ctx,
+      ),
+    ).toEqual([
+      {
+        kind: 'agenda',
+        url: 'https://delraybeach.legistar.com/',
+        label: 'Legistar meetings (delraybeach.legistar.com, public Web API)',
+      },
+    ]);
+    const city = '<a href="https://boyntonbeach.legistar.com/Calendar.aspx">Agendas</a>';
+    expect(
+      (await legistarAdapter.propose!('https://www.example.gov/', city, 'agenda', ctx))[0]!.url,
+    ).toBe('https://boyntonbeach.legistar.com/');
+    expect(
+      await legistarAdapter.propose!('https://delraybeach.legistar.com/', '', 'city_news', ctx),
+    ).toEqual([]);
+  });
+});

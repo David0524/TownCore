@@ -334,6 +334,23 @@ export const legistarAdapter: SourceAdapter = {
 
   fetch: (source, _since, ctx) => fetchEvents(source, ctx),
 
+  // Launcher discovery (M7): a {client}.legistar.com page, or a city page linking to one, gives
+  // that client's meetings; the API is health-checked before it's used.
+  async propose(url, html, kind) {
+    if (kind !== 'agenda') return [];
+    const client =
+      legistarClient(url) ??
+      html.match(/https?:\/\/([a-z0-9-]+)\.legistar\.com\//i)?.[1]?.toLowerCase();
+    if (!client || client === 'webapi') return [];
+    return [
+      {
+        kind,
+        url: `https://${client}.legistar.com/`,
+        label: `Legistar meetings (${client}.legistar.com, public Web API)`,
+      },
+    ];
+  },
+
   async healthCheck(source, ctx) {
     try {
       const { client } = options(source);
