@@ -201,6 +201,25 @@ export class Fetcher {
     return { status: response.status, body: (text ? JSON.parse(text) : null) as T };
   }
 
+  /**
+   * A read-only query some platforms only answer by POST (eScribe's meeting calendar), owner
+   * decision 2026-10-16 (a): allowed where robots.txt allows the path, with the same checks as a
+   * page (never-scrape list, robots.txt, Crawl-delay, Visit-time). Never for anything that
+   * changes state; never redirected.
+   */
+  async queryJson<T>(url: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {
+    const target = new URL(url);
+    await this.checkPolicy(target, url);
+    const response = await this.request(
+      target,
+      { accept: 'application/json', 'content-type': 'application/json', ...headers },
+      this.retries,
+      { method: 'POST', body: JSON.stringify(body) },
+    );
+    if (!response.ok) throw new Error(`POST ${url} failed: HTTP ${response.status}`);
+    return (await response.json()) as T;
+  }
+
   /** RFC 9309: 4xx robots.txt → no restrictions; 5xx or unreachable → treat as fully disallowed. */
   async allowedByRobots(target: URL): Promise<boolean> {
     const origin = target.origin;
