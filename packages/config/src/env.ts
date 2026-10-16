@@ -79,6 +79,8 @@ export const envSchema = z.object({
   MAIL_TOKEN_SECRET: optional(z.string().min(32)),
   MAIL_POSTAL_ADDRESS: optional(z.string()),
   UNSPLASH_ACCESS_KEY: optional(z.string()),
+  /** YouTube Data API v3 key: finds town meeting videos to embed (packages/adapters/src/youtube). */
+  YOUTUBE_API_KEY: optional(z.string()),
   DEV_TOWN_SLUG: optional(z.string().regex(/^[a-z0-9-]+$/)),
 });
 

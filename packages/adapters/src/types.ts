@@ -36,6 +36,11 @@ export interface SourceAdapter {
   fetch(source: SourceConfig, since: Date | null, ctx: AdapterContext): Promise<RawRecord[]>;
   healthCheck(source: SourceConfig, ctx: AdapterContext): Promise<{ ok: boolean; detail?: string }>;
   /**
+   * Environment variables the adapter can't run without (an API key). Ingest skips its sources
+   * while one is missing, rather than failing them every run (missingEnv in registry.ts).
+   */
+  requiresEnv?: readonly string[];
+  /**
    * Launcher discovery (M7): source settings for a page this adapter runs, for the kind wanted.
    * Each proposal is then health-checked live before it enters a town's config.
    */

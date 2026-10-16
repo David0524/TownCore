@@ -1,0 +1,37 @@
+{
+  "recordedAt": "hand-written 2026-10-16 from the YouTube Data API v3 reference; re-record with fixtures:record once YOUTUBE_API_KEY is set",
+  "exchanges": [
+    {
+      "url": "https://www.googleapis.com/robots.txt",
+      "status": 404,
+      "headers": {
+        "content-type": "text/html"
+      },
+      "body": ""
+    },
+    {
+      "url": "https://www.googleapis.com/youtube/v3/channels?part=contentDetails%2Csnippet&forHandle=%40cityofdelraybeachfl",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=UTF-8"
+      },
+      "body": "{\"kind\": \"youtube#channelListResponse\", \"items\": [{\"kind\": \"youtube#channel\", \"id\": \"UCfixtureChannel0000000000\", \"snippet\": {\"title\": \"City of Delray Beach\"}, \"contentDetails\": {\"relatedPlaylists\": {\"likes\": \"\", \"uploads\": \"UUfixtureChannel0000000000\"}}}]}"
+    },
+    {
+      "url": "https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=UUfixtureChannel0000000000&maxResults=50",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=UTF-8"
+      },
+      "body": "{\"kind\": \"youtube#playlistItemListResponse\", \"items\": [{\"contentDetails\": {\"videoId\": \"tcFixture001\", \"videoPublishedAt\": \"2026-10-14T01:12:00Z\"}}, {\"contentDetails\": {\"videoId\": \"tcFixture002\", \"videoPublishedAt\": \"2026-10-09T15:00:00Z\"}}, {\"contentDetails\": {\"videoId\": \"tcFixture003\", \"videoPublishedAt\": \"2026-10-07T00:30:00Z\"}}, {\"contentDetails\": {\"videoId\": \"tcFixtureOld\", \"videoPublishedAt\": \"2026-06-01T00:00:00Z\"}}]}"
+    },
+    {
+      "url": "https://www.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails%2CliveStreamingDetails%2Cstatus&id=tcFixture001%2CtcFixture002%2CtcFixture003",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=UTF-8"
+      },
+      "body": "{\"kind\": \"youtube#videoListResponse\", \"items\": [{\"id\": \"tcFixture001\", \"snippet\": {\"title\": \"City Commission Regular Meeting - October 13, 2026\", \"publishedAt\": \"2026-10-14T01:12:00Z\", \"channelId\": \"UCfixtureChannel0000000000\", \"channelTitle\": \"City of Delray Beach\", \"liveBroadcastContent\": \"none\"}, \"contentDetails\": {\"duration\": \"PT3H12M40S\"}, \"liveStreamingDetails\": {\"actualStartTime\": \"2026-10-13T21:02:11Z\", \"actualEndTime\": \"2026-10-14T00:14:51Z\"}, \"status\": {\"privacyStatus\": \"public\", \"embeddable\": true}}, {\"id\": \"tcFixture002\", \"snippet\": {\"title\": \"Delray Beach Pumpkin Patch 2026\", \"publishedAt\": \"2026-10-09T15:00:00Z\", \"channelId\": \"UCfixtureChannel0000000000\", \"channelTitle\": \"City of Delray Beach\", \"liveBroadcastContent\": \"none\"}, \"contentDetails\": {\"duration\": \"PT1M30S\"}, \"status\": {\"privacyStatus\": \"public\", \"embeddable\": true}}, {\"id\": \"tcFixture003\", \"snippet\": {\"title\": \"City Commission Regular Meeting - October 6, 2026\", \"publishedAt\": \"2026-10-07T00:30:00Z\", \"channelId\": \"UCfixtureChannel0000000000\", \"channelTitle\": \"City of Delray Beach\", \"liveBroadcastContent\": \"none\"}, \"contentDetails\": {\"duration\": \"PT2H5M\"}, \"liveStreamingDetails\": {\"actualStartTime\": \"2026-10-06T21:00:30Z\"}, \"status\": {\"privacyStatus\": \"public\", \"embeddable\": false}}]}"
+    }
+  ]
+}

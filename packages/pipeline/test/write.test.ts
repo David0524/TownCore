@@ -176,6 +176,38 @@ describe('writeCandidate: stories', () => {
     expect(c).toMatchObject({ status: 'written', articleId: a.id });
   });
 
+  it('sends a recap that used a machine transcript to review, even when it passes', async () => {
+    const { candidate, recordId } = await storyCandidate();
+    const [transcript] = await db
+      .insert(records)
+      .values({
+        sourceId: sourceIds.city_news!,
+        townId,
+        externalId: `transcript-${Math.random()}`,
+        type: 'transcript',
+        title: 'Transcript: Town Council Meeting',
+        text: 'Machine-generated captions. THE COUNCIL VOTED 4-1.',
+        contentHash: 't',
+        occurredAt: NOW,
+      })
+      .returning();
+    await db
+      .update(storyCandidates)
+      .set({ recordIds: [recordId, transcript!.id] })
+      .where(eq(storyCandidates.id, candidate.id));
+    const { llm, inputs } = scripted({
+      writer: [draft({ source_record_ids: [recordId] })],
+      factcheck: [goodCheck(recordId)],
+    });
+    const outcome = await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 });
+    expect(outcome).toMatchObject({ status: 'in_review', reason: 'transcript' });
+    expect((await article((outcome as { articleId: string }).articleId)).reviewReason).toBe(
+      'transcript',
+    );
+    // The writer saw the transcript alongside the release.
+    expect(inputs.find((i) => i.prompt === 'writer')!.input).toContain('THE COUNCIL VOTED 4-1.');
+  });
+
   it('samples 10% of passing Tier 2 stories into review before publishing', async () => {
     const { candidate, recordId } = await storyCandidate();
     const { llm } = scripted({

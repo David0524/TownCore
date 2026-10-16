@@ -7,6 +7,7 @@ import { legistarAdapter } from './legistar';
 import { nwsAdapter } from './nws';
 import { pageAdapter } from './page';
 import { registerAdapter, getAdapter } from './registry';
+import { youtubeAdapter } from './youtube';
 
 for (const adapter of [
   nwsAdapter,
@@ -16,6 +17,7 @@ for (const adapter of [
   flDbprAdapter,
   flSunbizAdapter,
   pageAdapter,
+  youtubeAdapter,
 ]) {
   if (!getAdapter(adapter.platform)) registerAdapter(adapter);
 }

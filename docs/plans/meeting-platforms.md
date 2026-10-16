@@ -1,6 +1,6 @@
 # Meeting platforms: survey and build order
 
-Agendas, minutes and meeting video beyond CivicPlus (owner request, 2026-10-16). This is the survey, checked live against Rule 8 with our bot's User-Agent, and the order we build adapters in (§9, launcher step 4). Status: **Legistar and CivicClerk built** (`packages/adapters/src/legistar`, `packages/adapters/src/civicclerk`); the rest in the order of §4 below.
+Agendas, minutes and meeting video beyond CivicPlus (owner request, 2026-10-16). This is the survey, checked live against Rule 8 with our bot's User-Agent, and the order we build adapters in (§9, launcher step 4). Status: **Legistar and CivicClerk built** (`packages/adapters/src/legistar`, `packages/adapters/src/civicclerk`); **Swagit transcripts** fetched through CivicClerk's video links (`packages/adapters/src/swagit`; owner approved 2026-10-16); the rest in the order of §4 below.
 
 ---
 

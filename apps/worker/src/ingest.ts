@@ -4,6 +4,7 @@ import {
   ingestSource,
   isDue,
   listIngestableSources,
+  missingEnv,
   type IngestResult,
 } from '@towncore/adapters';
 import type { SourceKind } from '@towncore/config';
@@ -25,6 +26,14 @@ export async function enqueueDueSources(db: Db, boss: PgBoss, logger: Logger, no
       logger.warn(
         { sourceId: source.id, adapter: source.adapter },
         'no adapter registered; skipping',
+      );
+      continue;
+    }
+    const missing = missingEnv(getAdapter(source.adapter)!);
+    if (missing.length > 0) {
+      logger.info(
+        { sourceId: source.id, missing },
+        'source needs an API key that is not set; skipping',
       );
       continue;
     }

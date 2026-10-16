@@ -13,6 +13,7 @@ import {
 import { ViewBeacon } from '@/components/Beacon';
 import { RelatedBusinesses } from '@/components/directory/RelatedBusinesses';
 import { BeatLabel } from '@/components/news/BeatLabel';
+import { MeetingVideo } from '@/components/news/MeetingVideo';
 import { ArticleVisual } from '@/components/visuals/ArticleVisual';
 import { Prose } from '@/components/Prose';
 import { TownGrid } from '@/layout/TownGrid';
@@ -27,6 +28,7 @@ import {
   guideLastChecked,
   rankedBeatArticles,
   roundupFigure,
+  storyMeetingVideo,
   storyTopics,
 } from '@/modules/data';
 import { relatedArticleIds } from '@towncore/pipeline';
@@ -114,6 +116,7 @@ export async function ArticleView({
       guide ? listPublishedGuides(db(), town.id) : [],
     ]);
   const otherGuides = guides.filter((g) => g.id !== article.id).slice(0, 6);
+  const video = guide ? null : await storyMeetingVideo(town.id, town.timezone, sourceRecords);
   // Test fixtures never appear beside real stories.
   const fixture = (a: { slug: string }) =>
     a.slug.startsWith('test-') && !article.slug.startsWith('test-');
@@ -216,6 +219,8 @@ export async function ArticleView({
             </Fragment>
           ))}
         </div>
+
+        {video ? <MeetingVideo {...video} /> : null}
 
         {REAL_ESTATE_BEATS.has(article.beat) ? (
           <Slot town={town} name="article.realestate" />

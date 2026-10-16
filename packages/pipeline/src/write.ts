@@ -251,7 +251,14 @@ export async function writeCandidate(
     factcheck: report
       ? { method: 'model+code', ...report }
       : { method: 'model+code', decision: 'review', error: 'fact-check failed to run' },
-    forceReview: !report ? 'model_error' : report.decision !== 'pass' ? 'factcheck' : undefined,
+    forceReview: !report
+      ? 'model_error'
+      : report.decision !== 'pass'
+        ? 'factcheck'
+        : // Machine captions can misspell names, so a person checks any story built on one.
+          rows.some((r) => r.record.type === 'transcript')
+          ? 'transcript'
+          : undefined,
     promptVersions: versions,
     now,
     random,
@@ -288,7 +295,7 @@ async function saveArticle(
     tier: Tier;
     tierReasons: string[];
     factcheck: Record<string, unknown>;
-    forceReview?: 'factcheck' | 'model_error';
+    forceReview?: 'factcheck' | 'model_error' | 'transcript';
     promptVersions: string[];
     now: Date;
     random: () => number;
