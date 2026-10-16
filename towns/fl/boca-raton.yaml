@@ -48,10 +48,15 @@ sources:
     options: { city: BOCA RATON }
   # Verified 2026-10-15: NWS Miami zone FLZ168, Coastal Palm Beach County (names Boca Raton).
   # The point is verified too: api.weather.gov/points names it "Boca Raton, FL" (grid MFL 111,77).
+  # Beach tiles (D-M4b-3, sources approved 2026-10-16, verified live): the NWS Miami surf zone
+  # forecast's FLZ168 segment, NOAA CO-OPS station 8722670 Lake Worth Pier (the ocean station the
+  # NWS surf forecast itself uses; the Boca Raton station is in the lagoon), and the EPA UV index
+  # for ZIP 33432.
   - kind: weather
     platform: nws
     zone: FLZ168
     point: '26.3587,-80.0831'
+    beach: { surf_office: MFL, tide_station: '8722670', uv_zip: '33432' }
 pricing:
   sponsored_slot_usd: 199
   enhanced_usd: 39

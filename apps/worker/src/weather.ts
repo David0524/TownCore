@@ -1,4 +1,10 @@
-import { fetchWeather, type Fetcher } from '@towncore/adapters';
+import {
+  beachConfig,
+  fetchBeach,
+  fetchWeather,
+  type BeachConfig,
+  type Fetcher,
+} from '@towncore/adapters';
 import { and, eq, ne, saveTownWeather, sources, towns, type Db } from '@towncore/db';
 import type { Logger } from 'pino';
 
@@ -8,15 +14,18 @@ import type { Logger } from 'pino';
 /** Towns that aren't paused and have an NWS source with a forecast point. */
 export async function weatherTargets(
   db: Db,
-): Promise<Array<{ townId: string; point: string; zone: string }>> {
+): Promise<Array<{ townId: string; point: string; zone: string; beach: BeachConfig | null }>> {
   const rows = await db
     .select({ townId: sources.townId, config: sources.config })
     .from(sources)
     .innerJoin(towns, eq(sources.townId, towns.id))
     .where(and(eq(sources.platform, 'nws'), ne(towns.status, 'paused')));
   return rows.flatMap(({ townId, config }) => {
-    const { point, zone } = (config ?? {}) as { point?: unknown; zone?: unknown };
-    return typeof point === 'string' && typeof zone === 'string' ? [{ townId, point, zone }] : [];
+    const all = (config ?? {}) as Record<string, unknown>;
+    const { point, zone } = all;
+    return typeof point === 'string' && typeof zone === 'string'
+      ? [{ townId, point, zone, beach: beachConfig(all) }]
+      : [];
   });
 }
 
@@ -32,6 +41,8 @@ export async function refreshWeather(
   for (const target of await weatherTargets(db)) {
     try {
       const snapshot = await fetchWeather(fetcher, target, now);
+      // Beach parts fail on their own; the weather tile never waits on them.
+      if (target.beach) snapshot.beach = await fetchBeach(fetcher, target.beach, now);
       await saveTownWeather(db, target.townId, { snapshot }, now);
       ok++;
     } catch (error) {

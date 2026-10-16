@@ -288,3 +288,46 @@ a.lineText:hover {
     border-top-color: var(--accent-text);
   }
 }
+
+/* Beach tiles (D-M4b-3): small tiles, two across. */
+.beach {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.beachGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.beachTile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-tile);
+  background: var(--surface);
+}
+
+.beachNote,
+.tideLine {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.tideLine {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.beachSources {
+  margin: 0;
+}
+
+@media (max-width: 599.98px) {
+  .beachTile {
+    border-radius: var(--radius-widget);
+    background: var(--ios-grouped);
+  }
+}

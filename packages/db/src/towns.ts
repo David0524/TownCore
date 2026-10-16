@@ -57,6 +57,7 @@ export async function syncTowns(db: Db, loaded: LoadedTown[]): Promise<SyncTowns
             timezone: config.timezone,
             ...(source.zone ? { zone: source.zone } : {}),
             ...(source.point ? { point: source.point } : {}),
+            ...(source.beach ?? {}),
             ...(source.options ?? {}),
           },
         };
