@@ -1,0 +1,27 @@
+{
+  "palette": {
+    "ink": "#141710",
+    "accent": "#45600F",
+    "accentText": "#FFFFFF",
+    "tint": "#EEF5E6",
+    "surface": "#F4F6F2",
+    "background": "#FFFFFF"
+  },
+  "family": "community",
+  "type": "bricolage-figtree",
+  "masthead": "left-motif",
+  "layout": {
+    "header": "tinted-bar",
+    "nav": "beat-tabs",
+    "grid": "main-right-rail",
+    "home": ["beat-sections", "essentials", "events", "directory-featured", "documents-posted"],
+    "homeTop": ["category-buttons", "briefing-column", "newsletter-cta", "today-bento"],
+    "homeRail": ["coming-up"],
+    "article": "classic-rail",
+    "directory": "search-first",
+    "footer": "community"
+  },
+  "corners": "round",
+  "motif": "sailboat",
+  "identityNotes": "Generated without a model for Delray Beach, FL: identity research is still to do (see the launch report)."
+}

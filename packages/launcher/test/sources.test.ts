@@ -24,6 +24,7 @@ import {
   withSources,
   type DiscoverDetail,
   type ReadinessDetail,
+  type SeedDetail,
   type ResolvedTown,
 } from '../src';
 
@@ -180,6 +181,28 @@ function fakeModel(): LlmProvider & { calls: LlmRequest[] } {
           webSearches: 4,
         };
       }
+      if (request.system.includes('You design the look')) {
+        return {
+          text: JSON.stringify({
+            identityNotes: 'A harbor town of oaks, squares and brick warehouses on the river.',
+            family: 'heritage',
+            accent: '#8A3324',
+            secondary: null,
+            motif: 'oak',
+            masthead: 'ruled-nameplate',
+            tagline: 'News from the squares',
+            header: 'nameplate-double-rule',
+            grid: 'single-column',
+            article: 'wide-reading',
+            directory: 'category-grid',
+            footer: 'minimal',
+            corners: 'square',
+          }),
+          stop: 'end',
+          model: 'claude-opus-5-5',
+          usage,
+        };
+      }
       const elsewhere = /Title: Elsewhere/.test(request.input);
       return {
         text: JSON.stringify({
@@ -301,12 +324,14 @@ describe('steps 3–5 in a launch', () => {
   let drop: () => Promise<void>;
   const launchDir = mkdtempSync(join(tmpdir(), 'src-launch-'));
   const townsDir = mkdtempSync(join(tmpdir(), 'src-towns-'));
+  const frictionLog = join(mkdtempSync(join(tmpdir(), 'src-friction-')), 'launch-friction.md');
   const web = fakeWeb();
   const model = fakeModel();
   const deps = () => ({
     db,
     launchDir,
     townsDir,
+    frictionLog,
     now: () => NOW,
     resolve: async () => TOWN,
     fetcher: web.fetcher,
@@ -391,24 +416,75 @@ describe('steps 3–5 in a launch', () => {
     ]);
     const [scored] = await db.select().from(towns).where(eq(towns.slug, 'harbor-city'));
     expect(scored!.readinessScore).toBe(1.3);
+    // The stopped launch still has a report: why it stopped, readiness by source, the to-dos.
+    const partial = readFileSync(join(launchDir, 'harbor-city', 'launch-report.md'), 'utf8');
+    expect(partial).toContain('**The launch stopped:** 5. Readiness: 1.3 real items a day');
+    expect(partial).toContain('| city_news (civicplus) | ok |');
+    expect(partial).toContain('## Theme\n\nNot run yet.');
+    expect(partial).toMatch(/- \[ \] Readiness is 1\.3 a day, below 3 \(Rule 7\)/);
+    expect(partial).toContain(
+      "can't be read (robots.txt, or the site refused us): blocked.example.gov, cdn-denied.example.gov",
+    );
     // Records were ingested, but nothing was written: readiness only counts.
     expect((await db.select().from(records)).length).toBeGreaterThan(40);
     expect(await db.select().from(articles)).toHaveLength(0);
   });
 
-  it('re-runs discovery for a new --source and passes', async () => {
+  it('re-runs discovery for a new --source, passes, and finishes with a report', async () => {
     const run = await runLaunch(deps(), { town, resume: true, sources: [`police=${POLICE}/Home`] });
     const measured = run.steps.find((s) => s.step === 'readiness')!.detail as ReadinessDetail;
     // The police site has 60 releases (54 about the town): 93 items, 3.1 a day.
     expect(measured).toMatchObject({ itemsPerDay: 3.1, passed: true });
-    expect(run.launch.stoppedReason).toMatch(/Seed content isn't built yet/);
+    // Steps 6–8 ran: seeded through the normal pipeline, themed, provisioned (dry run), reported.
+    expect(run.launch.status).toBe('ready');
+    expect(run.steps.every((s) => s.status === 'done')).toBe(true);
+    const themeFile = join(townsDir, 'ga', 'harbor-city.theme.json');
+    // The model asked for heritage, but 3.1 items a day is under 5: community, briefing-led.
+    expect(JSON.parse(readFileSync(themeFile, 'utf8'))).toMatchObject({
+      family: 'community',
+      motif: 'oak',
+      masthead: 'ruled-nameplate',
+      layout: { header: 'nameplate-double-rule', grid: 'single-column' },
+    });
+    const [synced] = await db.select().from(towns).where(eq(towns.slug, 'harbor-city'));
+    expect(synced!.theme).toMatchObject({ family: 'community' });
+    expect(synced!.status).toBe('draft');
+    // Seeding ran the story finder on the town's last week; this fake model can't write drafts,
+    // so its accepted stories were skipped by the writer (a real model writes them).
+    const seed = run.steps.find((s) => s.step === 'seed')!.detail as SeedDetail;
+    expect(seed.finder.candidates).toBeGreaterThan(0);
+    expect(seed.directory).toEqual({
+      skipped: 'No state license adapter for GA yet; the directory starts empty.',
+    });
+    const report = readFileSync(join(launchDir, 'harbor-city', 'launch-report.md'), 'utf8');
+    expect(report).toContain('# Launch report: Harbor City Town Square (Harbor City, GA)');
+    // Screenshots weren't taken (no --site), so the report isn't passing yet and says why.
+    expect(report).toContain('**Not passing yet:**');
+    expect(report).toContain('| Every page type renders | Not run |');
+    expect(report).toContain(
+      '| Readiness (Rule 7) | Pass | 3.1 real items a day; 3 needed (classified). |',
+    );
+    expect(report).toMatch(/Family \*\*community\*\*, brand color #[0-9A-F]{6}, motif oak/);
+    expect(report).toContain(
+      '3.1 items a day is under 5: the briefing-led community family is used',
+    );
+    expect(report).toContain('pnpm mail:onboard add harborcitytownsquare.com --execute --approved');
+    expect(readFileSync(frictionLog, 'utf8')).toMatch(
+      /## Harbor City, GA \(2026-10-16\)\n\n- Buy harborcitytownsquare\.com/,
+    );
     const config = parseTownConfig(readFileSync(join(townsDir, 'ga', 'harbor-city.yaml'), 'utf8'));
     expect(config.sources.filter((s) => s.kind === 'police')).toHaveLength(1);
     expect(await db.select().from(sources)).toHaveLength(4);
     // Every model call was logged against the draft town as launch work, web searches priced.
     const usage = await db.select().from(aiUsage);
     expect(new Set(usage.map((u) => u.job))).toEqual(
-      new Set(['launch.discover', 'launch.readiness']),
+      new Set([
+        'launch.discover',
+        'launch.readiness',
+        'story-finder.classify',
+        'writer',
+        'launch.theme',
+      ]),
     );
     const discover = usage.filter((u) => u.job === 'launch.discover');
     expect(discover).toHaveLength(2);

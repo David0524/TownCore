@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./candidates": "./src/candidates.ts"
+    "./candidates": "./src/candidates.ts",
+    "./golive": "./src/golive.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -18,6 +19,7 @@
     "@towncore/brand": "workspace:*",
     "@towncore/config": "workspace:*",
     "@towncore/db": "workspace:*",
+    "@towncore/directory": "workspace:*",
     "@towncore/pipeline": "workspace:*",
     "@towncore/prompts": "workspace:*",
     "fflate": "^0.8.3",

@@ -317,6 +317,9 @@ importers:
       '@towncore/db':
         specifier: workspace:*
         version: link:../db
+      '@towncore/directory':
+        specifier: workspace:*
+        version: link:../directory
       '@towncore/pipeline':
         specifier: workspace:*
         version: link:../pipeline

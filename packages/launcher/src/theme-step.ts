@@ -392,6 +392,8 @@ export async function themeStep(input: {
   launchDir: string;
   /** A running web app to screenshot (--site); without it the report lists screenshots as to do. */
   shots?: Omit<ShotTarget, 'domain'>;
+  /** The theme an earlier run made: kept (re-checked) instead of generating a new one. */
+  previous?: ThemeDetail;
 }): Promise<{ detail: ThemeDetail; files: string[] }> {
   const { db, town } = input;
   const picked = input.names.picked;
@@ -403,45 +405,62 @@ export async function themeStep(input: {
   const itemsPerDay = input.readiness?.itemsPerDay ?? 0;
   const neighbors = await nearbyThemes(db, input.places, town, defaultTheme);
 
-  let choice: ThemeChoice;
+  let theme: Theme;
   let mode: ThemeDetail['mode'] = 'fallback';
-  if (input.llm) {
-    const [row] = await db.select({ id: towns.id }).from(towns).where(eq(towns.slug, config.slug));
-    const { value } = await callModel(input.llm, {
-      job: 'launch.theme',
-      town: await launchLlmTown(
-        db,
-        { id: row!.id, timezone: config.timezone },
-        input.launchStartedAt,
-      ),
-      prompt: themeV1,
-      input: [
-        `Town: ${town.name}, ${town.state} (${town.county} County)`,
-        `Site name: ${picked.siteName}`,
-        `News items a day: ${itemsPerDay}`,
-        neighbors.length
-          ? `Nearby sites:\n${neighbors
-              .map(
-                (n) =>
-                  `- ${n.siteName} (${n.miles} miles): family ${n.theme.family}, accent ${n.theme.palette.accent}, motif ${n.theme.motif}, header ${n.theme.layout.header}, grid ${n.theme.layout.grid}, article ${n.theme.layout.article}`,
-              )
-              .join('\n')}`
-          : 'Nearby sites: none within 50 miles.',
-      ].join('\n'),
-    });
-    if (!/^#[0-9A-Fa-f]{6}$/.test(value.accent))
-      throw new Error(`The model's accent "${value.accent}" isn't a #RRGGBB color.`);
-    if (value.secondary && !/^#[0-9A-Fa-f]{6}$/.test(value.secondary)) value.secondary = null;
-    choice = value;
-    mode = 'model';
+  const notes: string[] = [];
+  if (input.previous?.theme) {
+    // Re-run (screenshots, --redo): keep the theme already made; the rules are re-checked below.
+    theme = themeSchema.parse(input.previous.theme);
+    mode = input.previous.mode;
+    notes.push(...input.previous.notes);
+    if (neighborProblems(theme, neighbors).length) {
+      const repaired = satisfyNeighbors(theme, neighbors);
+      theme = repaired.theme;
+      notes.push(...repaired.notes);
+    }
   } else {
-    choice = fallbackChoice(town, neighbors, itemsPerDay);
-  }
+    let choice: ThemeChoice;
+    if (input.llm) {
+      const [row] = await db
+        .select({ id: towns.id })
+        .from(towns)
+        .where(eq(towns.slug, config.slug));
+      const { value } = await callModel(input.llm, {
+        job: 'launch.theme',
+        town: await launchLlmTown(
+          db,
+          { id: row!.id, timezone: config.timezone },
+          input.launchStartedAt,
+        ),
+        prompt: themeV1,
+        input: [
+          `Town: ${town.name}, ${town.state} (${town.county} County)`,
+          `Site name: ${picked.siteName}`,
+          `News items a day: ${itemsPerDay}`,
+          neighbors.length
+            ? `Nearby sites:\n${neighbors
+                .map(
+                  (n) =>
+                    `- ${n.siteName} (${n.miles} miles): family ${n.theme.family}, accent ${n.theme.palette.accent}, motif ${n.theme.motif}, header ${n.theme.layout.header}, grid ${n.theme.layout.grid}, article ${n.theme.layout.article}`,
+                )
+                .join('\n')}`
+            : 'Nearby sites: none within 50 miles.',
+        ].join('\n'),
+      });
+      if (!/^#[0-9A-Fa-f]{6}$/.test(value.accent))
+        throw new Error(`The model's accent "${value.accent}" isn't a #RRGGBB color.`);
+      if (value.secondary && !/^#[0-9A-Fa-f]{6}$/.test(value.secondary)) value.secondary = null;
+      choice = value;
+      mode = 'model';
+    } else {
+      choice = fallbackChoice(town, neighbors, itemsPerDay);
+    }
 
-  const built = buildTheme(choice, { itemsPerDay });
-  const repaired = satisfyNeighbors(built.theme, neighbors);
-  let theme = repaired.theme;
-  const notes = [...built.notes, ...repaired.notes];
+    const built = buildTheme(choice, { itemsPerDay });
+    const repaired = satisfyNeighbors(built.theme, neighbors);
+    theme = repaired.theme;
+    notes.push(...built.notes, ...repaired.notes);
+  }
   for (const problem of slotProblems(theme)) throw new Error(`Slot contract: ${problem}`);
   const townProblems = checkThemeForTown(theme, {
     tier: itemsPerDay < LOW_VOLUME_ITEMS ? 'small' : config.tier,
@@ -479,7 +498,7 @@ export async function themeStep(input: {
     const capture = async () => {
       const shotDir = join(dir, 'screenshots');
       return [
-        ...(await capturePages(target, shotDir, pages)),
+        ...(await capturePages(target, shotDir, pages, theme)),
         ...(await captureIdentity(target, join(dir, 'identity'), {
           siteName: config.site_name,
           place: `${town.name}, ${town.state}`,

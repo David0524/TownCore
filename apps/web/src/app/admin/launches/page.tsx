@@ -1,8 +1,9 @@
 import { candidateStates, listCandidates, type Candidate } from '@towncore/launcher/candidates';
+import { goLiveBlockers, listLaunches, type LaunchRow } from '@towncore/launcher/golive';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../admin.module.css';
-import { decideCandidateAction } from './actions';
+import { approveLaunchAction, decideCandidateAction, pauseTownAction } from './actions';
 
 export const metadata = { title: 'Launches' };
 
@@ -20,7 +21,8 @@ const num = (n: number | null | undefined) =>
 const STATUSES = ['proposed', 'approved', 'rejected', 'live'] as const;
 
 // Admin → Launches (M7, CLAUDE.md §10a): the ranked towns from `pnpm towns:rank`. A launch can
-// start only from a town an admin approved here. Launch runs and go-live come in later M7 PRs.
+// start only from a town an admin approved here; its run (`pnpm launch`) is listed below, and an
+// admin approves a ready launch to take the town live (§10 step 9).
 export default async function Launches({
   searchParams,
 }: {
@@ -32,6 +34,14 @@ export default async function Launches({
   const state = params.state && states.includes(params.state) ? params.state : states[0];
   const status = STATUSES.find((s) => s === params.status);
   const rows = state ? await listCandidates(db(), { state, status, limit: 50 }) : [];
+  const runs = await listLaunches(db());
+  const blockers = new Map(
+    await Promise.all(
+      runs
+        .filter((r) => r.status === 'ready')
+        .map(async (r) => [r.id, await goLiveBlockers(db(), r.id)] as const),
+    ),
+  );
 
   return (
     <main>
@@ -46,6 +56,40 @@ export default async function Launches({
           {params.error}
         </p>
       ) : null}
+
+      <h2>Launch runs</h2>
+      <p className={styles.muted}>
+        Started with <code>pnpm launch &quot;Town, ST&quot;</code>. A town goes live only when its
+        run is ready, every automated check in its launch report passes, its domain was bought and
+        its mail domain is live (Rule 10).
+      </p>
+      {runs.length === 0 ? (
+        <p>No launches yet.</p>
+      ) : (
+        <div className={styles.scroll}>
+          <table className={styles.table} data-testid="launch-runs">
+            <thead>
+              <tr>
+                <th>Town</th>
+                <th>Run</th>
+                <th>Steps</th>
+                <th>Report</th>
+                <th>Site</th>
+              </tr>
+            </thead>
+            <tbody>
+              {runs.map((r) => (
+                <LaunchRunRow
+                  key={r.id}
+                  r={r}
+                  admin={me.role === 'admin'}
+                  blockers={blockers.get(r.id) ?? []}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <h2>Candidate towns</h2>
       <p className={styles.muted}>
@@ -174,6 +218,85 @@ function CandidateRow({ c, admin, state }: { c: Candidate; admin: boolean; state
           )}
         </td>
       ) : null}
+    </tr>
+  );
+}
+
+function LaunchRunRow({
+  r,
+  admin,
+  blockers,
+}: {
+  r: LaunchRow;
+  admin: boolean;
+  blockers: string[];
+}) {
+  const done = r.steps.filter((s) => s.status === 'done').length;
+  const failed = r.steps.find((s) => s.status === 'failed');
+  return (
+    <tr data-launch={r.slug}>
+      <td>
+        {r.name}, {r.state}
+        <div className={styles.muted}>
+          {r.town ? `${r.town.siteName} · ${r.town.domain}` : 'no town yet'}
+        </div>
+      </td>
+      <td>
+        {r.status}
+        {r.dryRun ? <div className={styles.muted}>dry run</div> : null}
+        {r.stoppedReason ? <div className={styles.muted}>{r.stoppedReason}</div> : null}
+      </td>
+      <td>
+        {done} of {r.steps.length} done
+        {failed ? <div className={styles.muted}>Failed: {failed.step}</div> : null}
+      </td>
+      <td>
+        {r.report ? (
+          <>
+            {r.report.passed ? 'All checks pass' : 'Checks not passing'}
+            <ul className={styles.muted}>
+              {r.report.checks.map((c) => (
+                <li key={c.name}>
+                  {c.status === 'pass' ? '✓' : c.status === 'fail' ? '✗' : '–'} {c.name}
+                </li>
+              ))}
+            </ul>
+            <div className={styles.muted}>
+              <code>docs/launches/{r.slug}/launch-report.md</code>
+            </div>
+          </>
+        ) : (
+          '–'
+        )}
+      </td>
+      <td>
+        {r.town ? r.town.status : '–'}
+        {admin && r.status === 'ready' ? (
+          blockers.length ? (
+            <ul className={styles.muted} data-testid="go-live-blockers">
+              {blockers.map((b) => (
+                <li key={b}>{b}</li>
+              ))}
+            </ul>
+          ) : (
+            <form action={approveLaunchAction} className={styles.actions}>
+              <input type="hidden" name="launchId" value={r.id} />
+              <button type="submit" className={styles.button}>
+                Approve launch: take {r.town?.siteName} live
+              </button>
+            </form>
+          )
+        ) : null}
+        {admin && r.town && (r.town.status === 'live' || r.town.status === 'paused') ? (
+          <form action={pauseTownAction} className={styles.actions}>
+            <input type="hidden" name="townId" value={r.town.id} />
+            <input type="hidden" name="paused" value={String(r.town.status === 'live')} />
+            <button type="submit" className={`${styles.button} ${styles.secondary}`}>
+              {r.town.status === 'live' ? `Pause ${r.town.siteName}` : `Resume ${r.town.siteName}`}
+            </button>
+          </form>
+        ) : null}
+      </td>
     </tr>
   );
 }

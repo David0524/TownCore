@@ -25,6 +25,39 @@ export const viewports = {
 
 export type Shot = { name: string; path: string; viewport: keyof typeof viewports | 'asset' };
 
+/** The web app caches a town for 60 seconds; wait (up to this long) for it to show the theme. */
+const THEME_WAIT_MS = 90_000;
+
+/** Reloads the home page until it renders `theme` (its family and brand color), or throws. */
+async function waitForTheme(
+  page: import('playwright-core').Page,
+  url: string,
+  theme: Pick<Theme, 'family' | 'palette'>,
+  sleep: (ms: number) => Promise<void>,
+) {
+  const deadline = Date.now() + THEME_WAIT_MS;
+  for (;;) {
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    const shown = await page.evaluate(() => {
+      const el = document.querySelector('[data-family]');
+      return {
+        family: el?.getAttribute('data-family') ?? null,
+        accent: el ? getComputedStyle(el).getPropertyValue('--accent').trim() : '',
+      };
+    });
+    if (
+      shown.family === theme.family &&
+      shown.accent.toUpperCase() === theme.palette.accent.toUpperCase()
+    )
+      return;
+    if (Date.now() > deadline)
+      throw new Error(
+        `The site still shows ${shown.family ?? 'no'} theme (${shown.accent}), not the new one.`,
+      );
+    await sleep(5_000);
+  }
+}
+
 async function launch(target: ShotTarget): Promise<Browser> {
   const app = new URL(target.siteUrl);
   return chromium.launch({
@@ -38,11 +71,14 @@ export async function capturePages(
   target: ShotTarget,
   outDir: string,
   pages: Array<{ name: string; path: string }>,
+  theme: Pick<Theme, 'family' | 'palette'>,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
 ): Promise<Shot[]> {
   mkdirSync(outDir, { recursive: true });
   const browser = await launch(target);
   const shots: Shot[] = [];
   try {
+    await waitForTheme(await browser.newPage(), `http://${target.domain}/`, theme, sleep);
     for (const [viewport, settings] of Object.entries(viewports) as Array<
       [keyof typeof viewports, (typeof viewports)[keyof typeof viewports]]
     >) {
@@ -85,7 +121,7 @@ export async function captureIdentity(
   mkdirSync(outDir, { recursive: true });
   const set = typePairings[input.theme.type];
   const font = {
-    fontFamily: 'var(--font-headline)',
+    fontFamily: 'serif',
     fontWeight: set.headlineWeight,
     advanceEm: set.headlineAdvanceEm,
   };
@@ -95,6 +131,12 @@ export async function captureIdentity(
     const page = await browser.newPage({ viewport: { width: 1700, height: 700 } });
     await page.goto(`http://${target.domain}/`, { waitUntil: 'networkidle' });
     await page.evaluate(() => document.fonts.ready);
+    // The town's headline face as the page resolves it; the SVGs name it directly, since the
+    // element that defines --font-headline is replaced when each asset is drawn.
+    font.fontFamily = await page.evaluate(() => {
+      const heading = document.querySelector('h1, h2, h3');
+      return heading ? getComputedStyle(heading).fontFamily : 'serif';
+    });
     const render = async (name: string, svg: string, width: number, height: number) => {
       writeFileSync(join(outDir, `${name}.svg`), svg);
       await page.evaluate(

@@ -1,6 +1,7 @@
 'use server';
 
 import { CandidateDecisionError, decideCandidate } from '@towncore/launcher/candidates';
+import { approveLaunch, GoLiveRefused, setTownPaused } from '@towncore/launcher/golive';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireStaff } from '@/lib/admin/session';
@@ -39,4 +40,37 @@ export async function decideCandidateAction(form: FormData): Promise<void> {
           ? `${name!} rejected`
           : `${name!} back to proposed`,
   });
+}
+
+/** Approve launch: the town goes live (admin only; every check re-run; audited). */
+export async function approveLaunchAction(form: FormData): Promise<void> {
+  const me = await requireStaff();
+  let siteName: string;
+  try {
+    ({ siteName } = await approveLaunch(db(), { launchId: str(form, 'launchId'), staff: me }));
+  } catch (error) {
+    if (error instanceof GoLiveRefused)
+      redirect(`/admin/launches?${new URLSearchParams({ error: error.message })}`);
+    throw error;
+  }
+  revalidatePath('/admin/launches');
+  redirect(`/admin/launches?${new URLSearchParams({ done: `${siteName!} is live` })}`);
+}
+
+/** Pause a live town, or resume a paused one (admin only; audited). */
+export async function pauseTownAction(form: FormData): Promise<void> {
+  const me = await requireStaff();
+  const paused = str(form, 'paused') === 'true';
+  let siteName: string;
+  try {
+    ({ siteName } = await setTownPaused(db(), { townId: str(form, 'townId'), staff: me, paused }));
+  } catch (error) {
+    if (error instanceof GoLiveRefused)
+      redirect(`/admin/launches?${new URLSearchParams({ error: error.message })}`);
+    throw error;
+  }
+  revalidatePath('/admin/launches');
+  redirect(
+    `/admin/launches?${new URLSearchParams({ done: `${siteName!} ${paused ? 'paused' : 'resumed'}` })}`,
+  );
 }
