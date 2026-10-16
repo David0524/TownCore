@@ -33,6 +33,16 @@
   color: var(--muted);
 }
 
+/* coastal-modern (wide screens): a tinted panel rather than a ruled block, like the hero. */
+@media (min-width: 600px) {
+  :global([data-family='coastal-modern']) .cta {
+    border: 0;
+    border-radius: var(--radius-tile);
+    background: var(--tint);
+    padding: 2rem 2.25rem;
+  }
+}
+
 /* Headline beside the note and form on wide screens. */
 @media (min-width: 48rem) {
   .cta {

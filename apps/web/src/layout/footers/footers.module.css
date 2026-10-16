@@ -50,6 +50,14 @@
   margin: 0;
 }
 
+.colTitle {
+  margin: 0 0 0.875rem;
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
 .columns h2 {
   font-size: 1rem;
   margin-bottom: 0.5rem;
@@ -109,12 +117,31 @@
 
 /* coastal-modern's footer sits on the white page, like the rest of it. */
 :global([data-family='coastal-modern']) .footer {
-  background: var(--background);
+  margin-top: 3rem;
+  background: var(--surface);
   border-top: 0;
 }
 
 :global([data-family='coastal-modern']) .inner {
   padding-top: 3rem;
+}
+
+:global([data-family='coastal-modern']) .masthead {
+  border-top: 0;
+  padding-top: 0;
+}
+
+:global([data-family='coastal-modern']) .about .wordmark {
+  font-size: 1.75rem;
+  line-height: 1.05;
+}
+
+:global([data-family='coastal-modern']) .copyright {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: var(--hairline);
+  color: var(--muted);
+  font-size: 0.8125rem;
 }
 
 /* heritage: the paper closes on a double rule. */

@@ -88,6 +88,7 @@ export {
   foodColors,
   type FoodColor,
   darkColors,
+  deriveDeep,
   deriveMuted,
   iosColors,
   iosFonts,

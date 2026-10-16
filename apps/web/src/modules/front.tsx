@@ -1,3 +1,4 @@
+import { motifSvg } from '@towncore/brand';
 import { townShortName, type TownConfig } from '@towncore/config';
 import { listPublishedGuides } from '@towncore/db';
 import { apDate } from '@towncore/pipeline';
@@ -26,7 +27,7 @@ export function greeting(now: Date, timeZone: string): string {
  * "Good morning, Boca" (the town's short name) with today's date. No "Updated" time: the newest
  * story can be days old, and a bare clock time beside "Good morning" read as today.
  */
-export const GoodMorning: HomeModuleComponent = async ({ town }) => {
+export const GoodMorning: HomeModuleComponent = async ({ town, theme }) => {
   const now = new Date();
   const weekday = new Intl.DateTimeFormat('en-US', {
     timeZone: town.timezone,
@@ -34,12 +35,34 @@ export const GoodMorning: HomeModuleComponent = async ({ town }) => {
   }).format(now);
   return (
     <div className={`${styles.greeting} not-phone`} data-module="good-morning">
+      <span
+        className={styles.heroMotif}
+        aria-hidden="true"
+        dangerouslySetInnerHTML={{ __html: motifSvg(theme.motif, 220) }}
+      />
       <p className={styles.hello}>
         {greeting(now, town.timezone)}, {townShortName(town.config as TownConfig)}
       </p>
       <p className="meta">
         {weekday}, {apDate(now, town.timezone)}
       </p>
+      <p className={styles.tagline}>
+        News, events and local businesses in {town.name}, from the public record.
+      </p>
+      <form action="/search" method="get" role="search" className={styles.heroSearch}>
+        <label htmlFor="hero-q" className="sr-only">
+          Search {town.siteName}
+        </label>
+        <input
+          id="hero-q"
+          name="q"
+          type="search"
+          placeholder="Search news and guides"
+          autoComplete="off"
+          maxLength={100}
+        />
+        <button type="submit">Search</button>
+      </form>
     </div>
   );
 };

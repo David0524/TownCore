@@ -51,6 +51,8 @@
 .more {
   white-space: nowrap;
   text-decoration: none;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .more:hover {
