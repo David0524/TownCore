@@ -221,6 +221,25 @@
   background: var(--surface);
 }
 
+.thumbIllustration {
+  position: relative;
+  display: block;
+}
+
+/* Labels a library illustration at list size (§11c); the article page prints the full label. */
+.thumbTag {
+  position: absolute;
+  left: 0.25rem;
+  bottom: 0.25rem;
+  padding: 0.0625rem 0.3125rem;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ink) 70%, transparent);
+  color: var(--background);
+  font-family: var(--font-meta);
+  font-size: 0.5625rem;
+  line-height: 1.4;
+}
+
 .thumbMap {
   aspect-ratio: 3 / 2;
   overflow: hidden;

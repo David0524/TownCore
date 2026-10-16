@@ -1,11 +1,13 @@
 // Reader, contributor and business photos (M9, CLAUDE.md §11c; docs/plans/M9.md).
 export { businessLicense, readerLicense, type LicenseGrant } from './license';
 export {
+  ILLUSTRATION_SIZE,
   MAX_EDGE,
   MAX_PHOTO_BYTES,
   MIN_EDGE,
   PHOTO_REJECTIONS,
   PhotoRejected,
+  processIllustration,
   processPhoto,
   type PhotoRejection,
 } from './process';

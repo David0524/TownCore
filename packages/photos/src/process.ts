@@ -56,3 +56,26 @@ export async function processPhoto(
   if (Math.max(info.width, info.height) < MIN_EDGE) throw new PhotoRejected('too_small');
   return { jpeg: new Uint8Array(data), width: info.width, height: info.height };
 }
+
+/** Section illustrations (CLAUDE.md §11c) are stored at this size: 3:2, cropped to center. */
+export const ILLUSTRATION_SIZE = { width: 1200, height: 800 } as const;
+
+/**
+ * A library illustration as stored: WebP at 1200×800 (cropped to fill, centered), with all
+ * metadata stripped. Refuses anything that isn't a readable image at least 800 px wide.
+ */
+export async function processIllustration(
+  bytes: Uint8Array,
+): Promise<{ webp: Uint8Array; width: number; height: number }> {
+  const meta = await sharp(bytes, { failOn: 'error', limitInputPixels: 60_000_000 }).metadata();
+  if (!meta.format || !['jpeg', 'png', 'webp'].includes(meta.format)) {
+    throw new Error(`not a JPEG, PNG or WebP image (${meta.format ?? 'unknown'})`);
+  }
+  if ((meta.width ?? 0) < 800) throw new Error(`too small (${meta.width} px wide; need 800)`);
+  const { data, info } = await sharp(bytes, { failOn: 'error', limitInputPixels: 60_000_000 })
+    .rotate()
+    .resize({ ...ILLUSTRATION_SIZE, fit: 'cover', position: 'centre' })
+    .webp({ quality: 80 })
+    .toBuffer({ resolveWithObject: true });
+  return { webp: new Uint8Array(data), width: info.width, height: info.height };
+}

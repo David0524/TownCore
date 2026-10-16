@@ -106,11 +106,13 @@ export {
 } from './directory';
 export {
   AI_ILLUSTRATION_LABEL,
+  illustrationSrc,
   imageDefaults,
   imageKinds,
   roundupImageDefaults,
   MAP_VIEW,
   type DailyCountsSpec,
+  type IllustrationSpec,
   type ImageKind,
   type ImageSpec,
   type MapSpec,
@@ -150,3 +152,12 @@ export {
   tierThresholds,
   type LaunchStep,
 } from './launch';
+export {
+  ILLUSTRATION_STYLE,
+  shotPrompt,
+  illustrationShots,
+  type IllustrationSection,
+  type IllustrationShot,
+  type LibraryIllustration,
+} from './illustrations';
+export { illustrationLibrary } from './illustrations-library';

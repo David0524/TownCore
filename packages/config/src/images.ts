@@ -19,21 +19,26 @@ export type ImageKind = (typeof imageKinds)[number];
  * built yet (maps in M4 PR E, photos in M9) are skipped by the router until they are.
  */
 export const imageDefaults: Record<string, readonly ImageKind[]> = {
-  development: ['map', 'data-graphic', 'typographic-card'],
-  government: ['data-graphic', 'government-image', 'typographic-card'],
-  business: ['business-photo', 'typographic-card'],
+  development: ['map', 'data-graphic', 'ai-illustration', 'typographic-card'],
+  government: ['data-graphic', 'government-image', 'ai-illustration', 'typographic-card'],
+  business: ['business-photo', 'ai-illustration', 'typographic-card'],
+  // No illustration for public safety: a drawing beside crime news editorializes.
   'public-safety': ['map', 'typographic-card'],
-  schools: ['data-graphic', 'typographic-card'],
-  community: ['reader-photo', 'stock', 'typographic-card'],
-  weather: ['reader-photo', 'stock', 'typographic-card'],
+  schools: ['data-graphic', 'ai-illustration', 'typographic-card'],
+  community: ['reader-photo', 'stock', 'ai-illustration', 'typographic-card'],
+  weather: ['reader-photo', 'stock', 'ai-illustration', 'typographic-card'],
   guide: ['ai-illustration', 'stock', 'typographic-card'],
 };
 
 /**
  * Roundups are counts of records, so a data graphic built from those records leads for them on
- * any beat (§11c: "built from the story's own source records").
+ * any beat (§11c: "built from the story's own source records"); a section illustration next.
  */
-export const roundupImageDefaults: readonly ImageKind[] = ['data-graphic', 'typographic-card'];
+export const roundupImageDefaults: readonly ImageKind[] = [
+  'data-graphic',
+  'ai-illustration',
+  'typographic-card',
+];
 
 /** A bar chart of counts per day, built only from the story's own records. */
 export type DailyCountsSpec = {
@@ -106,7 +111,22 @@ export type PhotoSpec = {
   takenWhen: string | null;
 };
 
+/**
+ * A section illustration from the network library (§11c, packages/config/src/illustrations.ts):
+ * a generic, owner-approved AI illustration of a kind of thing, never the story's scene. Served
+ * from /illustrations/<illustrationId>.webp and always labeled.
+ */
+export type IllustrationSpec = {
+  type: 'illustration';
+  illustrationId: string;
+  width: number;
+  height: number;
+};
+
+export const illustrationSrc = (id: string) => `/illustrations/${id}.webp`;
+
 /** The label every AI illustration carries, on the page and in its alt text (§11c). */
 export const AI_ILLUSTRATION_LABEL = 'Illustration (AI-generated)';
 
-export type ImageSpec = DailyCountsSpec | MapSpec | StockPhotoSpec | PhotoSpec | { type: 'card' };
+export type ImageSpec =
+  DailyCountsSpec | MapSpec | StockPhotoSpec | PhotoSpec | IllustrationSpec | { type: 'card' };

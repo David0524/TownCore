@@ -490,7 +490,7 @@ Every article gets a visual, but a visual must never be misleading. The image ro
 | **Reader or contributor photos** | Community, events, weather, sports | Upload form with license grant, credit line and human approval; pay-per-photo contributors later |
 | **Government public-domain images** | Officials, facilities, projects | Federal government works are public domain. State and local works vary by state, so store the legal basis per source and credit the agency |
 | **Licensed stock** (e.g. Unsplash or Pexels under their licenses) | Generic topics only: weather, a generic gavel for court items, school buses | Never presented as the actual scene of the story; caption "Stock photo" |
-| **AI-generated illustration** | Explainers, evergreen guides, generic features | Clearly illustrative style, never photorealistic news scenes; no real people, no real events, no identifiable real places presented as photos; label "Illustration (AI-generated)" |
+| **AI-generated illustration** | Explainers, evergreen guides, generic features, and generic section images on news stories from the network library (never public safety) | Clearly illustrative style, never photorealistic news scenes; no real people, no real events, no identifiable real places presented as photos; a picture of a kind of thing, never presented as the story's scene; approved by a person; label "Illustration (AI-generated)", on list thumbnails too |
 
 **Never:**
 - Images from other news sites, social media, Google Images or Street View.
@@ -501,12 +501,13 @@ Every article gets a visual, but a visual must never be misleading. The image ro
 **Every image needs:** alt text written from what it actually shows, a credit line, and an `images` row: id, kind, source_url, license, attribution, ai_generated, approved_by.
 
 **Defaults by beat** (stored in config; the first allowed option wins):
-- Development, permits, property: map → data graphic → card
-- Meetings: data graphic (votes) → government image → card
-- Business openings: business photo → card
+- Development, permits, property: map → data graphic → section illustration → card
+- Meetings: data graphic (votes) → government image → section illustration → card
+- Business openings: business photo → section illustration → card
+- Schools: data graphic → section illustration → card
 - Public safety: block-level map → card
-- Weather: reader photo → stock → card
-- Guides: AI illustration → stock → card
+- Community and weather: reader photo → stock → section illustration → card
+- Guides: AI illustration (the guide's own, then a section one) → stock → card
 
 **Open Graph images:** generate a share image per article from the chosen visual, plus the headline in the town's theme, sized for Facebook and other platforms.
 
@@ -602,6 +603,7 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
 - 2026-10-16 — **Weather refreshes on view where no worker runs (owner: "do number 2").** The demo on Vercel has no worker yet (D-M2-5), so its weather snapshot went stale and the Today tile fell back to the plain zone forecast. On Vercel only, a town page that finds the snapshot more than 30 minutes old refreshes that town after the response (Next `after()`), through the same polite Fetcher; one conditional write lets only one request per town refresh, at most every 10 minutes. A Vercel cron was the first idea, but Hobby plans allow cron only once a day. The worker stays the main source once it's deployed.
 - 2026-10-16 — **Fonts: Outfit for Boca, Space Grotesk for charts, San Francisco headlines on phones (owner, from a side-by-side of six faces).** Instrument Serif read "too New York Times" for Boca, so Boca's headlines and wordmark use Outfit 600 (a new `outfit-geist` set, now first on the `coastal-modern` shortlist; Instrument Serif stays allowed). Every chart and data graphic, and the bar numbers in share images, use Space Grotesk on every town (`--font-chart`), apart from any town's headlines. Phones drop the New York serif: headlines and ad headlines use San Francisco; the wordmark keeps the town's own face on every screen (`--font-wordmark`).
 - 2026-10-16 — **Homepage matched to the canvas (owner: "make the rest of the homepage match the mockup").** Boca's header uses reader categories (`category-tabs`: News, Events, Dining, Businesses, Schools, each shown only once it has content, D-M4b-4), with a new `/news` front; the greeting uses the town's `short_name`; the Today band has the canvas's Beach and Sunset tiles; Explore cards, a Latest list with thumbnails, City Hall this week, the rail ad after the first rail module, Find a local pro as rows, and a new full-width `homeBottom` band (photo of the week from approved reader photos, new places to eat as a grid). Kept on purpose: `home.top` under the header (slot contract, §11b), "New places to eat" rather than "now open" (a license isn't an opening), and no photos where we have none.
+- 2026-10-16 — **Section illustrations on news stories (owner: "yes to both"; §11c changed).** A network-wide library of AI-generated illustrations, made by the owner in ChatGPT from the shot list (`packages/config/src/illustrations.ts` → `docs/brand/illustration-shot-list.md`, 150 scenes in one flat editorial style: no text, logos, faces or recognizable places) and approved by the owner. The image router uses one when a story has no map, chart or real photo: the shot for its section and region with the most of its keywords, not repeated in a town within 14 days, before the title card. Never on public safety (a drawing beside crime news editorializes). Each is a generic picture of a kind of thing, never the story's scene, recorded as AI-generated with its approver, and labeled "Illustration (AI-generated)" on the article and with a small "Illustration" tag on list thumbnails. `pnpm illustrations import` takes the files with alt text written from what each shows; `pnpm illustrations assign` gives stories still on a title card one.
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.

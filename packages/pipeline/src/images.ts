@@ -2,10 +2,15 @@ import {
   AI_ILLUSTRATION_LABEL,
   beats,
   entityKey,
+  illustrationLibrary,
+  illustrationShots,
   imageDefaults,
   roundupImageDefaults,
   type DailyCountsSpec,
+  type IllustrationSection,
+  type IllustrationShot,
   type ImageKind,
+  type LibraryIllustration,
   type ImageSpec,
   type MapSpec,
   type StockPhotoSpec,
@@ -29,8 +34,10 @@ import {
   eq,
   images,
   ne,
+  gte,
   inArray,
   records,
+  staff,
   storyCandidates,
   townBasemaps,
   towns,
@@ -255,6 +262,8 @@ export async function chooseArticleImage(
           approvedBy: art.reviewedBy,
         };
       }
+      const section = await pickSectionIllustration(db, { ...article, id: article.id });
+      if (section) return section;
     }
     if (option === 'stock' && deps?.unsplash) {
       const photo = await pickStockPhoto(db, article, { ...deps, unsplash: deps.unsplash });
@@ -493,3 +502,115 @@ export async function assignArticleImage(
     .onConflictDoUpdate({ target: images.articleId, set: values });
   return choice;
 }
+
+/** A library illustration isn't shown again in the same town for this long. */
+const ILLUSTRATION_REPEAT_DAYS = 14;
+
+const illustrationWords = (text: string) => new Set(text.toLowerCase().match(/[a-z][a-z-]*/g));
+
+/** A stable small number from a string, so the same story always gets the same pick. */
+function stableHash(text: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/**
+ * The library illustration for a story (§11c, section illustrations): one made for its section
+ * (guides use `guide`) and region, not shown in the town in the last two weeks, with the most of
+ * its keywords in the headline and dek; ties broken by a stable hash, so a story keeps its pick.
+ * A story that already shows one keeps it while it's in the library. Null for public safety,
+ * which has none, and when nothing fits.
+ */
+export function chooseLibraryIllustration(input: {
+  section: string;
+  state: string;
+  text: string;
+  articleId: string;
+  current: string | null;
+  recent: ReadonlySet<string>;
+  shots?: readonly IllustrationShot[];
+  library?: readonly LibraryIllustration[];
+}): { shot: IllustrationShot; art: LibraryIllustration } | null {
+  const shots = input.shots ?? illustrationShots;
+  const library = new Map((input.library ?? illustrationLibrary).map((a) => [a.id, a]));
+  const fits = shots.filter(
+    (s) =>
+      library.has(s.id) &&
+      s.sections.includes(input.section as IllustrationSection) &&
+      (s.region === 'any' || s.region === input.state),
+  );
+  const kept = fits.find((s) => s.id === input.current);
+  if (kept) return { shot: kept, art: library.get(kept.id)! };
+  const words = illustrationWords(input.text);
+  const score = (s: IllustrationShot) => s.tags.filter((t) => words.has(t)).length;
+  const best = fits
+    .filter((s) => !input.recent.has(s.id))
+    .map((s) => ({ s, score: score(s), tie: stableHash(`${input.articleId}:${s.id}`) }))
+    .sort((a, b) => b.score - a.score || a.tie - b.tie)[0];
+  return best ? { shot: best.s, art: library.get(best.s.id)! } : null;
+}
+
+async function pickSectionIllustration(
+  db: Db,
+  article: ArticleForImage & { id: string },
+): Promise<ImageChoice | null> {
+  if (illustrationLibrary.length === 0) return null;
+  const [town] = await db
+    .select({ state: towns.state })
+    .from(towns)
+    .where(eq(towns.id, article.townId));
+  const [current] = await db
+    .select({ spec: images.spec })
+    .from(images)
+    .where(eq(images.articleId, article.id));
+  const since = new Date(Date.now() - ILLUSTRATION_REPEAT_DAYS * 86_400_000);
+  const used = await db
+    .select({ spec: images.spec })
+    .from(images)
+    .innerJoin(articles, eq(images.articleId, articles.id))
+    .where(
+      and(
+        eq(articles.townId, article.townId),
+        ne(articles.id, article.id),
+        eq(images.kind, 'ai-illustration'),
+        gte(images.updatedAt, since),
+      ),
+    );
+  const idOf = (spec: ImageSpec | undefined) =>
+    spec?.type === 'illustration' ? spec.illustrationId : null;
+  const pick = chooseLibraryIllustration({
+    section: article.kind === 'guide' ? 'guide' : article.beat,
+    state: town?.state ?? '',
+    text: `${article.headline} ${article.dek ?? ''}`,
+    articleId: article.id,
+    current: idOf(current?.spec),
+    recent: new Set(used.map((u) => idOf(u.spec)).filter((id): id is string => id !== null)),
+  });
+  if (!pick) return null;
+  // `images.approved_by` is a staff member (§11c: AI images are approved by a person). An
+  // approver who isn't active staff here means the illustration can't be used.
+  const [approver] = await db
+    .select({ id: staff.id })
+    .from(staff)
+    .where(and(eq(staff.email, pick.art.approvedBy.toLowerCase()), eq(staff.active, true)));
+  if (!approver) return null;
+  return {
+    kind: 'ai-illustration',
+    spec: {
+      type: 'illustration',
+      illustrationId: pick.art.id,
+      width: pick.art.width,
+      height: pick.art.height,
+    },
+    alt: `${AI_ILLUSTRATION_LABEL}: ${pick.art.alt}`,
+    license: ILLUSTRATION_LICENSE,
+    attribution: AI_ILLUSTRATION_LABEL,
+    sourceUrl: null,
+    aiGenerated: true,
+    approvedBy: approver.id,
+  };
+}
+
+/** Made by the publisher with ChatGPT image generation; OpenAI assigns its outputs to the user. */
+const ILLUSTRATION_LICENSE = 'own-work (AI-generated with ChatGPT)';

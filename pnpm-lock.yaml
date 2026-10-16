@@ -192,6 +192,9 @@ importers:
       '@towncore/mail':
         specifier: workspace:*
         version: link:../../packages/mail
+      '@towncore/photos':
+        specifier: workspace:*
+        version: link:../../packages/photos
       '@towncore/pipeline':
         specifier: workspace:*
         version: link:../../packages/pipeline
