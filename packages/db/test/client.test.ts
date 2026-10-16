@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
+import { loadEnv } from '@towncore/config';
 import { clientUrl, createDb } from '../src/client';
 
 // Neon connection strings carry `channel_binding=require`, which postgres.js would send to the
@@ -14,7 +15,7 @@ describe('clientUrl', () => {
     expect(clientUrl(plain)).toBe(plain);
   });
 
-  const url = process.env.DATABASE_URL;
+  const url = loadEnv().DATABASE_URL;
   const db = url ? createDb(`${url}${url.includes('?') ? '&' : '?'}channel_binding=require`) : null;
   afterAll(async () => db?.$client.end());
 
