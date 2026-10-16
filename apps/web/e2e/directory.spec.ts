@@ -32,6 +32,31 @@ test('the directory home lists categories with counts', async ({ page }) => {
   await expect(main.getByRole('link', { name: /Restaurants\s*1 place\b/ })).toBeVisible();
 });
 
+test('the advertising page sells featured spots at the town’s prices', async ({ page }) => {
+  await page.goto(`${harbor}/advertise?category=plumbers`);
+  const main = page.getByRole('main');
+  await expect(
+    main.getByRole('heading', { name: 'Get your business featured', level: 1 }),
+  ).toBeVisible();
+  const spots = page.getByTestId('featured-spots').getByRole('listitem');
+  await expect(spots).toHaveCount(3);
+  await expect(spots.nth(0)).toContainText('#1');
+  await expect(spots.nth(0)).toContainText('$19 a month');
+  await expect(spots.nth(1)).toContainText('$12 a month');
+  await expect(spots.nth(2)).toContainText('$7 a month');
+  await expect(main).toContainText('Your first 30 days are free.');
+  await expect(page.getByTestId('advertise-category')).toContainText('#1, #2, #3 open');
+  // House ads on the category page lead here.
+  await page.goto(plumbers);
+  await expect(page.locator('[data-slot="directory.topspot"] a')).toHaveAttribute(
+    'href',
+    '/advertise?category=plumbers',
+  );
+  await expect(page.locator('[data-slot="directory.topspot"]')).toContainText(
+    '$19 a month, first 30 days free',
+  );
+});
+
 test('search finds a business by name and is not indexed', async ({ page }) => {
   await page.goto(`${harbor}/directory?q=cove`);
   const main = page.getByRole('main');
@@ -60,11 +85,9 @@ test('a category page has its slots, then organic listings with the claimed one 
     await expect(slot, name).toHaveAttribute('data-fill', 'house');
     await expect(slot.getByTestId('slot-label'), name).toHaveText('From The Harbor Point Ledger');
   }
-  await expect(page.locator('[data-slot="directory.topspot"]')).toContainText(
-    'Top spot open: Plumbers. Claim it',
-  );
+  await expect(page.locator('[data-slot="directory.topspot"]')).toContainText('#1 spot open');
   await expect(page.locator('[data-slot="directory.category.exclusive"]')).toContainText(
-    "Become Harbor Point's featured plumber",
+    'Is yours listed? Claim it free',
   );
   const names = await page
     .locator('#organic ~ ul a, section[aria-labelledby="organic"] li a')
@@ -293,9 +316,7 @@ test.describe('directory on the homepage and articles', () => {
       '/directory/plumbers',
     );
     await expect(pro.getByRole('link', { name: /Restaurants/ })).toHaveCount(0);
-    await expect(pro.locator('[data-slot="directory.topspot"]')).toContainText(
-      'Top spots are open',
-    );
+    await expect(pro.locator('[data-slot="directory.topspot"]')).toContainText('#1 spot open');
 
     const eat = page.locator('[data-module="new-now-open"]');
     await expect(eat.getByRole('listitem')).toHaveCount(2);

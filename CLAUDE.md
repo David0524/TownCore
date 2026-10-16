@@ -88,7 +88,7 @@ docs/plans/       # milestone plans written before coding
 - `articles` — id, town_id, slug, headline, dek, body_md, beat, tier, status (`draft|in_review|published|rejected|blocked|corrected`), byline, reviewer_id, source_record_ids[], claims (jsonb), factcheck (jsonb), published_at, updated_at
 - `corrections` — id, article_id, note, created_at (shown publicly)
 - `businesses` — id, town_id, slug, name, category, address (shown only once claimed), city, zip, phone, website, license_type, license_number, license_verified, license_expires_at, data_source, source_record_id, osm_ref, cuisine, address_public, active, lat, lng, in_city_limits, geocode_status, geocoded_at, claimed_by_email, claimed_at
-- `placements` — id, business_id, town_id, product (`enhanced|sponsored_slot|exclusive|newsletter|spotlight`), category, stripe_subscription_id, starts_at, ends_at, status
+- `placements` — id, business_id, town_id, product (`enhanced|sponsored_slot|exclusive|newsletter|spotlight`), category, rank (featured spot 1–3), stripe_subscription_id, starts_at, ends_at, status
 - `leads` — id, business_id, kind (`call|form`), meta, created_at
 - `subscribers` — id, town_id, email, status (`pending|active|unsubscribed|bounced|complained`), consent_at, consent_source, consent_ip, confirmed_at, unsubscribed_at, last_engaged_at, source
 - `newsletter_issues` — id, town_id, date, article_ids[], sponsor_placement_id, sent_at, stats
@@ -235,7 +235,7 @@ sources:
   - kind: weather
     platform: nws
     zone: TBD
-pricing: { sponsored_slot_usd: 199, enhanced_usd: 39 }
+pricing: { featured_usd: [19, 12, 7], enhanced_usd: 39, free_trial_days: 30 }
 ```
 
 **Launcher CLI:** `pnpm launch "Delray Beach, FL" --domain delraytownsquare.com [--dry-run (default)] [--approve-spend]`
@@ -314,7 +314,7 @@ score = 0.25 business_value + 0.20 households_x_income + 0.20 source_readiness
 **Directory:**
 - Seed from state license data (Florida DBPR to start) and other public business data; mark `license_verified`.
 - Claim flow by email verification. Owners edit hours, photos, links.
-- Products via Stripe Checkout: enhanced listing, sponsored slot (max 3 per category per town), newsletter sponsorship. All paid placements render a "Sponsored" label.
+- Products via Stripe Checkout: enhanced listing, featured spots #1, #2 and #3 per category (one business each; #1 is the Top spot), newsletter sponsorship. All paid placements render a "Sponsored" label.
 - Organic sort: verified license, completeness, recency of updates.
 - Business triggers: when a published story mentions a new business opening or a business with a listing, queue an outreach email draft for human approval (never auto-send in v1).
 - Monthly proof report per listed business: views, clicks, calls.
@@ -606,6 +606,7 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
 - 2026-10-16 — **Section illustrations on news stories (owner: "yes to both"; §11c changed).** A network-wide library of AI-generated illustrations, made by the owner in ChatGPT from the shot list (`packages/config/src/illustrations.ts` → `docs/brand/illustration-shot-list.md`, 150 scenes in one flat editorial style: no text, logos, faces or recognizable places) and approved by the owner. The image router uses one when a story has no map, chart or real photo: the shot for its section and region with the most of its keywords, not repeated in a town within 14 days, before the title card. Never on public safety (a drawing beside crime news editorializes). Each is a generic picture of a kind of thing, never the story's scene, recorded as AI-generated with its approver, and labeled "Illustration (AI-generated)" on the article and with a small "Illustration" tag on list thumbnails. `pnpm illustrations import` takes the files with alt text written from what each shows; `pnpm illustrations assign` gives stories still on a title card one.
 - 2026-10-16 — **Boca's metadata in the gray text face, not mono (owner, after reviewing bocatownsquare.com: "look at their sub fonts").** Dates, sources, counts and labels on Boca use Geist (its body face) in gray at 13px, like the reference site's Inter metadata, instead of Geist Mono. Other `coastal-modern` sets keep mono until a town asks otherwise.
 - 2026-10-16 — **Mapped places in the directory (owner: "Yes to OSM listings").** Named shops, restaurants, cafés, bars, offices and venues from the same OpenStreetMap extract as the base maps join the directory in new categories (dining, coffee, bars, groceries, shopping, health, beauty, fitness, auto, banks, real estate, professional and personal services, pets, childcare, hotels, entertainment), refreshed with each extract. A place is listed only in the town's area: a mapped ZIP the town's license listings use, or inside city limits by one Census coordinates lookup when it has no ZIP. A place we already list (same category group, same or prefix name, same ZIP or within 300 m) enriches that listing instead of duplicating it. Mapped storefronts show their public street address, phone, website and hours (`address_public`); license-only listings still hide theirs until claimed (D-M6-2), and claimed listings keep their owner's details. Every page with them credits "© OpenStreetMap contributors" (ODbL) and links the place on openstreetmap.org. Places gone from the map are hidden, never deleted. Directory labels are sentence case, never all caps.
+- 2026-10-16 — **Featured spots at $19 / $12 / $7, first 30 days free (owner: "use their prices", after bocatownsquare.com).** The sponsored listings of each directory category are sold as three ranked spots, one business each: #1 is the Top spot (`directory.topspot`), #2 and #3 the sponsored cards below it (`directory.category.top`), in rank order. Prices per town in `pricing.featured_usd`, one Stripe Price per spot; a business's first spot starts with a `free_trial_days` (30) Stripe trial, a later one bills at once. This replaces the $199 sponsored slot (D-M6-6). Unsold slots show house ads that sell the category's open spots at their real prices and lead to a new `/advertise` page (the footer's Advertise link too); the category-exclusive header slot invites a free claim while that product is off. Labels, organic order and staff approval of every card are unchanged (Rules 6, D-M6-7). Directory labels stay sentence case, never all caps (owner: "your call").
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.

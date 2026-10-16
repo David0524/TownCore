@@ -23,14 +23,14 @@ export const metadata: Metadata = { title: 'Edit your listing', robots: { index:
 const PAYMENT_MESSAGES: Record<string, string> = {
   paid: 'Thanks. Your placement turns on as soon as Stripe confirms the payment, usually within a minute.',
   canceled: 'Checkout was canceled; nothing was charged.',
-  sold_out: 'That placement just sold out in your category.',
+  sold_out: 'Someone just took that spot in your category. Pick another open one.',
   already_active: 'You already have that placement.',
   unavailable: 'Paid placements aren’t open on this site yet.',
   no_billing: 'There’s no billing account for you yet.',
   card_sent: 'Thanks. Your card is waiting for review; we’ll put it up once it’s checked.',
   card_headline: `Write a headline of up to ${CARD_LIMITS.headline} characters.`,
   card_body: `Keep the text under ${CARD_LIMITS.body} characters.`,
-  card_no_placement: 'Your sponsored slot isn’t active yet.',
+  card_no_placement: 'Your featured spot isn’t active yet.',
   photo_sent: 'Thanks. Your photo shows on your listing once our staff check it.',
   photo_closed: 'Photo uploads aren’t open yet. Please try again soon.',
   photo_error: 'Something went wrong with that photo. Please try again later.',
@@ -39,7 +39,13 @@ const PAYMENT_MESSAGES: Record<string, string> = {
 
 const OFFER_NOTES: Record<string, string> = {
   enhanced: 'Your hours, website and description on your listing card in the category list.',
-  sponsored_slot: 'A labeled card at the top of your category, linking to your listing.',
+  sponsored_slot: 'A labeled card above every other listing in your category, linking to yours.',
+};
+
+const SPOT_NOTES: Record<number, string> = {
+  1: 'The Top spot: first on your category page.',
+  2: 'Right below the Top spot.',
+  3: 'Below #2, above every other listing.',
 };
 
 type Props = {
@@ -196,25 +202,32 @@ export default async function EditListing({ params, searchParams }: Props) {
           </p>
           <ul className={styles.offers}>
             {offers.map((offer) => (
-              <li key={offer.product}>
+              <li key={`${offer.product}-${offer.rank ?? 0}`}>
                 <strong>{offer.name}</strong> · ${offer.monthlyUsd}/month
                 <span className="meta">
-                  {OFFER_NOTES[offer.product] ?? ''}
-                  {offer.left !== null ? ` ${offer.left} of 3 left in this category.` : ''}
+                  {offer.rank ? SPOT_NOTES[offer.rank] : (OFFER_NOTES[offer.product] ?? '')}
+                  {!offer.rank && offer.left !== null
+                    ? ` ${offer.left} of 3 left in this category.`
+                    : ''}
+                  {offer.trialDays > 0 && !offer.placement
+                    ? ` First ${offer.trialDays} days free.`
+                    : ''}
                 </span>
                 {offer.placement ? (
                   <span className="meta" data-testid={`placement-${offer.product}`}>
                     {offer.placement.status === 'held'
-                      ? 'Paid, but this category filled up first. We’ll refund you or offer the next opening.'
+                      ? 'Paid, but someone took this spot first. We’ll refund you or offer the next opening.'
                       : `Active${offer.placement.endsAt ? ` until ${offer.placement.endsAt.toISOString().slice(0, 10)}` : ''}.`}
                   </span>
                 ) : offer.left === 0 ? (
-                  <span className="meta">Sold out.</span>
+                  <span className="meta">Taken.</span>
                 ) : (
                   <form method="post" action={`/owner/${listing.slug}/checkout`}>
                     <input type="hidden" name="product" value={offer.product} />
+                    {offer.rank ? <input type="hidden" name="rank" value={offer.rank} /> : null}
                     <button type="submit" className="button">
-                      Buy {offer.name.toLowerCase()}
+                      {offer.rank ? `Get spot #${offer.rank}` : `Buy ${offer.name.toLowerCase()}`}
+                      {offer.trialDays > 0 && offer.rank ? ` free for ${offer.trialDays} days` : ''}
                     </button>
                   </form>
                 )}
@@ -225,9 +238,9 @@ export default async function EditListing({ params, searchParams }: Props) {
             <section id="card" aria-labelledby="card-h" data-testid="sponsor-card">
               <h3 id="card-h">Your sponsored card</h3>
               <p className={styles.note}>
-                It shows at the top of your category, labeled &quot;Sponsored&quot;, and links to
-                your listing. Our staff check each version before it goes up; a live card stays up
-                while a new version is reviewed.
+                It shows in your featured spot at the top of your category, labeled
+                &quot;Sponsored&quot;, and links to your listing. Our staff check each version
+                before it goes up; a live card stays up while a new version is reviewed.
               </p>
               {liveCard ? (
                 <p className="meta" data-testid="card-live">

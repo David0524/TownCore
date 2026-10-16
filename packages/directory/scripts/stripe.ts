@@ -5,7 +5,7 @@
 import { requireEnv } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
 import { createDb } from '@towncore/db';
-import { applyPricePlan, planPrices, stripeClient } from '../src';
+import { applyPricePlan, offerName, planPrices, stripeClient } from '../src';
 
 loadDotEnv();
 const args = process.argv.slice(2);
@@ -20,7 +20,7 @@ try {
   const plan = await planPrices(db, towns);
   for (const item of plan) {
     console.log(
-      `${item.action === 'create' ? 'CREATE ' : 'current'}  ${item.town.slug}  ${item.product}  $${item.amountCents / 100}/month  (${item.lookupKey})`,
+      `${item.action === 'create' ? 'CREATE ' : 'current'}  ${item.town.slug}  ${offerName(item.product, item.rank)}  $${item.amountCents / 100}/month  (${item.lookupKey})`,
     );
   }
   const missing = plan.filter((p) => p.action === 'create').length;

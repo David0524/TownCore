@@ -476,6 +476,6 @@ sources:
     platform: nws
     zone: ${town.nws.zone} # NWS ${town.nws.office}, from api.weather.gov/points
     point: '${town.nws.point}'
-pricing: { sponsored_slot_usd: 199, enhanced_usd: 39 } # Boca's prices until the owner sets this town's
+pricing: { featured_usd: [19, 12, 7], enhanced_usd: 39 } # Boca's prices until the owner sets this town's
 `;
 }

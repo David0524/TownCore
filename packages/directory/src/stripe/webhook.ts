@@ -1,4 +1,4 @@
-import { directoryProducts, type DirectoryProduct } from '@towncore/config';
+import { directoryProducts, type DirectoryProduct, type FeaturedRank } from '@towncore/config';
 import { and, eq, isNull, placements, stripeEvents, type Db } from '@towncore/db';
 import type Stripe from 'stripe';
 import { endPlacementCampaigns, syncPlacementCampaigns } from '../creatives';
@@ -116,8 +116,11 @@ async function apply(db: Db, event: Stripe.Event, now: Date) {
           .where(eq(placements.id, placement.id));
         return;
       }
-      // Inventory is checked again here: a fourth sponsored slot is held, never shown.
-      const cap = directoryProducts[placement.product as DirectoryProduct].perCategory;
+      // Inventory is checked again here: a fourth sponsored slot, or a featured spot someone
+      // else took first, is held, never shown.
+      const cap = placement.rank
+        ? 1
+        : directoryProducts[placement.product as DirectoryProduct].perCategory;
       const taken =
         cap === null
           ? 0
@@ -128,6 +131,7 @@ async function apply(db: Db, event: Stripe.Event, now: Date) {
               placement.category,
               now,
               placement.id,
+              placement.rank as FeaturedRank | null,
             );
       const status: Status = cap !== null && taken >= cap ? 'held' : 'active';
       await db

@@ -13,7 +13,7 @@ import {
   sql,
 } from 'drizzle-orm';
 import type { Db } from './client';
-import { articles, campaigns, corrections, records, towns } from './schema';
+import { articles, campaigns, corrections, placements, records, towns } from './schema';
 
 export type Town = typeof towns.$inferSelect;
 export type Article = typeof articles.$inferSelect;
@@ -123,7 +123,10 @@ export async function getActiveCampaign(
   return campaign ?? null;
 }
 
-/** Up to `limit` active campaigns for a slot and category, oldest first (first come, first shown). */
+/**
+ * Up to `limit` active campaigns for a slot and category: featured spots in rank order, then
+ * the rest oldest first (first come, first shown).
+ */
 export async function getActiveCampaigns(
   db: Db,
   townId: string,
@@ -145,7 +148,10 @@ export async function getActiveCampaigns(
         or(isNull(campaigns.endsAt), gt(campaigns.endsAt, now)),
       ),
     )
-    .orderBy(campaigns.startsAt)
+    .orderBy(
+      sql`(select ${placements.rank} from ${placements} where ${placements.id} = ${campaigns.placementId}) asc nulls last`,
+      campaigns.startsAt,
+    )
     .limit(limit);
 }
 

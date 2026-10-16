@@ -292,7 +292,7 @@ describe('discovery helpers', () => {
   });
 
   it('rewrites only the sources block of a town file', () => {
-    const yaml = `slug: x\nsources:\n  # weather\n  - kind: weather\n    platform: nws\n    zone: GAZ119\npricing: { sponsored_slot_usd: 1, enhanced_usd: 1 }\n`;
+    const yaml = `slug: x\nsources:\n  # weather\n  - kind: weather\n    platform: nws\n    zone: GAZ119\npricing: { featured_usd: [1, 1, 1], enhanced_usd: 1 }\n`;
     const out = withSources(
       yaml,
       [
@@ -306,7 +306,7 @@ describe('discovery helpers', () => {
       ],
       [],
     );
-    expect(out).toContain('pricing: { sponsored_slot_usd: 1, enhanced_usd: 1 }');
+    expect(out).toContain('pricing: { featured_usd: [1, 1, 1], enhanced_usd: 1 }');
     expect(out).toContain(
       [
         'sources:',

@@ -2,6 +2,7 @@ import {
   creativeSchema,
   townContactEmail,
   type DirectoryCategory,
+  type FeaturedRank,
   type TownConfig,
 } from '@towncore/config';
 import { getActiveCampaign, type Town } from '@towncore/db';
@@ -28,8 +29,31 @@ export type SlotFill = {
  * 1. direct-sold campaign, 2. sponsored placement (M6), 3. programmatic (later, gated),
  * 4. house ad. A slot never renders empty.
  */
-/** What a slot's house ad can say about where it sits (the directory category, for one). */
-export type SlotContext = { category?: DirectoryCategory | undefined };
+/**
+ * What a slot's house ad can say about where it sits: the directory category, and which of its
+ * featured spots are open (the page knows; a house ad never offers a sold spot).
+ */
+export type SlotContext = {
+  category?: DirectoryCategory | undefined;
+  openRanks?: readonly FeaturedRank[] | undefined;
+};
+
+/** "$19", "$12 and $7": a town's featured spot prices, from its config. */
+export function featuredOffer(town: Town, ranks: readonly FeaturedRank[] = [1, 2, 3]) {
+  const pricing = (town.config as TownConfig).pricing;
+  const prices = ranks.map((r) => `$${pricing.featured_usd[r - 1]}`);
+  const list =
+    prices.length <= 1
+      ? (prices[0] ?? '')
+      : `${prices.slice(0, -1).join(', ')} and ${prices[prices.length - 1]}`;
+  const from = `$${Math.min(...pricing.featured_usd)}`;
+  const trial = pricing.free_trial_days > 0 ? `first ${pricing.free_trial_days} days free` : '';
+  return { list, from, trial, trialDays: pricing.free_trial_days };
+}
+
+/** The advertising page, with the category to feature when there is one. */
+export const advertisePath = (category?: DirectoryCategory) =>
+  category ? `/advertise?category=${category.slug}` : '/advertise';
 
 export async function resolveSlotFill(
   town: Town,
@@ -67,13 +91,17 @@ export function houseAd(
   opts: { newsletter?: boolean } & SlotContext = {},
 ): SlotFill {
   const contact = townContactEmail(town.config as TownConfig);
+  // Every money house ad sells the same concrete offer: featured spots at the town's prices,
+  // first month free (owner, 2026-10-16, after bocatownsquare.com).
+  const offer = featuredOffer(town);
+  const freeLine = offer.trial ? ` ${capitalize(offer.trial)}.` : '';
   const advertise: SlotFill = {
     source: 'house',
     label: `From ${town.siteName}`,
-    headline: `Advertise in ${town.siteName}`,
-    body: `Reach ${town.name} readers with a sponsorship or a featured listing.`,
-    href: `mailto:${contact}?subject=${encodeURIComponent(`Advertising in ${town.siteName}`)}`,
-    cta: 'Get in touch',
+    headline: 'Get your business featured',
+    body: `Featured spots in ${town.siteName}'s directory from ${offer.from} a month.${freeLine}`,
+    href: advertisePath(),
+    cta: 'See the spots',
   };
   // The newsletter page shows the signup form, or "launching soon" until the town can send.
   const newsletter: SlotFill = opts.newsletter
@@ -101,52 +129,58 @@ export function houseAd(
     href: `mailto:${contact}?subject=${encodeURIComponent('News tip')}`,
     cta: 'Send a tip',
   };
-  // Directory house ads sell the directory's own inventory to businesses already listed.
+  // Directory house ads sell the category's own open featured spots, with their prices.
   const category = opts.category;
-  const ask = (subject: string) => `mailto:${contact}?subject=${encodeURIComponent(subject)}`;
-  const topspot: SlotFill = {
-    source: 'house',
-    label: `From ${town.siteName}`,
-    headline: category ? `Top spot open: ${category.name}. Claim it` : 'Top spots are open',
-    body: `Be the first ${category?.singular ?? 'business'} ${town.name} readers see here.`,
-    href: ask(`Top spot: ${category?.name ?? 'directory'}`),
-    cta: 'Ask about the top spot',
-  };
-  const exclusive: SlotFill = {
-    source: 'house',
-    label: `From ${town.siteName}`,
-    headline: category
-      ? `Become ${town.name}'s featured ${category.singular}`
-      : `Feature your business in ${town.siteName}`,
-    body: 'One business per category, shown at the top of this page.',
-    href: ask(`Featured ${category?.singular ?? 'business'}`),
-    cta: 'Get in touch',
-  };
+  const open = opts.openRanks ?? [1, 2, 3];
   const claim: SlotFill = {
     source: 'house',
     label: `From ${town.siteName}`,
-    headline: 'Is your business listed here? Claim it free',
-    body: 'Add your phone, hours and website so readers can reach you.',
-    href: ask('Claim my listing'),
+    headline: 'Is yours listed? Claim it free',
+    body: 'Add your phone, hours and website.',
+    href: '/advertise#claim',
     cta: 'Claim your listing',
   };
+  const topOffer = featuredOffer(town, [1]);
+  const topspot: SlotFill = open.includes(1)
+    ? {
+        source: 'house',
+        label: `From ${town.siteName}`,
+        // Short enough for the reserved height on a phone, whatever the category's name.
+        headline: '#1 spot open',
+        body: `The first ${category?.singular ?? 'business'} readers see here. ${topOffer.list} a month${topOffer.trial ? `, ${topOffer.trial}` : ''}.`,
+        href: advertisePath(category),
+        cta: 'Claim the #1 spot',
+      }
+    : advertise;
+  const rest = open.filter((r) => r !== 1);
+  const restOffer = featuredOffer(town, rest);
+  const featured: SlotFill = rest.length
+    ? {
+        source: 'house',
+        label: `From ${town.siteName}`,
+        headline: `${rest.length === 1 ? 'Spot' : 'Spots'} ${rest.map((r) => `#${r}`).join(' and ')} ${rest.length === 1 ? 'is' : 'are'} open`,
+        body: `Above every other ${category?.singular ?? 'listing'}. ${restOffer.list} a month${restOffer.trial ? `, ${restOffer.trial}` : ''}.`,
+        href: advertisePath(category),
+        cta: 'Get featured',
+      }
+    : claim;
   const leads: SlotFill = {
     source: 'house',
     label: `From ${town.siteName}`,
     headline: category
       ? `Are you a ${category.singular}? Get quote requests from ${town.name} readers`
       : `Get quote requests from ${town.name} readers`,
-    body: 'Sponsored listings receive the quote requests sent from this page.',
-    href: ask(`Quote requests: ${category?.name ?? 'directory'}`),
+    body: `Featured businesses receive the quote requests sent from this page. From ${offer.from} a month.`,
+    href: advertisePath(category),
     cta: 'Learn more',
   };
   const dining: SlotFill = {
     source: 'house',
     label: `From ${town.siteName}`,
     headline: 'This spot could be your restaurant',
-    body: `Put your restaurant in front of ${town.name} readers looking for somewhere new.`,
-    href: ask('Featured restaurant'),
-    cta: 'Get in touch',
+    body: `Put your restaurant in front of ${town.name} readers. From ${offer.from} a month.${freeLine}`,
+    href: advertisePath(),
+    cta: 'Get featured',
   };
   // Neighboring slots on one page get different messages.
   const rotation: Record<SlotName, SlotFill> = {
@@ -158,11 +192,14 @@ export function houseAd(
     'article.inline': newsletter,
     'article.related-businesses': advertise,
     'article.realestate': advertise,
-    'directory.category.exclusive': exclusive,
+    // The category-exclusive product is off (D-M6-6), so its header slot invites a free claim.
+    'directory.category.exclusive': claim,
     'directory.topspot': topspot,
-    'directory.category.top': claim,
+    'directory.category.top': featured,
     'directory.quote-request': leads,
     'dining.featured': dining,
   };
   return rotation[slot];
 }
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);

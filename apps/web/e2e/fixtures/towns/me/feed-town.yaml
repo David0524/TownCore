@@ -11,4 +11,4 @@ domain: feedtown.test
 tier: small
 newsletter_send_time: '07:00'
 agencies: [Town of Feed Town]
-pricing: { sponsored_slot_usd: 99, enhanced_usd: 19 }
+pricing: { featured_usd: [19, 12, 7], enhanced_usd: 19 }

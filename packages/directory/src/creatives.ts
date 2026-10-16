@@ -8,8 +8,10 @@ import {
   eq,
   inArray,
   isNotNull,
+  isNull,
   logAdminAction,
   ne,
+  or,
   placements,
   sql,
   towns,
@@ -17,11 +19,20 @@ import {
 } from '@towncore/db';
 import { ownerListings } from './owners';
 
-// Sponsor cards (M6 PR D2, D-M6-7): the owner of a paid sponsored slot writes a short card; it
-// becomes a `campaigns` row for `directory.category.top` in their category, and shows only once
-// staff approve it. The "Sponsored" label is added by the slot code, never by the owner.
+// Sponsor cards (M6 PR D2, D-M6-7): the owner of a featured spot writes a short card; it becomes
+// a `campaigns` row in their category, and shows only once staff approve it. Spot #1 is the
+// category's Top spot (`directory.topspot`); #2 and #3 are the sponsored cards below it
+// (`directory.category.top`), in rank order. The "Sponsored" label is added by the slot code,
+// never by the owner.
 
 export const SPONSOR_SLOT = 'directory.category.top';
+export const TOP_SPOT_SLOT = 'directory.topspot';
+
+/** Where a featured spot's card shows. */
+export const slotForRank = (rank: number | null) => (rank === 1 ? TOP_SPOT_SLOT : SPONSOR_SLOT);
+
+/** Cards a slot shows at once in a category: the Top spot one, the sponsored cards the rest. */
+const slotCap = (slot: string) => (slot === TOP_SPOT_SLOT ? 1 : maxSponsoredPerCategory - 1);
 export const CARD_LIMITS = { headline: 70, body: 160 };
 
 export type SponsorCard = {
@@ -117,7 +128,7 @@ export async function submitSponsorCard(
     .where(and(eq(campaigns.placementId, placement.id), eq(campaigns.status, 'draft')));
   await db.insert(campaigns).values({
     townId: input.townId,
-    slot: SPONSOR_SLOT,
+    slot: slotForRank(placement.rank),
     category: placement.category,
     placementId: placement.id,
     status: 'draft',
@@ -201,14 +212,20 @@ export async function decideSponsorCard(
         .where(
           and(
             eq(campaigns.townId, row.campaign.townId),
-            eq(campaigns.slot, SPONSOR_SLOT),
+            eq(campaigns.slot, row.campaign.slot),
             eq(campaigns.category, row.campaign.category ?? ''),
             eq(campaigns.status, 'active'),
-            ne(campaigns.placementId, row.placement.id),
+            or(isNull(campaigns.placementId), ne(campaigns.placementId, row.placement.id)),
           ),
         );
-      if (live.length >= maxSponsoredPerCategory)
-        throw new CardNotWaiting('The category already shows 3 sponsored cards.');
+      // A card from before ranks (no rank) may use all three sponsored places.
+      const cap = row.placement.rank ? slotCap(row.campaign.slot) : maxSponsoredPerCategory;
+      if (live.length >= cap)
+        throw new CardNotWaiting(
+          row.campaign.slot === TOP_SPOT_SLOT
+            ? 'The category’s Top spot already shows a card.'
+            : 'The category already shows its sponsored cards.',
+        );
       await tx
         .update(campaigns)
         .set({ status: 'ended', updatedAt: now })

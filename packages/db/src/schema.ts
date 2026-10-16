@@ -803,6 +803,8 @@ export const placements = pgTable(
       .references(() => towns.id),
     product: placementProduct('product').notNull(),
     category: text('category'),
+    /** A featured spot's rank in its category, 1 (the Top spot) to 3; null for unranked products. */
+    rank: smallint('rank'),
     stripeSubscriptionId: text('stripe_subscription_id'),
     stripeCustomerId: text('stripe_customer_id'),
     stripeCheckoutSessionId: text('stripe_checkout_session_id'),
@@ -819,6 +821,7 @@ export const placements = pgTable(
     index('placements_town_product_idx').on(t.townId, t.product, t.category),
     uniqueIndex('placements_checkout_session_uq').on(t.stripeCheckoutSessionId),
     uniqueIndex('placements_subscription_uq').on(t.stripeSubscriptionId),
+    check('placements_rank', sql`${t.rank} is null or ${t.rank} between 1 and 3`),
   ],
 );
 
@@ -832,6 +835,8 @@ export const stripePrices = pgTable(
       .notNull()
       .references(() => towns.id),
     product: placementProduct('product').notNull(),
+    /** The featured spot this price is for (1–3), or null for unranked products. */
+    rank: smallint('rank'),
     stripeProductId: text('stripe_product_id').notNull(),
     stripePriceId: text('stripe_price_id').notNull().unique(),
     unitAmountCents: integer('unit_amount_cents').notNull(),

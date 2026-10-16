@@ -100,9 +100,12 @@ export {
   directoryCategories,
   directoryCategory,
   directoryProducts,
+  featuredName,
+  featuredRanks,
   maxSponsoredPerCategory,
   productPrice,
   type DirectoryProduct,
+  type FeaturedRank,
   type DirectoryCategory,
 } from './directory';
 export {

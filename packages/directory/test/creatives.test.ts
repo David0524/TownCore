@@ -19,6 +19,7 @@ import {
   SPONSOR_SLOT,
   sponsorCards,
   submitSponsorCard,
+  TOP_SPOT_SLOT,
 } from '../src';
 
 // Sponsor cards (M6 PR D2, D-M6-7): owner writes, staff approve, the card follows its placement.
@@ -177,7 +178,7 @@ describe('sponsor cards', () => {
     const [w] = await pendingSponsorCards(db);
     await expect(
       decideSponsorCard(db, { campaignId: w!.campaignId, staffId, decision: 'approve' }, now),
-    ).rejects.toThrow(/already shows 3/);
+    ).rejects.toThrow(/already shows its sponsored cards/);
     expect(await getActiveCampaigns(db, townId, SPONSOR_SLOT, 'plumbers', 5, now)).toHaveLength(3);
   });
 
@@ -204,6 +205,53 @@ describe('sponsor cards', () => {
     expect(live.map((c) => (c.creative as { advertiser: string }).advertiser).sort()).toEqual([
       'Plumber 2',
       'Plumber 3',
+    ]);
+  });
+
+  it('a #1 spot’s card is the Top spot; #2 and #3 show below it in rank order', async () => {
+    // A fresh category with ranked featured spots: plumber 5 holds #1, plumber 4 #3, 2 #2.
+    const roofers: Array<[number, 1 | 2 | 3]> = [
+      [5, 1],
+      [4, 3],
+      [2, 2],
+    ];
+    for (const [i, rank] of roofers) {
+      const [listing] = await db
+        .select()
+        .from(businesses)
+        .where(eq(businesses.slug, `plumber-${i}`));
+      await db
+        .update(businesses)
+        .set({ category: 'roofers' })
+        .where(eq(businesses.id, listing!.id));
+      await db
+        .update(placements)
+        .set({ status: 'canceled' })
+        .where(eq(placements.businessId, listing!.id));
+      await db.insert(placements).values({
+        businessId: listing!.id,
+        townId,
+        product: 'sponsored_slot',
+        category: 'roofers',
+        rank,
+        status: 'active',
+        stripeSubscriptionId: `sub_roof_${i}`,
+      });
+      expect(await submit(i, `Roofer ${i}`)).toEqual({ ok: true });
+    }
+    const waiting = await pendingSponsorCards(db);
+    for (const card of waiting.filter((c) => c.headline.startsWith('Roofer')))
+      await decideSponsorCard(
+        db,
+        { campaignId: card.campaignId, staffId, decision: 'approve' },
+        now,
+      );
+    const top = await getActiveCampaigns(db, townId, TOP_SPOT_SLOT, 'roofers', 3, now);
+    expect(top.map((c) => (c.creative as { headline: string }).headline)).toEqual(['Roofer 5']);
+    const below = await getActiveCampaigns(db, townId, SPONSOR_SLOT, 'roofers', 3, now);
+    expect(below.map((c) => (c.creative as { headline: string }).headline)).toEqual([
+      'Roofer 2',
+      'Roofer 4',
     ]);
   });
 });
