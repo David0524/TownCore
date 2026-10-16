@@ -30,6 +30,7 @@ import {
 } from './followups';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { MIN_SOURCE_CHARS, scoreCandidate, titleSimilarity } from './scoring';
+import { createGuideCandidates } from './guides';
 import { isIssuedLicense, isNewsworthyAlert } from './templates';
 import { cannotBeArticle, decideTier } from './tiers';
 import { isoLocalDate, localDate, localWeekStart, startOfLocalDay } from './time';
@@ -64,6 +65,8 @@ export type FinderReport = {
   /** Candidates left pending (no model configured, or the town hit its daily AI cap). */
   pending: number;
   capReached: boolean;
+  /** Guide candidates queued: new topics, or topics whose pages changed. */
+  guides: number;
 };
 
 export async function runStoryFinder(
@@ -85,6 +88,7 @@ export async function runStoryFinder(
     dropped: 0,
     pending: 0,
     capReached: false,
+    guides: 0,
   };
 
   await createRoundups(db, town, now, report);
@@ -92,6 +96,8 @@ export async function runStoryFinder(
   report.updates += await createChangedRecordUpdates(db, town.id, now);
   await createStoryCandidates(db, town, config, now, report, opts.llm);
   await applyBudget(db, town, config, now, report);
+  // Evergreen guides are their own job, outside the story budget (§6 step 2).
+  report.guides = await createGuideCandidates(db, town, now);
   return report;
 }
 

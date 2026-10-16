@@ -24,6 +24,7 @@ import { buildByline } from './byline';
 import { assignArticleImage } from './images';
 import { checkDraft, type FactcheckReport } from './factcheck';
 import { applyUpdate, linkRelatedStories } from './followups';
+import { writeGuide } from './guides';
 import { llmTown } from './finder';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { uniqueSlug } from './publish';
@@ -78,6 +79,11 @@ export async function writeCandidate(
     .where(eq(storyCandidates.id, candidateId));
   const backTo = async (status: 'accepted' | 'skipped') =>
     db.update(storyCandidates).set({ status }).where(eq(storyCandidates.id, candidateId));
+
+  // --- Evergreen guides: written from their topic's official pages (M4 PR F).
+  if (candidate.kind === 'guide') {
+    return writeGuide(db, candidate, { llm: opts.llm, now, backTo });
+  }
 
   // --- Templated items: built in code from the records.
   if (candidate.kind === 'roundup' || candidate.kind === 'template') {

@@ -2,7 +2,8 @@ import robotsParser from 'robots-parser';
 import { documentedApi, isBlockedUrl, MIN_INTERVAL_MS, USER_AGENT } from './policy';
 
 // The only way adapters may make HTTP requests (a lint rule bans bare fetch in this package).
-// Every request: never-scrape list → robots.txt → 1 request/second per host → timeout + retries.
+// Every request: never-scrape list → robots.txt (including Crawl-delay) → at most 1 request a
+// second per host → timeout + retries.
 
 export class FetchPolicyError extends Error {}
 
@@ -24,10 +25,15 @@ export type FetcherOptions = {
   now?: () => number;
 };
 
-type Robots = { isAllowed(url: string, ua?: string): boolean | undefined };
+type Robots = {
+  isAllowed(url: string, ua?: string): boolean | undefined;
+  getCrawlDelay(ua?: string): number | undefined;
+};
 const ROBOTS_TTL_MS = 24 * 3_600_000;
 /** The slowest we'll pace a host after 429s. */
 const MAX_INTERVAL_MS = 10_000;
+/** The longest robots.txt Crawl-delay we honor as asked; longer delays are capped here. */
+const MAX_CRAWL_DELAY_MS = 60_000;
 
 /** Retry-After as seconds or an HTTP date, capped at 60s. */
 export function retryAfterMs(value: string | null, now = Date.now()): number | null {
@@ -97,8 +103,10 @@ export class Fetcher {
       let robots: Robots | 'allow-all' | 'disallow-all';
       try {
         const response = await this.request(new URL(robotsUrl), {}, 1);
-        if (response.ok) robots = robotsParser(robotsUrl, await response.text()) as Robots;
-        else
+        if (response.ok) {
+          robots = robotsParser(robotsUrl, await response.text()) as Robots;
+          this.applyCrawlDelay(target.host, robots);
+        } else
           robots = response.status >= 400 && response.status < 500 ? 'allow-all' : 'disallow-all';
       } catch {
         robots = 'disallow-all';
@@ -156,10 +164,20 @@ export class Fetcher {
     return this.hostInterval.get(host) ?? this.minIntervalMs;
   }
 
+  /** Rule 8: a robots.txt Crawl-delay for our agent (or *) spaces requests at least that far. */
+  private applyCrawlDelay(host: string, robots: Robots) {
+    const seconds = robots.getCrawlDelay(this.userAgent);
+    if (!seconds || !Number.isFinite(seconds) || seconds <= 0) return;
+    const ms = Math.min(MAX_CRAWL_DELAY_MS, seconds * 1_000);
+    if (ms > this.intervalFor(host)) this.hostInterval.set(host, ms);
+  }
+
   private slowDown(host: string) {
+    const current = this.intervalFor(host);
+    // Never below what robots.txt asked for.
     this.hostInterval.set(
       host,
-      Math.min(MAX_INTERVAL_MS, Math.max(1_000, this.intervalFor(host) * 2)),
+      Math.max(current, Math.min(MAX_INTERVAL_MS, Math.max(1_000, current * 2))),
     );
   }
 

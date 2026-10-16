@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, ilike, inArray, ne, or, sql } from 'drizzle-orm';
 import type { Db } from './client';
 import { articles, articleStatsDaily, pins, storyCandidates } from './schema';
 
@@ -14,7 +14,13 @@ export type RankableArticle = typeof articles.$inferSelect & {
 export async function listRankableArticles(
   db: Db,
   townId: string,
-  opts: { beat?: string; limit?: number; search?: string } = {},
+  opts: {
+    beat?: string;
+    limit?: number;
+    search?: string;
+    /** Include evergreen guides (search does; home, beat lists and the newsletter don't). */
+    guides?: boolean;
+  } = {},
 ): Promise<RankableArticle[]> {
   const rows = await db
     .select({ article: articles, newsworthiness: storyCandidates.newsworthiness })
@@ -25,6 +31,7 @@ export async function listRankableArticles(
         eq(articles.townId, townId),
         or(eq(articles.status, 'published'), eq(articles.status, 'corrected')),
         opts.beat ? eq(articles.beat, opts.beat) : undefined,
+        opts.guides ? undefined : ne(articles.kind, 'guide'),
         ...searchTerms(opts.search).map((term) =>
           or(ilike(articles.headline, term), ilike(articles.dek, term)),
         ),

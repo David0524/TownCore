@@ -39,6 +39,8 @@ type TestStory = {
   hoursAgo?: number;
   /** Fictional streets the story names, linked as topics (M4 PR D) and written into its text. */
   streets?: string[];
+  /** An evergreen guide for this topic (M4 PR F), served under /guides. */
+  guideTopic?: string;
   /** A fictional street address written into the text, for a block-level map (M4 PR E). */
   address?: string;
   /** A roundup: extra sample filing records this many days ago each (one record per entry). */
@@ -79,6 +81,16 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
         hoursAgo: 72,
       },
       {
+        slug: 'fixture-guide-recycling',
+        headline: '[TEST] How recycling works in Feed Town',
+        dek: 'A fictional guide: in the guides sitemap, never in feeds or the news sitemap.',
+        beat: 'community',
+        paragraphs: paragraphs(4),
+        source,
+        hoursAgo: 30,
+        guideTopic: 'recycling',
+      },
+      {
         slug: 'test-never-listed',
         headline: '[TEST] A test fixture that must never be listed',
         dek: 'Test slugs are excluded from every sitemap and feed.',
@@ -101,6 +113,19 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
           url: 'https://www.myboca.us/',
         },
         correction: 'Test correction: this note shows how a correction appears on a story.',
+      },
+      {
+        slug: 'test-guide-trash',
+        headline: `[TEST] How trash pickup works (sample guide for ${siteName})`,
+        dek: 'A sample guide used to check the guide page. It is not real guidance.',
+        beat: 'community',
+        paragraphs: paragraphs(5),
+        source: {
+          title: 'City of Boca Raton sanitation page (test source)',
+          url: 'https://www.myboca.us/665/Sanitation',
+        },
+        hoursAgo: 26,
+        guideTopic: 'trash-pickup',
       },
     ];
   }
@@ -198,7 +223,14 @@ export async function seedTestContent(
 
     const [source] = await tx
       .insert(sources)
-      .values({ townId: town.id, kind: 'agenda', platform: TEST_PLATFORM, adapter: TEST_PLATFORM })
+      // Checked just now, so guides show a "Last checked" date.
+      .values({
+        townId: town.id,
+        kind: 'agenda',
+        platform: TEST_PLATFORM,
+        adapter: TEST_PLATFORM,
+        lastOkAt: new Date(),
+      })
       .returning();
     for (const story of testStories(town.siteName, town.slug)) {
       const publishedAt = new Date(Date.now() - (story.hoursAgo ?? 2) * 3_600_000);
@@ -245,11 +277,12 @@ export async function seedTestContent(
             ...(story.address ? [`The sample plan covers ${story.address}.`] : []),
           ].join('\n\n'),
           beat: story.beat,
-          tier: 2,
           status: story.correction ? 'corrected' : 'published',
           byline: buildByline(town.siteName),
           sourceRecordIds: [record!.id, ...chart.map((r) => r.id)],
-          kind: story.roundupDaysAgo ? 'roundup' : 'story',
+          kind: story.guideTopic ? 'guide' : story.roundupDaysAgo ? 'roundup' : 'story',
+          guideTopic: story.guideTopic ?? null,
+          tier: story.guideTopic ? 1 : 2,
           publishedAt,
           createdAt: publishedAt,
           updatedAt: publishedAt,

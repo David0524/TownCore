@@ -107,3 +107,4 @@ export {
   relatedArticleIds,
   type ExtractReport,
 } from './entities';
+export { createGuideCandidates, pagesHash, writeGuide, type GuideOutcome } from './guides';

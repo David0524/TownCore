@@ -1,12 +1,14 @@
 import type { Article, Town } from '@towncore/db';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { articlePath } from '@/lib/paths';
 import { formatTownDate } from '@/lib/town';
 import { BeatLabel } from './BeatLabel';
 import { RelativeTime } from './RelativeTime';
 import styles from './news.module.css';
 
-type Story = Pick<Article, 'slug' | 'headline' | 'dek' | 'beat' | 'publishedAt'>;
+type Story = Pick<Article, 'slug' | 'headline' | 'dek' | 'beat' | 'publishedAt'> &
+  Partial<Pick<Article, 'kind'>>;
 
 export type StoryVariant = 'lead' | 'secondary' | 'brief' | 'list';
 
@@ -31,7 +33,7 @@ export function StoryBlock({
   visual?: ReactNode;
   as?: 'h2' | 'h3';
 }) {
-  const href = `/news/${story.slug}`;
+  const href = articlePath(story.slug, story.kind);
   const time = story.publishedAt ? (
     <RelativeTime
       iso={story.publishedAt.toISOString()}

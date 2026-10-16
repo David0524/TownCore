@@ -1,4 +1,17 @@
-import { and, arrayContains, desc, eq, gt, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import {
+  and,
+  arrayContains,
+  asc,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lte,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm';
 import type { Db } from './client';
 import { articles, campaigns, corrections, records, towns } from './schema';
 
@@ -54,10 +67,27 @@ export async function listPublishedArticles(
         eq(articles.townId, townId),
         or(eq(articles.status, 'published'), eq(articles.status, 'corrected')),
         beat ? eq(articles.beat, beat) : undefined,
+        // News only: evergreen guides have their own index (listPublishedGuides).
+        ne(articles.kind, 'guide'),
       ),
     )
     .orderBy(desc(articles.publishedAt))
     .limit(limit);
+}
+
+/** A town's published guides (M4 PR F), A to Z by headline. */
+export async function listPublishedGuides(db: Db, townId: string): Promise<Article[]> {
+  return db
+    .select()
+    .from(articles)
+    .where(
+      and(
+        eq(articles.townId, townId),
+        or(eq(articles.status, 'published'), eq(articles.status, 'corrected')),
+        eq(articles.kind, 'guide'),
+      ),
+    )
+    .orderBy(asc(articles.headline));
 }
 
 /** The highest-priority active campaign running now in a town's slot, if any. */

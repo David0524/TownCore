@@ -96,11 +96,12 @@ describe('ingest', () => {
       fetch: async () => [{ externalId: 'e1', type: 'event', title: 'Test event', raw: {} }],
       healthCheck: async () => ({ ok: true }),
     });
-    // Boca's config without its real sources, so the tick only finds the test source.
+    // Boca's config without its real sources or guide pages, so the tick only finds the test
+    // source.
     const loaded = loadTowns(fileURLToPath(new URL('../../../towns', import.meta.url))).map(
       (t) => ({
         ...t,
-        config: { ...t.config, sources: [] },
+        config: { ...t.config, sources: [], guides: [] },
       }),
     );
     await syncTowns(testDb.db, loaded);

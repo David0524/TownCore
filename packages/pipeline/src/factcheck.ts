@@ -81,7 +81,7 @@ const CALENDAR =
 export function namesIn(text: string): string[] {
   const found = new Set<string>();
   // A name never spans a line or a sentence end ("…Park Road. Work begins…").
-  for (const sentence of text.split(/\n|(?<=[a-z0-9)][.!?])\s+/)) {
+  for (const sentence of text.split(/\n|(?<=[A-Za-z0-9)][.!?])\s+/)) {
     for (const name of namesInSentence(sentence)) found.add(name);
   }
   return [...found];
@@ -141,7 +141,16 @@ export function checkDraft(input: {
       });
     }
   }
-  for (const name of namesIn(rawDraft.split('\n').map(normalize).join('\n'))) {
+  // Subheadings ("## How to apply") are the writer's own section labels, not names from the
+  // records; their numbers are still checked above.
+  const nameText = stripMarkdown(
+    [
+      draft.headline,
+      draft.dek,
+      ...draft.bodyMd.split('\n').filter((line) => !/^\s*#{1,6}\s/.test(line)),
+    ].join('\n'),
+  );
+  for (const name of namesIn(nameText.split('\n').map(normalize).join('\n'))) {
     if (!allSources.includes(name) && !known.some((k) => k.includes(name))) {
       claims.push({
         claim: `the name "${name}"`,

@@ -213,6 +213,24 @@ export const townSources = cache(async (townId: string) =>
     .where(eq(sources.townId, townId)),
 );
 
+/**
+ * When a guide's official pages were last all fetched successfully (M4 PR F): the oldest
+ * last-good fetch among its sources. None if any of them is failing, so the page never claims
+ * a check that didn't happen.
+ */
+export const guideLastChecked = cache(
+  async (article: Pick<Article, 'id' | 'sourceRecordIds'>): Promise<Date | null> => {
+    if (article.sourceRecordIds.length === 0) return null;
+    const rows = await db()
+      .selectDistinct({ health: sources.health, lastOkAt: sources.lastOkAt, id: sources.id })
+      .from(records)
+      .innerJoin(sources, eq(records.sourceId, sources.id))
+      .where(inArray(records.id, article.sourceRecordIds));
+    if (rows.length === 0 || rows.some((r) => r.health !== 'ok' || !r.lastOkAt)) return null;
+    return new Date(Math.min(...rows.map((r) => r.lastOkAt!.getTime())));
+  },
+);
+
 /** The city's own recent releases, newest first, linked to the city's pages. */
 export const cityPostings = cache(async (townId: string, limit = 5) => {
   const rows = await db()

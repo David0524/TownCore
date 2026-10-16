@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
+import { guideTopicKeys } from './guides';
 import { checkThemeForTown, defaultTheme, parseTheme, type Theme } from './theme';
 
 // Town config schema (CLAUDE.md §10). Objects are strict: unknown keys fail, so a town
@@ -23,6 +24,9 @@ export const sourceKinds = [
   'events',
   // Official releases from a town's own government (e.g. CivicPlus News Flash).
   'city_news',
+  // Official reference pages (city, county, state, utilities) that evergreen guides are written
+  // from (M4 PR F). Never story material: the story finder ignores them.
+  'reference',
   'other_outlet',
 ] as const;
 export type SourceKind = (typeof sourceKinds)[number];
@@ -94,6 +98,23 @@ export const townConfigSchema = z.strictObject({
   same_name_elsewhere: z.array(z.string().min(1)).default([]),
   agencies: z.array(z.string().min(1)).min(1),
   sources: z.array(sourceSchema).default([]),
+  // Evergreen guides (CLAUDE.md §6a; D-M4-2): topics from the network list, each with the
+  // official pages it's written from. Official pages only (Rule 3); added once verified live.
+  guides: z
+    .array(
+      z.strictObject({
+        topic: z.enum(guideTopicKeys),
+        pages: z
+          .array(z.url({ protocol: /^https$/ }))
+          .min(1)
+          .max(4),
+      }),
+    )
+    .default([])
+    .refine(
+      (gs) => new Set(gs.map((g) => g.topic)).size === gs.length,
+      'each guide topic may appear only once',
+    ),
   // Editorial overrides (CLAUDE.md §6a); defaults in editorial.ts.
   story_budget: z.number().int().positive().optional(),
   score_threshold: z.number().min(0).max(100).default(40),

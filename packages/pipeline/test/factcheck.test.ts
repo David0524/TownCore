@@ -72,6 +72,20 @@ describe('checkDraft', () => {
     );
   });
 
+  it("leaves the writer's own subheadings out of the name check, but not their numbers", () => {
+    const withHeadings = (heading: string) =>
+      check(model([claim()]), { ...draft, bodyMd: `## ${heading}\n${draft.bodyMd}` });
+    expect(withHeadings('How Paving Works').decision).toBe('pass');
+    expect(withHeadings('Phase 3 Begins').unsupportedClaims).toEqual([
+      'the number 3 (number not found in any cited record)',
+    ]);
+    // A name in a body sentence is still checked.
+    expect(
+      check(model([claim()]), { ...draft, bodyMd: `${draft.bodyMd}\nThe work is led by Pat Doe.` })
+        .unsupportedClaims,
+    ).toEqual(['the name "Pat Doe" (name not found in any cited record)']);
+  });
+
   it('sends wrong-town risk straight to review', () => {
     expect(
       check(model([claim()], { wrong_town_risk: true, wrong_town_reason: 'x' })).decision,
@@ -104,5 +118,12 @@ describe('extractors', () => {
         'The City Council met Tuesday. On Monday, Oct. 19 Mayor Scott Singer spoke at Mizner Park.',
       ),
     ).toEqual(['City Council', 'Mayor Scott Singer', 'Mizner Park']);
+  });
+
+  it('namesIn ends a sentence after a capital letter too ("…on A1A. Bark Beach…")', () => {
+    expect(namesIn('Parking is along State Road A1A. Bark Beach opens at 8.')).toEqual([
+      'State Road A1A',
+      'Bark Beach',
+    ]);
   });
 });
