@@ -240,6 +240,17 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       recordIds: licenses.map((r) => r.id),
       now,
     });
+    // Permits from a city or county open-data source (§7: permit roundups are Tier 1). Their
+    // dates are real timestamps, so the local week is used rather than the date-only range.
+    const weekEndLocal = new Date(lastWeek.getTime() + 7 * 86_400_000);
+    const permits = await townRecords(db, town.id, 'permit', lastWeek, weekEndLocal);
+    await roundup(db, town, report, {
+      key: `roundup:permits:${week}`,
+      title: `Building permits, week of ${week}`,
+      beat: 'development',
+      recordIds: permits.map((r) => r.id),
+      now,
+    });
     // Restaurant inspections: a week that names a closure or complaint needs a person (§7).
     const inspections = await townRecords(db, town.id, 'inspection', from, to);
     const failures = hasInspectionFailures(inspections.map((r) => r.raw));

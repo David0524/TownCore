@@ -7,6 +7,7 @@ import {
   meetingsRoundup,
   newBusinessesRoundup,
   newLicensesRoundup,
+  permitsRoundup,
   weatherAlert,
   type TemplateRecord,
 } from '../src/templates';
@@ -254,5 +255,39 @@ describe('inspectionsRoundup', () => {
       '- **Delta Deli**: inspected 10/20/2026; 6 violations, 2 high priority; a call-back visit on 10/21/2026 found it in compliance.',
     );
     expect(draft.bodyMd).not.toContain('## Met inspection standards');
+  });
+});
+
+describe('permitsRoundup', () => {
+  const permit = (id: string, title: string, lines: string[]) =>
+    rec({ id, type: 'permit', title, text: lines.join('\n'), url: `https://data.x.gov/d/${id}` });
+  const rows = [
+    permit('p1', 'Building Permit: New at 5641 RALEIGH ST', [
+      'Type: Building Permit',
+      'Estimated cost: 1000',
+      'Contractor: MTCI PRIVATE PROVIDER SERVICES LLC',
+    ]),
+    permit('p2', 'Building Permit: Addition at 12 NE 4 AVE', [
+      'Type: Building Permit',
+      'Estimated cost: $250,000',
+    ]),
+    permit('p3', 'Demolition Permit at 724 PALM DR', ['Type: Demolition Permit']),
+  ];
+
+  it('lists permits by estimated cost with contractor and link, then counts by type', () => {
+    const draft = permitsRoundup(town, week, rows);
+    expect(draft.headline).toBe('Building permits in Boca Raton, Oct. 19–Oct. 25');
+    expect(draft.dek).toBe(
+      '3 permits with a combined estimated cost of $251,000, according to the official permit records.',
+    );
+    const list = draft.bodyMd.split('## All permits')[1]!;
+    expect(list.indexOf('12 NE 4 Ave')).toBeLessThan(list.indexOf('5641 Raleigh St'));
+    expect(draft.bodyMd).toContain(
+      '- **Building Permit: New at 5641 Raleigh St**: estimated cost $1,000; contractor Mtci Private Provider Services LLC. [Record](https://data.x.gov/d/p1)',
+    );
+    expect(draft.bodyMd).toContain('- **Demolition Permit at 724 Palm Dr** [Record]');
+    expect(draft.bodyMd).toContain('## By type\n\n- Building Permit: 2\n- Demolition Permit: 1');
+    expect(draft.beat).toBe('development');
+    expect(draft.sourceRecordIds).toEqual(['p1', 'p2', 'p3']);
   });
 });

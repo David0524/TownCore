@@ -33,6 +33,7 @@ import {
   meetingsRoundup,
   newBusinessesRoundup,
   newLicensesRoundup,
+  permitsRoundup,
   weatherAlert,
   type TemplatedDraft,
 } from './templates';
@@ -281,6 +282,7 @@ function buildTemplate(
     return newBusinessesRoundup(info, weekOf(week!), recs);
   if (key.startsWith('roundup:new-licenses:')) return newLicensesRoundup(info, weekOf(week!), recs);
   if (key.startsWith('roundup:inspections:')) return inspectionsRoundup(info, weekOf(week!), recs);
+  if (key.startsWith('roundup:permits:')) return permitsRoundup(info, weekOf(week!), recs);
   if (key.startsWith('alert:') && recs[0]) return weatherAlert(info, recs[0]);
   return null;
 }

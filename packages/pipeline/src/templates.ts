@@ -281,6 +281,85 @@ export function inspectionsRoundup(
   };
 }
 
+/** A "Label: value" line from an open-data record's text (lib/rows in the adapters). */
+const labeled = (text: string | null, label: RegExp) =>
+  (text ?? '')
+    .split('\n')
+    .map((l) => /^([^:]+): (.*)$/.exec(l))
+    .find((m) => m && label.test(m[1]!))?.[2] ?? null;
+
+const money = (value: string | null) => {
+  const n = value ? Number(value.replace(/[$,]/g, '')) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+/** How many permits the roundup lists by name; the rest are counted by type. */
+const PERMITS_LISTED = 15;
+
+/**
+ * Last week's permits from a city or county open-data source (Socrata or ArcGIS), any town:
+ * the largest by estimated cost with their address, type and contractor, then counts by type.
+ * Owners' names never come through (the source's field map leaves them out). Tier 1 (§7).
+ */
+export function permitsRoundup(
+  town: TownInfo,
+  weekStart: Date,
+  permits: TemplateRecord[],
+): TemplatedDraft {
+  const weekEnd = new Date(weekStart.getTime() + 6 * 86_400_000);
+  const range = `${apDate(weekStart, town.timezone)}–${apDate(weekEnd, town.timezone)}`;
+  const rows = permits.map((p) => ({
+    p,
+    title: titleCase(p.title ?? 'Permit'),
+    type: labeled(p.text, /^(type|permit type|application type)$/i),
+    cost: money(labeled(p.text, /cost|valuation|value/i)),
+    contractor: labeled(p.text, /^contractor/i),
+  }));
+  const ranked = [...rows].sort(
+    (a, b) => (b.cost ?? 0) - (a.cost ?? 0) || a.title.localeCompare(b.title),
+  );
+  const listed = ranked.slice(0, PERMITS_LISTED);
+  const total = rows.reduce((sum, r) => sum + (r.cost ?? 0), 0);
+  const byType = new Map<string, number>();
+  for (const r of rows) {
+    const t = r.type ? titleCase(r.type) : 'Other';
+    byType.set(t, (byType.get(t) ?? 0) + 1);
+  }
+  const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+  const n = permits.length;
+  return {
+    headline: `Building permits in ${town.name}, ${range}`,
+    dek: `${n} ${n === 1 ? 'permit' : 'permits'}${total > 0 ? ` with a combined estimated cost of ${usd(total)}` : ''}, according to the official permit records.`,
+    bodyMd: [
+      `These are the permits in ${town.name}'s official permit records from ${range}. Estimated costs are the applicant's figures.`,
+      `## ${listed.length < n ? `The ${listed.length} largest` : 'All permits'}`,
+      listed
+        .map((r) => {
+          const parts = [
+            r.cost ? `estimated cost ${usd(r.cost)}` : null,
+            r.contractor ? `contractor ${md(titleCase(r.contractor))}` : null,
+          ].filter(Boolean);
+          const link = r.p.url ? ` [Record](${r.p.url})` : '';
+          return `- **${md(r.title)}**${parts.length ? `: ${parts.join('; ')}.` : ''}${link}`;
+        })
+        .join('\n'),
+      byType.size > 1
+        ? [
+            '## By type',
+            [...byType.entries()]
+              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+              .map(([t, k]) => `- ${md(t)}: ${k}`)
+              .join('\n'),
+          ].join('\n\n')
+        : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    beat: 'development',
+    sourceRecordIds: permits.map((p) => p.id),
+  };
+}
+
 type Alert = {
   event?: string;
   headline?: string;
