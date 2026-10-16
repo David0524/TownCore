@@ -87,12 +87,13 @@ const legacyPair = (headline: string, body: string, headlineAdvanceEm: number): 
 });
 
 export const typePairings = {
-  // Boca's (owner, 2026-10-16): a round geometric sans instead of a newspaper serif.
+  // Boca's (owner, 2026-10-16): a round geometric sans instead of a newspaper serif, and dates,
+  // sources and labels in the text face, gray, instead of mono (owner, after bocatownsquare.com).
   'outfit-geist': {
     headline: 'Outfit Variable',
     body: 'Geist Variable',
-    meta: 'Geist Mono Variable',
-    metaStyle: 'mono',
+    meta: 'Geist Variable',
+    metaStyle: 'sans',
     headlineWeight: 600,
     headlineAdvanceEm: 0.482,
   },

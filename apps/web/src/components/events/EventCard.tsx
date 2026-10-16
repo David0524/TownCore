@@ -1,5 +1,3 @@
-import { categoryColors } from '@towncore/config';
-import type { CSSProperties } from 'react';
 import styles from './events.module.css';
 
 export type EventCardData = {
@@ -66,19 +64,12 @@ export function EventCard({ event, timeZone }: { event: EventCardData; timeZone:
       </span>
     </>
   );
-  const style = { '--event-color': categoryColors.events } as CSSProperties;
   return event.url ? (
-    <a
-      href={event.url}
-      rel="nofollow noopener"
-      className={styles.card}
-      style={style}
-      data-testid="event-card"
-    >
+    <a href={event.url} rel="nofollow noopener" className={styles.card} data-testid="event-card">
       {body}
     </a>
   ) : (
-    <div className={styles.card} style={style} data-testid="event-card">
+    <div className={styles.card} data-testid="event-card">
       {body}
     </div>
   );
