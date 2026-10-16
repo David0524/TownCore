@@ -105,9 +105,11 @@ export {
   imageDefaults,
   imageKinds,
   roundupImageDefaults,
+  MAP_VIEW,
   type DailyCountsSpec,
   type ImageKind,
   type ImageSpec,
+  type MapSpec,
 } from './images';
 export {
   entityKey,

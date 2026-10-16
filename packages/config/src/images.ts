@@ -45,4 +45,27 @@ export type DailyCountsSpec = {
   total: number;
 };
 
-export type ImageSpec = DailyCountsSpec | { type: 'card' };
+/**
+ * A block-level map (§11c; D-M4-1): streets around a point snapped to its block, drawn from our
+ * OpenStreetMap base map. Lines are pre-projected into a 1200×675 view (SVG path data), so a
+ * page draws it without the base map. Never more precise than the block.
+ */
+export type MapSpec = {
+  type: 'map';
+  /** "1200 block of SW 12th Ave": what the marker shows. Never a house number. */
+  label: string;
+  street: string;
+  /** The block's center, [lon, lat], from the Census Geocoder. */
+  center: [number, number];
+  /** Meters across the view. */
+  widthMeters: number;
+  lines: Array<{ c: 'major' | 'secondary' | 'minor' | 'water' | 'coast'; d: string }>;
+  /** Street names to print, placed along their line. */
+  labels: Array<{ text: string; x: number; y: number; angle: number }>;
+  /** The marker's center and radius in view units (radius about half a block). */
+  marker: { x: number; y: number; r: number };
+};
+
+export const MAP_VIEW = { width: 1200, height: 675 } as const;
+
+export type ImageSpec = DailyCountsSpec | MapSpec | { type: 'card' };

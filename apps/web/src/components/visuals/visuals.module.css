@@ -78,3 +78,106 @@
     aspect-ratio: 4 / 3;
   }
 }
+
+/* Block-level maps (D-M4-1): the town's tokens, OpenStreetMap lines, a block-sized marker. */
+.map {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+  aspect-ratio: 16 / 9;
+}
+
+.map svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mapGround {
+  fill: var(--surface);
+}
+
+.map_water,
+.map_coast {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.35;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.map_minor,
+.map_secondary,
+.map_major {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.map_minor {
+  stroke: var(--rule);
+  stroke-width: 5;
+}
+
+.map_secondary {
+  stroke: var(--muted);
+  stroke-opacity: 0.55;
+  stroke-width: 8;
+}
+
+.map_major {
+  stroke: var(--ink);
+  stroke-opacity: 0.7;
+  stroke-width: 12;
+}
+
+.mapLabel {
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 600;
+  fill: var(--ink);
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 6px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* Sizes are in map units (1200 wide): a phone draws the map at about a third of that. */
+@media (max-width: 599px) {
+  .mapLabel {
+    font-size: 36px;
+    stroke-width: 9px;
+  }
+}
+
+.mapArea {
+  fill: var(--accent);
+  fill-opacity: 0.2;
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.mapDot {
+  fill: var(--accent);
+}
+
+.mapBlock {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+@media (max-width: 599.98px) {
+  .map {
+    border-radius: var(--radius-widget);
+  }
+}

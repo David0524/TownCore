@@ -34,3 +34,19 @@ export {
   type GeocodeInput,
   type GeocodeResult,
 } from './census/geocoder';
+export {
+  bboxAround,
+  classifyWay,
+  downloadTo,
+  extractBasemap,
+  extractBasemaps,
+  geofabrikStateUrl,
+  OSM_ATTRIBUTION,
+  OSM_COPYRIGHT_URL,
+  OSM_LICENSE,
+  simplify,
+  type BasemapClass,
+  type BasemapLine,
+  type Bbox,
+} from './osm/basemap';
+export { pbfFileFrames } from './osm/pbf';

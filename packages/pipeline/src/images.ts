@@ -5,7 +5,9 @@ import {
   type DailyCountsSpec,
   type ImageKind,
   type ImageSpec,
+  type MapSpec,
 } from '@towncore/config';
+import { OSM_ATTRIBUTION, OSM_COPYRIGHT_URL, OSM_LICENSE, type Fetcher } from '@towncore/adapters';
 import {
   articles,
   eq,
@@ -13,9 +15,18 @@ import {
   inArray,
   records,
   storyCandidates,
+  townBasemaps,
   towns,
   type Db,
 } from '@towncore/db';
+import {
+  blockLabel,
+  buildMapSpec,
+  findStreetAddress,
+  geocodeBlock,
+  mapAlt,
+  type BasemapLines,
+} from './maps';
 import { apDate, isoLocalDate, localMidnight } from './time';
 
 // The image router (CLAUDE.md §11c; docs/plans/M4.md §3). For each article it takes the first
@@ -23,8 +34,14 @@ import { apDate, isoLocalDate, localMidnight } from './time';
 // typographic card, so every article has a visual. Generated visuals are drawn by us from the
 // article's own text and records: no photos from other sites, no image model.
 
-/** Options the router can build today. Maps arrive with M4 PR E, photos with M9. */
-const BUILDABLE = new Set<ImageKind>(['data-graphic', 'typographic-card']);
+/** Options the router can build today (maps need the deps below). Photos arrive with M9. */
+const BUILDABLE = new Set<ImageKind>(['map', 'data-graphic', 'typographic-card']);
+
+/**
+ * What drawing a map needs: the polite Fetcher for the Census Geocoder. Without it (or without
+ * a base map for the town) the router skips maps; the maps job retries with it.
+ */
+export type ImageDeps = { fetcher: Fetcher };
 
 /** What a roundup's main record type counts, singular and plural. */
 export const recordCountLabels: Record<string, [string, string]> = {
@@ -48,7 +65,10 @@ export type ImageChoice = {
 };
 
 type ArticleForImage = {
+  townId: string;
   headline: string;
+  dek: string | null;
+  bodyMd: string;
   beat: string;
   kind: string;
   sourceRecordIds: string[];
@@ -143,9 +163,23 @@ export async function chooseArticleImage(
   db: Db,
   article: ArticleForImage,
   timeZone: string,
+  deps?: ImageDeps & { town: { name: string; state: string } },
 ): Promise<ImageChoice> {
   for (const option of imageOptions(article)) {
     if (!BUILDABLE.has(option)) continue;
+    if (option === 'map' && deps) {
+      const map = await buildArticleMap(db, article, deps);
+      if (map) {
+        return {
+          kind: 'map',
+          spec: map,
+          alt: mapAlt(map, deps.town.name),
+          license: OSM_LICENSE,
+          attribution: OSM_ATTRIBUTION,
+          sourceUrl: OSM_COPYRIGHT_URL,
+        };
+      }
+    }
     if (option === 'data-graphic' && article.sourceRecordIds.length >= MIN_RECORDS) {
       const rows = await db
         .select({ type: records.type, occurredAt: records.occurredAt })
@@ -175,10 +209,47 @@ export async function chooseArticleImage(
   };
 }
 
+/** A map for the story's first street address, at block level, or null. */
+async function buildArticleMap(
+  db: Db,
+  article: ArticleForImage,
+  deps: ImageDeps & { town: { name: string; state: string } },
+): Promise<MapSpec | null> {
+  const address = findStreetAddress(
+    [article.headline, article.dek ?? '', article.bodyMd].join('\n'),
+  );
+  if (!address) return null;
+  const [basemap] = await db
+    .select({ lines: townBasemaps.lines })
+    .from(townBasemaps)
+    .where(eq(townBasemaps.townId, article.townId));
+  if (!basemap) return null;
+  const center = await geocodeBlock(deps.fetcher, address, deps.town);
+  if (!center) return null;
+  const spec = buildMapSpec(
+    basemap.lines as BasemapLines,
+    center,
+    blockLabel(address.number, address.street),
+    address.street,
+  );
+  // A point outside the base map (or with no streets around it) makes no map.
+  return spec.lines.some((l) => l.c !== 'water' && l.c !== 'coast') ? spec : null;
+}
+
 /** Chooses and records an article's visual (idempotent: re-running replaces the choice). */
-export async function assignArticleImage(db: Db, articleId: string): Promise<ImageChoice> {
+export async function assignArticleImage(
+  db: Db,
+  articleId: string,
+  deps?: ImageDeps,
+): Promise<ImageChoice> {
   const [row] = await db
-    .select({ article: articles, timezone: towns.timezone, candidateKind: storyCandidates.kind })
+    .select({
+      article: articles,
+      timezone: towns.timezone,
+      townName: towns.name,
+      townState: towns.state,
+      candidateKind: storyCandidates.kind,
+    })
     .from(articles)
     .innerJoin(towns, eq(articles.townId, towns.id))
     .leftJoin(storyCandidates, eq(storyCandidates.id, articles.candidateId))
@@ -186,8 +257,19 @@ export async function assignArticleImage(db: Db, articleId: string): Promise<Ima
   if (!row) throw new Error(`Unknown article ${articleId}`);
   // Articles written before `articles.kind` existed are roundups if their candidate was.
   const kind = row.candidateKind === 'roundup' ? 'roundup' : row.article.kind;
-  const choice = await chooseArticleImage(db, { ...row.article, kind }, row.timezone);
-  const values = { ...choice, articleId, aiGenerated: false, updatedAt: new Date() };
+  const choice = await chooseArticleImage(
+    db,
+    { ...row.article, kind },
+    row.timezone,
+    deps && { ...deps, town: { name: row.townName, state: row.townState } },
+  );
+  const values = {
+    ...choice,
+    articleId,
+    aiGenerated: false,
+    updatedAt: new Date(),
+    ...(deps ? { mapCheckedAt: new Date() } : {}),
+  };
   await db
     .insert(images)
     .values(values)

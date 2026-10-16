@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
-    "weather:once": "tsx src/weather-once.ts"
+    "weather:once": "tsx src/weather-once.ts",
+    "maps:once": "tsx src/maps-once.ts"
   },
   "dependencies": {
     "@towncore/adapters": "workspace:*",

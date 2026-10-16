@@ -235,7 +235,10 @@ export const cityPostings = cache(async (townId: string, limit = 5) => {
  */
 export const articleImage = cache(
   async (
-    article: Pick<Article, 'id' | 'headline' | 'beat' | 'kind' | 'sourceRecordIds'>,
+    article: Pick<
+      Article,
+      'id' | 'townId' | 'headline' | 'dek' | 'bodyMd' | 'beat' | 'kind' | 'sourceRecordIds'
+    >,
     timeZone: string,
   ): Promise<ImageChoice> => {
     const [row] = await db().select().from(images).where(eq(images.articleId, article.id));

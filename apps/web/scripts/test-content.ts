@@ -10,10 +10,16 @@ import {
   pins,
   records,
   sources,
+  townBasemaps,
   type Db,
 } from '@towncore/db';
 import { entityKey } from '@towncore/config';
-import { assignArticleImage, buildByline, linkArticleEntities } from '@towncore/pipeline';
+import {
+  assignArticleImage,
+  buildByline,
+  linkArticleEntities,
+  type ImageDeps,
+} from '@towncore/pipeline';
 
 // Clearly labeled test articles for dev and CI (plan: "Test content"). Every headline starts with
 // "[TEST]", and every slug with "test-" (always noindex) except the fictional live Feed Town's
@@ -33,6 +39,8 @@ type TestStory = {
   hoursAgo?: number;
   /** Fictional streets the story names, linked as topics (M4 PR D) and written into its text. */
   streets?: string[];
+  /** A fictional street address written into the text, for a block-level map (M4 PR E). */
+  address?: string;
   /** A roundup: extra sample filing records this many days ago each (one record per entry). */
   roundupDaysAgo?: number[];
 };
@@ -150,6 +158,7 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
         url: 'https://example.com/harbor-point-agenda',
       },
       streets: townSlug === 'harbor-point' ? ['Sample Harbor Road'] : [],
+      ...(townSlug === 'harbor-point' ? { address: '412 Sample Harbor Road' } : {}),
     },
   ];
 }
@@ -233,6 +242,7 @@ export async function seedTestContent(
           bodyMd: [
             ...story.paragraphs,
             ...(story.streets ?? []).map((st) => `The fictional item concerns ${st}.`),
+            ...(story.address ? [`The sample plan covers ${story.address}.`] : []),
           ].join('\n\n'),
           beat: story.beat,
           tier: 2,
@@ -252,8 +262,10 @@ export async function seedTestContent(
       if (story.streets?.length) topics.push({ id: article!.id, streets: story.streets });
     }
   });
-  // Each test article gets its visual from the same router as real stories (§11c).
-  for (const id of written) await assignArticleImage(db, id);
+  // Each test article gets its visual from the same router as real stories (§11c). Harbor Point
+  // has a fictional street grid and a stand-in geocoder, so CI never calls the Census.
+  const maps = town.slug === 'harbor-point' ? await seedFictionalBasemap(db, town.id) : undefined;
+  for (const id of written) await assignArticleImage(db, id, maps);
   // Topics as the entity job would link them (no model call in fixtures).
   for (const { id, streets } of topics) {
     await linkArticleEntities(
@@ -262,4 +274,70 @@ export async function seedTestContent(
       streets.map((name) => ({ name, kind: 'street' as const, key: entityKey('street', name) })),
     );
   }
+}
+
+/** The middle of Harbor Point's fictional street grid (open water off a made-up coast). */
+const HARBOR_CENTER: [number, number] = [-68.9, 43.9];
+
+/**
+ * A fictional base map for Harbor Point: a few made-up streets around HARBOR_CENTER, plus a
+ * geocoder stand-in that answers every lookup with that point. Not OpenStreetMap data.
+ */
+async function seedFictionalBasemap(db: Db, townId: string): Promise<ImageDeps> {
+  const [x, y] = HARBOR_CENTER;
+  const lines: Array<{ c: string; n?: string; p: Array<[number, number]> }> = [
+    {
+      c: 'water',
+      p: [
+        [x + 0.004, y - 0.01],
+        [x + 0.005, y + 0.01],
+      ],
+    },
+    {
+      c: 'major',
+      n: 'Sample Harbor Road',
+      p: [
+        [x - 0.01, y],
+        [x + 0.004, y],
+      ],
+    },
+    {
+      c: 'secondary',
+      n: 'Ferry Lane',
+      p: [
+        [x - 0.0045, y - 0.01],
+        [x - 0.0045, y + 0.01],
+      ],
+    },
+    {
+      c: 'minor',
+      n: 'Mill Street',
+      p: [
+        [x - 0.01, y + 0.0012],
+        [x + 0.004, y + 0.0012],
+      ],
+    },
+    {
+      c: 'minor',
+      n: 'Pier Street',
+      p: [
+        [x - 0.01, y - 0.0012],
+        [x + 0.004, y - 0.0012],
+      ],
+    },
+  ];
+  const values = {
+    bbox: [x - 0.15, y - 0.11, x + 0.15, y + 0.11] as [number, number, number, number],
+    lines,
+    sourceUrl: 'https://example.com/fictional-basemap',
+    extractedAt: new Date(),
+  };
+  await db
+    .insert(townBasemaps)
+    .values({ townId, ...values })
+    .onConflictDoUpdate({ target: townBasemaps.townId, set: values });
+  const fetcher = {
+    getJson: async () => ({ result: { addressMatches: [{ coordinates: { x, y } }] } }),
+  } as unknown as ImageDeps['fetcher'];
+  return { fetcher };
 }

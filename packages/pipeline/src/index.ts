@@ -98,6 +98,7 @@ export {
   imageOptions,
   recordCountLabels,
   type ImageChoice,
+  type ImageDeps,
 } from './images';
 export {
   acceptEntities,

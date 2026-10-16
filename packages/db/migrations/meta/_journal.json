@@ -211,6 +211,13 @@
       "when": 1792112713057,
       "tag": "0029_entities",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792113497254,
+      "tag": "0030_maps",
+      "breakpoints": true
     }
   ]
 }

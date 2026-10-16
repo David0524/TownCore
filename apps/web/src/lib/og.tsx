@@ -1,7 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { motifSvg } from '@towncore/brand';
-import { beatCategory, beats, categoryColors, typePairings, type Theme } from '@towncore/config';
+import {
+  beatCategory,
+  beats,
+  categoryColors,
+  MAP_VIEW,
+  typePairings,
+  type MapSpec,
+  type Theme,
+} from '@towncore/config';
 import type { Article, Town } from '@towncore/db';
 import type { ImageChoice } from '@towncore/pipeline';
 import { ImageResponse } from 'next/og';
@@ -72,6 +80,7 @@ export async function articleOgImage({
   const font = await displayFont(typePairings[theme.type].headline);
   const chart =
     image.kind === 'data-graphic' && image.spec.type === 'daily-counts' ? image.spec : null;
+  const map = image.kind === 'map' && image.spec.type === 'map' ? image.spec : null;
   const beatLabel = beats.find((b) => b.slug === article.beat)?.label ?? 'News';
   const dot = categoryColors[beatCategory[article.beat] ?? 'news'];
   const motif = `data:image/svg+xml;base64,${Buffer.from(
@@ -94,7 +103,7 @@ export async function articleOgImage({
         position: 'relative',
       }}
     >
-      {chart ? null : (
+      {chart || map ? null : (
         <img
           src={motif}
           width={440}
@@ -116,7 +125,7 @@ export async function articleOgImage({
             display: 'flex',
             flex: 1,
             fontFamily: display,
-            fontSize: headlineSize(article.headline, Boolean(chart)),
+            fontSize: headlineSize(article.headline, Boolean(chart || map)),
             lineHeight: 1.05,
             letterSpacing: -1,
           }}
@@ -152,8 +161,23 @@ export async function articleOgImage({
             ))}
           </div>
         ) : null}
+        {map ? (
+          <img
+            src={mapDataUri(map, palette)}
+            width={480}
+            height={270}
+            alt=""
+            style={{ borderRadius: 8 }}
+          />
+        ) : null}
       </div>
-      <div style={{ display: 'flex', fontSize: 24, opacity: 0.75 }}>{town.domain}</div>
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', fontSize: 24, opacity: 0.75 }}
+      >
+        <span>{town.domain}</span>
+        {/* ODbL: the credit travels with the map. */}
+        {map ? <span style={{ fontSize: 18 }}>Map data © OpenStreetMap contributors</span> : null}
+      </div>
     </div>,
     {
       ...OG_SIZE,
@@ -161,4 +185,31 @@ export async function articleOgImage({
       headers: { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' },
     },
   );
+}
+
+/** The map as a standalone SVG in the town's colors, for the share image. */
+function mapDataUri(spec: MapSpec, palette: Theme['palette']): string {
+  const { width, height } = MAP_VIEW;
+  const style: Record<string, string> = {
+    water: `stroke="${palette.tint}" stroke-width="8"`,
+    coast: `stroke="${palette.tint}" stroke-width="8"`,
+    minor: `stroke="${palette.background}" stroke-opacity="0.25" stroke-width="5"`,
+    secondary: `stroke="${palette.background}" stroke-opacity="0.5" stroke-width="8"`,
+    major: `stroke="${palette.background}" stroke-opacity="0.85" stroke-width="12"`,
+  };
+  const order = ['water', 'coast', 'minor', 'secondary', 'major'] as const;
+  const paths = order
+    .flatMap((c) =>
+      spec.lines
+        .filter((l) => l.c === c)
+        .map((l) => `<path d="${l.d}" fill="none" stroke-linecap="round" ${style[c]}/>`),
+    )
+    .join('');
+  const { x, y, r } = spec.marker;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">` +
+    `<rect width="${width}" height="${height}" fill="${palette.ink}"/>${paths}` +
+    `<circle cx="${x}" cy="${y}" r="${r}" fill="${palette.accent}" fill-opacity="0.45" stroke="${palette.background}" stroke-width="4"/>` +
+    `</svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
