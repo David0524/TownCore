@@ -39,6 +39,8 @@ describe('town config', () => {
     expect(findTbdFields(boca)).toEqual([]);
     expect(boca.sources.map((s) => `${s.kind}/${s.platform}`)).toEqual([
       'agenda/civicplus',
+      // The city's event calendars (community events, the Explorium, Gumbo Limbo, …).
+      ...Array<string>(10).fill('events/civicplus'),
       'city_news/civicplus',
       'business_filings/fl-dbpr',
       'business_filings/fl-dbpr',
