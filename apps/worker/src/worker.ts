@@ -24,6 +24,7 @@ import {
   type InboundConfig,
 } from './mail';
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
+import { drawMaps, refreshBasemaps } from './maps';
 import { refreshWeather } from './weather';
 import { geocodeDirectory, refreshDirectory, sendProofReports } from './directory';
 import { queues, schedules } from './queues';
@@ -137,6 +138,14 @@ export async function startWorker({
 
   await boss.work(queues.proofReports, async () => {
     await sendProofReports(db, opsDeps.alertMail, logger);
+  });
+
+  await boss.work(queues.basemaps, async () => {
+    await refreshBasemaps(db, logger);
+  });
+
+  await boss.work(queues.maps, async () => {
+    await drawMaps(db, fetcher, logger);
   });
 
   // The daily newsletter (M5): test list or every subscriber, once per town and local date.

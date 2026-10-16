@@ -1559,6 +1559,8 @@ export const images = pgTable(
     attribution: text('attribution'),
     aiGenerated: boolean('ai_generated').notNull().default(false),
     approvedBy: uuid('approved_by').references(() => staff.id),
+    // When the maps job last tried to draw this article a map (null: not yet tried).
+    mapCheckedAt: timestamp('map_checked_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -1624,3 +1626,22 @@ export const articleEntities = pgTable(
     index('article_entities_entity_idx').on(t.entityId),
   ],
 );
+
+/**
+ * Each town's base map (D-M4-1): roads, waterways and coastline clipped from the state's
+ * OpenStreetMap extract (Geofabrik) and simplified. Refreshed monthly; maps credit
+ * "© OpenStreetMap contributors" (ODbL).
+ */
+export const townBasemaps = pgTable('town_basemaps', {
+  townId: uuid('town_id')
+    .primaryKey()
+    .references(() => towns.id),
+  /** [west, south, east, north] in degrees. */
+  bbox: jsonb('bbox').$type<[number, number, number, number]>().notNull(),
+  /** [{ c: class, n?: name, p: [[lon, lat], …] }] */
+  lines: jsonb('lines')
+    .$type<Array<{ c: string; n?: string; p: Array<[number, number]> }>>()
+    .notNull(),
+  sourceUrl: text('source_url').notNull(),
+  extractedAt: timestamp('extracted_at', { withTimezone: true }).notNull(),
+});

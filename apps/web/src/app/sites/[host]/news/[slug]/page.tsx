@@ -157,6 +157,16 @@ export default async function ArticlePage({ params }: Props) {
               Counted from this story&apos;s source records, listed below. Chart: {town.siteName}.
             </figcaption>
           ) : null}
+          {image.kind === 'map' ? (
+            // ODbL: the credit sits with the map, linked to the copyright page.
+            <figcaption className={`meta ${styles.visualCaption}`} data-testid="map-credit">
+              The marked area shows the block, not an exact address. Map data ©{' '}
+              <a href={image.sourceUrl ?? 'https://www.openstreetmap.org/copyright'}>
+                OpenStreetMap contributors
+              </a>
+              .
+            </figcaption>
+          ) : null}
         </figure>
 
         {/* No slot may sit between the headline and the first paragraph (§11b). */}

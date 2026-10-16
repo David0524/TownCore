@@ -14,6 +14,8 @@ export const queues = {
   directorySeed: 'directory.seed',
   directoryGeocode: 'directory.geocode',
   proofReports: 'directory.proof-reports',
+  basemaps: 'maps.basemaps',
+  maps: 'maps.draw',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -40,4 +42,8 @@ export const schedules = [
   // Hourly, email last month's proof report to paying businesses on the 1st–3rd (D-M6-10);
   // once per business and month.
   { queue: queues.proofReports, cron: '7 * * * *' },
+  // Monthly (the 3rd, 07:40 UTC), rebuild town base maps from Geofabrik's state extracts (M4 E).
+  { queue: queues.basemaps, cron: '40 7 3 * *' },
+  // Every 30 minutes, give recent development and public-safety stories block-level maps.
+  { queue: queues.maps, cron: '*/30 * * * *' },
 ] as const;

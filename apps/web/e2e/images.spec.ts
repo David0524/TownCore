@@ -17,6 +17,31 @@ test('a roundup over several days gets a data graphic built from its records', a
   );
 });
 
+test('a story with a street address gets a block-level map with the OpenStreetMap credit', async ({
+  page,
+}) => {
+  await page.goto(`${harbor}/news/test-site-plan`);
+  const main = page.getByRole('main');
+  const map = main.locator('figure [data-visual="map"]');
+  await expect(map).toHaveAttribute('role', 'img');
+  await expect(map).toHaveAttribute(
+    'aria-label',
+    /^Street map of Harbor Point centered on the 400 block of Sample Harbor Road, with Ferry Lane nearby\. The marked area shows the block, not an exact address\.$/,
+  );
+  // Never more precise than the block: the house number appears nowhere in the map.
+  expect(await map.innerHTML()).not.toContain('412');
+  const credit = main.getByTestId('map-credit');
+  await expect(credit).toContainText('not an exact address');
+  await expect(credit.getByRole('link', { name: 'OpenStreetMap contributors' })).toHaveAttribute(
+    'href',
+    'https://www.openstreetmap.org/copyright',
+  );
+  const res = (await page.goto(`${harbor}/news/test-site-plan/og`))!;
+  expect(res.status()).toBe(200);
+  const png = await res.body();
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
+});
+
 test('other stories get the typographic card', async ({ page }) => {
   await page.goto(`${boca}/news/test-article`);
   await expect(
