@@ -73,7 +73,7 @@ async function article(over: Partial<typeof articles.$inferInsert> = {}) {
       beat: 'community',
       tier: 1,
       status: 'published',
-      byline: 'Boca Town Square Newsroom (AI-assisted)',
+      byline: 'Boca Town Square Newsroom',
       sourceRecordIds: ['00000000-0000-4000-8000-000000000001'],
       publishedAt: new Date(),
       kind: 'guide',

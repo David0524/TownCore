@@ -204,7 +204,7 @@ export async function pinIllustration(
       pinned: true,
       ...(opts.photoreal ? { photoreal: true } : {}),
     },
-    alt: `${label}: ${alt}`,
+    alt,
     license: ILLUSTRATION_LICENSE,
     attribution: label,
     sourceUrl: null,

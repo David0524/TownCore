@@ -52,7 +52,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
     rendered.some(({ key }) => !key.startsWith('newsletter-cta')) ||
     topNodes.some(({ node }) => node !== null);
 
-  // Phones open on a large "Today" title with the greeting and a search field, on every town.
+  // Phones open on a large "Today" title with the greeting (search is the tab bar's), on every town.
   const now = new Date();
   const phoneTitle = (
     <LargeTitle
@@ -63,7 +63,6 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
         month: 'short',
         day: 'numeric',
       }).format(now)}`}
-      search={{}}
     />
   );
   const capsules = <CategoryCapsules town={town} />;

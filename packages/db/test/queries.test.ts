@@ -92,7 +92,7 @@ describe('town and article queries', () => {
       bodyMd: 'Body.',
       beat: 'government',
       tier: 2,
-      byline: 'Boca Town Square Newsroom (AI-assisted)',
+      byline: 'Boca Town Square Newsroom',
       sourceRecordIds: [record!.id],
     };
     await db.insert(articles).values([
@@ -200,7 +200,7 @@ describe('town and article queries', () => {
       bodyMd: 'Body.',
       beat: 'government',
       tier: 2,
-      byline: 'Boca Town Square Newsroom (AI-assisted)',
+      byline: 'Boca Town Square Newsroom',
       sourceRecordIds: [r2!.id, r1!.id],
     };
     const [pub] = await db

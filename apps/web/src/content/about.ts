@@ -5,7 +5,7 @@
 export const aboutInShort = [
   '{site_name} reports what the public record says about {town_name}: meetings, votes, permits, new businesses, official releases and weather.',
   'Stories are drafted by software from public records, checked fact by fact against those records, and every one links to its sources.',
-  'Every byline says "(AI-assisted)". Sensitive stories are approved by a person before they publish.',
+  'Sensitive stories are approved by a person before they publish.',
 ];
 
 export const aboutSteps = [

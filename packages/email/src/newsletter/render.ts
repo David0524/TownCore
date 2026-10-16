@@ -115,7 +115,7 @@ export function renderIssue(c: IssueContent): RenderedIssue {
       );
   }
   html.push(
-    `<p style="margin:28px 0 0;font-size:14px">Written by the ${esc(c.town.siteName)} Newsroom (AI-assisted) from public records. Every story links to the records it was written from. <a href="https://${esc(c.town.domain)}/methods" style="color:${p.ink}">How we report</a></p>`,
+    `<p style="margin:28px 0 0;font-size:14px">Written by the ${esc(c.town.siteName)} Newsroom from public records. Every story links to the records it was written from. <a href="https://${esc(c.town.domain)}/methods" style="color:${p.ink}">How we report</a></p>`,
   );
 
   const text: string[] = [`${c.town.siteName}`, longDate(c.date), ''];
@@ -153,7 +153,7 @@ export function renderIssue(c: IssueContent): RenderedIssue {
     text.push('');
   }
   text.push(
-    `Written by the ${c.town.siteName} Newsroom (AI-assisted) from public records. Every story links to the records it was written from. How we report: https://${c.town.domain}/methods`,
+    `Written by the ${c.town.siteName} Newsroom from public records. Every story links to the records it was written from. How we report: https://${c.town.domain}/methods`,
   );
   return { subject, preheader, html: html.join('\n'), text: text.join('\n') };
 }

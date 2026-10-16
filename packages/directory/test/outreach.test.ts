@@ -133,7 +133,7 @@ describe('outreach drafts', () => {
             tier: 1,
             status: 'published',
             kind,
-            byline: 'The Reachville Post Newsroom (AI-assisted)',
+            byline: 'The Reachville Post Newsroom',
             sourceRecordIds,
             publishedAt: new Date(now.getTime() - daysAgo * 86_400_000),
           })
@@ -240,7 +240,7 @@ describe('outreach drafts', () => {
       tier: 1,
       status: 'published',
       kind: 'story',
-      byline: 'The Reachville Post Newsroom (AI-assisted)',
+      byline: 'The Reachville Post Newsroom',
       sourceRecordIds: [ids.cafeRecord!],
       publishedAt: later,
     });

@@ -149,7 +149,7 @@ describe('rendering', () => {
     ).toBe('Thursday: Hurricane Warning');
   });
 
-  it('links stories with ?ref=newsletter, escapes text, discloses AI and carries no images', () => {
+  it('links stories with ?ref=newsletter, escapes text, names the newsroom and carries no images', () => {
     const r = renderIssue(content());
     expect(r.html).toContain(`href="${storyUrl('bocatownsquare.com', 'council-budget')}"`);
     expect(storyUrl('bocatownsquare.com', 'council-budget')).toBe(
@@ -157,7 +157,7 @@ describe('rendering', () => {
     );
     expect(r.html).toContain('Café &lt;Mizner&gt; opens');
     expect(r.html).not.toMatch(/<img|<script/i);
-    expect(r.html).toContain('Boca Town Square Newsroom (AI-assisted)');
+    expect(r.html).toContain('Boca Town Square Newsroom');
     expect(r.html).toContain('Thursday, October 15, 2026');
     expect(r.html).toContain('Coming up');
     expect(r.html).toContain('Thu, Oct 15, 6:00 PM: <a href="https://myboca.us/cal/1"');
@@ -167,7 +167,7 @@ describe('rendering', () => {
       'https://bocatownsquare.com/news/new-cafe?ref=newsletter',
       'COMING UP',
       'CORRECTIONS',
-      '(AI-assisted)',
+      'Newsroom from public records',
     ])
       expect(r.text).toContain(part);
   });
@@ -266,7 +266,7 @@ describe('gathering an issue from the database', () => {
       beat,
       tier: 1,
       status: 'published' as const,
-      byline: 'The Gather Post Newsroom (AI-assisted)',
+      byline: 'The Gather Post Newsroom',
       sourceRecordIds: [recs[0]!.id],
       publishedAt: at(hour),
     });

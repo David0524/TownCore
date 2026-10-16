@@ -68,7 +68,7 @@ const story = (
   beat: 'government',
   tier: 2,
   status,
-  byline: 'X Newsroom (AI-assisted)',
+  byline: 'X Newsroom',
   sourceRecordIds: ['00000000-0000-4000-8000-000000000001'],
   factcheck: { decision: pass ? 'pass' : 'review' },
   publishedAt: status === 'published' ? at : null,

@@ -151,7 +151,7 @@ describe('the router with the library', () => {
         beat: 'government',
         tier: 2,
         status: 'published',
-        byline: 'Palm Square Newsroom (AI-assisted)',
+        byline: 'Palm Square Newsroom',
         sourceRecordIds: ['00000000-0000-4000-8000-000000000001'],
         publishedAt: new Date(),
         ...over,
@@ -165,7 +165,7 @@ describe('the router with the library', () => {
     const choice = await assignArticleImage(db, a.id);
     expect(choice.kind).toBe('ai-illustration');
     expect(choice.spec).toMatchObject({ type: 'illustration', illustrationId: 'gov-05' });
-    expect(choice.alt).toBe('Illustration (AI-generated): A budget binder and a calculator.');
+    expect(choice.alt).toBe('A budget binder and a calculator.');
     const [row] = await db.select().from(images).where(eq(images.articleId, a.id));
     expect(row).toMatchObject({ aiGenerated: true, approvedBy: ownerId });
   });
@@ -196,7 +196,7 @@ describe('the router with the library', () => {
         pinned: true,
         photoreal: true,
       },
-      alt: 'Image (AI-generated): Storefronts.',
+      alt: 'Storefronts.',
       license: 'own-work',
       attribution: 'Image (AI-generated)',
       aiGenerated: true,

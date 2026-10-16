@@ -1,10 +1,11 @@
-import { aiLabel, illustrationSrc, type IllustrationSpec } from '@towncore/config';
+import { illustrationSrc, type IllustrationSpec } from '@towncore/config';
+import { plainAlt } from './alt';
 import styles from './visuals.module.css';
 
 /**
  * An AI-generated picture (CLAUDE.md §11c): a library illustration, or one a person pinned to the
- * story; generic, never the story's scene. Always labeled underneath, as an illustration or,
- * when photorealistic, an AI image.
+ * story; generic, never the story's scene. No label (owner, 2026-10-16); the record of what it
+ * is and who approved it stays in `images`.
  */
 export function SectionIllustration({ spec, alt }: { spec: IllustrationSpec; alt: string }) {
   return (
@@ -13,18 +14,15 @@ export function SectionIllustration({ spec, alt }: { spec: IllustrationSpec; alt
         src={illustrationSrc(spec.illustrationId)}
         width={spec.width}
         height={spec.height}
-        alt={alt}
+        alt={plainAlt(alt)}
         decoding="async"
         className={styles.stockImage}
       />
-      <p className={`meta ${styles.stockCredit}`} data-testid="photo-credit">
-        {aiLabel(spec)}
-      </p>
     </div>
   );
 }
 
-/** The same at list-row size, with a small "Illustration" tag so it's labeled there too. */
+/** The same at list-row size. */
 export function SectionIllustrationThumb({ spec }: { spec: IllustrationSpec }) {
   return (
     <span className={styles.thumbIllustration}>
@@ -37,9 +35,6 @@ export function SectionIllustrationThumb({ spec }: { spec: IllustrationSpec }) {
         decoding="async"
         className={styles.thumbImage}
       />
-      <span className={styles.thumbTag} aria-hidden="true">
-        {spec.photoreal ? 'AI image' : 'Illustration'}
-      </span>
     </span>
   );
 }

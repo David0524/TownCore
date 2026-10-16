@@ -156,7 +156,7 @@ async function publishedStory(recordId: string, tier = 2) {
       beat: 'government',
       tier,
       status: 'published',
-      byline: 'Boca Town Square Newsroom (AI-assisted)',
+      byline: 'Boca Town Square Newsroom',
       sourceRecordIds: [recordId],
       publishedAt: new Date(NOW.getTime() - 86_400_000),
     })

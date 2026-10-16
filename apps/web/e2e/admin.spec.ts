@@ -118,7 +118,7 @@ async function storyInReview(tag: string) {
       status: 'in_review',
       reviewReason: 'tier3',
       tierReasons: ['names a private person (Pat Doe)'],
-      byline: 'The Review Town Courier Newsroom (AI-assisted)',
+      byline: 'The Review Town Courier Newsroom',
       sourceRecordIds: [record!.id],
       factcheck: {
         method: 'model+code',
@@ -197,7 +197,7 @@ test.describe('review queue', () => {
     const [published] = await db.select().from(articles).where(eq(articles.id, article.id));
     expect(published).toMatchObject({
       status: 'published',
-      byline: 'The Review Town Courier Newsroom (AI-assisted). Reviewed by an editor',
+      byline: 'The Review Town Courier Newsroom. Reviewed by an editor',
     });
     await page.goto(`${reviewTown}/news/${article.slug}`);
     await expect(page.getByText('Reviewed by an editor')).toBeVisible();
