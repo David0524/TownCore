@@ -25,6 +25,7 @@ import {
 } from './mail';
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
 import { drawMaps, refreshBasemaps } from './maps';
+import { drawStockPhotos, unsplashFromEnv } from './photos';
 import { refreshWeather } from './weather';
 import { geocodeDirectory, refreshDirectory, sendProofReports } from './directory';
 import { queues, schedules } from './queues';
@@ -146,6 +147,11 @@ export async function startWorker({
 
   await boss.work(queues.maps, async () => {
     await drawMaps(db, fetcher, logger);
+  });
+
+  const unsplash = unsplashFromEnv();
+  await boss.work(queues.photos, async () => {
+    await drawStockPhotos(db, fetcher, unsplash, logger);
   });
 
   // The daily newsletter (M5): test list or every subscriber, once per town and local date.

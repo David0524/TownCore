@@ -16,6 +16,7 @@ export const queues = {
   proofReports: 'directory.proof-reports',
   basemaps: 'maps.basemaps',
   maps: 'maps.draw',
+  photos: 'photos.stock',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -46,4 +47,6 @@ export const schedules = [
   { queue: queues.basemaps, cron: '40 7 3 * *' },
   // Every 30 minutes, give recent development and public-safety stories block-level maps.
   { queue: queues.maps, cron: '*/30 * * * *' },
+  // Every 30 minutes (offset from maps), stock photos for new or rewritten guides (§11c).
+  { queue: queues.photos, cron: '15,45 * * * *' },
 ] as const;

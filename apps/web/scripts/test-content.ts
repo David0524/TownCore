@@ -297,8 +297,14 @@ export async function seedTestContent(
   });
   // Each test article gets its visual from the same router as real stories (§11c). Harbor Point
   // has a fictional street grid and a stand-in geocoder, so CI never calls the Census.
-  const maps = town.slug === 'harbor-point' ? await seedFictionalBasemap(db, town.id) : undefined;
-  for (const id of written) await assignArticleImage(db, id, maps);
+  // Boca's sample guide gets a stand-in stock photo the same way (no Unsplash call in CI).
+  const deps =
+    town.slug === 'harbor-point'
+      ? await seedFictionalBasemap(db, town.id)
+      : town.slug === 'boca-raton'
+        ? stockStandIn()
+        : undefined;
+  for (const id of written) await assignArticleImage(db, id, deps);
   // Topics as the entity job would link them (no model call in fixtures).
   for (const { id, streets } of topics) {
     await linkArticleEntities(
@@ -373,4 +379,29 @@ async function seedFictionalBasemap(db: Db, townId: string): Promise<ImageDeps> 
     getJson: async () => ({ result: { addressMatches: [{ coordinates: { x, y } }] } }),
   } as unknown as ImageDeps['fetcher'];
   return { fetcher };
+}
+
+/**
+ * A stand-in for the Unsplash API (search, then the download ping) with one sample photo. The
+ * image URL points at Unsplash's image host, as a real one would, but no such photo exists.
+ */
+function stockStandIn(): ImageDeps {
+  const photo = {
+    id: 'test-fixture-photo',
+    width: 4000,
+    height: 2667,
+    color: '#c9d6df',
+    description: null,
+    alt_description: 'Garbage bins lined up at the curb',
+    urls: { raw: 'https://images.unsplash.com/photo-test-fixture?ixid=test' },
+    links: {
+      html: 'https://unsplash.com/photos/test-fixture-photo',
+      download_location: 'https://api.unsplash.com/photos/test-fixture-photo/download',
+    },
+    user: { name: 'Sample Photographer', links: { html: 'https://unsplash.com/@sample' } },
+  };
+  const fetcher = {
+    getJson: async (url: string) => (url.includes('/search/photos') ? { results: [photo] } : {}),
+  } as unknown as ImageDeps['fetcher'];
+  return { fetcher, unsplash: { accessKey: 'test-fixture' } };
 }

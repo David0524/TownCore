@@ -68,4 +68,25 @@ export type MapSpec = {
 
 export const MAP_VIEW = { width: 1200, height: 675 } as const;
 
-export type ImageSpec = DailyCountsSpec | MapSpec | { type: 'card' };
+/**
+ * A licensed stock photo (§11c), only as a generic illustration for an evergreen guide. Shown
+ * from the provider's own servers (Unsplash requires hotlinking), always captioned "Stock photo"
+ * and credited. Links are stored untagged; the page adds the provider's referral tags.
+ */
+export type StockPhotoSpec = {
+  type: 'stock';
+  provider: 'unsplash';
+  photoId: string;
+  /** The provider's base image URL; the page asks for sized, cropped versions of it. */
+  src: string;
+  width: number;
+  height: number;
+  /** The photo's average color, shown while it loads. */
+  color: string | null;
+  photographer: string;
+  photographerUrl: string;
+  /** The photo's page on the provider's site. */
+  photoUrl: string;
+};
+
+export type ImageSpec = DailyCountsSpec | MapSpec | StockPhotoSpec | { type: 'card' };

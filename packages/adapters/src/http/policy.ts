@@ -76,6 +76,14 @@ export const DOCUMENTED_APIS: Record<string, { name: string; terms: string }> = 
   // disallowing everyone, though the evident intent is to block those six. The open-data page
   // points to this server "to download full datasets". Only this host; www.census.gov pages are
   // never fetched by code.
+  // Owner approved 2026-10-16 (Unsplash for guide photos). api.unsplash.com's robots.txt is
+  // `Disallow: /` for crawlers; the API itself is for registered apps, which send their access
+  // key. Only this API host; unsplash.com pages are never fetched by code. Images are hotlinked
+  // by readers' browsers from images.unsplash.com, as Unsplash requires.
+  'api.unsplash.com': {
+    name: 'Unsplash API',
+    terms: 'https://unsplash.com/api-terms',
+  },
   'www2.census.gov': {
     name: 'U.S. Census Bureau public data downloads',
     terms:
