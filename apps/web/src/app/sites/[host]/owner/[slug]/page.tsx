@@ -55,7 +55,8 @@ export default async function EditListing({ params, searchParams }: Props) {
     <StandardPage town={town}>
       <p className="meta">
         <Link href="/owner">Your listings</Link> ›{' '}
-        <Link href={listingPath(listing)}>View listing</Link>
+        <Link href={listingPath(listing)}>View listing</Link> ›{' '}
+        <Link href={`/owner/${listing.slug}/report`}>Report</Link>
       </p>
       <LargeTitle title={listing.name} as="h1" always />
       {s === 'saved' || s === 'review' ? (

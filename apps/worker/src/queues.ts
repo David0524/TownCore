@@ -13,6 +13,7 @@ export const queues = {
   weather: 'weather.refresh',
   directorySeed: 'directory.seed',
   directoryGeocode: 'directory.geocode',
+  proofReports: 'directory.proof-reports',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -36,4 +37,7 @@ export const schedules = [
   { queue: queues.directorySeed, cron: '20 9 * * *' },
   // Every 15 minutes, geocode pending listings at the Census Geocoder's polite pace (M6).
   { queue: queues.directoryGeocode, cron: '*/15 * * * *' },
+  // Hourly, email last month's proof report to paying businesses on the 1st–3rd (D-M6-10);
+  // once per business and month.
+  { queue: queues.proofReports, cron: '7 * * * *' },
 ] as const;

@@ -37,6 +37,7 @@ export function SlotUnit({ name, fill }: { name: SlotName; fill: SlotFill }) {
       style={style}
       data-slot={name}
       data-fill={fill.source}
+      data-campaign={fill.campaignId}
       data-format={format}
       aria-label={fill.source === 'campaign' ? 'Sponsored content' : 'Message from this site'}
     >

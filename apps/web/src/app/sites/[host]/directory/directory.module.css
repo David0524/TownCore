@@ -162,3 +162,17 @@
   cursor: pointer;
   justify-self: start;
 }
+
+/* The quote form sits in the locked slot style: mono label above, sand tile behind. */
+.quote {
+  margin: 1.75rem 0;
+}
+
+.quoteBody {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+}
+
+.quoteBody h2 {
+  margin-top: 0;
+}

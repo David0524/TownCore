@@ -13,6 +13,8 @@ export { creativeSchema, type Creative } from '@towncore/config';
 
 export type SlotFill = {
   source: 'campaign' | 'house';
+  /** The campaign shown, for the cookieless slot counters (M6 PR E). */
+  campaignId?: string | undefined;
   /** Shown in the locked label style. Paid fills are always labeled (Rule 6). */
   label: string;
   headline: string;
@@ -41,6 +43,7 @@ export async function resolveSlotFill(
     if (creative.success) {
       return {
         source: 'campaign',
+        campaignId: campaign.id,
         label: `${slots[slot].paidLabel} · ${creative.data.advertiser}`,
         headline: creative.data.headline,
         body: creative.data.body,
