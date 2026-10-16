@@ -42,8 +42,12 @@ import { isoLocalDate, localDate, localWeekStart, startOfLocalDay } from './time
 //      logged reason.
 // Accepted candidates are picked up by the writer job.
 
-/** Record types written up as individual stories. */
-const STORY_TYPES = ['release'];
+/**
+ * Record types written up as individual stories: the town's releases, and meeting results
+ * (minutes, or the clerk's recorded actions), which become recaps (§6a). Agendas and meeting
+ * notices are not stories on their own; the weekly meetings roundup covers them (D-M3-6).
+ */
+const STORY_TYPES = ['release', 'minutes', 'meeting-actions'];
 /** Record types that point elsewhere and carry no text of their own. */
 const LINK_TYPES = ['release-link'];
 /** How far back the finder looks for unprocessed records. */
