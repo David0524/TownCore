@@ -7,8 +7,11 @@ import {
   campaigns,
   createDb,
   eq,
+  leads,
+  mailDomains,
   ownerSessions,
   placements,
+  slotStatsDaily,
   staff,
   staffSessions,
   stripeEvents,
@@ -274,6 +277,116 @@ test('a paid sponsor card goes live only after staff approve it; Enhanced is lab
   await expect(organic).toContainText('(207) 555-0177');
 
   await db.delete(campaigns).where(eq(campaigns.category, 'restaurants'));
+  await db.delete(placements).where(eq(placements.businessId, listing!.id));
+  await db
+    .update(businesses)
+    .set({ claimedAt: null, claimedByEmail: null, phone: null })
+    .where(eq(businesses.id, listing!.id));
+});
+
+test('quote requests and call taps become leads; slots are counted; the owner sees the report', async ({
+  page,
+  context,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'runs once, on desktop');
+  const [town] = await db.select().from(towns).where(eq(towns.slug, 'harbor-point'));
+  const slug = 'harbor-light-chowder-house-test0008';
+  const [listing] = await db
+    .select()
+    .from(businesses)
+    .where(and(eq(businesses.townId, town!.id), eq(businesses.slug, slug)));
+  const email = 'owner-leads@chowder.test';
+  await db.delete(leads).where(eq(leads.businessId, listing!.id));
+  await db.delete(slotStatsDaily).where(eq(slotStatsDaily.townId, town!.id));
+  await db.delete(placements).where(eq(placements.businessId, listing!.id));
+  await db
+    .update(businesses)
+    .set({ claimedAt: new Date(), claimedByEmail: email, phone: '(207) 555-0177' })
+    .where(eq(businesses.id, listing!.id));
+  await db.insert(placements).values({
+    businessId: listing!.id,
+    townId: town!.id,
+    product: 'sponsored_slot',
+    category: 'restaurants',
+    status: 'active',
+    startsAt: new Date(),
+    stripeSubscriptionId: `sub_leads_${Date.now()}`,
+    buyerEmail: email,
+  });
+  // Lead emails need the town's mail domain to be live (sent to the log in tests).
+  await db
+    .insert(mailDomains)
+    .values({
+      name: 'harborpoint.test',
+      townId: town!.id,
+      displayName: 'The Harbor Point Ledger',
+      status: 'live',
+    })
+    .onConflictDoNothing();
+
+  // A reader asks for quotes.
+  await page.goto('http://harborpoint.test/directory/restaurants');
+  const form = page.locator('#quote');
+  await expect(form.getByTestId('slot-label')).toHaveText(
+    'Sponsored · Quotes go to Harbor Light Chowder House',
+  );
+  await form.getByRole('textbox', { name: 'Your name' }).fill('Pat Reader');
+  await form.getByRole('textbox', { name: 'Email' }).fill('pat@reader.test');
+  await form
+    .getByRole('textbox', { name: 'What do you need?' })
+    .fill('Catering for 40 people in May.');
+  await form.getByRole('checkbox').check();
+  await form.getByRole('button', { name: 'Send my request' }).click();
+  await expect(page.getByTestId('quote-message')).toHaveText(
+    'Sent. The businesses will reply to you by email.',
+  );
+  const formLeads = await db.select().from(leads).where(eq(leads.businessId, listing!.id));
+  expect(formLeads).toEqual([
+    expect.objectContaining({ kind: 'form', slot: 'directory.quote-request' }),
+  ]);
+  expect(formLeads[0]!.meta).toMatchObject({ name: 'Pat Reader', email: 'pat@reader.test' });
+
+  // A reader taps the call button on the listing; the slot counters see the page.
+  await page.goto(`http://harborpoint.test/directory/restaurants/${slug}`);
+  await page.getByRole('link', { name: 'Call Harbor Light Chowder House' }).dispatchEvent('click');
+  await expect
+    .poll(async () => (await db.select().from(leads).where(eq(leads.kind, 'call'))).length)
+    .toBeGreaterThan(0);
+  // Leaving the page flushes the slot beacon.
+  await page.goto('about:blank');
+  await expect
+    .poll(async () => {
+      const [row] = await db
+        .select()
+        .from(slotStatsDaily)
+        .where(
+          and(
+            eq(slotStatsDaily.townId, town!.id),
+            eq(slotStatsDaily.slot, 'directory.business.cta'),
+            eq(slotStatsDaily.businessId, listing!.id),
+          ),
+        );
+      return row?.impressions ?? 0;
+    })
+    .toBeGreaterThan(0);
+
+  // The owner's report shows it.
+  const token = randomBytes(24).toString('base64url');
+  await db.insert(ownerSessions).values({
+    townId: town!.id,
+    email,
+    tokenHash: hash(token),
+    expiresAt: new Date(Date.now() + 3_600_000),
+  });
+  await context.addCookies([{ name: 'tc_owner', value: token, url: 'http://harborpoint.test/' }]);
+  await page.goto(`http://harborpoint.test/owner/${slug}/report`);
+  const report = page.getByTestId('report');
+  await expect(report).toContainText('Listing views1');
+  await expect(report).toContainText('Calls (taps on your call button)1');
+  await expect(report).toContainText('Quote requests1');
+
+  await db.delete(leads).where(eq(leads.businessId, listing!.id));
+  await db.delete(slotStatsDaily).where(eq(slotStatsDaily.townId, town!.id));
   await db.delete(placements).where(eq(placements.businessId, listing!.id));
   await db
     .update(businesses)

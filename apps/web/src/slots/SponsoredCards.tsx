@@ -28,6 +28,7 @@ export async function SponsoredCards({
         key: campaign.id,
         fill: {
           source: 'campaign' as const,
+          campaignId: campaign.id,
           label: `${slots[SLOT].paidLabel} · ${creative.data.advertiser}`,
           headline: creative.data.headline,
           body: creative.data.body,

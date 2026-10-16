@@ -2,8 +2,11 @@ import {
   and,
   businessClaims,
   businesses,
+  campaigns,
   eq,
   inArray,
+  leads,
+  placements,
   records,
   sources,
   type Db,
@@ -66,13 +69,20 @@ export async function seedTestDirectory(db: Db, town: Town): Promise<number> {
     .select({ id: businesses.id })
     .from(businesses)
     .where(and(eq(businesses.townId, town.id), eq(businesses.dataSource, TEST_DIRECTORY_SOURCE)));
-  if (old.length)
-    await db.delete(businessClaims).where(
-      inArray(
-        businessClaims.businessId,
-        old.map((b) => b.id),
-      ),
-    );
+  if (old.length) {
+    const oldIds = old.map((b) => b.id);
+    await db.delete(businessClaims).where(inArray(businessClaims.businessId, oldIds));
+    await db.delete(leads).where(inArray(leads.businessId, oldIds));
+    const oldPlacements = await db
+      .select({ id: placements.id })
+      .from(placements)
+      .where(inArray(placements.businessId, oldIds));
+    if (oldPlacements.length) {
+      const placementIds = oldPlacements.map((p) => p.id);
+      await db.delete(campaigns).where(inArray(campaigns.placementId, placementIds));
+      await db.delete(placements).where(inArray(placements.id, placementIds));
+    }
+  }
   await db
     .delete(businesses)
     .where(and(eq(businesses.townId, town.id), eq(businesses.dataSource, TEST_DIRECTORY_SOURCE)));

@@ -47,3 +47,20 @@ Staff never charge a card. Refunds happen in the Stripe dashboard:
 | Sponsored slot | town `pricing.sponsored_slot_usd` (Boca $199), 3 per category | on |
 | Category exclusive | not priced | built, off |
 | Newsletter sponsorship | not priced | built, off |
+
+## Leads, slot counts and proof reports (M6 PR E)
+
+- **Quote requests** (D-M6-9): the form on a category page appears only when the category has
+  claimed businesses with an active sponsored slot. One request goes to up to 3 of them, as
+  separate `leads` rows sharing a `request_id`, each emailed from `listings@<town domain>` with
+  Reply-To set to the reader. Limits: 5 requests an hour per IP, 3 a day per email address.
+  The reader ticks a box naming the businesses before anything is sent.
+- **Calls** (D-M6-8): no tracked numbers. A tap on a listing's call button is logged as a
+  `call` lead; the phone dials the real number.
+- **`slot_stats_daily`**: impressions (at least half the unit on screen), clicks and leads per
+  slot, campaign and business, per day in the town's time zone. Cookieless; crawlers aren't
+  counted. A listing's "views" are impressions of its contact area.
+- **Proof reports** (D-M6-10): owners see any month at `/owner/<listing>/report`. On the 1st to
+  3rd of each month the worker emails last month's report to every claimed business that had a
+  paid placement during it, once per business and month (`proof_reports`), through the
+  conversational stream. It sends nothing until SES sending is set up.

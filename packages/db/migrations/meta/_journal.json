@@ -211,6 +211,13 @@
       "when": 1792112713057,
       "tag": "0029_entities",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792114022479,
+      "tag": "0030_leads_slot_stats",
+      "breakpoints": true
     }
   ]
 }

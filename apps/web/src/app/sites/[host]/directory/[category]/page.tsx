@@ -12,11 +12,12 @@ import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
 import { SponsoredCards } from '@/slots/SponsoredCards';
+import { QuoteRequest } from '@/components/directory/QuoteRequest';
 import styles from '../directory.module.css';
 
 type Props = {
   params: Promise<{ host: string; category: string }>;
-  searchParams: Promise<{ q?: string | string[] }>;
+  searchParams: Promise<{ q?: string | string[]; quote?: string }>;
 };
 
 const queryOf = (raw: string | string[] | undefined) =>
@@ -45,7 +46,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const town = await requireTown(params);
   const category = directoryCategory((await params).category);
   if (!category) notFound();
-  const q = queryOf((await searchParams).q);
+  const { q: rawQ, quote: quoteStatus } = await searchParams;
+  const q = queryOf(rawQ);
   const [{ listings, total }, enhanced] = await Promise.all([
     categoryListings(db(), town.id, category.slug, { q }),
     enhancedListingIds(db(), town.id),
@@ -115,7 +117,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           }
         />
       )}
-      <Slot town={town} name="directory.quote-request" context={context} />
+      <QuoteRequest town={town} category={category} status={quoteStatus} />
     </StandardPage>
   );
 }
