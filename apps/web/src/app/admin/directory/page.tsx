@@ -2,6 +2,7 @@ import { eq, towns } from '@towncore/db';
 import {
   listClaims,
   listPlacements,
+  pendingBusinessRequests,
   pendingNameChanges,
   pendingOutreach,
   pendingSponsorCards,
@@ -14,6 +15,7 @@ import {
   decideCardAction,
   decideClaimAction,
   decideNameAction,
+  decideRequestAction,
   sendOutreachAction,
 } from './actions';
 
@@ -38,7 +40,11 @@ export default async function DirectoryAdmin({
     pendingNameChanges(db()),
     listPlacements(db()),
   ]);
-  const [cards, outreach] = await Promise.all([pendingSponsorCards(db()), pendingOutreach(db())]);
+  const [cards, outreach, requests] = await Promise.all([
+    pendingSponsorCards(db()),
+    pendingOutreach(db()),
+    pendingBusinessRequests(db()),
+  ]);
   const townRows = names.length
     ? await Promise.all(
         [...new Set(names.map((n) => n.townId))].map(
@@ -102,6 +108,60 @@ export default async function DirectoryAdmin({
                     <input name="note" placeholder="Note (optional)" aria-label="Note" />
                     <button type="submit" name="decision" value="approve" className={styles.button}>
                       Approve
+                    </button>
+                    <button
+                      type="submit"
+                      name="decision"
+                      value="reject"
+                      className={styles.secondary}
+                    >
+                      Reject
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Businesses asking to be added ({requests.length})</h2>
+      <p className={styles.muted}>
+        Sent from &ldquo;Add your business&rdquo;. Check that the business is real and in the town
+        (its website, a license, the map) and isn&apos;t listed already. Adding lists it with these
+        details shown; the sender can then claim it. Nothing is emailed.
+      </p>
+      {requests.length === 0 ? <p>No requests are waiting.</p> : null}
+      <div className={styles.scroll}>
+        <table className={styles.table} data-testid="requests-waiting">
+          <tbody>
+            {requests.map((r) => (
+              <tr key={r.id}>
+                <td>
+                  <strong>{r.name}</strong>
+                  <div className={styles.muted}>
+                    {r.town.name} · {r.category}
+                  </div>
+                  <div className={styles.muted}>
+                    {[r.address, r.zip, r.phone].filter(Boolean).join(' · ') || 'No address'}
+                  </div>
+                  {r.website ? (
+                    <a href={r.website} target="_blank" rel="noreferrer nofollow">
+                      {r.website}
+                    </a>
+                  ) : null}
+                  {r.note ? <div className={styles.muted}>&ldquo;{r.note}&rdquo;</div> : null}
+                </td>
+                <td>
+                  {r.contactName}
+                  <div className={styles.muted}>{r.email}</div>
+                  <div className={styles.muted}>Sent {when(r.createdAt)}</div>
+                </td>
+                <td>
+                  <form action={decideRequestAction} className={styles.actions}>
+                    <input type="hidden" name="requestId" value={r.id} />
+                    <button type="submit" name="decision" value="add" className={styles.button}>
+                      Add to Places
                     </button>
                     <button
                       type="submit"

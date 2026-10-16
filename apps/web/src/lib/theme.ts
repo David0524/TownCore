@@ -72,6 +72,8 @@ export function themeCssVariables(theme: Theme): string {
     '--sand': systemColors.sand,
     '--alert': systemColors.alert,
     '--alert-text': systemColors.alertText,
+    '--calendar': systemColors.calendar,
+    '--calendar-text': systemColors.calendarText,
     ...Object.fromEntries(Object.entries(categoryColors).map(([k, v]) => [`--cat-${k}`, v])),
     ...Object.fromEntries(
       Object.entries(foodColors).flatMap(([k, v]) => [

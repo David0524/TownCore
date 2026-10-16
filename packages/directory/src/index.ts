@@ -131,3 +131,15 @@ export {
   type OutreachReport,
   type PendingOutreach,
 } from './outreach';
+export {
+  decideBusinessRequest,
+  decidedBusinessRequests,
+  pendingBusinessRequests,
+  REQUEST,
+  RequestNotPending,
+  REQUESTS_PER_HOUR,
+  submitBusinessRequest,
+  type PendingRequest,
+  type RequestInput,
+  type RequestOutcome,
+} from './requests';

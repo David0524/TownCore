@@ -38,6 +38,10 @@ export const systemColors = {
   /** Real warnings only (NWS alerts, closures). Never decorative. */
   alert: '#F5A524',
   alertText: '#111418',
+  /** The band on event date tiles, like a wall calendar page (owner, 2026-10-16). White text on
+   *  it is 4.8:1. */
+  calendar: '#D92D20',
+  calendarText: '#FFFFFF',
 } as const;
 
 /** Dark-mode roles (built now, shipped later): near-black page, lifted tiles. */

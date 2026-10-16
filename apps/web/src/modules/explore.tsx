@@ -188,7 +188,7 @@ export const DirectoryGrid: HomeModuleComponent = async ({ town }) => {
           );
         })}
       </ul>
-      <Link href="/advertise#claim" className={styles.add}>
+      <Link href="/directory/add" className={styles.add}>
         <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.plus}>
           <circle cx="12" cy="12" r="9" />
           <path d="M12 8v8M8 12h8" />

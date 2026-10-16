@@ -96,7 +96,8 @@ export default async function AdvertisePage({
       <h2 id="claim">How to get one</h2>
       <ol className={styles.steps}>
         <li>
-          Find your business in <Link href={directoryPath()}>Places</Link>.
+          Find your business in <Link href="/directory/claim">Places</Link> (or{' '}
+          <Link href="/directory/add">add it</Link> if it isn&rsquo;t listed).
         </li>
         <li>
           Claim the listing. It&rsquo;s free: we email you a link to confirm, and an editor checks

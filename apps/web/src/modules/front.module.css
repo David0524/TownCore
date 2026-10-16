@@ -34,12 +34,6 @@
   letter-spacing: -0.015em;
 }
 
-.tagline {
-  flex-basis: 100%;
-  font-size: 1.0625rem;
-  color: var(--muted);
-}
-
 .heroMotif {
   position: absolute;
   right: 2rem;

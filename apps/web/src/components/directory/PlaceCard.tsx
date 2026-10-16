@@ -12,7 +12,8 @@ import styles from './places.module.css';
 /**
  * A place as a card (owner's request, after bocatownsquare.com's "Where to eat"): a colored
  * icon, the name, its cuisine or kind, the street (or, for a license-only listing, its license
- * and area), and Call and Website buttons. Only for listings whose contact
+ * and area), and round Call and Website icon buttons, one compact row (owner: "the call and
+ * website buttons can sit as icons on the card"). Contact details only for listings whose
  * details may show (claimed, or a mapped storefront; D-M6-2); the Call tap logs a lead (D-M6-8).
  */
 export function PlaceCard({
@@ -60,19 +61,19 @@ export function PlaceCard({
             <Link href={listingPath(listing)}>{friendlyName(listing.name)}</Link>
           </h3>
           {kind ? <p className={styles.kind}>{kind}</p> : null}
+          {contact && listing.address ? (
+            <p className={styles.where}>
+              {[listing.address, listing.zip].filter(Boolean).join(', ')}
+            </p>
+          ) : null}
+          {!(contact && listing.address) && detail ? (
+            <p className={styles.where}>{detail}</p>
+          ) : null}
+          {contact && listing.phone ? (
+            <p className={`${styles.where} ${styles.deskPhone}`}>{listing.phone}</p>
+          ) : null}
         </div>
       </div>
-      {contact && listing.address ? (
-        <p className={styles.where}>
-          <svg viewBox="0 0 16 16" aria-hidden="true" className={styles.icon}>
-            <path d="M8 14.5s4.75-4.2 4.75-8A4.75 4.75 0 0 0 3.25 6.5c0 3.8 4.75 8 4.75 8Z" />
-            <circle cx="8" cy="6.5" r="1.75" />
-          </svg>
-          {[listing.address, listing.zip].filter(Boolean).join(', ')}
-        </p>
-      ) : null}
-      {!(contact && listing.address) && detail ? <p className={styles.where}>{detail}</p> : null}
-      {contact && listing.phone ? <p className={styles.where}>{listing.phone}</p> : null}
       {contact && (listing.phone || listing.website) ? (
         <div className={styles.actions}>
           {listing.phone ? (
@@ -80,18 +81,25 @@ export function PlaceCard({
               slug={listing.slug}
               phone={listing.phone}
               name={listing.name}
-              label="Call"
-              className={`button ${styles.call}`}
-            />
+              className={styles.iconButton}
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M6.6 2.75 4.3 3.4c-.9.25-1.5 1.15-1.35 2.1.95 5.6 5.95 10.6 11.55 11.55.95.15 1.85-.45 2.1-1.35l.65-2.3a1.1 1.1 0 0 0-.6-1.3l-2.55-1.1a1.1 1.1 0 0 0-1.25.3l-.95 1.1a8.6 8.6 0 0 1-4.2-4.2l1.1-.95a1.1 1.1 0 0 0 .3-1.25L8 3.35a1.1 1.1 0 0 0-1.4-.6Z" />
+              </svg>
+            </CallButton>
           ) : null}
           {listing.website ? (
             <a
-              className={`button ${styles.web}`}
+              className={styles.iconButton}
               href={listing.website}
               rel="noopener nofollow"
               aria-label={`${listing.name} website`}
+              title="Website"
             >
-              Website
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="10" cy="10" r="7.25" />
+                <path d="M2.75 10h14.5M10 2.75c2 2 3 4.4 3 7.25s-1 5.25-3 7.25c-2-2-3-4.4-3-7.25s1-5.25 3-7.25Z" />
+              </svg>
             </a>
           ) : null}
         </div>

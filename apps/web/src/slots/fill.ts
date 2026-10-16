@@ -143,7 +143,7 @@ export function houseAd(
     label: `From ${town.siteName}`,
     headline: 'Is yours listed? Claim it free',
     body: 'Add your phone, hours and website.',
-    href: '/advertise#claim',
+    href: '/directory/claim',
     cta: 'Claim your listing',
   };
   const topOffer = featuredOffer(town, [1]);
@@ -200,8 +200,9 @@ export function houseAd(
     'article.inline': newsletter,
     'article.related-businesses': advertise,
     'article.realestate': advertise,
-    // The category-exclusive product is off (D-M6-6), so its header slot invites a free claim.
-    'directory.category.exclusive': claim,
+    // The category-exclusive product is off (D-M6-6), and the owner panel just below invites
+    // claims, so its header slot offers the morning email.
+    'directory.category.exclusive': newsletter,
     'directory.topspot': topspot,
     'directory.category.top': featured,
     'directory.quote-request': leads,

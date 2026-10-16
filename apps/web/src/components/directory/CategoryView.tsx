@@ -8,6 +8,7 @@ import {
   openFeaturedRanks,
   worthALook,
 } from '@towncore/directory';
+import { OwnerBar } from '@/components/directory/OwnerBar';
 import { PlaceCard } from '@/components/directory/PlaceCard';
 import places from '@/components/directory/places.module.css';
 import { QuoteRequest } from '@/components/directory/QuoteRequest';
@@ -84,7 +85,8 @@ export function CategoryView({
   const context = { category, openRanks };
   return (
     <>
-      <Slot town={town} name="directory.category.exclusive" context={context} />
+      {/* Unsold, it's left out on phones, where the page is long enough (owner, 2026-10-16). */}
+      <Slot town={town} name="directory.category.exclusive" context={context} houseOffOnPhones />
       <p className={`muted ${styles.intro}`}>
         {category.group === 'home'
           ? `${total} ${total === 1 ? 'business holds' : 'businesses hold'} an active Florida license as ${category.name.toLowerCase()} with a ${town.name} mailing address, which can be outside city limits. Check any license with the state before you hire.`
@@ -94,6 +96,7 @@ export function CategoryView({
                 : ', from OpenStreetMap'
             }. An area address can be outside city limits.`}
       </p>
+      <OwnerBar town={town} />
       {cuisines.length > 1 ? (
         <nav aria-label={`Browse ${category.name.toLowerCase()} by cuisine`}>
           <ul className={places.chips} data-testid="cuisines">
