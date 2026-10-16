@@ -1,7 +1,9 @@
 import {
+  entityKinds,
   imageKinds,
   sourceKinds,
   townTiers,
+  type EntityKind,
   type ImageKind,
   type ImageSpec,
   type WeatherSnapshot,
@@ -400,6 +402,8 @@ export const articles = pgTable(
     reviewReason: text('review_reason'),
     tierReasons: text('tier_reasons').array(),
     rejectionReason: text('rejection_reason'),
+    // When its entities were extracted (M4 PR D); null until the entities job has run on it.
+    entitiesExtractedAt: timestamp('entities_extracted_at', { withTimezone: true }),
     publishedAt: timestamp('published_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -1516,3 +1520,54 @@ export const images = pgTable(
   ],
 );
 export type Image = typeof images.$inferSelect;
+
+/**
+ * Named things our stories mention (CLAUDE.md §6a; docs/plans/M4.md §4): businesses, streets,
+ * neighborhoods, schools, public officials, projects, agencies. One row per town, kind and
+ * normalized key; each has a topic page at /topics/<slug>.
+ */
+export const entities = pgTable(
+  'entities',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    kind: text('kind').$type<EntityKind>().notNull(),
+    /** As first written in one of our stories. */
+    name: text('name').notNull(),
+    /** entityKey(kind, name): how mentions are matched. */
+    key: text('key').notNull(),
+    slug: text('slug').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('entities_town_kind_key_uq').on(t.townId, t.kind, t.key),
+    uniqueIndex('entities_town_slug_uq').on(t.townId, t.slug),
+    check(
+      'entities_kind',
+      sql`${t.kind} in (${sql.raw(entityKinds.map((k) => `'${k}'`).join(', '))})`,
+    ),
+  ],
+);
+export type Entity = typeof entities.$inferSelect;
+
+/** Which stories mention which entities, with the exact words used. */
+export const articleEntities = pgTable(
+  'article_entities',
+  {
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id, { onDelete: 'cascade' }),
+    entityId: uuid('entity_id')
+      .notNull()
+      .references(() => entities.id, { onDelete: 'cascade' }),
+    /** The name exactly as it appears in this story (checked in code). */
+    mention: text('mention').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.articleId, t.entityId] }),
+    index('article_entities_entity_idx').on(t.entityId),
+  ],
+);

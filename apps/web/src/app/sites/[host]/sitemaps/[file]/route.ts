@@ -8,6 +8,7 @@ import {
   xmlResponse,
 } from '@/lib/discovery';
 import { resolveTown } from '@/lib/town';
+import { indexableTopics } from '@/modules/data';
 
 // Built per request from the database (never pre-rendered at build time).
 export const dynamic = 'force-dynamic';
@@ -21,8 +22,16 @@ export async function GET(_req: Request, { params }: Ctx) {
   if (!town) return new Response('Not found', { status: 404 });
 
   if (file === 'pages.xml') {
+    // Topic pages only once they're indexable (3+ real stories, D-M4-5).
     const paths = isIndexable(town)
-      ? ['/', '/about', '/methods', '/corrections', ...beats.map((b) => `/beat/${b.slug}`)]
+      ? [
+          '/',
+          '/about',
+          '/methods',
+          '/corrections',
+          ...beats.map((b) => `/beat/${b.slug}`),
+          ...(await indexableTopics(town.id)).map((slug) => `/topics/${slug}`),
+        ]
       : [];
     return xmlResponse(
       urlset(paths.map((p) => ({ loc: siteUrl(town, p) }))),

@@ -109,3 +109,30 @@
   margin: 0;
   padding: 0;
 }
+
+/* "In this story": links to the topic pages of what the story names (M4 PR D). */
+.topics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.75rem;
+  margin: 1.5rem 0;
+  padding: 0.75rem 0;
+  border-top: var(--hairline);
+  border-bottom: var(--hairline);
+}
+
+.topics ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topics a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}

@@ -12,7 +12,8 @@ import {
   sources,
   type Db,
 } from '@towncore/db';
-import { assignArticleImage, buildByline } from '@towncore/pipeline';
+import { entityKey } from '@towncore/config';
+import { assignArticleImage, buildByline, linkArticleEntities } from '@towncore/pipeline';
 
 // Clearly labeled test articles for dev and CI (plan: "Test content"). Every headline starts with
 // "[TEST]", and every slug with "test-" (always noindex) except the fictional live Feed Town's
@@ -30,6 +31,8 @@ type TestStory = {
   correction?: string;
   /** How long ago it was published. Default 2 hours. */
   hoursAgo?: number;
+  /** Fictional streets the story names, linked as topics (M4 PR D) and written into its text. */
+  streets?: string[];
   /** A roundup: extra sample filing records this many days ago each (one record per entry). */
   roundupDaysAgo?: number[];
 };
@@ -112,6 +115,8 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
         url: `https://example.com/${townSlug}-notices`,
       },
       hoursAgo: hoursAgo as number,
+      // Three items share a fictional street, so it has a topic page and related coverage.
+      streets: prefix === 'harbor' && beat !== 'business' ? ['Sample Harbor Road'] : [],
     }));
   return [
     ...(townSlug === 'harbor-point' ? extra('harbor') : []),
@@ -144,6 +149,7 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
         title: 'Sample agenda (fictional test source)',
         url: 'https://example.com/harbor-point-agenda',
       },
+      streets: townSlug === 'harbor-point' ? ['Sample Harbor Road'] : [],
     },
   ];
 }
@@ -153,6 +159,7 @@ export async function seedTestContent(
   town: { id: string; slug: string; siteName: string },
 ) {
   const written: string[] = [];
+  const topics: Array<{ id: string; streets: string[] }> = [];
   await db.transaction(async (tx) => {
     // Remove earlier test content for this town (rows that reference an article go first).
     const old = await tx
@@ -223,7 +230,10 @@ export async function seedTestContent(
           slug: story.slug,
           headline: story.headline,
           dek: story.dek,
-          bodyMd: story.paragraphs.join('\n\n'),
+          bodyMd: [
+            ...story.paragraphs,
+            ...(story.streets ?? []).map((st) => `The fictional item concerns ${st}.`),
+          ].join('\n\n'),
           beat: story.beat,
           tier: 2,
           status: story.correction ? 'corrected' : 'published',
@@ -239,8 +249,17 @@ export async function seedTestContent(
         await tx.insert(corrections).values({ articleId: article!.id, note: story.correction });
       }
       written.push(article!.id);
+      if (story.streets?.length) topics.push({ id: article!.id, streets: story.streets });
     }
   });
   // Each test article gets its visual from the same router as real stories (§11c).
   for (const id of written) await assignArticleImage(db, id);
+  // Topics as the entity job would link them (no model call in fixtures).
+  for (const { id, streets } of topics) {
+    await linkArticleEntities(
+      db,
+      { id, townId: town.id },
+      streets.map((name) => ({ name, kind: 'street' as const, key: entityKey('street', name) })),
+    );
+  }
 }

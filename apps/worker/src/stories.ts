@@ -1,5 +1,6 @@
 import { and, eq, isNull, ne, storyCandidates, towns, type Db } from '@towncore/db';
 import {
+  extractEntitiesForTown,
   runStoryFinder,
   writeCandidate,
   type FinderReport,
@@ -50,6 +51,11 @@ export async function runStoryFinderJob(
     await boss.send(queues.writer, { candidateId: candidate.id } satisfies WriterJob, {
       singletonKey: candidate.id,
     });
+  }
+  // Index newly published stories for topic pages (docs/plans/M4.md §4).
+  if (llm) {
+    const entities = await extractEntitiesForTown(db, llm, job.townId, { limit: 10 });
+    logger.info({ townId: job.townId, ...entities }, 'entity extraction');
   }
   if (report.capReached)
     logger.warn({ townId: job.townId }, 'AI daily cap reached; candidates wait');

@@ -1,11 +1,11 @@
 // pnpm stories:once <town-slug>: run the story finder for one town right now, then write every
-// accepted, unwritten candidate. Same code path as the worker's story-finder and writer jobs.
+// accepted, unwritten candidate, then index published stories for topic pages. Same code path as the worker's story-finder and writer jobs.
 // Without a model provider, only code-built items (roundups, NWS alerts) are made; candidates
 // that need classification stay pending. In the cloud sandbox run with NODE_USE_ENV_PROXY=1.
 import { requireEnv } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
 import { and, createDb, eq, isNull, storyCandidates, towns } from '@towncore/db';
-import { runStoryFinder, writeCandidate } from '../src';
+import { extractEntitiesForTown, runStoryFinder, writeCandidate } from '../src';
 import { providerFromEnv, resolveProviderName, type Llm } from '../src/llm';
 
 loadDotEnv();
@@ -41,6 +41,7 @@ try {
     console.log(`writer ${candidate.id}:`, outcome);
   }
   console.log('writer totals:', tally);
+  if (llm) console.log('entities:', await extractEntitiesForTown(db, llm, town.id));
 } finally {
   await db.$client.end();
 }
