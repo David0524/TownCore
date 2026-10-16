@@ -59,3 +59,36 @@ export {
   type LaunchOptions,
   type LaunchResult,
 } from './launch';
+export {
+  archiveYears,
+  buyDomain,
+  domainOrder,
+  newsSignals,
+  priorUse,
+  registeredInRegistry,
+  registrantFromEnv,
+  searchDomains,
+  type DomainQuote,
+  type PriorUse,
+  type Purchase,
+  type Registrant,
+} from './domains';
+export {
+  domainsFor,
+  nameCandidates,
+  namePatterns,
+  NEIGHBOR_MILES,
+  officialSounding,
+  patternOf,
+  resemblesOutlet,
+  siteNameFor,
+  type NamePattern,
+} from './names';
+export {
+  DEFAULT_TOWNS_DIR,
+  namesReport,
+  namesStep,
+  type NameDeps,
+  type NamesDetail,
+  type Proposal,
+} from './names-step';

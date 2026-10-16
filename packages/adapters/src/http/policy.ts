@@ -69,13 +69,6 @@ export const DOCUMENTED_APIS: Record<string, { name: string; terms: string }> = 
     name: 'EPA Envirofacts data service (UV index)',
     terms: 'https://www.epa.gov/enviro/web-services',
   },
-  // Owner approved 2026-10-16 (D-M7-12). The Census Bureau's public data downloads (its former FTP
-  // server): Gazetteer, population estimates, ACS summary files, relationship files and business
-  // patterns, used by `pnpm towns:rank`. Its robots.txt opens with `User-agent: *` and no rules,
-  // then a blank line and six named crawlers with `Disallow: /`; RFC 9309 reads that as one group
-  // disallowing everyone, though the evident intent is to block those six. The open-data page
-  // points to this server "to download full datasets". Only this host; www.census.gov pages are
-  // never fetched by code.
   // Owner approved 2026-10-16 (Unsplash for guide photos). api.unsplash.com's robots.txt is
   // `Disallow: /` for crawlers; the API itself is for registered apps, which send their access
   // key. Only this API host; unsplash.com pages are never fetched by code. Images are hotlinked
@@ -84,10 +77,24 @@ export const DOCUMENTED_APIS: Record<string, { name: string; terms: string }> = 
     name: 'Unsplash API',
     terms: 'https://unsplash.com/api-terms',
   },
+  // Owner approved 2026-10-16 (D-M7-12). The Census Bureau's public data downloads (its former FTP
+  // server): Gazetteer, population estimates, ACS summary files, relationship files and business
+  // patterns, used by `pnpm towns:rank`. Its robots.txt opens with `User-agent: *` and no rules,
+  // then a blank line and six named crawlers with `Disallow: /`; RFC 9309 reads that as one group
+  // disallowing everyone, though the evident intent is to block those six. The open-data page
+  // points to this server "to download full datasets". Only this host; www.census.gov pages are
+  // never fetched by code.
   'www2.census.gov': {
     name: 'U.S. Census Bureau public data downloads',
     terms:
       'https://www.census.gov/topics/research/research-transparency-public-access/open-data.html',
+  },
+  // Owner approved 2026-10-16 with the M7 plan (D-M7-8): Vercel's REST API, our registrar and
+  // DNS provider. robots.txt is `Disallow: /` (an API host). Domain search needs no auth; buying
+  // needs the team token and runs only behind `--approve-spend` and a typed confirmation.
+  'api.vercel.com': {
+    name: 'Vercel REST API (domains registrar)',
+    terms: 'https://vercel.com/docs/rest-api',
   },
 };
 

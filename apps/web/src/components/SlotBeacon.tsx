@@ -60,12 +60,15 @@ export function SlotBeacon() {
     };
     document.addEventListener('click', onClick);
     document.addEventListener('visibilitychange', onHide);
+    // Navigating away fires pagehide, not always visibilitychange: send what's queued then too.
+    window.addEventListener('pagehide', flush);
     return () => {
       flush();
       clearInterval(timer);
       observer?.disconnect();
       document.removeEventListener('click', onClick);
       document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', flush);
     };
   }, []);
   return null;

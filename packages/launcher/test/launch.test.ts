@@ -212,13 +212,14 @@ describe('a launch run', () => {
     const again = await runLaunch(deps(), { town: 'Delray Beach, FL', resume: true });
     expect(again.launch).toMatchObject({
       id: first.launch.id,
-      status: 'stopped',
+      status: 'failed',
       slug: 'delray-beach',
     });
-    expect(again.launch.stoppedReason).toMatch(/Names and domains isn't built yet/);
+    // Step 2 needs the registrar (names.test.ts); without it the run stops there.
+    expect(again.launch.stoppedReason).toMatch(/Names and domains: No domain registrar/);
     expect(again.steps.map((s) => [s.step, s.status])).toEqual([
       ['resolve', 'done'],
-      ['names', 'pending'],
+      ['names', 'failed'],
       ['sources', 'pending'],
       ['adapters', 'pending'],
       ['readiness', 'pending'],
