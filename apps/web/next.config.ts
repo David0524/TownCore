@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
     '@towncore/db',
     '@towncore/directory',
     '@towncore/email',
+    '@towncore/launcher',
     '@towncore/mail',
     '@towncore/pipeline',
     '@towncore/prompts',

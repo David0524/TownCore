@@ -51,3 +51,4 @@ export {
   type Bbox,
 } from './osm/basemap';
 export { pbfFileFrames } from './osm/pbf';
+export { parseCsvLine } from './lib/csv';

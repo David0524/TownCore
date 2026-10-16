@@ -36,6 +36,7 @@
     "@towncore/config": "workspace:*",
     "@towncore/directory": "workspace:*",
     "@towncore/email": "workspace:*",
+    "@towncore/launcher": "workspace:*",
     "@towncore/mail": "workspace:*",
     "@towncore/prompts": "workspace:*",
     "micromark": "^4.0.3",

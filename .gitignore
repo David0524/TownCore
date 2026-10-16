@@ -17,3 +17,6 @@ next-env.d.ts
 
 # AWS CDK synth output
 cdk.out/
+
+# Downloaded public data (Census files for towns:rank)
+.cache/

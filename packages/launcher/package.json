@@ -4,10 +4,21 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./candidates": "./src/candidates.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "towns:rank": "tsx scripts/rank.ts"
+  },
+  "dependencies": {
+    "@towncore/adapters": "workspace:*",
+    "@towncore/config": "workspace:*",
+    "@towncore/db": "workspace:*",
+    "fflate": "^0.8.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
   }
 }

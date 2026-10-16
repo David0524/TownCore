@@ -110,6 +110,9 @@ importers:
       '@towncore/email':
         specifier: workspace:*
         version: link:../../packages/email
+      '@towncore/launcher':
+        specifier: workspace:*
+        version: link:../../packages/launcher
       '@towncore/mail':
         specifier: workspace:*
         version: link:../../packages/mail
@@ -300,7 +303,24 @@ importers:
         specifier: ^4.23.15
         version: 4.23.15
 
-  packages/launcher: {}
+  packages/launcher:
+    dependencies:
+      '@towncore/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@towncore/config':
+        specifier: workspace:*
+        version: link:../config
+      '@towncore/db':
+        specifier: workspace:*
+        version: link:../db
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
+    devDependencies:
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
 
   packages/mail:
     dependencies:
