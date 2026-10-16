@@ -12,7 +12,8 @@
     "sources:status": "tsx src/scripts/status.ts",
     "fixtures:record": "tsx src/scripts/record.ts",
     "ingest:once": "tsx src/scripts/ingest-once.ts",
-    "weather:record": "tsx src/scripts/record-weather.ts"
+    "weather:record": "tsx src/scripts/record-weather.ts",
+    "beach:record": "tsx src/scripts/record-beach.ts"
   },
   "dependencies": {
     "@towncore/config": "workspace:*",

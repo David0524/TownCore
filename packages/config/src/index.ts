@@ -77,7 +77,7 @@ export {
   type Theme,
   type TypePairing,
 } from './theme';
-export type { WeatherAlert, WeatherHour, WeatherSnapshot } from './weather';
+export type { BeachConditions, WeatherAlert, WeatherHour, WeatherSnapshot } from './weather';
 export {
   beatCategory,
   categoryColors,

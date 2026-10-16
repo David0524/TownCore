@@ -52,6 +52,15 @@ const sourceSchema = z.strictObject({
     .string()
     .regex(/^-?\d{1,2}(\.\d+)?,-?\d{1,3}(\.\d+)?$/, 'expected "lat,lon"')
     .optional(),
+  // Beach tiles for coastal towns (D-M4b-3). Weather sources only. Kept out of `options` so
+  // adding or changing them never changes the source's identity (its key).
+  beach: z
+    .strictObject({
+      surf_office: z.string().regex(/^[A-Z]{3}$/, 'expected an NWS office like "MFL"').optional(),
+      tide_station: z.string().regex(/^\d{7}$/, 'expected a 7-digit NOAA station ID').optional(),
+      uv_zip: z.string().regex(/^\d{5}$/, 'expected a 5-digit ZIP code').optional(),
+    })
+    .optional(),
   schedule: scheduleSchema.optional(),
   // Other platform-specific settings, validated by the adapter.
   options: z.record(z.string(), z.union([z.string(), z.number(), z.array(z.string())])).optional(),

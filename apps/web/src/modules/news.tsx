@@ -11,6 +11,7 @@ import type { Article } from '@towncore/db';
 import { formatTownDate } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
 import { SunsetTile } from '@/components/weather/SunsetTile';
+import { BeachTiles } from '@/components/weather/BeachTiles';
 import { townSunset } from '@/lib/sun';
 import {
   frontSplit,
@@ -56,11 +57,18 @@ export const TodayBento: HomeModuleComponent = async ({ town, modules }) => {
   ]);
   const sunset = point ? townSunset(new Date(), town.timezone, point[0], point[1]) : null;
   const { also } = frontSplit(articles, modules);
+  const b = weather?.kind === 'snapshot' ? weather.snapshot.beach : undefined;
+  const beach = b && (b.surf || b.water || b.tides || b.uv) ? b : null;
   if (!weather && !sunset && also.length === 0) return null;
   return (
     <div className={styles.today} data-module="today-bento">
       {weather ? <WeatherTile town={town} weather={weather} /> : null}
-      {sunset ? <SunsetTile town={town} sunset={sunset} /> : null}
+      {/* Coastal towns: beach tiles with sunset in the same grid; others: sunset alone. */}
+      {beach ? (
+        <BeachTiles town={town} beach={beach} sunset={sunset} />
+      ) : sunset ? (
+        <SunsetTile town={town} sunset={sunset} />
+      ) : null}
       {also.length > 0 ? (
         <section aria-labelledby="also-h">
           <h2 id="also-h" className={`meta ${styles.alsoHeading}`}>

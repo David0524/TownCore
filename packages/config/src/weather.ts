@@ -32,4 +32,32 @@ export type WeatherSnapshot = {
   alerts: WeatherAlert[];
   /** The NWS page for this point, linked as the source. */
   sourceUrl: string;
+  /** Coastal towns with beach sources configured (see BeachConditions). */
+  beach?: BeachConditions;
+};
+
+/**
+ * Beach conditions for coastal towns (D-M4b-3; owner approved the sources 2026-10-16). Each part
+ * comes from its own public source and is missing when that source failed or is stale.
+ */
+export type BeachConditions = {
+  /** NWS surf zone forecast (SRF) for the town's zone: the first period's rip current risk. */
+  surf: {
+    period: string;
+    ripRisk: string;
+    surfHeight: string | null;
+    issuedAt: string;
+    office: string;
+    url: string;
+  } | null;
+  /** NOAA CO-OPS: latest water temperature at the station (preliminary data). */
+  water: { fahrenheit: number; at: string; station: string; stationName: string } | null;
+  /** NOAA CO-OPS: the next high and low tide predictions. */
+  tides: {
+    next: Array<{ type: 'high' | 'low'; at: string }>;
+    station: string;
+    stationName: string;
+  } | null;
+  /** EPA Envirofacts: today's UV index forecast for the ZIP code. */
+  uv: { index: number; zip: string; date: string } | null;
 };

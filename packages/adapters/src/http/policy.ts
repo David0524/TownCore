@@ -56,6 +56,19 @@ export const DOCUMENTED_APIS: Record<string, { name: string; terms: string }> = 
     name: 'Florida Division of Corporations public data downloads',
     terms: 'https://dos.fl.gov/sunbiz/other-services/data-downloads/daily-data/',
   },
+  // Owner approved 2026-10-16 (D-M4b-3), after a terms and robots.txt check. The host serves no
+  // robots rules (403 on /robots.txt; it's API-only). NOAA data is public domain; NOAA asks for
+  // attribution and an `application` name on every request.
+  'api.tidesandcurrents.noaa.gov': {
+    name: 'NOAA CO-OPS Tides & Currents data API',
+    terms: 'https://tidesandcurrents.noaa.gov/disclaimers.html',
+  },
+  // Owner approved 2026-10-16 (D-M4b-3). data.epa.gov's robots.txt has no rules; listed so the
+  // UV endpoint keeps working if that changes. Only this host: enviro.epa.gov disallows all.
+  'data.epa.gov': {
+    name: 'EPA Envirofacts data service (UV index)',
+    terms: 'https://www.epa.gov/enviro/web-services',
+  },
 };
 
 export function documentedApi(url: URL): { name: string; terms: string } | null {

@@ -59,7 +59,18 @@ afterAll(async () => drop());
 describe('weather refresh', () => {
   it('finds Boca by its NWS source and forecast point', async () => {
     expect(await weatherTargets(db)).toEqual([
-      { townId, point: '26.3587,-80.0831', zone: 'FLZ168' },
+      {
+        townId,
+        point: '26.3587,-80.0831',
+        zone: 'FLZ168',
+        beach: {
+          zone: 'FLZ168',
+          surfOffice: 'MFL',
+          tideStation: '8722670',
+          uvZip: '33432',
+          timezone: 'America/New_York',
+        },
+      },
     ]);
   });
 
