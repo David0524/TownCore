@@ -8,7 +8,7 @@ import { db } from '@/lib/db';
 import { articlePath } from '@/lib/paths';
 import type { Town } from '@towncore/db';
 import { readerCategories } from './categories';
-import { cityPostings, recentArticles, upcomingMeetings } from './data';
+import { cityPostings, upcomingMeetings } from './data';
 import type { HomeModuleComponent } from './types';
 import styles from './front.module.css';
 
@@ -22,13 +22,12 @@ export function greeting(now: Date, timeZone: string): string {
   return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 }
 
-/** "Good morning, Boca" (the town's short name) with the date and when the newsroom last published. */
+/**
+ * "Good morning, Boca" (the town's short name) with today's date. No "Updated" time: the newest
+ * story can be days old, and a bare clock time beside "Good morning" read as today.
+ */
 export const GoodMorning: HomeModuleComponent = async ({ town }) => {
   const now = new Date();
-  const newest = (await recentArticles(town.id)).reduce<Date | null>(
-    (max, a) => (!max || a.publishedAt > max ? a.publishedAt : max),
-    null,
-  );
   const weekday = new Intl.DateTimeFormat('en-US', {
     timeZone: town.timezone,
     weekday: 'long',
@@ -40,7 +39,6 @@ export const GoodMorning: HomeModuleComponent = async ({ town }) => {
       </p>
       <p className="meta">
         {weekday}, {apDate(now, town.timezone)}
-        {newest ? ` · Updated ${clockTime(newest, town.timezone)}` : ''}
       </p>
     </div>
   );

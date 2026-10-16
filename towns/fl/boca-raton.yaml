@@ -8,6 +8,8 @@ census_id: '1207300' # Census place GEOID for the city of Boca Raton (verified 2
 county: Palm Beach
 timezone: America/New_York
 site_name: Boca Town Square
+# The owner's logo (docs/brand/boca-town-square-logo.webp); the header uses its wordmark.
+logo: { src: /brand/boca-raton/wordmark.webp, width: 936, height: 108 }
 domain: bocatownsquare.com
 extra_domains: []
 tier: large
