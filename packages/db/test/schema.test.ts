@@ -167,7 +167,7 @@ describe('articles constraints', () => {
     beat: 'government',
     tier: 2,
     status: 'published' as const,
-    byline: 'Boca Town Square Newsroom (AI-assisted)',
+    byline: 'Boca Town Square Newsroom',
     sourceRecordIds: [recordId],
     publishedAt: new Date(),
   });
@@ -208,7 +208,7 @@ describe('articles constraints', () => {
     await expect(
       db.insert(articles).values({
         ...valid(),
-        byline: 'Boca Town Square Newsroom (AI-assisted). Reviewed by Jane Editor',
+        byline: 'Boca Town Square Newsroom. Reviewed by Jane Editor',
       }),
     ).resolves.toBeDefined();
   });

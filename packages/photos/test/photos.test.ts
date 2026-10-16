@@ -235,7 +235,7 @@ describe('submissions', () => {
     expect((await businessPhotoFor(db, bizId))!.id).toBe(rows[2]!.id);
   });
 
-  it('queues an AI illustration for a guide; once approved it shows, labeled and AI-generated', async () => {
+  it('queues an AI illustration for a guide; once approved it shows, recorded as AI-generated', async () => {
     const prompts: string[] = [];
     const provider = {
       name: 'test-model',
@@ -256,7 +256,7 @@ describe('submissions', () => {
           beat: 'community',
           tier: 1,
           status: 'published',
-          byline: 'Harbor Square Newsroom (AI-assisted)',
+          byline: 'Harbor Square Newsroom',
           sourceRecordIds: ['00000000-0000-4000-8000-000000000001'],
           kind,
           guideTopic: kind === 'guide' ? 'recycling' : null,
@@ -296,7 +296,7 @@ describe('submissions', () => {
       aiGenerated: true,
       approvedBy: staffId,
       attribution: 'Illustration (AI-generated)',
-      alt: 'Illustration (AI-generated): Blue and green recycling bins drawn in flat shapes.',
+      alt: 'Blue and green recycling bins drawn in flat shapes.',
     });
   });
 });

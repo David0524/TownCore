@@ -23,7 +23,8 @@ export function windShort(wind: { windDirection: string; windSpeed: string } | n
  * The Today band's two small tiles for coastal towns (D-M4b-3; canvas "Homepage"): Beach, with
  * the rip current risk from the NWS surf zone forecast, the water temperature and the next high
  * tide from NOAA; and Sunset, with the EPA UV index and the hour's forecast wind. Each part shows
- * only when its source answered, and one line names every source, as each asks.
+ * only when its source answered. The sources are named, as each asks, on the Weather page
+ * (BeachSources), not under the tiles (owner, 2026-10-16: no linked sources by the weather).
  */
 export function BeachTiles({
   town,
@@ -104,32 +105,41 @@ export function BeachTiles({
           </div>
         ) : null}
       </div>
-      <p className={`meta ${styles.beachSources}`}>
-        {[
-          surf ? (
-            <a key="nws" href={surf.url}>
-              NWS {surf.office === 'MFL' ? 'Miami' : surf.office} surf forecast
-            </a>
-          ) : null,
-          water || tides ? (
-            <a
-              key="noaa"
-              href={`https://tidesandcurrents.noaa.gov/stationhome.html?id=${(water ?? tides)!.station}`}
-            >
-              NOAA Tides &amp; Currents (preliminary)
-            </a>
-          ) : null,
-          uv ? (
-            <a key="epa" href="https://www.epa.gov/sunsafety/uv-index-1">
-              UV: U.S. EPA
-            </a>
-          ) : null,
-        ]
-          .filter(Boolean)
-          .flatMap((node, i) => (i === 0 ? [node] : [' · ', node]))}
-      </p>
     </section>
   );
 }
 
 const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+
+/** The beach tiles' sources, linked, as NOAA and the others ask; shown on the Weather page. */
+export function BeachSources({ beach }: { beach: BeachConditions }) {
+  const { surf, water, tides, uv } = beach;
+  if (!surf && !water && !tides && !uv) return null;
+  return (
+    <p className="meta" data-testid="beach-sources">
+      Beach conditions:{' '}
+      {[
+        surf ? (
+          <a key="nws" href={surf.url}>
+            NWS {surf.office === 'MFL' ? 'Miami' : surf.office} surf forecast
+          </a>
+        ) : null,
+        water || tides ? (
+          <a
+            key="noaa"
+            href={`https://tidesandcurrents.noaa.gov/stationhome.html?id=${(water ?? tides)!.station}`}
+          >
+            NOAA Tides &amp; Currents (preliminary)
+          </a>
+        ) : null,
+        uv ? (
+          <a key="epa" href="https://www.epa.gov/sunsafety/uv-index-1">
+            UV: U.S. EPA
+          </a>
+        ) : null,
+      ]
+        .filter(Boolean)
+        .flatMap((node, i) => (i === 0 ? [node] : [' · ', node]))}
+    </p>
+  );
+}

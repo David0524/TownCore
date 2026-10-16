@@ -27,7 +27,7 @@ another outlet has a story we don't, we may link to it with a one-line summary i
 
 ## Bylines and sources
 
-Our byline is "{site_name} Newsroom (AI-assisted)". When a person reviewed or edited a story,
+Our byline is "{site_name} Newsroom". When a person reviewed or edited a story,
 the byline adds "Reviewed by an editor". Every story ends with links to the records it was
 written from, so you can check our work.
 

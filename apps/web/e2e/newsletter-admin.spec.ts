@@ -70,7 +70,7 @@ test('test list, preview and a test send of the next issue', async ({ page, cont
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('The Letter Town Post');
   await expect(page.getByTestId('next-subject')).toContainText(/^\w+day: /);
   await expect(page.frameLocator('[data-testid="next-preview"]').locator('body')).toContainText(
-    'The Letter Town Post Newsroom (AI-assisted)',
+    'The Letter Town Post Newsroom',
   );
   await expect(page.getByText('An admin changes the mode.')).toBeVisible();
 

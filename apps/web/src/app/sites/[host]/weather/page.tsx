@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { apDate } from '@towncore/pipeline';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
-import { townForecast } from '@/modules/data';
+import { BeachSources, BeachTiles } from '@/components/weather/BeachTiles';
+import { townForecast, townWeather } from '@/modules/data';
 import styles from './weather.module.css';
 
 export const metadata: Metadata = { title: 'Weather', alternates: { canonical: '/weather' } };
@@ -14,7 +15,8 @@ export const metadata: Metadata = { title: 'Weather', alternates: { canonical: '
  */
 export default async function WeatherPage({ params }: { params: Promise<{ host: string }> }) {
   const town = await requireTown(params);
-  const forecast = await townForecast(town.id);
+  const [forecast, weather] = await Promise.all([townForecast(town.id), townWeather(town.id)]);
+  const beach = weather?.kind === 'snapshot' ? weather.snapshot.beach : undefined;
   return (
     <StandardPage town={town}>
       <h1>{town.name} weather</h1>
@@ -42,6 +44,13 @@ export default async function WeatherPage({ params }: { params: Promise<{ host: 
       ) : (
         <p>The latest forecast isn&rsquo;t available right now. Please check back soon.</p>
       )}
+      {beach ? (
+        <section aria-labelledby="beach-h" className={styles.beach}>
+          <h2 id="beach-h">At the beach</h2>
+          <BeachTiles town={town} beach={beach} sunset={null} />
+          <BeachSources beach={beach} />
+        </section>
+      ) : null}
     </StandardPage>
   );
 }

@@ -274,6 +274,13 @@
       "when": 1792171971355,
       "tag": "0038_featured_spots",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792183225052,
+      "tag": "0039_byline_without_ai_label",
+      "breakpoints": true
     }
   ]
 }

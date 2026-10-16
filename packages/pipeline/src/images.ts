@@ -254,7 +254,7 @@ export async function chooseArticleImage(
         return {
           kind: 'ai-illustration',
           spec: photoSpec(art),
-          alt: `${AI_ILLUSTRATION_LABEL}: ${art.alt}`,
+          alt: art.alt ?? '',
           license: art.licenseVersion,
           attribution: AI_ILLUSTRATION_LABEL,
           sourceUrl: null,
@@ -657,7 +657,7 @@ async function pickSectionIllustration(
       width: pick.art.width,
       height: pick.art.height,
     },
-    alt: `${AI_ILLUSTRATION_LABEL}: ${pick.art.alt}`,
+    alt: pick.art.alt,
     license: ILLUSTRATION_LICENSE,
     attribution: AI_ILLUSTRATION_LABEL,
     sourceUrl: null,

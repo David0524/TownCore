@@ -167,7 +167,7 @@ export async function decidePhoto(
       articleId: row.articleId,
       kind: 'ai-illustration' as const,
       spec: photoSpec(row),
-      alt: `${AI_ILLUSTRATION_LABEL}: ${alt}`,
+      alt,
       license: row.licenseVersion,
       attribution: AI_ILLUSTRATION_LABEL,
       sourceUrl: null,

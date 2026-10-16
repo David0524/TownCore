@@ -204,7 +204,7 @@ describe('writing guides', () => {
       guideTopic: 'bulk-waste',
       tier: 1,
       beat: 'community',
-      byline: 'Boca Town Square Newsroom (AI-assisted)',
+      byline: 'Boca Town Square Newsroom',
       sourceRecordIds: [recordId],
       promptVersions: ['guide@v1', 'factcheck@v1'],
     });
@@ -224,7 +224,7 @@ describe('writing guides', () => {
         beat: 'community',
         tier: 1,
         status: 'published' as const,
-        byline: 'Boca Town Square Newsroom (AI-assisted)',
+        byline: 'Boca Town Square Newsroom',
         sourceRecordIds: ['00000000-0000-4000-8000-000000000001'],
         kind: 'guide',
         publishedAt: new Date('2026-09-01T12:00:00Z'),

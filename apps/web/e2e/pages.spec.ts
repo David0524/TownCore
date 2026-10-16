@@ -11,7 +11,7 @@ test.describe('About, Methods and Corrections (Rule 1)', () => {
     expect(response?.status()).toBe(200);
     const main = page.getByRole('main');
     await expect(main).toContainText('Boca Town Square is published by TownCore.');
-    await expect(main).toContainText('(AI-assisted)');
+    await expect(main).not.toContainText('(AI-assisted)');
     await expect(
       main.getByRole('link', { name: 'news@bocatownsquare.com' }).first(),
     ).toHaveAttribute('href', 'mailto:news@bocatownsquare.com');
@@ -65,7 +65,7 @@ test.describe('article page', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       '[TEST] This is a test article for Boca Town Square',
     );
-    await expect(page.getByTestId('byline')).toHaveText('Boca Town Square Newsroom (AI-assisted)');
+    await expect(page.getByTestId('byline')).toHaveText('Boca Town Square Newsroom');
     const sources = page.getByTestId('sources');
     await expect(sources.getByRole('link')).toHaveAttribute('href', 'https://www.myboca.us/');
     await expect(page.getByTestId('correction-notice')).toContainText('Test correction');

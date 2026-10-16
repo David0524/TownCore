@@ -160,7 +160,7 @@ describe('writeCandidate: stories', () => {
       slug: 'council-approves-paving-contract-for-palmetto-park-road',
       status: 'published',
       tier: 2,
-      byline: 'Boca Town Square Newsroom (AI-assisted)',
+      byline: 'Boca Town Square Newsroom',
       sourceRecordIds: [recordId],
       promptVersions: ['writer@v1', 'factcheck@v1'],
       reviewReason: null,
@@ -407,7 +407,7 @@ describe('publishing with a reviewer', () => {
     await publishArticle(db, articleId, { reviewer, now: NOW });
     expect(await article(articleId)).toMatchObject({
       status: 'published',
-      byline: 'Boca Town Square Newsroom (AI-assisted). Reviewed by an editor',
+      byline: 'Boca Town Square Newsroom. Reviewed by an editor',
       reviewerId: reviewer.id,
       reviewReason: null,
     });

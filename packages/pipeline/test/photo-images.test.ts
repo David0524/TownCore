@@ -62,7 +62,7 @@ async function story(over: Partial<typeof articles.$inferInsert> = {}) {
       beat: 'community',
       tier: 1,
       status: 'published',
-      byline: 'Harbor Square Newsroom (AI-assisted)',
+      byline: 'Harbor Square Newsroom',
       sourceRecordIds: ['00000000-0000-4000-8000-000000000001'],
       publishedAt: NOW,
       ...over,
@@ -175,7 +175,7 @@ describe('business photos', () => {
 });
 
 describe('AI illustrations', () => {
-  it('appear on a guide only once approved, labeled and recorded as AI-generated', async () => {
+  it('appear on a guide only once approved, and are recorded as AI-generated', async () => {
     const guide = await story({ kind: 'guide', guideTopic: 'recycling', beat: 'community' });
     const art = await photo({
       kind: 'illustration',
@@ -190,7 +190,7 @@ describe('AI illustrations', () => {
       .where(eq(photoSubmissions.id, art.id));
     expect(await assignArticleImage(db, guide.id)).toMatchObject({
       kind: 'ai-illustration',
-      alt: 'Illustration (AI-generated): Recycling bins drawn in flat shapes.',
+      alt: 'Recycling bins drawn in flat shapes.',
       aiGenerated: true,
       approvedBy: staffId,
     });

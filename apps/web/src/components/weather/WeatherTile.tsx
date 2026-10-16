@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Town } from '@towncore/db';
 import type { TownWeather } from '@/modules/data';
 import { clockTime, sentenceCase, shortHour } from './format';
@@ -6,7 +7,8 @@ import styles from './weather.module.css';
 /**
  * The Today weather tile (docs/plans/M4b.md): this hour's forecast in large light numerals,
  * today's high and low, and an hourly row, with the National Weather Service named as the
- * source. It's a forecast for the hour, not a measurement, and says so.
+ * source (no outside link: the full forecast is our own Weather page). It's a forecast for the
+ * hour, not a measurement, and says so.
  */
 export function WeatherTile({ town, weather }: { town: Town; weather: TownWeather }) {
   if (weather.kind === 'zone') {
@@ -20,13 +22,8 @@ export function WeatherTile({ town, weather }: { town: Town; weather: TownWeathe
         <p className={styles.zonePeriod}>{weather.period}</p>
         <p className={styles.zoneText}>{weather.text}</p>
         <p className={`meta ${styles.source}`}>
-          National Weather Service forecast, issued {clockTime(weather.issuedAt, town.timezone)}
-          {weather.url ? (
-            <>
-              {' '}
-              · <a href={weather.url}>Full forecast</a>
-            </>
-          ) : null}
+          National Weather Service forecast, issued {clockTime(weather.issuedAt, town.timezone)} ·{' '}
+          <Link href="/weather">Full forecast</Link>
         </p>
       </section>
     );
@@ -39,9 +36,9 @@ export function WeatherTile({ town, weather }: { town: Town; weather: TownWeathe
         <h2 id="weather-h" className={styles.place}>
           {town.name}
         </h2>
-        <a className="meta" href={w.sourceUrl}>
+        <Link className="meta" href="/weather">
           Full forecast →
-        </a>
+        </Link>
       </div>
       <div className={styles.now}>
         <p className={styles.temp}>

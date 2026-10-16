@@ -67,7 +67,7 @@ test.describe.serial('beach tiles', () => {
     await db.$client.end();
   });
 
-  test('shows each condition with its source', async ({ page }) => {
+  test('shows each condition, with its sources on the Weather page', async ({ page }) => {
     await page.goto(`${pine}/`);
     const tiles = page.getByTestId('beach-tiles');
     await expect(tiles.getByTestId('beach-rip')).toContainText('High rip risk');
@@ -76,10 +76,14 @@ test.describe.serial('beach tiles', () => {
     await expect(tiles.getByTestId('beach-tides')).toContainText('tide');
     await expect(tiles.getByTestId('beach-uv')).toContainText('UV 4');
     await expect(tiles.getByTestId('beach-uv')).toHaveAttribute('title', 'UV index 4: moderate');
-    await expect(tiles.getByRole('link', { name: /surf forecast/ })).toBeVisible();
+    // No source links by the weather on the homepage (owner); they're on the Weather page.
+    await expect(tiles.getByRole('link')).toHaveCount(0);
+    await page.goto(`${pine}/weather`);
+    const sources = page.getByTestId('beach-sources');
+    await expect(sources.getByRole('link', { name: /surf forecast/ })).toBeVisible();
     await expect(
-      tiles.getByRole('link', { name: /NOAA Tides & Currents \(preliminary\)/ }),
+      sources.getByRole('link', { name: /NOAA Tides & Currents \(preliminary\)/ }),
     ).toBeVisible();
-    await expect(tiles.getByRole('link', { name: 'UV: U.S. EPA' })).toBeVisible();
+    await expect(sources.getByRole('link', { name: 'UV: U.S. EPA' })).toBeVisible();
   });
 });

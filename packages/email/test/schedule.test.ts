@@ -75,7 +75,7 @@ describe('the daily tick', () => {
     beat,
     tier: 1,
     status: 'published' as const,
-    byline: 'The Tick Times Newsroom (AI-assisted)',
+    byline: 'The Tick Times Newsroom',
     sourceRecordIds: [recordId],
     publishedAt: at,
   });

@@ -1,11 +1,12 @@
-import { AI_ILLUSTRATION_LABEL, type ImageKind, type PhotoSpec } from '@towncore/config';
+import type { ImageKind, PhotoSpec } from '@towncore/config';
+import { plainAlt } from './alt';
 import styles from './visuals.module.css';
 
 /**
  * A photo someone sent us, or an approved AI illustration (M9, CLAUDE.md §11c), served from the
  * town's own domain at a reserved 16:9 size. Underneath, always: a reader photo's own caption
- * ("Reader photo: …"), so it never passes as the story's scene; the credit line; and for an
- * illustration, the "Illustration (AI-generated)" label.
+ * ("Reader photo: …"), so it never passes as the story's scene, and the credit line. An AI
+ * illustration has no label (owner, 2026-10-16).
  */
 export function SentPhoto({ kind, spec, alt }: { kind: ImageKind; spec: PhotoSpec; alt: string }) {
   const note =
@@ -21,20 +22,16 @@ export function SentPhoto({ kind, spec, alt }: { kind: ImageKind; spec: PhotoSpe
         src={`/photos/${spec.photoId}.jpg`}
         width={spec.width}
         height={spec.height}
-        alt={alt}
+        alt={plainAlt(alt)}
         decoding="async"
         className={styles.stockImage}
       />
-      <p className={`meta ${styles.stockCredit}`} data-testid="photo-credit">
-        {kind === 'ai-illustration' ? (
-          AI_ILLUSTRATION_LABEL
-        ) : (
-          <>
-            {note ? `${note} ` : null}
-            {spec.credit}
-          </>
-        )}
-      </p>
+      {kind === 'ai-illustration' ? null : (
+        <p className={`meta ${styles.stockCredit}`} data-testid="photo-credit">
+          {note ? `${note} ` : null}
+          {spec.credit}
+        </p>
+      )}
     </div>
   );
 }

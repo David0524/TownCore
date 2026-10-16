@@ -525,10 +525,10 @@ export const articles = pgTable(
       'articles_tier4_never_public',
       sql`${t.tier} < 4 or ${t.status} in ('blocked', 'rejected')`,
     ),
-    // Rule 2: honest bylines on anything public.
+    // Rule 2: the newsroom byline on anything public.
     check(
       'articles_public_byline',
-      sql`${t.status} not in ('published', 'corrected') or ${t.byline} like '% Newsroom (AI-assisted)%'`,
+      sql`${t.status} not in ('published', 'corrected') or ${t.byline} like '% Newsroom%'`,
     ),
     // Rule 4: every public article cites at least one source record.
     check(

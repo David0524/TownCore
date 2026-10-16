@@ -52,7 +52,7 @@ test('a guide shows when it was updated and checked, the official-pages note and
 }) => {
   await page.goto(`${boca}/guides/${guide}`);
   await expect(page.locator('h1')).toContainText('How trash pickup works');
-  await expect(page.getByTestId('byline')).toHaveText('Boca Town Square Newsroom (AI-assisted)');
+  await expect(page.getByTestId('byline')).toHaveText('Boca Town Square Newsroom');
   await expect(page.getByTestId('guide-dates')).toHaveText(/^Updated .+ · Last checked .+$/);
   await expect(page.getByTestId('guide-note')).toContainText('check those pages before you act');
   await expect(page.getByTestId('sources').getByRole('link')).toHaveAttribute(
