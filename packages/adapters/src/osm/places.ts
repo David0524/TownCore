@@ -19,7 +19,7 @@ export type OsmPlace = {
   zip: string | null;
   phone: string | null;
   website: string | null;
-  /** "sushi; japanese" → "sushi, japanese". */
+  /** "sushi;japanese" → "Sushi, japanese". */
   cuisine: string | null;
   hours: string | null;
 };
@@ -79,7 +79,8 @@ export function placeFromTags(
         ?.split(';')
         .map((c) => c.trim().replace(/_/g, ' '))
         .filter(Boolean)
-        .join(', ') ?? null,
+        .join(', ')
+        .replace(/^./, (c) => c.toUpperCase()) ?? null,
     hours: clean(tags.opening_hours),
   };
 }

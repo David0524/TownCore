@@ -253,7 +253,7 @@ describe('OSM places for the directory', () => {
       zip: '33432',
       phone: '(561) 555-0100',
       website: 'https://samplecafe.example/',
-      cuisine: 'coffee shop, bagel',
+      cuisine: 'Coffee shop, bagel',
     });
     expect(places[1]!.street).toBeNull();
     // A building sits at the average of its points.
