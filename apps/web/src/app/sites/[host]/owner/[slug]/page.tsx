@@ -2,10 +2,17 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { CARD_LIMITS, listingOffers, ownerListings, sponsorCards } from '@towncore/directory';
+import {
+  businessLicense,
+  ownerPhotos,
+  PHOTO_REJECTIONS,
+  PHOTOS_PER_LISTING,
+} from '@towncore/photos';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
 import { listingPath } from '@/lib/directory';
 import { currentOwner } from '@/lib/owner';
+import { photosOpen } from '@/lib/photos';
 import { stripe } from '@/lib/stripe';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
@@ -24,6 +31,10 @@ const PAYMENT_MESSAGES: Record<string, string> = {
   card_headline: `Write a headline of up to ${CARD_LIMITS.headline} characters.`,
   card_body: `Keep the text under ${CARD_LIMITS.body} characters.`,
   card_no_placement: 'Your sponsored slot isn’t active yet.',
+  photo_sent: 'Thanks. Your photo shows on your listing once our staff check it.',
+  photo_closed: 'Photo uploads aren’t open yet. Please try again soon.',
+  photo_error: 'Something went wrong with that photo. Please try again later.',
+  ...Object.fromEntries(Object.entries(PHOTO_REJECTIONS).map(([k, v]) => [`photo_${k}`, v])),
 };
 
 const OFFER_NOTES: Record<string, string> = {
@@ -51,6 +62,8 @@ export default async function EditListing({ params, searchParams }: Props) {
   const liveCard = cards?.find((c) => c.status === 'live');
   const latest = cards?.[0];
   const errors = (Array.isArray(e) ? e : e ? [e] : []).slice(0, 5);
+  const photos = await ownerPhotos(db(), listing.id);
+  const kept = photos.filter((p) => p.status !== 'rejected');
   return (
     <StandardPage town={town}>
       <p className="meta">
@@ -111,12 +124,69 @@ export default async function EditListing({ params, searchParams }: Props) {
           />
         </label>
         <p className="meta">
-          Your license details come from the state and can&apos;t be edited here. Photos come later.
+          Your license details come from the state and can&apos;t be edited here.
         </p>
         <button type="submit" className="button">
           Save
         </button>
       </form>
+      <section id="photos" aria-labelledby="photos-h" data-testid="owner-photos">
+        <h2 id="photos-h">Photos</h2>
+        <p className={styles.note}>
+          Up to {PHOTOS_PER_LISTING} photos of your business: the storefront, the inside, your work.
+          Our staff check each one before it shows on your listing and in stories about your
+          business. We remove location and camera data from every photo.
+        </p>
+        {photos.length > 0 ? (
+          <ul className={styles.offers}>
+            {photos.map((p) => (
+              <li key={p.id}>
+                {p.caption}
+                <span className="meta">
+                  {p.status === 'approved'
+                    ? 'Showing on your listing.'
+                    : p.status === 'pending'
+                      ? 'Waiting for review.'
+                      : 'Not approved.'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {kept.length < PHOTOS_PER_LISTING && photosOpen() ? (
+          <form
+            method="post"
+            action={`/owner/${listing.slug}/photo`}
+            encType="multipart/form-data"
+            className={styles.claim}
+          >
+            <label>
+              Photo (JPEG, PNG or WebP, up to 12 MB)
+              <input name="photo" type="file" required accept="image/jpeg,image/png,image/webp" />
+            </label>
+            <label>
+              What it shows
+              <input name="caption" required maxLength={300} />
+            </label>
+            <label>
+              Credit line
+              <input
+                name="credit"
+                required
+                maxLength={80}
+                defaultValue={`Photo: ${listing.name}`}
+              />
+            </label>
+            <label className={styles.check}>
+              <input type="checkbox" name="agree" value="yes" required />
+              <span data-testid="business-license">{businessLicense(town.siteName).text}</span>
+            </label>
+            <button type="submit" className="button">
+              Send photo
+            </button>
+          </form>
+        ) : null}
+      </section>
       {offers.length > 0 ? (
         <section aria-labelledby="promote-h" data-testid="promote">
           <h2 id="promote-h">Promote this listing</h2>

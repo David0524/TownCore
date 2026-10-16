@@ -24,10 +24,12 @@ function isAdminHost(host: string): boolean {
 
 export const config = {
   // Pages, plus the per-town discovery files (robots.txt, sitemaps, feeds) and app icons and
-  // manifest. Skip Next internals and other files with an extension (fonts).
+  // manifest, and approved reader and business photos. Skip Next internals and other files
+  // with an extension (fonts).
   matcher: [
     '/((?!_next/|favicon.ico|.*\\.[a-zA-Z0-9]+$).*)',
     '/((?!_next/).*\\.(?:xml|txt))',
     '/(apple-touch-icon\\.png|icon-192\\.png|icon-512\\.png|manifest\\.webmanifest)',
+    '/photos/(.*\\.jpg)',
   ],
 };

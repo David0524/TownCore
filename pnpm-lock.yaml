@@ -116,6 +116,9 @@ importers:
       '@towncore/mail':
         specifier: workspace:*
         version: link:../../packages/mail
+      '@towncore/photos':
+        specifier: workspace:*
+        version: link:../../packages/photos
       '@towncore/prompts':
         specifier: workspace:*
         version: link:../../packages/prompts
@@ -392,6 +395,21 @@ importers:
         specifier: ^4.23.15
         version: 4.23.15
 
+  packages/photos:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1152.0
+        version: 3.1152.0
+      '@towncore/config':
+        specifier: workspace:*
+        version: link:../config
+      '@towncore/db':
+        specifier: workspace:*
+        version: link:../db
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@22.20.5)
+
   packages/pipeline:
     dependencies:
       '@anthropic-ai/sdk':
@@ -406,6 +424,9 @@ importers:
       '@towncore/db':
         specifier: workspace:*
         version: link:../db
+      '@towncore/photos':
+        specifier: workspace:*
+        version: link:../photos
       '@towncore/prompts':
         specifier: workspace:*
         version: link:../prompts
@@ -3717,8 +3738,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@img/colour@1.1.0':
-    optional: true
+  '@img/colour@1.1.0': {}
 
   '@img/sharp-darwin-arm64@0.35.5':
     optionalDependencies:
@@ -5391,7 +5411,6 @@ snapshots:
       '@img/sharp-win32-ia32': 0.35.5
       '@img/sharp-win32-x64': 0.35.5
       '@types/node': 22.20.5
-    optional: true
 
   shebang-command@2.0.0:
     dependencies:

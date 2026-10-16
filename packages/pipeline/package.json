@@ -18,6 +18,7 @@
     "@towncore/adapters": "workspace:*",
     "@towncore/config": "workspace:*",
     "@towncore/db": "workspace:*",
+    "@towncore/photos": "workspace:*",
     "@towncore/prompts": "workspace:*",
     "zod": "^4.6.7"
   },

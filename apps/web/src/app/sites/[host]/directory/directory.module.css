@@ -176,3 +176,27 @@
 .quoteBody h2 {
   margin-top: 0;
 }
+
+/* An owner's approved photos (M9), each with its credit; reserved 4:3 so nothing shifts. */
+.photos {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+}
+
+.photos li {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.photos img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--surface);
+}

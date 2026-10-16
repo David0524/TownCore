@@ -1787,3 +1787,74 @@ export const townBasemaps = pgTable('town_basemaps', {
   sourceUrl: text('source_url').notNull(),
   extractedAt: timestamp('extracted_at', { withTimezone: true }).notNull(),
 });
+
+/**
+ * Photos people send us (M9, CLAUDE.md §11c): readers and contributors through a town site's
+ * form, business owners through the owner portal. Each is re-encoded with its metadata (GPS
+ * included) stripped before it's stored, carries the license grant its sender accepted, and is
+ * shown only after staff approve it with alt text written from what it shows. AI illustrations
+ * for guides wait here too (kind `illustration`, for one article), so a person approves every
+ * AI image before it appears.
+ */
+export const photoSubmissions = pgTable(
+  'photo_submissions',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    /** Set for a business owner's photo of their listing. */
+    businessId: uuid('business_id').references(() => businesses.id),
+    /** Set for an AI illustration: the guide it was made for. */
+    articleId: uuid('article_id').references(() => articles.id, { onDelete: 'cascade' }),
+    kind: text('kind').$type<'reader' | 'business' | 'illustration'>().notNull(),
+    /** Where the re-encoded JPEG is kept (storage key, never a public URL). */
+    storageKey: text('storage_key').notNull(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    bytes: integer('bytes').notNull(),
+    caption: text('caption').notNull(),
+    /** Where and when it was taken, as the sender wrote it. */
+    takenWhere: text('taken_where'),
+    takenWhen: text('taken_when'),
+    /** Shown under the photo: "Photo: Pat Reader". */
+    credit: text('credit').notNull(),
+    /** Never shown. */
+    submitterName: text('submitter_name').notNull(),
+    submitterEmail: text('submitter_email').notNull(),
+    licenseVersion: text('license_version').notNull(),
+    licenseText: text('license_text').notNull(),
+    consentIp: text('consent_ip'),
+    consentAt: timestamp('consent_at', { withTimezone: true }).notNull(),
+    status: text('status')
+      .$type<'pending' | 'approved' | 'rejected'>()
+      .notNull()
+      .default('pending'),
+    /** Written by the reviewer from what the photo shows; required to approve. */
+    alt: text('alt'),
+    reviewedBy: uuid('reviewed_by').references(() => staff.id),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    rejectReason: text('reject_reason'),
+    /** The last time a story used it (the router doesn't reuse a photo within a week). */
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('photo_submissions_town_status_idx').on(t.townId, t.status, t.createdAt.desc()),
+    check('photo_submissions_kind', sql`${t.kind} in ('reader', 'business', 'illustration')`),
+    check('photo_submissions_status', sql`${t.status} in ('pending', 'approved', 'rejected')`),
+    check(
+      'photo_submissions_business',
+      sql`(${t.kind} = 'business') = (${t.businessId} is not null)`,
+    ),
+    check(
+      'photo_submissions_illustration',
+      sql`(${t.kind} = 'illustration') = (${t.articleId} is not null)`,
+    ),
+    // Approved photos have reviewer-written alt text and a reviewer (§11c).
+    check(
+      'photo_submissions_approved',
+      sql`${t.status} <> 'approved' or (${t.alt} is not null and ${t.reviewedBy} is not null)`,
+    ),
+  ],
+);

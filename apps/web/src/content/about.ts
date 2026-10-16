@@ -39,6 +39,9 @@ quickly and note every correction on the story and on our [Corrections](/correct
 News tips and public records are welcome at the same address. [How we report](/methods)
 explains our process in detail.
 
+Took a photo around town? [Send it to us](/photos). An editor reviews every photo, and we print
+your credit line.
+
 ## Advertising
 
 Local businesses can sponsor {site_name} or feature their listing. Ask at
