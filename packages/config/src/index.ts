@@ -101,3 +101,11 @@ export {
   type DirectoryProduct,
   type DirectoryCategory,
 } from './directory';
+export {
+  imageDefaults,
+  imageKinds,
+  roundupImageDefaults,
+  type DailyCountsSpec,
+  type ImageKind,
+  type ImageSpec,
+} from './images';

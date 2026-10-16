@@ -1,5 +1,6 @@
 import { and, articles, eq, like, staff, towns, type Db } from '@towncore/db';
 import { buildByline } from './byline';
+import { assignArticleImage } from './images';
 
 // Publishing (CLAUDE.md §6 step 6). The DB constraints already enforce Rules 2, 4 and 5 on
 // every write; this adds the Tier 4 check. Bylines say "Reviewed by an editor" without a name,
@@ -39,6 +40,8 @@ export async function publishArticle(
       reviewReason: null,
     })
     .where(eq(articles.id, articleId));
+  // Every published article has a visual (§11c); an edit in review may have changed its sources.
+  await assignArticleImage(db, articleId);
 }
 
 /** Lowercase ASCII slug from a headline, at most 80 characters. */

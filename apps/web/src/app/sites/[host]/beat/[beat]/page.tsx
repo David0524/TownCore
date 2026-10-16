@@ -6,7 +6,7 @@ import { beats } from '@towncore/config';
 import { ListBeacon } from '@/components/Beacon';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { StoryBlock } from '@/components/news/StoryBlock';
-import { TypographicCard } from '@/components/news/TypographicCard';
+import { ArticleVisual } from '@/components/visuals/ArticleVisual';
 import { beatCoverage, sourceLabel } from '@/content/beats';
 import { TownGrid } from '@/layout/TownGrid';
 import { themeFor } from '@/lib/theme';
@@ -87,14 +87,7 @@ export default async function BeatPage({ params }: Props) {
             town={town}
             variant="lead"
             as="h2"
-            visual={
-              <TypographicCard
-                theme={theme}
-                beat={lead.beat}
-                headline={lead.headline}
-                figure={figure}
-              />
-            }
+            visual={<ArticleVisual town={town} theme={theme} article={lead} figure={figure} />}
           />
           {rest.length > 0 ? (
             <ul className={styles.list}>

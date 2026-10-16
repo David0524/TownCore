@@ -1,4 +1,11 @@
-import { sourceKinds, townTiers, type WeatherSnapshot } from '@towncore/config';
+import {
+  imageKinds,
+  sourceKinds,
+  townTiers,
+  type ImageKind,
+  type ImageSpec,
+  type WeatherSnapshot,
+} from '@towncore/config';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -1471,3 +1478,41 @@ export const dmarcReports = pgTable(
     index('dmarc_reports_domain_end_idx').on(t.domain, t.endAt),
   ],
 );
+
+/**
+ * Article visuals (CLAUDE.md §11c). One lead visual per article, chosen by the image router.
+ * Every row records what it is, where it came from, its license and whether it is AI-generated;
+ * generated cards and graphics are our own work. `spec` holds what's needed to draw it (a data
+ * graphic's numbers, built from the article's own records).
+ */
+export const images = pgTable(
+  'images',
+  {
+    id: id(),
+    // An image belongs to its article and goes with it.
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id, { onDelete: 'cascade' }),
+    kind: text('kind').$type<ImageKind>().notNull(),
+    spec: jsonb('spec').$type<ImageSpec>().notNull(),
+    /** Written from what the image actually shows. */
+    alt: text('alt').notNull(),
+    sourceUrl: text('source_url'),
+    license: text('license').notNull(),
+    attribution: text('attribution'),
+    aiGenerated: boolean('ai_generated').notNull().default(false),
+    approvedBy: uuid('approved_by').references(() => staff.id),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('images_article_uq').on(t.articleId),
+    check(
+      'images_kind',
+      sql`${t.kind} in (${sql.raw(imageKinds.map((k) => `'${k}'`).join(', '))})`,
+    ),
+    // AI images must be labeled as such and approved by a person (§11c).
+    check('images_ai_approved', sql`not ${t.aiGenerated} or ${t.approvedBy} is not null`),
+  ],
+);
+export type Image = typeof images.$inferSelect;

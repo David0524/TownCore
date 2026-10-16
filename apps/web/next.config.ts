@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
     '@towncore/prompts',
   ],
   poweredByHeader: false,
+  // Share images read the display faces' static .woff files at run time (lib/og.tsx).
+  outputFileTracingIncludes: {
+    '/sites/[host]/news/[slug]/og': ['./node_modules/@fontsource/*/files/*-latin-*-normal.woff'],
+  },
   experimental: {
     // Reply attachments go through a server action (10 MB in total, plus form overhead).
     serverActions: { bodySizeLimit: '12mb' },

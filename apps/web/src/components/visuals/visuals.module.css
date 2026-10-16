@@ -1,0 +1,80 @@
+/* Data graphics (CLAUDE.md §11c): the town's colors from tokens, no shadows. */
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border-radius: var(--radius);
+  background: var(--surface);
+  aspect-ratio: 16 / 9;
+}
+
+.chartHead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+}
+
+.chartTitle {
+  font-family: var(--font-headline);
+  font-weight: var(--headline-weight);
+  font-size: clamp(1.25rem, 1rem + 1vw, 1.625rem);
+  line-height: 1.1;
+}
+
+.bars {
+  flex: 1;
+  min-height: 8rem;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: clamp(0.25rem, 1.2vw, 0.75rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.barValue {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.barTrack {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--ink);
+}
+
+.bar {
+  width: 100%;
+  background: var(--accent);
+}
+
+.barLabel {
+  white-space: nowrap;
+  font-size: 0.75rem;
+}
+
+.caption {
+  margin: 0.5rem 0 0;
+}
+
+@media (max-width: 599.98px) {
+  .chart {
+    border-radius: var(--radius-widget);
+    background: var(--ios-grouped);
+    aspect-ratio: 4 / 3;
+  }
+}

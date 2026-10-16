@@ -89,3 +89,13 @@ export {
   type Rankable,
 } from './ranking';
 export { apDate } from './time';
+export {
+  assignArticleImage,
+  cardAlt,
+  chooseArticleImage,
+  dailyCounts,
+  dailyCountsAlt,
+  imageOptions,
+  recordCountLabels,
+  type ImageChoice,
+} from './images';

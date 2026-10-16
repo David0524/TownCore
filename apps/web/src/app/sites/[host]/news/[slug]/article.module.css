@@ -25,6 +25,11 @@
   margin: 0 0 1.75rem;
 }
 
+.visualCaption {
+  display: block;
+  margin-top: 0.5rem;
+}
+
 /* Locked: byline, dates, sources and corrections look the same in every town (§11a-2). */
 .byline {
   margin: 0;
