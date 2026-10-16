@@ -27,8 +27,8 @@ const tabs: Tab[] = [
     label: 'Sections',
     icon: SectionsIcon,
     owns: (p) =>
-      ['/sections', '/beat/', '/about', '/methods', '/corrections', '/privacy'].some((s) =>
-        p.startsWith(s),
+      ['/sections', '/beat/', '/guides', '/about', '/methods', '/corrections', '/privacy'].some(
+        (s) => p.startsWith(s),
       ),
   },
   { href: '/events', label: 'Events', icon: EventsIcon, owns: (p) => p.startsWith('/events') },

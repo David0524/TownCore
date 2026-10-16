@@ -1,4 +1,4 @@
-import { and, articles, desc, eq, gte, inArray, lt, not, like, type Town } from '@towncore/db';
+import { and, articles, desc, eq, gte, inArray, lt, ne, not, like, type Town } from '@towncore/db';
 import { db } from './db';
 
 // Discovery for search engines and readers (CLAUDE.md §11 "SEO"; docs/plans/M4.md §1):
@@ -19,7 +19,9 @@ export function siteUrl(town: Pick<Town, 'domain'>, path = '/'): string {
   return `https://${town.domain}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export const articlePath = (slug: string) => `/news/${slug}`;
+import { articlePath } from './paths';
+
+export { articlePath };
 
 /**
  * The RSS `<link rel="alternate">`. Next replaces a layout's `alternates` when a page sets its
@@ -43,6 +45,7 @@ export type ListedArticle = {
   beat: string;
   publishedAt: Date;
   updatedAt: Date;
+  kind: string;
 };
 
 const listed = {
@@ -52,12 +55,20 @@ const listed = {
   beat: articles.beat,
   publishedAt: articles.publishedAt,
   updatedAt: articles.updatedAt,
+  kind: articles.kind,
 };
 
 /** Public articles for sitemaps and feeds; empty for a town that isn't live. */
 export async function listListedArticles(
   town: Pick<Town, 'id' | 'status'>,
-  opts: { since?: Date; before?: Date; beat?: string; limit?: number } = {},
+  opts: {
+    since?: Date;
+    before?: Date;
+    beat?: string;
+    limit?: number;
+    /** News (the default: feeds, news sitemap, monthly sitemaps) or evergreen guides. */
+    kind?: 'news' | 'guides';
+  } = {},
 ): Promise<ListedArticle[]> {
   if (!isIndexable(town)) return [];
   const rows = await db()
@@ -69,6 +80,7 @@ export async function listListedArticles(
         opts.since ? gte(articles.publishedAt, opts.since) : undefined,
         opts.before ? lt(articles.publishedAt, opts.before) : undefined,
         opts.beat ? eq(articles.beat, opts.beat) : undefined,
+        opts.kind === 'guides' ? eq(articles.kind, 'guide') : ne(articles.kind, 'guide'),
       ),
     )
     .orderBy(desc(articles.publishedAt))

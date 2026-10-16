@@ -22,10 +22,13 @@ export function organizationJsonLd(
 
 export function newsArticleJsonLd(
   town: Pick<Town, 'siteName' | 'domain' | 'name' | 'state'>,
-  article: Pick<Article, 'slug' | 'headline' | 'dek' | 'beat' | 'publishedAt' | 'updatedAt'>,
+  article: Pick<
+    Article,
+    'slug' | 'headline' | 'dek' | 'beat' | 'kind' | 'publishedAt' | 'updatedAt'
+  >,
 ): Json {
   // The share image (1200×630) drawn for every article (§11c).
-  const image = siteUrl(town, `${articlePath(article.slug)}/og`);
+  const image = siteUrl(town, `/news/${article.slug}/og`);
   const publisher = {
     '@type': 'NewsMediaOrganization',
     name: town.siteName,
@@ -33,10 +36,11 @@ export function newsArticleJsonLd(
   };
   return {
     '@context': 'https://schema.org',
-    '@type': 'NewsArticle',
+    // Guides are evergreen reference pages, not news (docs/plans/M4.md: "Guides: Article").
+    '@type': article.kind === 'guide' ? 'Article' : 'NewsArticle',
     headline: article.headline.slice(0, 110),
     description: article.dek ?? undefined,
-    mainEntityOfPage: siteUrl(town, articlePath(article.slug)),
+    mainEntityOfPage: siteUrl(town, articlePath(article.slug, article.kind)),
     datePublished: article.publishedAt?.toISOString(),
     dateModified: article.updatedAt.toISOString(),
     articleSection: article.beat,

@@ -6,6 +6,7 @@ import {
   eq,
   gte,
   inArray,
+  ne,
   records,
   storyCandidates,
   towns,
@@ -62,6 +63,8 @@ export async function recentPublished(
         eq(articles.townId, townId),
         inArray(articles.status, ['published', 'corrected']),
         gte(articles.publishedAt, new Date(now.getTime() - FOLLOW_UP_DAYS * 86_400_000)),
+        // Guides are rewritten when their pages change, never given dated update notes.
+        ne(articles.kind, 'guide'),
       ),
     );
 }

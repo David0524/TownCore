@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 
 type Ctx = { params: Promise<{ host: string; file: string }> };
 
-// /sitemaps/pages.xml and /sitemaps/articles-YYYY-MM.xml
+// /sitemaps/pages.xml, /sitemaps/guides.xml and /sitemaps/articles-YYYY-MM.xml
 export async function GET(_req: Request, { params }: Ctx) {
   const { host, file } = await params;
   const town = await resolveTown(host);
@@ -29,12 +29,28 @@ export async function GET(_req: Request, { params }: Ctx) {
           '/about',
           '/methods',
           '/corrections',
+          '/guides',
           ...beats.map((b) => `/beat/${b.slug}`),
           ...(await indexableTopics(town.id)).map((slug) => `/topics/${slug}`),
         ]
       : [];
     return xmlResponse(
       urlset(paths.map((p) => ({ loc: siteUrl(town, p) }))),
+      town,
+      'application/xml',
+    );
+  }
+
+  if (file === 'guides.xml') {
+    // Evergreen guides (M4 PR F): lastmod is when the guide's text last changed.
+    const guides = await listListedArticles(town, { kind: 'guides' });
+    return xmlResponse(
+      urlset(
+        guides.map((g) => ({
+          loc: siteUrl(town, articlePath(g.slug, g.kind)),
+          lastmod: g.updatedAt,
+        })),
+      ),
       town,
       'application/xml',
     );

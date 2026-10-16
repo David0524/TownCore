@@ -1,8 +1,11 @@
-import { beats } from '@towncore/config';
+import { beats, type TownConfig } from '@towncore/config';
+import { listPublishedGuides } from '@towncore/db';
 import { apDate } from '@towncore/pipeline';
 import Link from 'next/link';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { clockTime } from '@/components/weather/format';
+import { db } from '@/lib/db';
+import { articlePath } from '@/lib/paths';
 import { beatColorVar } from '@/lib/theme';
 import { beatCounts, cityPostings, recentArticles, upcomingMeetings } from './data';
 import type { HomeModuleComponent } from './types';
@@ -95,6 +98,36 @@ export const ComingUp: HomeModuleComponent = async ({ town }) => {
         ))}
       </ol>
       <p className="meta">From the city&apos;s public meeting calendar.</p>
+    </section>
+  );
+};
+
+/**
+ * Essentials (M4 PR F): quick links to the town's evergreen guides, in the order its config
+ * lists the topics (the most-asked first), linking to the full list.
+ */
+export const Essentials: HomeModuleComponent = async ({ town }) => {
+  const order: string[] = ((town.config as TownConfig).guides ?? []).map((g) => g.topic);
+  const guides = (await listPublishedGuides(db(), town.id))
+    .filter((g) => g.guideTopic && order.includes(g.guideTopic))
+    .sort((a, b) => order.indexOf(a.guideTopic!) - order.indexOf(b.guideTopic!))
+    .slice(0, 6);
+  if (guides.length === 0) return null;
+  return (
+    <section className={styles.coming} aria-labelledby="essentials-h" data-module="essentials">
+      <SectionHeader title="Essentials" href="/guides" id="essentials-h" />
+      <ul className={styles.meetings}>
+        {guides.map((g) => (
+          <li key={g.id}>
+            <Link href={articlePath(g.slug, g.kind)} className={styles.meetingTitle}>
+              {g.headline}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <p className="meta">
+        <Link href="/guides">All guides</Link>
+      </p>
     </section>
   );
 };

@@ -1,5 +1,5 @@
 {
-  "id": "bf7fa3cd-dbbe-40e5-be89-cee9851f7ee4",
+  "id": "37389d15-0df3-41fb-ba7b-b724c17d1e87",
   "prevId": "85acfae7-b010-4fbf-b76d-31f3ea28eae1",
   "version": "7",
   "dialect": "postgresql",
@@ -899,6 +899,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "guide_topic": {
+          "name": "guide_topic",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "published_at": {
           "name": "published_at",
           "type": "timestamp with time zone",
@@ -938,6 +944,28 @@
             }
           ],
           "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_town_guide_topic_uq": {
+          "name": "articles_town_guide_topic_uq",
+          "columns": [
+            {
+              "expression": "town_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "guide_topic",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"articles\".\"guide_topic\" is not null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -7807,7 +7835,8 @@
         "story",
         "roundup",
         "template",
-        "update"
+        "update",
+        "guide"
       ]
     },
     "public.candidate_status": {

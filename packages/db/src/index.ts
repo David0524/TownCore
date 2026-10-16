@@ -13,6 +13,7 @@ export {
 export {
   and,
   asc,
+  count,
   desc,
   eq,
   gt,
@@ -42,6 +43,7 @@ export {
   getTownBySlug,
   listLiveTowns,
   listPublishedArticles,
+  listPublishedGuides,
   normalizeHost,
   type Article,
   type Campaign,

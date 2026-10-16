@@ -1,1 +1,0 @@
-ALTER TYPE "public"."source_kind" ADD VALUE 'reference' BEFORE 'other_outlet';

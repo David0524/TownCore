@@ -8,7 +8,7 @@ import {
   NewsletterCta,
   TodayBento,
 } from './news';
-import { CategoryButtons, ComingUp, DocumentsPosted, GoodMorning } from './front';
+import { CategoryButtons, ComingUp, DocumentsPosted, Essentials, GoodMorning } from './front';
 import { DirectoryCategories, DirectoryFeatured, FindAPro, NewNowOpen } from './directory';
 import type { HomeModuleComponent } from './types';
 
@@ -26,6 +26,7 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
   'category-buttons': CategoryButtons,
   'coming-up': ComingUp,
   'documents-posted': DocumentsPosted,
+  essentials: Essentials,
   'lead-story': LeadStory,
   'latest-list': LatestList,
   briefs: Briefs,

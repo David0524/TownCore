@@ -4,6 +4,8 @@ import type { BeatSlug } from './theme';
 // list for the whole network; each town maps the topics it covers to official pages in its YAML
 // (`guides:`). Guides are written only from those pages, never from other outlets (Rule 3).
 
+// Topics use civic beats only: the public-safety beat means police and fire news (§7 tiers), and
+// a guide to hurricane supplies or boil-water notices is neither.
 export type GuideTopic = {
   key: string;
   /** Working title, for the writer and the admin; the published headline is the writer's. */
@@ -41,13 +43,13 @@ export const guideTopics = [
   {
     key: 'hurricane-prep',
     title: 'Hurricane preparedness',
-    beat: 'public-safety',
+    beat: 'community',
     need: 'how to prepare, supplies, shutters, where official updates come from',
   },
   {
     key: 'evacuation',
     title: 'Evacuation zones and shelters',
-    beat: 'public-safety',
+    beat: 'community',
     need: 'how to find your zone, when to leave, shelters and special-needs registration',
   },
   {
@@ -65,7 +67,7 @@ export const guideTopics = [
   {
     key: 'emergency-alerts',
     title: 'Emergency alerts',
-    beat: 'public-safety',
+    beat: 'community',
     need: 'how to sign up for official alerts and what each alert service sends',
   },
   {
@@ -161,7 +163,7 @@ export const guideTopics = [
   {
     key: 'boil-water-notices',
     title: 'Boil water notices',
-    beat: 'public-safety',
+    beat: 'community',
     need: 'what a notice means, what to do, how to find out if your address is affected',
   },
   {
@@ -227,7 +229,7 @@ export const guideTopics = [
   {
     key: 'alarm-permits',
     title: 'Alarm permits and false alarms',
-    beat: 'public-safety',
+    beat: 'community',
     need: 'whether an alarm permit is required, fees and false alarm charges',
   },
   {

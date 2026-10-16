@@ -25,7 +25,7 @@ describe('theme schema', () => {
     expect(theme.palette.accent).toBe('#0E6FA8');
     expect(theme.layout.header).toBe('slim-left');
     expect(theme.layout.homeTop).toEqual(['good-morning', 'lead-story', 'today-bento']);
-    expect(theme.layout.homeRail).toEqual(['coming-up']);
+    expect(theme.layout.homeRail).toEqual(['coming-up', 'essentials']);
   });
 
   it('allows each homepage module once across the band, main column and rail', () => {

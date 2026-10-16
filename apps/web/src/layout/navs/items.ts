@@ -8,6 +8,7 @@ export const beatItems = [
 export const aboutItems = [
   { href: '/about', label: 'About' },
   { href: '/directory', label: 'Local directory' },
+  { href: '/guides', label: 'Guides' },
   { href: '/methods', label: 'How we report' },
   { href: '/corrections', label: 'Corrections' },
   { href: '/privacy', label: 'Privacy' },
