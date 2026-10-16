@@ -14,9 +14,8 @@
     "header": "slim-left",
     "nav": "category-tabs",
     "grid": "main-right-rail",
-    "homeTop": ["good-morning", "lead-story", "today-bento"],
+    "homeTop": ["good-morning", "quick-links", "lead-story", "today-bento"],
     "home": [
-      "category-buttons",
       "newsletter-cta",
       "latest-list",
       "directory-featured",
@@ -24,7 +23,7 @@
       "real-estate"
     ],
     "homeRail": ["events", "coming-up", "find-a-pro", "essentials"],
-    "homeBottom": ["photo-of-the-week", "new-now-open"],
+    "homeBottom": ["photo-of-the-week", "new-now-open", "directory-grid"],
     "article": "classic-rail",
     "directory": "category-grid",
     "footer": "three-column"

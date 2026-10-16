@@ -24,10 +24,19 @@ describe('theme schema', () => {
     expect(theme.palette.ink).toBe('#111418');
     expect(theme.palette.accent).toBe('#0E6FA8');
     expect(theme.layout.header).toBe('slim-left');
-    expect(theme.layout.homeTop).toEqual(['good-morning', 'lead-story', 'today-bento']);
+    expect(theme.layout.homeTop).toEqual([
+      'good-morning',
+      'quick-links',
+      'lead-story',
+      'today-bento',
+    ]);
     expect(theme.layout.nav).toBe('category-tabs');
     expect(theme.layout.homeRail).toEqual(['events', 'coming-up', 'find-a-pro', 'essentials']);
-    expect(theme.layout.homeBottom).toEqual(['photo-of-the-week', 'new-now-open']);
+    expect(theme.layout.homeBottom).toEqual([
+      'photo-of-the-week',
+      'new-now-open',
+      'directory-grid',
+    ]);
   });
 
   it('allows each homepage module once across the band, main column and rail', () => {

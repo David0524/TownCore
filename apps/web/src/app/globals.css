@@ -31,6 +31,15 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Desktop and tablet read at 90% of the browser's text size (owner, 2026-10-16: "the page looks
+   nicer at 80% or 90% zoom"). Sizes are rem, so type, spacing and measure all follow, and a
+   reader's own text size setting still applies. Phones keep the iOS type scale. */
+@media (min-width: 600px) {
+  html {
+    font-size: 90%;
+  }
+}
+
 body {
   margin: 0;
   background: var(--background);

@@ -328,7 +328,7 @@ test.describe('directory on the homepage and articles', () => {
     await expect(eat).toContainText('Lobster Pot Takeout');
     await expect(eat.getByRole('link', { name: 'Lobster Pot Takeout' })).toHaveCount(0);
     await expect(eat.locator('[data-slot="dining.featured"]')).toContainText(
-      'This spot could be your restaurant',
+      'Your restaurant here',
     );
   });
 

@@ -1,0 +1,134 @@
+.tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-tile);
+  background: var(--tile);
+  color: var(--tile-ink);
+  overflow: hidden;
+}
+
+.icon {
+  width: 38%;
+  max-width: 4.5rem;
+  height: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.grid {
+  list-style: none;
+  margin: 1.25rem 0 1.5rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  gap: 1.25rem 1rem;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.media {
+  margin-bottom: 0.5rem;
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: var(--radius-tile);
+  background: var(--surface);
+}
+
+.badge {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-capsule);
+  background: var(--background);
+  color: var(--ink);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+}
+
+.name {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.name::after {
+  /* The whole card opens the listing. */
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+a.name:hover {
+  text-decoration: underline;
+}
+
+.kind {
+  font-size: 0.9375rem;
+  color: var(--tile-ink, var(--ink));
+}
+
+.detail {
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.links {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  font-size: var(--fs-meta);
+  font-weight: 600;
+}
+
+@media (max-width: 599.98px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 0.75rem;
+  }
+
+  .name {
+    font-size: 1rem;
+  }
+
+  /* Three rows on a phone; the rest are a tap away. */
+  .grid > li:nth-child(n + 7) {
+    display: none;
+  }
+}
+
+.dot {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--round);
+  background: var(--tile);
+  color: var(--tile-ink);
+}
+
+.dot .icon {
+  width: 1.5rem;
+  stroke-width: 2.5;
+}

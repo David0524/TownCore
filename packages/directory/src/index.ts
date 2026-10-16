@@ -6,7 +6,9 @@ export { DBPR, seedDirectory, type SeedResult } from './seed';
 export { matchName, OSM, seedOsmPlaces, type OsmSeedResult } from './osm';
 export {
   categoryCounts,
+  categoryCuisines,
   categoryListings,
+  worthALook,
   claimedListings,
   enhancedListingIds,
   newFoodPlaces,

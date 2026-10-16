@@ -34,6 +34,8 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
       rendered.push({ key: `${module}${mobileOnly ? '-mobile' : ''}`, node, mobileOnly });
   }
   const hello = top.includes('good-morning') ? await render('good-morning') : null;
+  // The quick-links bar spans the band right under the greeting (desktop; phones have tabs).
+  const quick = top.includes('quick-links') ? await render('quick-links') : null;
   // Section tiles at the start of the band span it (community), like the greeting.
   const spanning = top.includes('category-buttons') ? await render('category-buttons') : null;
   const split = top.filter((m) => !SPANNING_MODULES.has(m));
@@ -88,6 +90,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
         {phoneTitle}
         {capsules}
         {hello}
+        {quick}
         <Slot town={town} name="home.top" />
         {spanning}
         {threeColumn ? (

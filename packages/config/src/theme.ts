@@ -189,6 +189,10 @@ export const homeModules = [
   'directory-categories',
   'find-a-pro',
   'new-now-open',
+  // Ways in (owner, 2026-10-16, from bocatownsquare.com): the quick-links bar under the greeting
+  // and the directory as colored category tiles.
+  'quick-links',
+  'directory-grid',
   'jobs-classifieds',
   'newsletter-cta',
 ] as const;
@@ -292,9 +296,9 @@ export function checkThemeForTown(
 ): string[] {
   const problems: string[] = [];
   if (town.tier === 'small') {
-    // The greeting is a line of text, not a lead; the first real module decides.
+    // The greeting and the quick-links bar aren't leads; the first real module decides.
     const first = [...(theme.layout.homeTop ?? []), ...theme.layout.home].find(
-      (m) => m !== 'good-morning',
+      (m) => m !== 'good-morning' && m !== 'quick-links',
     );
     if (first === 'lead-story') {
       problems.push('small towns cannot lead the homepage with lead-story');

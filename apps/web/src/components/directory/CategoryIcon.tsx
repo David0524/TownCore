@@ -20,6 +20,10 @@ const PATHS: Record<string, string> = {
   hotel: 'M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 11.5a1.5 1.5 0 1 0 0 .01',
   fun: 'M4 7h16v10H4V7ZM9 7v10M15 7v10M4 12h5M15 12h5',
   bank: 'M3 9l9-5 9 5M5 9v8M9.5 9v8M14.5 9v8M19 9v8M3 20h18',
+  tools: 'M14.5 6.5a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3l7.5-7.5a4 4 0 0 0-2-2ZM7 5l3 3M5 7l2-2',
+  house: 'M4 11l8-7 8 7M6 9.5V20h12V9.5M10 20v-5h4v5',
+  scissors: 'M6 6.5a2.5 2.5 0 1 0 0 .01M6 17.5a2.5 2.5 0 1 0 0 .01M8 8l12 10M8 16l12-10',
+  takeout: 'M6 8h12l-1 12H7L6 8ZM9 8V6a3 3 0 0 1 6 0v2',
 };
 
 const BY_CATEGORY: Record<string, string> = {
@@ -33,10 +37,25 @@ const BY_CATEGORY: Record<string, string> = {
   'childcare-and-education': 'school',
   hotels: 'hotel',
   'banks-and-finance': 'bank',
+  'real-estate': 'house',
+  'personal-services': 'scissors',
+  'takeout-and-counter': 'takeout',
 };
 
-export function CategoryIcon({ category }: { category: DirectoryCategory }) {
-  const d = PATHS[BY_CATEGORY[category.slug] ?? category.group] ?? PATHS.services!;
+export type IconKey = keyof typeof PATHS;
+
+export function CategoryIcon({
+  category,
+  icon,
+}: {
+  category?: DirectoryCategory;
+  /** A drawing by name, for tiles that stand for more than one category (home services). */
+  icon?: IconKey;
+}) {
+  const d =
+    (icon ? PATHS[icon] : undefined) ??
+    (category ? PATHS[BY_CATEGORY[category.slug] ?? category.group] : undefined) ??
+    PATHS.services!;
   return (
     <svg
       viewBox="0 0 24 24"

@@ -31,7 +31,9 @@ export const MIN_INDEXABLE = 5;
 
 const active = (townId: string) => and(eq(businesses.townId, townId), eq(businesses.active, true));
 
-const completeness = sql<number>`((${businesses.phone} is not null)::int + (${businesses.website} is not null)::int + (${businesses.claimedAt} is not null)::int)`;
+// How complete a listing is for a reader: a way to reach it, where it is, what it serves, when
+// it's open. Places with real details come before bare license rows, then A–Z only to break ties.
+const completeness = sql<number>`((${businesses.phone} is not null)::int + (${businesses.website} is not null)::int + (${businesses.claimedAt} is not null)::int + (${businesses.addressPublic})::int + (${businesses.cuisine} is not null)::int + (${businesses.hours} is not null)::int)`;
 
 const organicOrder = [
   desc(businesses.licenseVerified),
@@ -65,12 +67,17 @@ export async function categoryListings(
   db: Db,
   townId: string,
   category: string,
-  { q, limit = PAGE_SIZE }: { q?: string | undefined; limit?: number } = {},
+  {
+    q,
+    cuisine,
+    limit = PAGE_SIZE,
+  }: { q?: string | undefined; cuisine?: string | undefined; limit?: number } = {},
 ): Promise<{ listings: Listing[]; total: number }> {
   const where = and(
     active(townId),
     eq(businesses.category, category),
     q?.trim() ? ilike(businesses.name, likeTerm(q.trim())) : undefined,
+    cuisine?.trim() ? ilike(businesses.cuisine, likeTerm(cuisine.trim())) : undefined,
   );
   const [listings, [count]] = await Promise.all([
     db
@@ -85,6 +92,67 @@ export async function categoryListings(
       .where(where),
   ]);
   return { listings, total: count?.n ?? 0 };
+}
+
+/** The cuisines mapped in a category, most common first ("Italian" 14, "Pizza" 9…). */
+export async function categoryCuisines(
+  db: Db,
+  townId: string,
+  category: string,
+  limit = 12,
+): Promise<Array<{ cuisine: string; count: number }>> {
+  const rows = await db
+    .select({ cuisine: businesses.cuisine })
+    .from(businesses)
+    .where(and(active(townId), eq(businesses.category, category), isNotNull(businesses.cuisine)));
+  const counts = new Map<string, number>();
+  for (const { cuisine } of rows)
+    for (const part of (cuisine ?? '').split(',')) {
+      const key = part.trim().toLowerCase();
+      if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  return [...counts]
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([key, count]) => ({ cuisine: key.charAt(0).toUpperCase() + key.slice(1), count }));
+}
+
+/**
+ * A few places worth a look in a category: ones with full public details (where, how to reach
+ * them, what they serve), one per cuisine, in an order that changes daily so every complete
+ * listing gets its turn. Editorial and never paid (Rule 6): payment doesn't enter into it.
+ */
+export async function worthALook(
+  db: Db,
+  townId: string,
+  category: string,
+  { limit = 4, day = new Date().toISOString().slice(0, 10) }: { limit?: number; day?: string } = {},
+): Promise<Listing[]> {
+  const rows = await db
+    .select()
+    .from(businesses)
+    .where(
+      and(
+        active(townId),
+        eq(businesses.category, category),
+        isNotNull(businesses.cuisine),
+        or(eq(businesses.addressPublic, true), isNotNull(businesses.claimedAt)),
+        or(isNotNull(businesses.phone), isNotNull(businesses.website)),
+      ),
+    )
+    .orderBy(sql`md5(${businesses.id}::text || ${day})`)
+    .limit(limit * 6);
+  const seen = new Set<string>();
+  const picks: Listing[] = [];
+  for (const row of rows) {
+    const first = row.cuisine?.split(',')[0]?.trim().toLowerCase() ?? '';
+    if (seen.has(first)) continue;
+    seen.add(first);
+    picks.push(row);
+    if (picks.length === limit) break;
+  }
+  return picks;
 }
 
 /** Name search across every category. */
@@ -178,8 +246,19 @@ export type NewPlace = {
   licenseType: string;
   approvedAt: Date;
   zip: string | null;
-  /** The directory listing, once seeding has picked the license up. */
-  listing: Pick<Listing, 'id' | 'slug' | 'category'> | null;
+  /** The directory listing, once seeding has picked the license up (with any mapped details). */
+  listing: Pick<
+    Listing,
+    | 'id'
+    | 'slug'
+    | 'category'
+    | 'cuisine'
+    | 'address'
+    | 'addressPublic'
+    | 'claimedAt'
+    | 'phone'
+    | 'website'
+  > | null;
 };
 
 /**
@@ -213,6 +292,12 @@ export async function newFoodPlaces(
           slug: businesses.slug,
           category: businesses.category,
           licenseNumber: businesses.licenseNumber,
+          cuisine: businesses.cuisine,
+          address: businesses.address,
+          addressPublic: businesses.addressPublic,
+          claimedAt: businesses.claimedAt,
+          phone: businesses.phone,
+          website: businesses.website,
         })
         .from(businesses)
         .where(and(active(townId), inArray(businesses.licenseNumber, licenses)))
@@ -233,7 +318,7 @@ export async function newFoodPlaces(
       licenseType: r.occupation ?? 'Food service',
       approvedAt: row.at,
       zip: r.zip?.slice(0, 5) || null,
-      listing: listing ? { id: listing.id, slug: listing.slug, category: listing.category } : null,
+      listing: listing ? (({ licenseNumber: _, ...rest }) => rest)(listing) : null,
     });
     if (places.length === limit) break;
   }

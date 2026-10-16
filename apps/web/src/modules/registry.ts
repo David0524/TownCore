@@ -11,6 +11,7 @@ import {
 import { CategoryButtons, ComingUp, DocumentsPosted, Essentials, GoodMorning } from './front';
 import { DirectoryCategories, DirectoryFeatured, FindAPro, NewNowOpen } from './directory';
 import { UpcomingEvents } from './events';
+import { DirectoryGrid, QuickLinks } from './explore';
 import { PhotoOfTheWeek } from './photo';
 import type { HomeModuleComponent } from './types';
 
@@ -47,6 +48,8 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
   'directory-categories': DirectoryCategories,
   'find-a-pro': FindAPro,
   'new-now-open': NewNowOpen,
+  'quick-links': QuickLinks,
+  'directory-grid': DirectoryGrid,
   'jobs-classifieds': awaitingData('classifieds, later'),
 };
 
@@ -54,7 +57,11 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
  * Modules that are navigation or a greeting, not content: they span the top band and don't
  * count toward "newsletter-cta among the first two modules on mobile".
  */
-export const SPANNING_MODULES = new Set<HomeModule>(['good-morning', 'category-buttons']);
+export const SPANNING_MODULES = new Set<HomeModule>([
+  'good-morning',
+  'category-buttons',
+  'quick-links',
+]);
 
 const contentIndex = (list: readonly HomeModule[], module: HomeModule) =>
   list.filter((m) => !SPANNING_MODULES.has(m)).indexOf(module);
