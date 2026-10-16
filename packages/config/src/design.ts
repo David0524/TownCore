@@ -13,6 +13,8 @@ export const categoryColors = {
   todo: '#0B7A7A',
   business: '#1F7A4D',
   homes: '#6B4FBF',
+  // Schools when it's a reader category of its own (D-M4b-4); the schools beat stays news blue.
+  schools: '#5856D6',
 } as const;
 export type Category = keyof typeof categoryColors;
 

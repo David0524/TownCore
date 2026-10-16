@@ -21,12 +21,12 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(to top, rgb(0 0 0 / 72%), rgb(0 0 0 / 0%));
-  color: #ffffff;
+  background: linear-gradient(to top, color-mix(in srgb, var(--ink) 72%, transparent), transparent);
+  color: var(--background);
 }
 
 .caption > * {
-  color: #ffffff;
+  color: var(--background);
 }
 
 .caption {
@@ -46,14 +46,14 @@
 }
 
 .text :global(.meta) {
-  color: #ffffff;
+  color: var(--background);
 }
 
 .title {
   margin: 0;
   font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
   line-height: 1.05;
-  color: #ffffff;
+  color: var(--background);
 }
 
 .credit {
@@ -65,9 +65,9 @@
   align-items: center;
   min-height: 44px;
   padding: 0 1rem;
-  border: 1px solid rgb(255 255 255 / 70%);
+  border: 1px solid color-mix(in srgb, var(--background) 70%, transparent);
   border-radius: var(--radius);
-  color: #ffffff;
+  color: var(--background);
   font-weight: 500;
   text-decoration: none;
 }

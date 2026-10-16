@@ -11,7 +11,7 @@ import { beatCounts, upcomingMeetings } from './data';
 // grouping that appears only once it has content or a directory behind it, so no empty fronts.
 
 export type ReaderCategory = {
-  key: Category | 'schools';
+  key: Category;
   name: string;
   href: string;
   color: string;
@@ -19,7 +19,6 @@ export type ReaderCategory = {
   count: string;
 };
 
-const SCHOOLS_COLOR = '#5856D6';
 const n = (value: number) => value.toLocaleString('en-US');
 
 export const readerCategories = cache(async (town: Town): Promise<ReaderCategory[]> => {
@@ -75,7 +74,7 @@ export const readerCategories = cache(async (town: Town): Promise<ReaderCategory
       key: 'schools',
       name: 'Schools',
       href: '/beat/schools',
-      color: SCHOOLS_COLOR,
+      color: categoryColors.schools,
       count: `${n(schools)} this week`,
     });
   return out;

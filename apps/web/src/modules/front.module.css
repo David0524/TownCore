@@ -114,7 +114,7 @@
 .square {
   width: 16px;
   height: 16px;
-  border-radius: 4px;
+  border-radius: var(--radius-field);
   flex: none;
 }
 
@@ -269,7 +269,7 @@ a.meetingTitle:hover {
     display: block;
     width: 30px;
     height: 30px;
-    border-radius: 8px;
+    border-radius: var(--radius-field);
   }
 
   .buttonTop .count {

@@ -316,7 +316,7 @@ a.lineText:hover {
   margin-top: 0.42em;
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--round);
   background: var(--alert);
   flex: none;
 }
