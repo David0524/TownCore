@@ -1,6 +1,7 @@
 import type { Fetcher } from '@towncore/adapters';
 import { and, eq, ne, sources, towns, type Db } from '@towncore/db';
-import { DBPR, geocodeListings, seedDirectory } from '@towncore/directory';
+import { DBPR, geocodeListings, seedDirectory, sendMonthlyReports } from '@towncore/directory';
+import type { OpsDeps } from './mail';
 import type { Logger } from 'pino';
 
 // The business directory (M6): seed listings from state license records once a day (the DBPR
@@ -31,4 +32,14 @@ export async function geocodeDirectory(db: Db, fetcher: Fetcher, logger: Logger)
     if (result.matched || result.noMatch || result.failed)
       logger[result.failed ? 'warn' : 'info']({ townId, ...result }, 'directory geocoding');
   }
+}
+
+/**
+ * Last month's proof reports (D-M6-10), on the 1st to 3rd of the month in each town's time.
+ * Account mail through the conversational stream; skipped while sending isn't set up.
+ */
+export async function sendProofReports(db: Db, mail: OpsDeps['alertMail'], logger: Logger) {
+  if (!mail) return;
+  const { sent } = await sendMonthlyReports({ db, ...mail });
+  if (sent) logger.info({ sent }, 'proof reports sent');
 }

@@ -57,6 +57,8 @@ export async function sendDirectoryMail(
     lines: string[];
     link: { href: string; label: string };
     kind: string;
+    /** Where replies go (a quote request: the reader who asked). Default: the town's sales@. */
+    replyTo?: string;
   },
 ): Promise<MailOutcome> {
   const to = parseAddress(message.to)?.address;
@@ -80,7 +82,7 @@ export async function sendDirectoryMail(
     text,
     html,
     messageId: newMessageId(mail.domain),
-    replyTo: `${LISTINGS_REPLY_TO}@${mail.domain}`,
+    replyTo: message.replyTo ?? `${LISTINGS_REPLY_TO}@${mail.domain}`,
     autoSubmitted: true,
   });
   await deps.transport.send({

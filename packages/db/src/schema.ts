@@ -747,10 +747,63 @@ export const leads = pgTable(
       .notNull()
       .references(() => businesses.id),
     kind: leadKind('kind').notNull(),
+    // M6 PR E: the town and slot a lead came from; a quote request routed to several
+    // businesses shares one request_id; ip only for rate limits.
+    townId: uuid('town_id').references(() => towns.id),
+    slot: text('slot'),
+    requestId: uuid('request_id'),
+    ip: text('ip'),
     meta: jsonb('meta'),
     createdAt: createdAt(),
   },
-  (t) => [index('leads_business_created_idx').on(t.businessId, t.createdAt)],
+  (t) => [
+    index('leads_business_created_idx').on(t.businessId, t.createdAt),
+    index('leads_ip_created_idx').on(t.ip, t.createdAt),
+  ],
+);
+
+// Monetization slot counts per day (CLAUDE.md §11b): impressions (the unit was on screen),
+// clicks and leads, per slot and, where known, campaign and business. Cookieless, like the
+// article counters (D-M4-3): no reader identifiers, only counts.
+export const slotStatsDaily = pgTable(
+  'slot_stats_daily',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    day: date('day').notNull(),
+    slot: text('slot').notNull(),
+    // Counts belong to their campaign and business: deleting either deletes its counts.
+    campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'cascade' }),
+    businessId: uuid('business_id').references(() => businesses.id, { onDelete: 'cascade' }),
+    impressions: integer('impressions').notNull().default(0),
+    clicks: integer('clicks').notNull().default(0),
+    leads: integer('leads').notNull().default(0),
+  },
+  (t) => [
+    unique('slot_stats_daily_key_uq')
+      .on(t.townId, t.day, t.slot, t.campaignId, t.businessId)
+      .nullsNotDistinct(),
+    index('slot_stats_daily_business_day_idx').on(t.businessId, t.day),
+  ],
+);
+
+// Monthly proof reports emailed to paying businesses (D-M6-10): one row per business and month,
+// so a report is never sent twice.
+export const proofReports = pgTable(
+  'proof_reports',
+  {
+    id: id(),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    month: text('month').notNull(),
+    email: text('email').notNull(),
+    totals: jsonb('totals').notNull(),
+    sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('proof_reports_business_month_uq').on(t.businessId, t.month)],
 );
 
 export const subscribers = pgTable(

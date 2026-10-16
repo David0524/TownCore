@@ -26,7 +26,7 @@ import {
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
 import { drawMaps, refreshBasemaps } from './maps';
 import { refreshWeather } from './weather';
-import { geocodeDirectory, refreshDirectory } from './directory';
+import { geocodeDirectory, refreshDirectory, sendProofReports } from './directory';
 import { queues, schedules } from './queues';
 import {
   enqueueStoryFinders,
@@ -134,6 +134,10 @@ export async function startWorker({
 
   await boss.work(queues.directoryGeocode, async () => {
     await geocodeDirectory(db, fetcher, logger);
+  });
+
+  await boss.work(queues.proofReports, async () => {
+    await sendProofReports(db, opsDeps.alertMail, logger);
   });
 
   await boss.work(queues.basemaps, async () => {

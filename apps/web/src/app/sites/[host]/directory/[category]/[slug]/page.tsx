@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getListing, listingCategory, listingInTheNews, listingPlace } from '@towncore/directory';
 import { apDate } from '@towncore/pipeline';
+import { CallButton } from '@/components/directory/CallButton';
 import { Grouped } from '@/components/phone/Grouped';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
@@ -117,11 +118,14 @@ export default async function BusinessPage({ params }: Props) {
           {listing.description}
         </p>
       ) : null}
-      <section className={styles.cta} data-slot="directory.business.cta" aria-label="Contact">
+      <section
+        className={styles.cta}
+        data-slot="directory.business.cta"
+        data-business={listing.id}
+        aria-label="Contact"
+      >
         {claimed && listing.phone ? (
-          <a className="button" href={`tel:${listing.phone.replace(/[^\d+]/g, '')}`}>
-            Call {listing.name}
-          </a>
+          <CallButton slug={listing.slug} phone={listing.phone} name={listing.name} />
         ) : null}
         {claimed ? (
           <a className={`button ${styles.secondary}`} href="/owner" data-testid="manage">

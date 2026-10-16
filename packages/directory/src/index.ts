@@ -92,3 +92,23 @@ export {
   type SponsorCard,
   type SubmitResult,
 } from './creatives';
+export {
+  CTA_SLOT,
+  logCall,
+  QUOTE_LIMITS,
+  QUOTE_SLOT,
+  quoteRecipients,
+  recordSlotEvents,
+  submitQuote,
+  type QuoteInput,
+  type QuoteOutcome,
+  type QuoteRecipient,
+  type SlotEvent,
+} from './leads';
+export {
+  monthRange,
+  previousMonth,
+  proofReport,
+  sendMonthlyReports,
+  type ProofTotals,
+} from './reports';

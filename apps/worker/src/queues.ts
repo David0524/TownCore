@@ -13,6 +13,7 @@ export const queues = {
   weather: 'weather.refresh',
   directorySeed: 'directory.seed',
   directoryGeocode: 'directory.geocode',
+  proofReports: 'directory.proof-reports',
   basemaps: 'maps.basemaps',
   maps: 'maps.draw',
 } as const;
@@ -38,6 +39,9 @@ export const schedules = [
   { queue: queues.directorySeed, cron: '20 9 * * *' },
   // Every 15 minutes, geocode pending listings at the Census Geocoder's polite pace (M6).
   { queue: queues.directoryGeocode, cron: '*/15 * * * *' },
+  // Hourly, email last month's proof report to paying businesses on the 1st–3rd (D-M6-10);
+  // once per business and month.
+  { queue: queues.proofReports, cron: '7 * * * *' },
   // Monthly (the 3rd, 07:40 UTC), rebuild town base maps from Geofabrik's state extracts (M4 E).
   { queue: queues.basemaps, cron: '40 7 3 * *' },
   // Every 30 minutes, give recent development and public-safety stories block-level maps.
