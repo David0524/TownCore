@@ -9,7 +9,11 @@ county: Palm Beach
 timezone: America/New_York
 site_name: Boca Town Square
 # The owner's logo (docs/brand/boca-town-square-logo.webp); the header uses its wordmark.
-logo: { src: /brand/boca-raton/wordmark.webp, width: 936, height: 108 }
+logo: { src: /brand/boca-raton/wordmark.webp, width: 936, height: 121 }
+# The logo's illustration beside the homepage greeting, and its left half (from the left palm to
+# just before the big right palm) as the browser and Home Screen icons.
+hero_art: { src: /brand/boca-raton/hero.webp, width: 1221, height: 407 }
+app_icon: /brand/boca-raton
 domain: bocatownsquare.com
 extra_domains: []
 tier: large

@@ -132,12 +132,22 @@ test.describe('Your town, app icons and the Home Screen card', () => {
     if (order.includes('business')) expect(order[0]).toBe('business');
   });
 
-  test('each town has a web app manifest and icons drawn from its theme', async ({ page }) => {
+  test('each town has a web app manifest and its own icons', async ({ page }) => {
     await page.goto(`${boca}/`);
     await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
       'href',
       '/manifest.webmanifest',
     );
+    // Boca has its own icon files (its logo art); towns without them get the motif drawn in code.
+    await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
+      'href',
+      '/brand/boca-raton/icon-180.png',
+    );
+    await expect(page.locator('link[rel="icon"][sizes="32x32"]')).toHaveAttribute(
+      'href',
+      '/brand/boca-raton/icon-32.png',
+    );
+    await page.goto(`${harbor}/`);
     await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
       'href',
       '/apple-touch-icon.png',
