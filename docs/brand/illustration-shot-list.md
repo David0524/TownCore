@@ -161,9 +161,9 @@ Flat editorial illustration in a clean vector style with a subtle paper grain, s
 - **wx-08** (any): A thermometer against a blazing sun and a pale, hazy sky.
 - **wx-09** (FL): Red warning flags on poles at an empty beach, choppy surf beyond.
 - **wx-10** (FL): Sunrise over the ocean with soft pink and orange clouds and a calm sea.
-- **wx-11** (any): A warm sunset over a quiet street with silhouetted trees and power lines.
+- **wx-11** (FL): A warm sunset over a quiet street with silhouetted trees and power lines.
 - **wx-12** (any): Morning fog over a lake and a footbridge, everything soft and pale.
-- **wx-13** (any): Trees bending in strong wind, leaves flying, clouds racing across the sky.
+- **wx-13** (FL): Trees bending in strong wind, leaves flying, clouds racing across the sky.
 - **wx-14** (any): A crisp clear morning with a light jacket on a park bench and a few fallen leaves.
 - **wx-15** (any): A beach towel, sunscreen bottle (blank label), sunglasses and a hat on the sand.
 - **wx-16** (any): A rainbow over wet rooftops after rain, the sky clearing.

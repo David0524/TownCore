@@ -918,7 +918,7 @@ const rows: Row[] = [
     'wx-09',
     ['weather'],
     'FL',
-    'rip current surf beach hazard',
+    'rip current surf hazard warning',
     'Red warning flags on poles at an empty beach, choppy surf beyond.',
   ],
   [
@@ -931,7 +931,8 @@ const rows: Row[] = [
   [
     'wx-11',
     ['weather'],
-    'any',
+    // The imported image has palm trees (owner's batch, 2026-10-16), so Florida only.
+    'FL',
     'sunset evening',
     'A warm sunset over a quiet street with silhouetted trees and power lines.',
   ],
@@ -945,7 +946,8 @@ const rows: Row[] = [
   [
     'wx-13',
     ['weather'],
-    'any',
+    // The imported image has palm trees (owner's batch, 2026-10-16), so Florida only.
+    'FL',
     'wind windy gusts',
     'Trees bending in strong wind, leaves flying, clouds racing across the sky.',
   ],
