@@ -14,7 +14,8 @@
   "dependencies": {
     "@towncore/adapters": "workspace:*",
     "@towncore/config": "workspace:*",
-    "@towncore/db": "workspace:*"
+    "@towncore/db": "workspace:*",
+    "@towncore/mail": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.23.15"

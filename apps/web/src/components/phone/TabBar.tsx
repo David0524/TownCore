@@ -37,7 +37,7 @@ const tabs: Tab[] = [
     href: '/directory',
     label: 'Places',
     icon: PlacesIcon,
-    owns: (p) => p.startsWith('/directory'),
+    owns: (p) => p.startsWith('/directory') || p.startsWith('/owner'),
   },
   { href: '/search', label: 'Search', icon: SearchIcon, owns: (p) => p.startsWith('/search') },
 ];

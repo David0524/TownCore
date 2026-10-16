@@ -252,6 +252,9 @@ importers:
       '@towncore/db':
         specifier: workspace:*
         version: link:../db
+      '@towncore/mail':
+        specifier: workspace:*
+        version: link:../mail
     devDependencies:
       tsx:
         specifier: ^4.23.15

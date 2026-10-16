@@ -96,3 +96,46 @@
 .note {
   max-width: var(--measure);
 }
+
+.claim {
+  display: grid;
+  gap: 1rem;
+  max-width: 32rem;
+  margin: 1rem 0 2rem;
+}
+
+.claim label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 500;
+}
+
+.claim input:not([type='checkbox']),
+.claim textarea {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: var(--hairline);
+  border-radius: var(--radius-field, var(--radius));
+  font: inherit;
+  color: var(--ink);
+  background: var(--background);
+}
+
+.claim .check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-weight: 400;
+}
+
+.claim button {
+  justify-self: start;
+  min-height: 44px;
+  border: 0;
+  cursor: pointer;
+}
+
+/* Owner-written text keeps its line breaks. */
+.pre {
+  white-space: pre-line;
+}

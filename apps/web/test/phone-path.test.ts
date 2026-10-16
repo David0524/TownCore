@@ -13,6 +13,12 @@ describe('phone back button', () => {
       label: 'Back',
     });
     expect(backTarget('/directory/plumbers')).toEqual({ href: '/directory', label: 'Places' });
+    expect(backTarget('/directory/claim/cove-plumbing-test0003')).toEqual({
+      href: '/directory',
+      label: 'Places',
+    });
+    expect(backTarget('/owner')).toEqual({ href: '/directory', label: 'Places' });
+    expect(backTarget('/owner/cove-plumbing-test0003')).toEqual({ href: '/owner', label: 'Back' });
     expect(backTarget('/beat/government')).toEqual({ href: '/sections', label: 'Sections' });
     expect(backTarget('/news/a-story')).toEqual({ href: '/', label: 'Today' });
   });

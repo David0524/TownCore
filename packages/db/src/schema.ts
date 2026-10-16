@@ -564,6 +564,12 @@ export const businesses = pgTable(
     geocodedAt: timestamp('geocoded_at', { withTimezone: true }),
     claimedByEmail: text('claimed_by_email'),
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    // Owner-edited fields (M6 PR C). A new name waits in pending_name for staff review.
+    description: text('description'),
+    hours: text('hours'),
+    serviceArea: text('service_area'),
+    pendingName: text('pending_name'),
+    ownerUpdatedAt: timestamp('owner_updated_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -576,6 +582,85 @@ export const businesses = pgTable(
       sql`${t.geocodeStatus} is null or ${t.geocodeStatus} in ('match', 'no_match')`,
     ),
   ],
+);
+
+export const businessClaimStatus = pgEnum('business_claim_status', [
+  'unverified',
+  'pending',
+  'approved',
+  'rejected',
+]);
+
+// Claims on directory listings (M6 PR C, D-M6-4): the person verifies the email address they
+// entered, then staff approve. Only hashes of the verification tokens are stored.
+export const businessClaims = pgTable(
+  'business_claims',
+  {
+    id: id(),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    claimantName: text('claimant_name').notNull(),
+    claimantRole: text('claimant_role').notNull(),
+    email: text('email').notNull(),
+    status: businessClaimStatus('status').notNull().default('unverified'),
+    verifyTokenHash: text('verify_token_hash'),
+    verifyExpiresAt: timestamp('verify_expires_at', { withTimezone: true }),
+    verifySentAt: timestamp('verify_sent_at', { withTimezone: true }),
+    verifySendsToday: integer('verify_sends_today').notNull().default(0),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    decisionNote: text('decision_note'),
+    ip: text('ip'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('business_claims_business_status_idx').on(t.businessId, t.status),
+    index('business_claims_town_status_idx').on(t.townId, t.status, t.createdAt),
+    index('business_claims_ip_created_idx').on(t.ip, t.createdAt),
+    uniqueIndex('business_claims_verify_hash_uq').on(t.verifyTokenHash),
+  ],
+);
+
+// Owner sign-in by email link (D-M6-11), per town site: single-use link tokens and sessions,
+// stored as SHA-256 hashes like staff sign-in.
+export const ownerLoginTokens = pgTable(
+  'owner_login_tokens',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    email: text('email').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('owner_login_tokens_hash_uq').on(t.tokenHash),
+    index('owner_login_tokens_email_created_idx').on(t.townId, t.email, t.createdAt),
+  ],
+);
+
+export const ownerSessions = pgTable(
+  'owner_sessions',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    email: text('email').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('owner_sessions_hash_uq').on(t.tokenHash)],
 );
 
 export const placements = pgTable(
