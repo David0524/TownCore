@@ -94,6 +94,7 @@ export {
   assignArticleImage,
   cardAlt,
   chooseArticleImage,
+  coverIllustration,
   dailyCounts,
   dailyCountsAlt,
   imageOptions,

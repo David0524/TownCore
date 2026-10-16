@@ -20,7 +20,8 @@ export type StoryVariant = 'lead' | 'secondary' | 'brief' | 'list' | 'today';
  * - brief: label and time in a column beside the headline and a one-line summary, with an
  *   optional thumbnail (`visual`) at the end of the row.
  * - list: headline and time on one row.
- * - today: label and time over a short headline (the Today band's "Also today").
+ * - today: label and time over a short headline (the Today band's "Also today"), with an
+ *   optional small thumbnail beside it.
  */
 export function StoryBlock({
   story,
@@ -58,9 +59,19 @@ export function StoryBlock({
   }
   if (variant === 'today') {
     return (
-      <article className={styles.today} data-story="today">
-        <BeatLabel beat={story.beat}>{time}</BeatLabel>
-        {headline}
+      <article
+        className={`${styles.today} ${visual ? styles.todayWithThumb : ''}`}
+        data-story="today"
+      >
+        <div>
+          <BeatLabel beat={story.beat}>{time}</BeatLabel>
+          {headline}
+        </div>
+        {visual ? (
+          <Link href={href} className={styles.thumb} tabIndex={-1} aria-hidden="true">
+            {visual}
+          </Link>
+        ) : null}
       </article>
     );
   }

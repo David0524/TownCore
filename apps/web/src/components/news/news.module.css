@@ -180,6 +180,13 @@
   border-bottom: var(--hairline);
 }
 
+.todayWithThumb {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
+  align-items: start;
+  gap: 1rem;
+}
+
 .today .label {
   margin-bottom: 0.25rem;
   font-size: 0.6875rem;

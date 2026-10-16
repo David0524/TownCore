@@ -87,7 +87,9 @@ export default async function BeatPage({ params }: Props) {
             town={town}
             variant="lead"
             as="h2"
-            visual={<ArticleVisual town={town} theme={theme} article={lead} figure={figure} />}
+            visual={
+              <ArticleVisual town={town} theme={theme} article={lead} figure={figure} cover />
+            }
           />
           {rest.length > 0 ? (
             <ul className={styles.list}>

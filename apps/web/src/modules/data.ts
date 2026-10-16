@@ -25,6 +25,7 @@ import {
 } from '@towncore/db';
 import {
   chooseArticleImage,
+  coverIllustration,
   pickLead as pickRankedLead,
   rankArticles,
   type ImageChoice,
@@ -336,6 +337,31 @@ export const articleImage = cache(
       };
     }
     return chooseArticleImage(db(), article, timeZone);
+  },
+);
+
+/**
+ * A story's cover on the homepage and in lists: its visual, but never a chart (owner,
+ * 2026-10-16). A chart's story is covered by its section illustration, or the title card; the
+ * chart itself stays in the article.
+ */
+export const coverImage = cache(
+  async (
+    article: Pick<
+      Article,
+      'id' | 'townId' | 'headline' | 'dek' | 'bodyMd' | 'beat' | 'kind' | 'sourceRecordIds'
+    >,
+    timeZone: string,
+  ): Promise<ImageChoice> => {
+    const image = await articleImage(article, timeZone);
+    if (image.kind !== 'data-graphic') return image;
+    return (
+      (await coverIllustration(db(), article)) ?? {
+        ...image,
+        kind: 'typographic-card',
+        spec: { type: 'card' },
+      }
+    );
   },
 );
 

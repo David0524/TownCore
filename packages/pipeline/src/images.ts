@@ -574,6 +574,19 @@ export function chooseLibraryIllustration(input: {
   return best ? { shot: best.s, art: library.get(best.s.id)! } : null;
 }
 
+/**
+ * A story's cover (homepage lead, list thumbnails): its own visual, except that a chart never
+ * stands in as the cover (owner, 2026-10-16: "a nice chart but looks terrible as the cover
+ * image"). A story whose visual is a chart is covered by its section's illustration, or null
+ * (the title card); the chart stays in the article itself.
+ */
+export async function coverIllustration(
+  db: Db,
+  article: ArticleForImage & { id: string },
+): Promise<ImageChoice | null> {
+  return pickSectionIllustration(db, article);
+}
+
 async function pickSectionIllustration(
   db: Db,
   article: ArticleForImage & { id: string },

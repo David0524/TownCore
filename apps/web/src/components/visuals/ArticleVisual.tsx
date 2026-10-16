@@ -1,7 +1,7 @@
 import type { Theme } from '@towncore/config';
 import type { Article, Town } from '@towncore/db';
 import { TypographicCard, type CardFigure } from '@/components/news/TypographicCard';
-import { articleImage } from '@/modules/data';
+import { articleImage, coverImage } from '@/modules/data';
 import { DataGraphic } from './DataGraphic';
 import { MapGraphic } from './MapGraphic';
 import { SectionIllustration } from './SectionIllustration';
@@ -18,6 +18,7 @@ export async function ArticleVisual({
   theme,
   article,
   figure,
+  cover = false,
 }: {
   town: Town;
   theme: Theme;
@@ -26,8 +27,10 @@ export async function ArticleVisual({
     'id' | 'townId' | 'headline' | 'dek' | 'bodyMd' | 'beat' | 'kind' | 'sourceRecordIds'
   >;
   figure?: CardFigure | null;
+  /** The homepage lead: a cover, never a chart (the chart stays in the article). */
+  cover?: boolean;
 }) {
-  const image = await articleImage(article, town.timezone);
+  const image = await (cover ? coverImage : articleImage)(article, town.timezone);
   if (image.kind === 'data-graphic' && image.spec.type === 'daily-counts') {
     return <DataGraphic spec={image.spec} alt={image.alt} />;
   }
