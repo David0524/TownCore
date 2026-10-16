@@ -44,9 +44,6 @@ export const GoodMorning: HomeModuleComponent = async ({ town, theme }) => {
         <p className="meta">
           {weekday}, {apDate(now, town.timezone)}
         </p>
-        <p className={styles.tagline}>
-          News, events and local businesses in {town.name}, from the public record.
-        </p>
       </div>
       {art ? (
         // The town's own illustration (its logo art), decorative: the greeting says the rest.

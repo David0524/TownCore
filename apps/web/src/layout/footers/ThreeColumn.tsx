@@ -51,7 +51,6 @@ export async function ThreeColumn({ town }: PartProps) {
         <div className={styles.masthead}>
           <div className={styles.about}>
             <p className={styles.wordmark}>{town.siteName}</p>
-            <p>{town.name}&apos;s daily paper, from the public record.</p>
             <p>
               News tips and corrections:{' '}
               <a href={`mailto:${contact}`} data-testid="contact-email">
