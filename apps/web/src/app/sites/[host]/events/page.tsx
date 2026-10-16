@@ -1,54 +1,68 @@
 import type { Metadata } from 'next';
 import { apDate } from '@towncore/pipeline';
-import { Grouped } from '@/components/phone/Grouped';
+import { EventCard, type EventCardData } from '@/components/events/EventCard';
+import styles from '@/components/events/events.module.css';
 import { LargeTitle } from '@/components/phone/LargeTitle';
-import { clockTime } from '@/components/weather/format';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
-import { upcomingMeetings } from '@/modules/data';
+import { upcomingEvents, upcomingMeetings } from '@/modules/data';
 
 export const metadata: Metadata = { title: 'Events', alternates: { canonical: '/events' } };
 
 const DAYS = 30;
 
 /**
- * The Events tab. Until the town has an events source, it lists the public meetings on the
- * city's calendar for the next 30 days (D-M5-3), grouped by day, linking to the city's pages.
+ * The Events tab: the town's official event calendars and its public meetings for the next 30
+ * days, as cards grouped by day, each linking to the city's own page.
  */
 export default async function EventsPage({ params }: { params: Promise<{ host: string }> }) {
   const town = await requireTown(params);
-  const meetings = await upcomingMeetings(town.id, DAYS, 60);
+  const [events, meetings] = await Promise.all([
+    upcomingEvents(town.id, town.name, DAYS, 200),
+    upcomingMeetings(town.id, DAYS, 60),
+  ]);
+  const all: EventCardData[] = [
+    ...events,
+    ...meetings.map((m) => ({
+      id: m.id,
+      title: m.title,
+      when: m.when,
+      end: null,
+      allDay: false,
+      venue: m.where,
+      street: null,
+      url: m.url,
+      tag: 'Public meeting',
+    })),
+  ].sort((a, b) => a.when.getTime() - b.when.getTime());
   const dayLabel = (d: Date) =>
     `${new Intl.DateTimeFormat('en-US', { timeZone: town.timezone, weekday: 'long' }).format(d)}, ${apDate(d, town.timezone)}`;
-  const days = new Map<string, typeof meetings>();
-  for (const m of meetings) {
-    const label = dayLabel(m.when);
-    days.set(label, [...(days.get(label) ?? []), m]);
+  const days = new Map<string, EventCardData[]>();
+  for (const e of all) {
+    const label = dayLabel(e.when);
+    days.set(label, [...(days.get(label) ?? []), e]);
   }
   return (
     <StandardPage town={town}>
       <LargeTitle title="Events" as="h1" always />
       <p className="muted">
-        Public meetings on the {town.name} city calendar for the next {DAYS} days. Each links to the
-        city&apos;s page with the agenda.
+        Events and public meetings on the {town.name} city calendars for the next {DAYS} days. Each
+        links to the city&apos;s page for details.
       </p>
       {days.size === 0 ? (
-        <p data-testid="events-empty">
-          No public meetings are on the city calendar for the next {DAYS} days.
-        </p>
+        <p data-testid="events-empty">Nothing is on the city calendars for the next {DAYS} days.</p>
       ) : (
         [...days].map(([day, list]) => (
-          <Grouped
-            key={day}
-            title={day}
-            rows={list.map((m) => ({
-              key: m.id,
-              href: m.url ?? undefined,
-              external: true,
-              label: m.title,
-              detail: [clockTime(m.when, town.timezone), m.where].filter(Boolean).join(' · '),
-            }))}
-          />
+          <section key={day} aria-label={day}>
+            <h2 className={styles.dayHeading}>{day}</h2>
+            <ul className={styles.list}>
+              {list.map((e) => (
+                <li key={e.id}>
+                  <EventCard event={e} timeZone={town.timezone} />
+                </li>
+              ))}
+            </ul>
+          </section>
         ))
       )}
     </StandardPage>

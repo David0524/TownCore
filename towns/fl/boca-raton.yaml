@@ -26,6 +26,50 @@ sources:
     platform: civicplus
     url: https://www.myboca.us/
     options: { module: calendar, catId: '29' }
+  # Verified 2026-10-16: the city's event calendars on the same CivicPlus site (iCal feeds,
+  # allowed by robots.txt). Community events, the city's museums, nature center, parks and venues;
+  # classes and league calendars (aquatics, athletics, fitness, tennis, golf) are left out, and
+  # the Libraries calendar is empty (the library posts its events elsewhere).
+  - kind: events
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '58' } # Community Events
+  - kind: events
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '45' } # Events & Activities
+  - kind: events
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '48' } # Children's Science Explorium
+  - kind: events
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '47' } # Gumbo Limbo Nature Center
+  - kind: events
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '27' } # Mizner Park Amphitheater
+  - kind: events
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '32' } # Willow Theatre at Sugar Sand Park
+  - kind: events
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '49' } # Sugar Sand Park Community Center
+  - kind: events
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '50' } # Boca Raton Community Center
+  - kind: events
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '59' } # Public Art Boca
+  - kind: events
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: calendar, catId: '60' } # Wildflower in Bloom Events
   # City media releases (CivicPlus News Flash, all categories).
   - kind: city_news
     platform: civicplus
