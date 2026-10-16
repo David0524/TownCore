@@ -63,18 +63,40 @@ function pbf(
   const wayBufs = ways.map((w) => {
     const keys = Object.keys(w.tags).map(s);
     const vals = Object.values(w.tags).map(s);
-    return new Writer()
-      .uint(1, w.id)
-      .packed(2, keys)
-      .packed(3, vals)
-      .packed(8, delta(w.refs), true)
-      .done();
+    return (
+      new Writer()
+        .uint(1, w.id)
+        .packed(2, keys)
+        .packed(3, vals)
+        // Info (version, timestamp, …) as real extracts carry it; the reader skips it.
+        .bytes(4, new Writer().uint(1, 3).uint(2, 1_700_000_000).done())
+        .packed(8, delta(w.refs), true)
+        .done()
+    );
   });
   const dense = new Writer()
     .packed(1, delta(nodes.map((n) => n.id)), true)
     // Granularity 100 nanodegrees: units of 1e-7 degrees.
     .packed(8, delta(nodes.map((n) => Math.round(n.lat * 1e7))), true)
     .packed(9, delta(nodes.map((n) => Math.round(n.lon * 1e7))), true)
+    // DenseInfo and keys_vals, as in Geofabrik extracts: skipped fields with multi-byte lengths.
+    .bytes(
+      5,
+      new Writer()
+        .packed(
+          1,
+          nodes.map(() => 1),
+        )
+        .packed(
+          2,
+          nodes.map(() => 200),
+        )
+        .done(),
+    )
+    .packed(
+      10,
+      nodes.map(() => 0),
+    )
     .done();
   const group = new Writer().bytes(2, dense);
   for (const w of wayBufs) group.bytes(3, w);

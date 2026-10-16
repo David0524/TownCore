@@ -44,8 +44,12 @@ export class ProtoReader {
   skip(wire: number): void {
     if (wire === 0) this.varint();
     else if (wire === 1) this.pos += 8;
-    else if (wire === 2) this.pos += this.varint();
-    else if (wire === 5) this.pos += 4;
+    else if (wire === 2) {
+      // Read the length first: `this.pos += this.varint()` would add it to the position from
+      // before the length's own bytes.
+      const len = this.varint();
+      this.pos += len;
+    } else if (wire === 5) this.pos += 4;
     else throw new Error(`unsupported wire type ${wire}`);
   }
 

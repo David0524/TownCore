@@ -44,7 +44,9 @@
   margin-top: 0.5rem;
 }
 
-/* slim-left (coastal-modern): one 68px row on wide screens; nav wraps below on narrow ones. */
+/* slim-left (coastal-modern): one 68px row on wide screens (wordmark, section links, weather and
+   Subscribe). Narrower, the links move to a second line. Either way they stay on one line: they
+   never wrap, and scroll sideways inside themselves if a screen is too narrow for them. */
 .slim {
   border-bottom: var(--hairline);
 }
@@ -59,10 +61,10 @@
     'mark end'
     'nav nav';
   align-items: center;
-  gap: 0.5rem 1.5rem;
+  gap: 0.5rem 1rem;
 }
 
-@media (min-width: 64rem) {
+@media (min-width: 70rem) {
   .slimInner {
     min-height: 68px;
     padding-block: 0;
@@ -82,11 +84,17 @@
 }
 
 .slimNav ul {
-  flex-wrap: wrap;
-  overflow: visible;
+  flex-wrap: nowrap;
+  gap: 0;
 }
 
-@media (min-width: 64rem) {
+/* Two classes deep, so it wins over the nav's own `.tabs a`, which loads later. */
+.slimNav ul a {
+  padding-inline: 0.5rem;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 70rem) {
   .slimNav ul {
     justify-content: center;
   }
@@ -96,7 +104,7 @@
   grid-area: end;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .slimTemp {
