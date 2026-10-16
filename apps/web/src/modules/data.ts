@@ -31,6 +31,7 @@ import {
 } from '@towncore/pipeline';
 import { db } from '@/lib/db';
 import { pickMeetingVideo, type MeetingVideo } from '@/lib/meeting-video';
+import { refreshWeatherAfterView } from '@/lib/weather';
 
 /**
  * The town's published articles in rank order (CLAUDE.md §6a): newsworthiness × freshness ×
@@ -71,6 +72,7 @@ export type TownWeather =
   | { kind: 'zone'; period: string; text: string; url: string | null; issuedAt: Date };
 
 export const townWeather = cache(async (townId: string): Promise<TownWeather | null> => {
+  refreshWeatherAfterView(townId);
   const fresh = await getTownWeather(db(), townId);
   if (fresh) return { kind: 'snapshot', snapshot: fresh.snapshot };
   const [forecast] = await db()

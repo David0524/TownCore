@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { Fetcher, replayFetch, type FixtureFile } from '@towncore/adapters';
 import { loadTowns } from '@towncore/config';
 import {
+  claimWeatherRefresh,
   eq,
   getTownBySlug,
   getTownWeather,
@@ -14,6 +15,7 @@ import {
 import { createTestDb } from '@towncore/db/testing';
 import { pino } from 'pino';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { refreshTownWeather } from '@towncore/pipeline';
 import { refreshWeather, weatherTargets } from '../src/weather';
 
 const townsDir = fileURLToPath(new URL('../../../towns', import.meta.url));
@@ -91,5 +93,22 @@ describe('weather refresh', () => {
     expect(await getTownWeather(db, townId, later)).not.toBeNull();
     const stale = new Date(NOW.getTime() + WEATHER_MAX_AGE_MS + 1);
     expect(await getTownWeather(db, townId, stale)).toBeNull();
+  });
+
+  it('lets one page view refresh a stale town, at most every 10 minutes', async () => {
+    const minutes = (n: number) => new Date(NOW.getTime() + n * 60_000);
+    // The snapshot from NOW is fresh for 30 minutes; the failed try above was at +15.
+    expect(await claimWeatherRefresh(db, townId, minutes(20))).toBe(false);
+    expect(await claimWeatherRefresh(db, townId, minutes(31))).toBe(true);
+    // Many requests at once: only the first claims it.
+    expect(await claimWeatherRefresh(db, townId, minutes(32))).toBe(false);
+    expect(await weatherTargets(db, townId)).toHaveLength(1);
+    const [target] = await weatherTargets(db, townId);
+    expect(await refreshTownWeather(db, fetcher(fixture), target!, minutes(32))).toEqual({
+      ok: true,
+    });
+    // Fresh again: no refresh until it ages past 30 minutes.
+    expect(await claimWeatherRefresh(db, townId, minutes(50))).toBe(false);
+    expect(await claimWeatherRefresh(db, townId, minutes(63))).toBe(true);
   });
 });
