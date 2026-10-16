@@ -92,7 +92,18 @@ export const townConfigSchema = z.strictObject({
   site_name: z.string().min(1),
   domain,
   extra_domains: z.array(domain).default([]),
-  logo: z.string().min(1).optional(),
+  // A logo image in place of the generated wordmark: a path, or { src, width, height } so the
+  // page reserves its shape before it loads (no layout shift).
+  logo: z
+    .union([
+      z.string().min(1),
+      z.object({
+        src: z.string().min(1),
+        width: z.number().int().positive(),
+        height: z.number().int().positive(),
+      }),
+    ])
+    .optional(),
   // Public contact shown on the site; defaults to news@{domain} (forwarded to the publisher inbox).
   contact_email: z.email().optional(),
   tier: z.enum(townTiers),

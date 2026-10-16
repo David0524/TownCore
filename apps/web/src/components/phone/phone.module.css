@@ -84,6 +84,12 @@
   color: var(--accent);
 }
 
+.wordmarkLogo {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+
 /* Tab bar */
 .tabBar {
   position: fixed;
