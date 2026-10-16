@@ -244,6 +244,26 @@ describe('story finder', () => {
     expect(again.skipped).toEqual({ budget_full: 1 });
   });
 
+  it('writes up meeting minutes and recorded actions as recaps, never bare agendas', async () => {
+    await addRecord('agenda', 'minutes', 'Minutes: Town Council Meeting');
+    await addRecord('agenda', 'meeting-actions', 'Actions: City Commission: Regular Meeting');
+    await addRecord('agenda', 'agenda', 'Agenda: City Commission: Regular Meeting');
+    await addRecord('agenda', 'meeting', 'City Commission: Regular Meeting');
+    const { llm, calls } = classifier({
+      'Minutes: Town Council Meeting': high,
+      'Actions: City Commission: Regular Meeting': high,
+    });
+    await runStoryFinder(db, townId, { llm, now: NOW });
+    expect(calls.sort()).toEqual([
+      'Actions: City Commission: Regular Meeting',
+      'Minutes: Town Council Meeting',
+    ]);
+    const all = await candidates();
+    expect(all['Minutes: Town Council Meeting']?.status).toBe('accepted');
+    expect(all['Actions: City Commission: Regular Meeting']?.c.beat).toBe('government');
+    expect(all['Agenda: City Commission: Regular Meeting']).toBeUndefined();
+  });
+
   it('leaves candidates pending without a model, or once the daily cap is hit', async () => {
     await addRecord('city_news', 'release', 'Budget vote');
     await addRecord('city_news', 'release', 'Parking rates');
