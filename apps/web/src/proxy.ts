@@ -4,13 +4,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 // Every page is served per town. The proxy only rewrites the path to /sites/<host>/...;
 // the layout resolves the host to a town (Next advises against shared state in proxy).
 //
-// Staff admin (/admin) and the mail webhooks (/api/mail) are served only on the internal host
+// Staff admin (/admin) and the webhooks (/api/mail, /api/stripe) are served only on the internal host
 // from APP_BASE_URL. On a town domain they are rewritten like any other path and 404, so they
 // never exist on a site.
 export function proxy(request: NextRequest) {
   const host = request.headers.get('host') ?? '';
   const url = request.nextUrl.clone();
-  if (isAdminHost(host) && /^\/(admin|api\/mail)(\/|$)/.test(url.pathname)) {
+  if (isAdminHost(host) && /^\/(admin|api\/mail|api\/stripe)(\/|$)/.test(url.pathname)) {
     return NextResponse.next();
   }
   url.pathname = `/sites/${encodeURIComponent(host)}${url.pathname === '/' ? '' : url.pathname}`;

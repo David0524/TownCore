@@ -139,3 +139,26 @@
 .pre {
   white-space: pre-line;
 }
+
+.offers {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.offers li {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+  border: var(--hairline);
+  border-radius: var(--radius);
+}
+
+.offers button {
+  min-height: 44px;
+  border: 0;
+  cursor: pointer;
+  justify-self: start;
+}

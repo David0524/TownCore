@@ -95,6 +95,9 @@ export {
   categoryForLicense,
   directoryCategories,
   directoryCategory,
+  directoryProducts,
   maxSponsoredPerCategory,
+  productPrice,
+  type DirectoryProduct,
   type DirectoryCategory,
 } from './directory';

@@ -9,13 +9,15 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "directory:seed": "tsx scripts/seed.ts"
+    "directory:seed": "tsx scripts/seed.ts",
+    "directory:stripe": "tsx scripts/stripe.ts"
   },
   "dependencies": {
     "@towncore/adapters": "workspace:*",
     "@towncore/config": "workspace:*",
     "@towncore/db": "workspace:*",
-    "@towncore/mail": "workspace:*"
+    "@towncore/mail": "workspace:*",
+    "stripe": "23.0.0"
   },
   "devDependencies": {
     "tsx": "^4.23.15"

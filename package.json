@@ -22,6 +22,7 @@
     "evals": "pnpm --filter @towncore/pipeline evals",
     "stories:once": "pnpm --filter @towncore/pipeline stories:once",
     "directory:seed": "pnpm --silent --filter @towncore/directory directory:seed",
+    "directory:stripe": "pnpm --silent --filter @towncore/directory directory:stripe",
     "mail:routing:sync": "pnpm --filter @towncore/db mail:routing:sync",
     "mail:onboard": "pnpm --silent --filter @towncore/mail onboard",
     "weather:once": "pnpm --filter @towncore/worker weather:once",
