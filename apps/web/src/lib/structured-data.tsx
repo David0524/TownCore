@@ -24,6 +24,8 @@ export function newsArticleJsonLd(
   town: Pick<Town, 'siteName' | 'domain' | 'name' | 'state'>,
   article: Pick<Article, 'slug' | 'headline' | 'dek' | 'beat' | 'publishedAt' | 'updatedAt'>,
 ): Json {
+  // The share image (1200×630) drawn for every article (§11c).
+  const image = siteUrl(town, `${articlePath(article.slug)}/og`);
   const publisher = {
     '@type': 'NewsMediaOrganization',
     name: town.siteName,
@@ -38,6 +40,7 @@ export function newsArticleJsonLd(
     datePublished: article.publishedAt?.toISOString(),
     dateModified: article.updatedAt.toISOString(),
     articleSection: article.beat,
+    image: [image],
     // The byline organization ("{Site} Newsroom"); AI assistance is disclosed in the visible byline.
     author: {
       '@type': 'Organization',

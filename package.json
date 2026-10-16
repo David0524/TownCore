@@ -21,6 +21,7 @@
     "ingest:once": "pnpm --filter @towncore/adapters ingest:once",
     "evals": "pnpm --filter @towncore/pipeline evals",
     "stories:once": "pnpm --filter @towncore/pipeline stories:once",
+    "images:backfill": "pnpm --filter @towncore/pipeline images:backfill",
     "directory:seed": "pnpm --silent --filter @towncore/directory directory:seed",
     "directory:stripe": "pnpm --silent --filter @towncore/directory directory:stripe",
     "mail:routing:sync": "pnpm --filter @towncore/db mail:routing:sync",

@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "evals": "tsx scripts/evals.ts",
-    "stories:once": "tsx scripts/stories-once.ts"
+    "stories:once": "tsx scripts/stories-once.ts",
+    "images:backfill": "tsx scripts/images-backfill.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.134.0",

@@ -4,6 +4,7 @@ import {
   aiUsage,
   articles,
   eq,
+  images,
   getTownBySlug,
   records,
   sources,
@@ -297,6 +298,51 @@ describe('writeCandidate: templated items', () => {
     });
     expect(a.bodyMd).toContain('TEENS ACADEMY LLC');
     expect(a.bodyMd).not.toContain('1 Main St');
+    // One record is too little for a chart: the router falls back to the typographic card.
+    const [image] = await db.select().from(images).where(eq(images.articleId, a.id));
+    expect(image).toMatchObject({
+      kind: 'typographic-card',
+      license: 'own-work',
+      aiGenerated: false,
+    });
+    expect(image!.alt).toContain(a.headline);
+  });
+
+  it('gives a roundup over several days a data graphic built from its records', async () => {
+    const filings = await db
+      .insert(records)
+      .values(
+        ['2026-10-06', '2026-10-06', '2026-10-07', '2026-10-09', '2026-10-09'].map((day, i) => ({
+          sourceId: sourceIds.business_filings!,
+          townId,
+          externalId: `filing:chart:${i}`,
+          type: 'new-filing',
+          title: `SAMPLE ${i} LLC`,
+          text: `Florida limited liability company, filed ${day}.`,
+          contentHash: `c${i}`,
+          occurredAt: new Date(`${day}T15:00:00Z`),
+          raw: {},
+        })),
+      )
+      .returning();
+    const [candidate] = await db
+      .insert(storyCandidates)
+      .values({
+        townId,
+        kind: 'roundup',
+        key: 'roundup:new-businesses:2026-10-12',
+        beat: 'business',
+        recordIds: filings.map((f) => f.id),
+        proposedTier: 1,
+        status: 'accepted',
+      })
+      .returning();
+    const outcome = await writeCandidate(db, candidate!.id, { now: NOW });
+    const articleId = (outcome as { articleId: string }).articleId;
+    const [image] = await db.select().from(images).where(eq(images.articleId, articleId));
+    expect(image?.kind).toBe('data-graphic');
+    expect(image?.spec).toMatchObject({ type: 'daily-counts', total: 5 });
+    expect(image?.alt).toMatch(/^Bar chart of new business filings by day, Oct\. 6 to Oct\. 9/);
   });
 });
 

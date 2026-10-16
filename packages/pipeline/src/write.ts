@@ -21,6 +21,7 @@ import {
   type WriterDraft,
 } from '@towncore/prompts';
 import { buildByline } from './byline';
+import { assignArticleImage } from './images';
 import { checkDraft, type FactcheckReport } from './factcheck';
 import { applyUpdate, linkRelatedStories } from './followups';
 import { llmTown } from './finder';
@@ -332,6 +333,8 @@ async function saveArticle(
     .update(storyCandidates)
     .set({ status: 'written', articleId: article!.id })
     .where(eq(storyCandidates.id, a.candidateId));
+  // The article's visual (§11c), chosen now so it's ready whenever the article is published.
+  if (status !== 'blocked') await assignArticleImage(db, article!.id);
   if (a.pin && status !== 'blocked') {
     await db.insert(pins).values({
       articleId: article!.id,

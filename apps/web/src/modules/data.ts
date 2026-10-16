@@ -11,13 +11,19 @@ import {
   inArray,
   listRankableArticles,
   lt,
+  images,
   records,
   sources,
   sql,
   type Article,
   type RankableArticle,
 } from '@towncore/db';
-import { pickLead as pickRankedLead, rankArticles } from '@towncore/pipeline';
+import {
+  chooseArticleImage,
+  pickLead as pickRankedLead,
+  rankArticles,
+  type ImageChoice,
+} from '@towncore/pipeline';
 import { db } from '@/lib/db';
 
 /**
@@ -217,3 +223,27 @@ export const cityPostings = cache(async (townId: string, limit = 5) => {
     at: Date;
   }>;
 });
+
+/**
+ * The article's visual (§11c): the router's recorded choice, or, for an article published before
+ * the router existed, the same choice computed now (not saved; the backfill records it).
+ */
+export const articleImage = cache(
+  async (
+    article: Pick<Article, 'id' | 'headline' | 'beat' | 'kind' | 'sourceRecordIds'>,
+    timeZone: string,
+  ): Promise<ImageChoice> => {
+    const [row] = await db().select().from(images).where(eq(images.articleId, article.id));
+    if (row) {
+      return {
+        kind: row.kind,
+        spec: row.spec,
+        alt: row.alt,
+        license: row.license,
+        attribution: row.attribution,
+        sourceUrl: row.sourceUrl,
+      };
+    }
+    return chooseArticleImage(db(), article, timeZone);
+  },
+);

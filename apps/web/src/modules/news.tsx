@@ -3,7 +3,7 @@ import { EnvelopeIcon } from '@/components/phone/icons';
 import { NewsletterForm } from '@/components/NewsletterForm';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { StoryBlock } from '@/components/news/StoryBlock';
-import { TypographicCard } from '@/components/news/TypographicCard';
+import { ArticleVisual } from '@/components/visuals/ArticleVisual';
 import { WeatherTile } from '@/components/weather/WeatherTile';
 import { newsletterOpen } from '@/lib/newsletter';
 import { beats } from '@towncore/config';
@@ -35,14 +35,7 @@ export const LeadStory: HomeModuleComponent = async ({ town, theme }) => {
         town={town}
         variant="lead"
         as="h2"
-        visual={
-          <TypographicCard
-            theme={theme}
-            beat={lead.beat}
-            headline={lead.headline}
-            figure={figure}
-          />
-        }
+        visual={<ArticleVisual town={town} theme={theme} article={lead} figure={figure} />}
       />
     </section>
   );

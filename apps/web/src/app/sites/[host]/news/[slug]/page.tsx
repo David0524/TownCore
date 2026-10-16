@@ -6,7 +6,7 @@ import { getPublishedArticle, getSourceRecords, listArticleCorrections } from '@
 import { ViewBeacon } from '@/components/Beacon';
 import { RelatedBusinesses } from '@/components/directory/RelatedBusinesses';
 import { BeatLabel } from '@/components/news/BeatLabel';
-import { TypographicCard } from '@/components/news/TypographicCard';
+import { ArticleVisual } from '@/components/visuals/ArticleVisual';
 import { Prose } from '@/components/Prose';
 import { TownGrid } from '@/layout/TownGrid';
 import { db } from '@/lib/db';
@@ -15,7 +15,7 @@ import { themeFor } from '@/lib/theme';
 import { formatTownDate, requireTown, resolveTown } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
 import { rssAlternate } from '@/lib/discovery';
-import { rankedBeatArticles, roundupFigure } from '@/modules/data';
+import { articleImage, rankedBeatArticles, roundupFigure } from '@/modules/data';
 import { NewsletterCta } from '@/modules/news';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { ShareButton } from '@/components/news/ShareButton';
@@ -34,10 +34,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!town) return {};
   const article = await getPublishedArticle(db(), town.id, slug);
   if (!article) return {};
+  const image = await articleImage(article, town.timezone);
+  const share = { url: `/news/${article.slug}/og`, width: 1200, height: 630, alt: image.alt };
   return {
     title: article.headline,
     description: article.dek ?? undefined,
     alternates: { canonical: `/news/${article.slug}`, types: rssAlternate(town) },
+    openGraph: {
+      type: 'article',
+      title: article.headline,
+      description: article.dek ?? undefined,
+      url: `/news/${article.slug}`,
+      siteName: town.siteName,
+      publishedTime: article.publishedAt?.toISOString(),
+      modifiedTime: article.updatedAt.toISOString(),
+      section: article.beat,
+      images: [share],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: article.headline,
+      description: article.dek ?? undefined,
+      images: [share],
+    },
     // Test fixtures are never indexable, even on a live town.
     robots: slug.startsWith('test-') ? { index: false, follow: false } : undefined,
   };
@@ -51,11 +70,12 @@ export default async function ArticlePage({ params }: Props) {
 
   const theme = themeFor(town);
   const template = theme.layout.article;
-  const [sourceRecords, corrections, figure, sameBeat] = await Promise.all([
+  const [sourceRecords, corrections, figure, sameBeat, image] = await Promise.all([
     getSourceRecords(db(), article.sourceRecordIds),
     listArticleCorrections(db(), article.id),
     roundupFigure(article),
     rankedBeatArticles(town.id, article.beat),
+    articleImage(article, town.timezone),
   ]);
   // Three more from the same section; test fixtures never appear beside real stories.
   const more = sameBeat
@@ -115,14 +135,14 @@ export default async function ArticlePage({ params }: Props) {
           </aside>
         ) : null}
 
-        {/* The story's visual (§11c): the typographic card until the image router (M4 PR C). */}
+        {/* The story's visual (§11c), chosen by the image router. */}
         <figure className={styles.visual}>
-          <TypographicCard
-            theme={theme}
-            beat={article.beat}
-            headline={article.headline}
-            figure={figure}
-          />
+          <ArticleVisual town={town} theme={theme} article={article} figure={figure} />
+          {image.kind === 'data-graphic' ? (
+            <figcaption className={`meta ${styles.visualCaption}`}>
+              Counted from this story&apos;s source records, listed below. Chart: {town.siteName}.
+            </figcaption>
+          ) : null}
         </figure>
 
         {/* No slot may sit between the headline and the first paragraph (§11b). */}

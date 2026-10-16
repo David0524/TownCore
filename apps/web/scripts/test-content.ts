@@ -12,7 +12,7 @@ import {
   sources,
   type Db,
 } from '@towncore/db';
-import { buildByline } from '@towncore/pipeline';
+import { assignArticleImage, buildByline } from '@towncore/pipeline';
 
 // Clearly labeled test articles for dev and CI (plan: "Test content"). Every headline starts with
 // "[TEST]", and every slug with "test-" (always noindex) except the fictional live Feed Town's
@@ -30,6 +30,8 @@ type TestStory = {
   correction?: string;
   /** How long ago it was published. Default 2 hours. */
   hoursAgo?: number;
+  /** A roundup: extra sample filing records this many days ago each (one record per entry). */
+  roundupDaysAgo?: number[];
 };
 
 const testParagraph = (siteName: string, n: number) =>
@@ -113,6 +115,24 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
     }));
   return [
     ...(townSlug === 'harbor-point' ? extra('harbor') : []),
+    // A roundup over several days, so the image router draws a data graphic (§11c).
+    ...(townSlug === 'harbor-point'
+      ? [
+          {
+            slug: 'test-harbor-roundup',
+            headline: '[TEST] Sample new business filings this week',
+            dek: 'A fictional roundup counted from sample records. It is not news.',
+            beat: 'business',
+            paragraphs: paragraphs(4),
+            source: {
+              title: 'Sample filings (fictional test source)',
+              url: 'https://example.com/harbor-point-filings',
+            },
+            hoursAgo: 30,
+            roundupDaysAgo: [1, 1, 2, 4, 4, 4],
+          },
+        ]
+      : []),
     ...(townSlug === 'pine-hollow' ? extra('pine') : []),
     {
       slug: 'test-site-plan',
@@ -132,6 +152,7 @@ export async function seedTestContent(
   db: Db,
   town: { id: string; slug: string; siteName: string },
 ) {
+  const written: string[] = [];
   await db.transaction(async (tx) => {
     // Remove earlier test content for this town (rows that reference an article go first).
     const old = await tx
@@ -178,6 +199,23 @@ export async function seedTestContent(
           contentHash: `test-${story.slug}`,
         })
         .returning();
+      const chart = story.roundupDaysAgo
+        ? await tx
+            .insert(records)
+            .values(
+              story.roundupDaysAgo.map((days, i) => ({
+                sourceId: source!.id,
+                townId: town.id,
+                externalId: `test-${story.slug}-filing-${i}`,
+                type: 'new-filing',
+                title: `SAMPLE BUSINESS ${i + 1} LLC (fictional)`,
+                url: story.source.url,
+                occurredAt: new Date(Date.now() - days * 86_400_000),
+                contentHash: `test-${story.slug}-filing-${i}`,
+              })),
+            )
+            .returning()
+        : [];
       const [article] = await tx
         .insert(articles)
         .values({
@@ -190,7 +228,8 @@ export async function seedTestContent(
           tier: 2,
           status: story.correction ? 'corrected' : 'published',
           byline: buildByline(town.siteName),
-          sourceRecordIds: [record!.id],
+          sourceRecordIds: [record!.id, ...chart.map((r) => r.id)],
+          kind: story.roundupDaysAgo ? 'roundup' : 'story',
           publishedAt,
           createdAt: publishedAt,
           updatedAt: publishedAt,
@@ -199,6 +238,9 @@ export async function seedTestContent(
       if (story.correction) {
         await tx.insert(corrections).values({ articleId: article!.id, note: story.correction });
       }
+      written.push(article!.id);
     }
   });
+  // Each test article gets its visual from the same router as real stories (§11c).
+  for (const id of written) await assignArticleImage(db, id);
 }
