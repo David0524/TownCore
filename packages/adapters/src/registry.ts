@@ -1,3 +1,4 @@
+import { loadEnv } from '@towncore/config';
 import type { SourceAdapter } from './types';
 
 // Every adapter, keyed by platform. Adapters register here as they're built (one per platform).
@@ -28,4 +29,12 @@ export async function findAdapter(
     if (confidence > 0 && (!best || confidence > best.confidence)) best = { adapter, confidence };
   }
   return best;
+}
+
+/** The environment variables an adapter needs that aren't set (empty when it can run). */
+export function missingEnv(
+  adapter: SourceAdapter,
+  env: Record<string, unknown> = loadEnv(),
+): string[] {
+  return (adapter.requiresEnv ?? []).filter((key) => !env[key]);
 }

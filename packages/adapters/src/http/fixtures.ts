@@ -15,6 +15,8 @@ export type Exchange = {
 export type FixtureFile = { recordedAt: string; exchanges: Exchange[] };
 
 const TEXT_TYPES = /json|xml|text|html|csv|javascript/i;
+/** Statuses whose responses can't carry a body (the Response constructor rejects one). */
+const NULL_BODY = new Set([101, 204, 205, 304]);
 
 /** A fetch that serves recorded responses in order per URL, and fails loudly on anything else. */
 export function replayFetch(fixture: FixtureFile | string): FetchFn {
@@ -32,7 +34,10 @@ export function replayFetch(fixture: FixtureFile | string): FetchFn {
     const body = exchange.bodyBase64
       ? Buffer.from(exchange.bodyBase64, 'base64')
       : (exchange.body ?? '');
-    return new Response(body, { status: exchange.status, headers: exchange.headers });
+    return new Response(NULL_BODY.has(exchange.status) ? null : body, {
+      status: exchange.status,
+      headers: exchange.headers,
+    });
   };
 }
 
@@ -55,7 +60,10 @@ export function recordingFetch(real: FetchFn): { fetch: FetchFn; save: (path: st
         headers,
         ...(isText ? { body: buffer.toString('utf8') } : { bodyBase64: buffer.toString('base64') }),
       });
-      return new Response(buffer, { status: response.status, headers: response.headers });
+      return new Response(NULL_BODY.has(response.status) ? null : buffer, {
+        status: response.status,
+        headers: response.headers,
+      });
     },
     save: (path) => {
       mkdirSync(dirname(path), { recursive: true });

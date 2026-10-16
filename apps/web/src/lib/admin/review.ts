@@ -22,6 +22,7 @@ export const reviewReasonLabel: Record<string, string> = {
   factcheck: 'Failed fact-check',
   model_error: 'Model error during fact-check',
   minor_override: 'Minor flag overridden; needs approval',
+  transcript: 'Uses a machine transcript: check names against the minutes',
 };
 
 /** Code checks (names and numbers) on an edited draft: no model call. */

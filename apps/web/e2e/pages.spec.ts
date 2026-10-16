@@ -98,7 +98,9 @@ test.describe('article page', () => {
     await page.goto(`${boca}/`);
     await expect(page.locator('[data-module="lead-story"]')).toContainText('[TEST]');
     await page.goto(`${boca}/beat/government`);
-    await expect(page.getByRole('main').getByRole('link', { name: /\[TEST\]/ })).toBeVisible();
+    await expect(
+      page.getByRole('main').getByRole('link', { name: /\[TEST\] This is a test article/ }),
+    ).toBeVisible();
   });
 });
 

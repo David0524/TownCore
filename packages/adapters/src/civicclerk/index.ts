@@ -1,4 +1,5 @@
 import { zonedTimeToUtc } from '../lib/ical';
+import { fetchSwagitTranscript, swagitVideo } from '../swagit';
 import type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from '../types';
 
 // CivicClerk (CivicPlus) through the public API behind each town's portal (CLAUDE.md §9: one
@@ -9,11 +10,13 @@ import type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from '../
 //   minutes file as plain text, so no PDF parsing is needed.
 // Agenda packets (hundreds of pages of backup) are never downloaded.
 //
-// Each meeting gives up to three records, so a change to one doesn't churn the others (a
+// Each meeting gives up to four records, so a change to one doesn't churn the others (a
 // published story citing a record gets an update note when that record changes):
-// - event:<id>    type 'meeting': when, where, which body, video link.
-// - agenda:<id>   type 'agenda': the agenda's text.
-// - minutes:<id>  type 'minutes': the minutes (or the synopsis some towns post first).
+// - event:<id>       type 'meeting': when, where, which body, video link.
+// - agenda:<id>      type 'agenda': the agenda's text.
+// - minutes:<id>     type 'minutes': the minutes (or the synopsis some towns post first).
+// - transcript:<id>  type 'transcript': the Swagit video's machine transcript, when the town
+//                    posts its video there (packages/adapters/src/swagit).
 //
 // Times: the API writes local wall-clock times with a "Z" (Jupiter's 7:00 PM council meeting is
 // "19:00:00Z"), so they are read in the town's time zone.
@@ -60,6 +63,8 @@ type EventsPage = { value: CivicClerkEvent[]; '@odata.nextLink'?: string };
 
 /** Pages of events followed per run; a town's window fits in one or two. */
 const MAX_PAGES = 8;
+/** Transcripts are asked for during the week after a meeting. */
+const TRANSCRIPT_DAYS = 7;
 /** Plain-text agendas and minutes are a few KB; anything far larger is cut. */
 const MAX_TEXT = 60_000;
 
@@ -266,6 +271,33 @@ async function fetchEvents(
           publishOn: file.publishOn,
         },
       });
+    }
+
+    // A past meeting's Swagit transcript (owner's decision, 2026-10-16): supporting text for
+    // its recap, never a story on its own. Posted a day or two after the meeting, so asked for
+    // during the following week (every meeting in the window on a first run).
+    const swagit = swagitVideo(event.externalMediaUrl);
+    const ended = start.getTime() < ctx.now.getTime() - 3 * 3_600_000;
+    const recent = !since || start.getTime() > ctx.now.getTime() - TRANSCRIPT_DAYS * 86_400_000;
+    if (swagit && ended && recent) {
+      const transcript = await fetchSwagitTranscript(ctx, swagit.page);
+      if (transcript) {
+        records.push({
+          externalId: `transcript:${event.id}`,
+          type: 'transcript',
+          title: `Transcript: ${title}`,
+          text: [
+            ...header,
+            `Video: ${swagit.page}`,
+            'Machine-generated captions: wording is approximate and names may be misspelled.',
+            '',
+            transcript.text,
+          ].join('\n'),
+          url: swagit.page,
+          occurredAt: start,
+          raw: { ...meta, video: swagit.page, transcriptUrl: transcript.url },
+        });
+      }
     }
   }
   return records;
