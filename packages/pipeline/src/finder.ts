@@ -459,7 +459,7 @@ export function llmTown(town: TownRow, config: TownConfig) {
   };
 }
 
-function classifyInput(
+export function classifyInput(
   town: TownRow,
   config: TownConfig,
   rows: { record: typeof records.$inferSelect; sourceKind: string }[],

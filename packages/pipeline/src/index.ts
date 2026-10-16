@@ -22,7 +22,7 @@ export {
 } from './llm';
 export { anthropicProvider } from './llm/anthropic';
 export { geminiProvider } from './llm/gemini';
-export { runStoryFinder, type FinderReport } from './finder';
+export { classifyInput, llmTown, runStoryFinder, type FinderReport } from './finder';
 export {
   MIN_SOURCE_CHARS,
   penalties,

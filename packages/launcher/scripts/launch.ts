@@ -1,5 +1,5 @@
 // pnpm launch "Delray Beach, FL" [--short-name Delray] [--nickname "Atlantic"] [--outlet "Name"]...
-//   [--resume] [--pick N] [--approve-spend]
+//   [--source kind=url]... [--resume] [--pick N] [--approve-spend]
 // Launches a town from an approved candidate (CLAUDE.md §10). A dry run unless --approve-spend:
 // nothing is bought, sent or deployed. Step 2 proposes names and waits for --pick; a domain is
 // bought only with --approve-spend and the domain typed back at the price shown (Rule 10).
@@ -8,6 +8,7 @@ import { Fetcher } from '@towncore/adapters';
 import { launchStepLabels, loadEnv, requireEnv } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
 import { createDb } from '@towncore/db';
+import { providerFromEnv, resolveProviderName, type Llm } from '@towncore/pipeline';
 import { LaunchRefused, resolveTown, runLaunch, statePlaces } from '../src';
 
 loadDotEnv();
@@ -18,13 +19,13 @@ const flag = (name: string) => {
 };
 const flags = (name: string) =>
   args.flatMap((a, i) => (a === `--${name}` && args[i + 1] ? [args[i + 1]!] : []));
-const VALUE_FLAGS = ['--domain', '--short-name', '--nickname', '--outlet', '--pick'];
+const VALUE_FLAGS = ['--domain', '--short-name', '--nickname', '--outlet', '--pick', '--source'];
 const town = args.find(
   (a, i) => !a.startsWith('--') && a.includes(',') && !VALUE_FLAGS.includes(args[i - 1] ?? ''),
 );
 if (!town) {
   console.error(
-    'Usage: pnpm launch "Town, ST" [--short-name X] [--nickname X] [--outlet "Name"]... [--resume] [--pick N] [--approve-spend]',
+    'Usage: pnpm launch "Town, ST" [--short-name X] [--nickname X] [--outlet "Name"]... [--source kind=url]... [--resume] [--pick N] [--approve-spend]',
   );
   process.exit(1);
 }
@@ -54,6 +55,14 @@ try {
   const shortName = flag('short-name');
   const nickname = flag('nickname');
   const outlets = flags('outlet');
+  const sources = flags('source');
+  // Discovery and readiness use the model when one is configured (D-M7-2); without one, step 3
+  // verifies --source flags and the state sources only.
+  let llm: Llm | undefined;
+  if (resolveProviderName()) {
+    const { name, provider } = providerFromEnv();
+    llm = { providerName: name, provider, db };
+  }
   const pick = flag('pick');
   if (pick !== undefined && !/^[1-9]$/.test(pick))
     throw new LaunchRefused('--pick takes 1, 2 or 3.');
@@ -61,6 +70,8 @@ try {
     {
       db,
       resolve: (t) => resolveTown(t, { fetcher }),
+      fetcher,
+      ...(llm ? { llm } : {}),
       names: {
         fetcher,
         places: (state) => statePlaces(state, { fetcher }),
@@ -77,6 +88,7 @@ try {
       ...(shortName ? { shortName } : {}),
       ...(nickname ? { nickname } : {}),
       ...(outlets.length ? { outlets } : {}),
+      ...(sources.length ? { sources } : {}),
       ...(pick ? { pick: Number(pick) } : {}),
       approveSpend: args.includes('--approve-spend'),
       resume: args.includes('--resume'),

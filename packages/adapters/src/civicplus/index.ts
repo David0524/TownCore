@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import * as cheerio from 'cheerio';
-import type { RawRecord, SourceAdapter, SourceConfig } from '../types';
+import type { SourceKind } from '@towncore/config';
+import type { RawRecord, SourceAdapter, SourceConfig, SourceProposal } from '../types';
 import { parseIcal } from '../lib/ical';
 
 // CivicPlus CivicEngage (CLAUDE.md §9: one adapter for every city on the platform).
@@ -148,6 +149,60 @@ async function fetchNewsFlash(
   return records;
 }
 
+/** The site's calendars, from the category checkboxes on /Calendar.aspx. */
+export function calendarCategories(html: string): Array<{ id: string; name: string }> {
+  const $ = cheerio.load(html);
+  return $('label[for^="chkCalendarID_"]')
+    .toArray()
+    .map((el) => ({
+      id: ($(el).attr('for') ?? '').replace('chkCalendarID_', ''),
+      name: $(el).text().replace(/\s+/g, ' ').trim(),
+    }))
+    .filter((c) => /^\d+$/.test(c.id) && c.name);
+}
+
+/** Calendar names that hold public meetings, best first. */
+const MEETING_CALENDARS = [
+  /city council|city commission|town council|town commission/i,
+  /council|commission/i,
+  /public meeting|board/i,
+];
+const EVENT_CALENDARS = [/community event|special event|^events$/i, /event|recreation|parks/i];
+
+async function proposeSources(
+  url: string,
+  kind: SourceKind,
+  ctx: Parameters<SourceAdapter['fetch']>[2],
+): Promise<SourceProposal[]> {
+  const origin = new URL(url).origin;
+  // Police and fire departments on CivicPlus publish through News Flash too.
+  if (kind === 'city_news' || kind === 'police' || kind === 'fire') {
+    return [
+      {
+        kind,
+        url: `${origin}/`,
+        options: { module: 'newsflash', catId: 'All-newsflash.xml' },
+        label: 'CivicPlus News Flash (all categories)',
+      },
+    ];
+  }
+  if (kind !== 'agenda' && kind !== 'events') return [];
+  const categories = calendarCategories(await ctx.fetcher.getText(`${origin}/Calendar.aspx`));
+  for (const pattern of kind === 'agenda' ? MEETING_CALENDARS : EVENT_CALENDARS) {
+    const hit = categories.find((c) => pattern.test(c.name));
+    if (hit)
+      return [
+        {
+          kind,
+          url: `${origin}/`,
+          options: { module: 'calendar', catId: hit.id },
+          label: `CivicPlus calendar: ${hit.name}`,
+        },
+      ];
+  }
+  return [];
+}
+
 export const civicplusAdapter: SourceAdapter = {
   platform: 'civicplus',
   kinds: ['agenda', 'events', 'police', 'fire', 'city_news'],
@@ -164,6 +219,10 @@ export const civicplusAdapter: SourceAdapter = {
     return opts.module === 'calendar'
       ? fetchCalendar(source, opts, ctx)
       : fetchNewsFlash(source, opts, since, ctx);
+  },
+
+  async propose(url, _html, kind, ctx) {
+    return proposeSources(url, kind, ctx);
   },
 
   async healthCheck(source, ctx) {

@@ -48,6 +48,12 @@ export const modelPrices: Record<string, ModelPrice> = {
   'gemini-pro-latest': { input: 0, output: 0, cacheRead: 0 },
 };
 
+/**
+ * Anthropic's server-side web search, USD per search (on top of tokens). Verified against the
+ * Anthropic pricing page on 2026-10-16: $10 per 1,000 searches.
+ */
+export const WEB_SEARCH_USD = 0.01;
+
 export type TokenUsage = { inputTokens: number; outputTokens: number; cacheReadTokens: number };
 
 /** Estimated cost in USD. Throws for a model without a price, so nothing runs unpriced. */

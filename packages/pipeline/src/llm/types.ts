@@ -15,6 +15,8 @@ export type LlmRequest = {
   schema: Record<string, unknown>;
   effort: Effort;
   maxOutputTokens: number;
+  /** Let the model search the web (launcher discovery only), at most this many searches. */
+  webSearch?: { maxUses: number };
 };
 
 export type StopKind = 'end' | 'max_tokens' | 'refusal' | 'other';
@@ -25,9 +27,13 @@ export type LlmResponse = {
   /** The model that actually served the request. */
   model: string;
   usage: TokenUsage;
+  /** Web searches the provider ran for this answer (billed per search). */
+  webSearches?: number;
 };
 
 export interface LlmProvider {
   readonly name: 'anthropic' | 'gemini' | 'replay';
+  /** Whether `webSearch` requests are supported. */
+  readonly webSearch?: boolean;
   generate(request: LlmRequest): Promise<LlmResponse>;
 }

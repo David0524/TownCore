@@ -62,6 +62,8 @@ export function geminiProvider(
   return {
     name: 'gemini',
     async generate(request) {
+      if (request.webSearch)
+        throw new Error('Web search runs only on the Anthropic provider (D-M7-2).');
       for (let attempt = 0; ; attempt++) {
         try {
           return await once(request);

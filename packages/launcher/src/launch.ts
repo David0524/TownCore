@@ -16,7 +16,11 @@ import {
   type Db,
 } from '@towncore/db';
 import type { ResolvedTown } from './resolve';
+import type { Fetcher } from '@towncore/adapters';
+import type { Llm } from '@towncore/pipeline';
+import type { DiscoverDetail } from './discover';
 import { DEFAULT_TOWNS_DIR, namesStep, type NameDeps, type NamesDetail } from './names-step';
+import { adaptersStep, readinessStep, sourcesStep } from './sources-step';
 
 // `pnpm launch "Delray Beach, FL"` (CLAUDE.md §10; docs/plans/M7.md §2). A launch starts only
 // from an approved town (§10a), is a dry run unless the operator approves spending, and records
@@ -41,6 +45,8 @@ export type LaunchOptions = {
   outlets?: string[];
   /** Step 2: the proposal the owner picked (1–3). */
   pick?: number;
+  /** Step 3: `kind=url` sources to verify, added to (or instead of) discovery. */
+  sources?: string[];
 };
 
 export type LaunchDeps = {
@@ -48,6 +54,10 @@ export type LaunchDeps = {
   resolve: (town: string) => Promise<ResolvedTown>;
   /** Step 2: names, domains and the registrar. Without it, step 2 stops the run. */
   names?: NameDeps;
+  /** Steps 3–5: the polite fetcher for discovery and ingest. */
+  fetcher?: Fetcher;
+  /** Steps 3 and 5: the model layer (discovery needs a provider with web search). */
+  llm?: Llm;
   launchDir?: string;
   townsDir?: string;
   now?: () => Date;
@@ -83,7 +93,45 @@ const STEPS: Partial<Record<LaunchStep, StepRun>> = {
       },
     });
   },
+  async sources({ deps, launch, done }) {
+    const opts = launch.options as LaunchOptions;
+    return sourcesStep({
+      deps: sourceDeps(deps),
+      town: done.resolve as ResolvedTown,
+      names: done.names as NamesDetail,
+      flags: opts.sources ?? [],
+      outlets: opts.outlets ?? [],
+      launchStartedAt: launch.createdAt,
+    });
+  },
+  async adapters({ deps, done }) {
+    return adaptersStep({
+      deps: sourceDeps(deps),
+      town: done.resolve as ResolvedTown,
+      names: done.names as NamesDetail,
+      discovery: done.sources as DiscoverDetail,
+      launchDir: deps.launchDir ?? DEFAULT_LAUNCH_DIR,
+    });
+  },
+  async readiness({ deps, launch, done }) {
+    return readinessStep({
+      deps: sourceDeps(deps),
+      names: done.names as NamesDetail,
+      launchStartedAt: launch.createdAt,
+    });
+  },
 };
+
+function sourceDeps(deps: LaunchDeps) {
+  const fetcher = deps.fetcher ?? deps.names?.fetcher;
+  if (!fetcher) throw new Error('No fetcher configured for this run.');
+  return {
+    db: deps.db,
+    fetcher,
+    ...(deps.llm ? { llm: deps.llm } : {}),
+    now: () => deps.now?.() ?? new Date(),
+  };
+}
 
 export type LaunchResult = {
   launch: typeof launches.$inferSelect;
@@ -174,22 +222,33 @@ export async function runLaunch(deps: LaunchDeps, opts: LaunchOptions): Promise<
   const done: Partial<Record<LaunchStep, unknown>> = Object.fromEntries(
     records.filter((r) => r.status === 'done').map((r) => [r.step, r.detail]),
   );
-  // Step 2 runs again when the owner picks again or approves spending after a dry-run pick.
+  const again = async (steps: readonly LaunchStep[]) => {
+    for (const step of steps) {
+      if (!(step in done)) continue;
+      records.find((r) => r.step === step)!.detail = done[step] as never;
+      delete done[step];
+      await db
+        .update(launchStepRecords)
+        .set({ status: 'pending' })
+        .where(and(eq(launchStepRecords.launchId, launch!.id), eq(launchStepRecords.step, step)));
+    }
+  };
+  const after = (step: LaunchStep) => launchSteps.slice(launchSteps.indexOf(step));
+  // A different pick changes the town, so step 2 and everything after it run again; approving
+  // spending after a dry-run pick re-runs step 2 alone (to buy the domain).
   const names = done.names as NamesDetail | undefined;
   if (
     names?.picked &&
-    ((opts.pick &&
-      names.proposals.filter((p) => !p.blocked.length)[opts.pick - 1]?.domain !==
-        names.picked.domain) ||
-      (opts.approveSpend && names.purchase?.status === 'not bought'))
-  ) {
-    delete done.names;
-    await db
-      .update(launchStepRecords)
-      .set({ status: 'pending' })
-      .where(and(eq(launchStepRecords.launchId, launch!.id), eq(launchStepRecords.step, 'names')));
-    records.find((r) => r.step === 'names')!.detail = names;
-  }
+    opts.pick &&
+    names.proposals.filter((p) => !p.blocked.length)[opts.pick - 1]?.domain !== names.picked.domain
+  )
+    await again(after('names'));
+  else if (names?.picked && opts.approveSpend && names.purchase?.status === 'not bought')
+    await again(['names']);
+  // New --source flags re-run discovery and what depends on it.
+  const discovery = done.sources as DiscoverDetail | undefined;
+  if (discovery && opts.sources && JSON.stringify(opts.sources) !== JSON.stringify(discovery.flags))
+    await again(after('sources'));
   for (const step of launchSteps) {
     if (step in done) continue;
     const run = STEPS[step];
@@ -246,9 +305,16 @@ export async function runLaunch(deps: LaunchDeps, opts: LaunchOptions): Promise<
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      // A step that measured something before failing (readiness) keeps what it found.
+      const found = (error as { detail?: unknown }).detail;
       await db
         .update(launchStepRecords)
-        .set({ status: 'failed', error: message, finishedAt: now() })
+        .set({
+          status: 'failed',
+          error: message,
+          finishedAt: now(),
+          ...(found !== undefined ? { detail: found } : {}),
+        })
         .where(and(eq(launchStepRecords.launchId, launch!.id), eq(launchStepRecords.step, step)));
       [launch] = await db
         .update(launches)

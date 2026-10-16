@@ -92,3 +92,14 @@ export {
   type NamesDetail,
   type Proposal,
 } from './names-step';
+export {
+  parseSourceFlags,
+  platformHint,
+  stateSources,
+  verifiedSources,
+  verifyUrl,
+  type DiscoverDetail,
+  type Finding,
+} from './discover';
+export { measureReadiness, ReadinessFailed, type ReadinessDetail } from './readiness';
+export { launchLlmTown, syncDraftTown, withSources } from './sources-step';

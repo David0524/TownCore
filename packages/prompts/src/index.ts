@@ -2,6 +2,7 @@
 // place, so each article records exactly which prompts produced it. Eval sets live in evals/.
 export { HOUSE_STYLE } from './style';
 export { classifySchema, classifyV1, type Classification } from './v1/classify';
+export { discoverSchema, discoverV1, type DiscoverResult } from './v1/discover';
 export { entitiesSchema, entitiesV1, type EntitiesResult } from './v1/entities';
 export { factcheckSchema, factcheckV1, type FactcheckResult } from './v1/factcheck';
 export { guideSchema, guideV1, type GuideDraft } from './v1/guide';
