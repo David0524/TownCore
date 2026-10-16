@@ -4,10 +4,10 @@ import { categoryCounts } from '@towncore/directory';
 import type { Town } from '@towncore/db';
 import { db } from '@/lib/db';
 import { directoryPath } from '@/lib/directory';
-import { beatCounts, upcomingEvents, upcomingMeetings } from './data';
+import { beatCounts, townGames, upcomingEvents, upcomingMeetings } from './data';
 
 // Reader categories (docs/plans/M4b.md, D-M4b-4): News, Events, Dining, Things to do,
-// Businesses, Homes and Schools. Beats stay the editorial unit; a category is a reader-facing
+// Businesses, Homes, Schools and Sports. Beats stay the editorial unit; a category is a reader-facing
 // grouping that appears only once it has content or a directory behind it, so no empty fronts.
 
 export type ReaderCategory = {
@@ -22,11 +22,13 @@ export type ReaderCategory = {
 const n = (value: number) => value.toLocaleString('en-US');
 
 export const readerCategories = cache(async (town: Town): Promise<ReaderCategory[]> => {
-  const [beats, meetings, events, listings] = await Promise.all([
+  const now = Date.now();
+  const [beats, meetings, events, listings, games] = await Promise.all([
     beatCounts(town.id),
     upcomingMeetings(town.id, 7, 50),
     upcomingEvents(town.id, town.name, 7, 200),
     categoryCounts(db(), town.id),
+    townGames(town.id, new Date(now - 14 * 86_400_000), new Date(now + 14 * 86_400_000)),
   ]);
   const newsCount = [...beats]
     .filter(([beat]) => (beatCategory[beat] ?? 'news') === 'news' || beat === 'business')
@@ -78,5 +80,15 @@ export const readerCategories = cache(async (town: Town): Promise<ReaderCategory
       color: categoryColors.schools,
       count: `${n(schools)} this week`,
     });
+  if (games.length > 0) {
+    const thisWeek = games.filter((g) => Math.abs(g.when.getTime() - now) < 7 * 86_400_000).length;
+    out.push({
+      key: 'sports',
+      name: 'Sports',
+      href: '/sports',
+      color: categoryColors.sports,
+      count: `${n(thisWeek || games.length)} ${thisWeek ? 'games this week' : 'games'}`,
+    });
+  }
   return out;
 });

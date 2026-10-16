@@ -2,6 +2,7 @@
 import { arcgisAdapter } from './arcgis';
 import { civicclerkAdapter } from './civicclerk';
 import { civicplusAdapter } from './civicplus';
+import { escribeAdapter } from './escribe';
 import { feedAdapter } from './feed';
 import { flDbprAdapter } from './fl-dbpr';
 import { flSunbizAdapter } from './fl-sunbiz';
@@ -22,6 +23,7 @@ for (const adapter of [
   pageAdapter,
   youtubeAdapter,
   socrataAdapter,
+  escribeAdapter,
   arcgisAdapter,
   // Last: the generic fallback for any RSS, Atom or iCalendar feed.
   feedAdapter,

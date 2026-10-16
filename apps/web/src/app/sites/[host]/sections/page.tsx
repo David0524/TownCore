@@ -8,6 +8,7 @@ import { StandardPage } from '@/lib/pages';
 import { newsletterOpen } from '@/lib/newsletter';
 import { beatColorVar } from '@/lib/theme';
 import { requireTown } from '@/lib/town';
+import { readerCategories } from '@/modules/categories';
 import { beatCounts } from '@/modules/data';
 
 export const metadata: Metadata = { title: 'Sections', alternates: { canonical: '/sections' } };
@@ -15,7 +16,12 @@ export const metadata: Metadata = { title: 'Sections', alternates: { canonical: 
 /** Every section with this week's new stories, then the pages about the paper (the Sections tab). */
 export default async function SectionsPage({ params }: { params: Promise<{ host: string }> }) {
   const town = await requireTown(params);
-  const [counts, open] = await Promise.all([beatCounts(town.id), newsletterOpen(town)]);
+  const [counts, open, categories] = await Promise.all([
+    beatCounts(town.id),
+    newsletterOpen(town),
+    readerCategories(town),
+  ]);
+  const sports = categories.find((c) => c.key === 'sports');
   return (
     <StandardPage town={town}>
       <LargeTitle title="Sections" as="h1" always />
@@ -36,6 +42,26 @@ export default async function SectionsPage({ params }: { params: Promise<{ host:
         }))}
         footer="New this week."
       />
+      {sports ? (
+        <Grouped
+          title="More"
+          rows={[
+            {
+              key: 'sports',
+              href: sports.href,
+              lead: (
+                <span
+                  className={styles.dot}
+                  style={{ background: sports.color }}
+                  aria-hidden="true"
+                />
+              ),
+              label: sports.name,
+              value: sports.count,
+            },
+          ]}
+        />
+      ) : null}
       <Grouped
         title={town.siteName}
         rows={[

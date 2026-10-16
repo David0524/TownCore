@@ -24,7 +24,7 @@
       "new-businesses",
       "real-estate"
     ],
-    "homeRail": ["events", "find-a-pro"],
+    "homeRail": ["events", "schools-sports", "find-a-pro"],
     "homeBottom": ["photo-of-the-week", "new-now-open", "directory-grid"],
     "article": "classic-rail",
     "directory": "category-grid",

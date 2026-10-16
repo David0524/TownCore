@@ -15,6 +15,8 @@ export const categoryColors = {
   homes: '#6B4FBF',
   // Schools when it's a reader category of its own (D-M4b-4); the schools beat stays news blue.
   schools: '#5856D6',
+  // Sports (owner, 2026-10-16: "I do need a sports tab"): team schedules and results.
+  sports: '#C2410C',
 } as const;
 export type Category = keyof typeof categoryColors;
 

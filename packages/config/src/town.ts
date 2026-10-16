@@ -27,6 +27,8 @@ export const sourceKinds = [
   // Official reference pages (city, county, state, utilities) that evergreen guides are written
   // from (M4 PR F). Never story material: the story finder ignores them.
   'reference',
+  // Team schedules and results (high school athletic associations, licensed score feeds).
+  'sports',
   'other_outlet',
 ] as const;
 export type SourceKind = (typeof sourceKinds)[number];
