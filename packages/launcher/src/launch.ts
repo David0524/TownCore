@@ -21,6 +21,9 @@ import type { Llm } from '@towncore/pipeline';
 import type { DiscoverDetail } from './discover';
 import { DEFAULT_TOWNS_DIR, namesStep, type NameDeps, type NamesDetail } from './names-step';
 import { adaptersStep, readinessStep, sourcesStep } from './sources-step';
+import type { ReadinessDetail } from './readiness';
+import type { ShotTarget } from './screenshots';
+import { themeStep } from './theme-step';
 
 // `pnpm launch "Delray Beach, FL"` (CLAUDE.md §10; docs/plans/M7.md §2). A launch starts only
 // from an approved town (§10a), is a dry run unless the operator approves spending, and records
@@ -56,8 +59,10 @@ export type LaunchDeps = {
   names?: NameDeps;
   /** Steps 3–5: the polite fetcher for discovery and ingest. */
   fetcher?: Fetcher;
-  /** Steps 3 and 5: the model layer (discovery needs a provider with web search). */
+  /** Steps 3, 5 and 6b: the model layer (discovery needs web search, the review needs images). */
   llm?: Llm;
+  /** Step 6b: a running web app to screenshot the draft town (--site). */
+  shots?: Omit<ShotTarget, 'domain'>;
   launchDir?: string;
   townsDir?: string;
   now?: () => Date;
@@ -111,6 +116,20 @@ const STEPS: Partial<Record<LaunchStep, StepRun>> = {
       names: done.names as NamesDetail,
       discovery: done.sources as DiscoverDetail,
       launchDir: deps.launchDir ?? DEFAULT_LAUNCH_DIR,
+    });
+  },
+  async theme({ deps, launch, done }) {
+    if (!deps.names) throw new Error('No place data configured for this run.');
+    return themeStep({
+      db: deps.db,
+      ...(deps.llm ? { llm: deps.llm } : {}),
+      places: deps.names.places,
+      town: done.resolve as ResolvedTown,
+      names: done.names as NamesDetail,
+      readiness: done.readiness as ReadinessDetail | undefined,
+      launchStartedAt: launch.createdAt,
+      launchDir: deps.launchDir ?? DEFAULT_LAUNCH_DIR,
+      ...(deps.shots ? { shots: deps.shots } : {}),
     });
   },
   async readiness({ deps, launch, done }) {

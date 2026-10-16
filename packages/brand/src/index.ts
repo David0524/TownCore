@@ -12,3 +12,4 @@ export {
   type Motif,
   type MotifName,
 } from './motifs';
+export { siteAssets, siteAssetSvg, type AssetInput, type SiteAsset } from './assets';

@@ -181,7 +181,7 @@ export const homeModules = [
 ] as const;
 export type HomeModule = (typeof homeModules)[number];
 
-export const mastheadStyles = ['centered-serif', 'left-motif'] as const;
+export const mastheadStyles = ['centered-serif', 'left-motif', 'ruled-nameplate'] as const;
 // Must match the motif library in @towncore/brand (checked by a test); added by human review.
 export const motifs = [
   'palm-frond',

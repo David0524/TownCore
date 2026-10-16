@@ -12,7 +12,7 @@ import { aiUsage, and, eq, gte, sql, type Db } from '@towncore/db';
 import { z } from 'zod';
 import { anthropicProvider } from './llm/anthropic';
 import { geminiProvider } from './llm/gemini';
-import type { Effort, LlmProvider, LlmResponse } from './llm/types';
+import type { Effort, LlmProvider, LlmRequest, LlmResponse } from './llm/types';
 
 // The pipeline's only door to a model (CLAUDE.md §8). Every call:
 //   1. checks the town's daily spend and call caps,
@@ -156,7 +156,13 @@ export type CallResult<T> = {
 
 export async function callModel<T>(
   llm: Llm,
-  args: { job: string; town: LlmTown; prompt: Prompt<T>; input: string },
+  args: {
+    job: string;
+    town: LlmTown;
+    prompt: Prompt<T>;
+    input: string;
+    images?: LlmRequest['images'];
+  },
 ): Promise<CallResult<T>> {
   const { db, provider, providerName } = llm;
   const { job, town, prompt, input } = args;
@@ -164,6 +170,8 @@ export async function callModel<T>(
 
   if (prompt.webSearch && !provider.webSearch)
     throw new Error(`${prompt.id} needs web search, which the ${providerName} provider lacks.`);
+  if (args.images?.length && !provider.images)
+    throw new Error(`${prompt.id} sends images, which the ${providerName} provider can't read.`);
   const today = await todaysUsage(db, town, now);
   if (today.costUsd >= town.aiDailyCapUsd) {
     throw new SpendCapReached(town.id, `$${today.costUsd.toFixed(2)} of $${town.aiDailyCapUsd}`);
@@ -208,6 +216,7 @@ export async function callModel<T>(
       effort: prompt.effort,
       maxOutputTokens: prompt.maxOutputTokens,
       ...(prompt.webSearch ? { webSearch: prompt.webSearch } : {}),
+      ...(args.images?.length ? { images: args.images } : {}),
     });
   } catch (error) {
     await log('error');

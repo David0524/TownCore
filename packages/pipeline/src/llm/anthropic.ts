@@ -15,8 +15,22 @@ export function anthropicProvider(client: Anthropic = new Anthropic()): LlmProvi
   return {
     name: 'anthropic',
     webSearch: true,
+    images: true,
     async generate(request: LlmRequest): Promise<LlmResponse> {
-      const messages: Anthropic.MessageParam[] = [{ role: 'user', content: request.input }];
+      // Images go first, each introduced by its label, then the text input.
+      const content: Anthropic.ContentBlockParam[] | string = request.images?.length
+        ? [
+            ...request.images.flatMap((image): Anthropic.ContentBlockParam[] => [
+              { type: 'text', text: image.label },
+              {
+                type: 'image',
+                source: { type: 'base64', media_type: image.mediaType, data: image.data },
+              },
+            ]),
+            { type: 'text', text: request.input },
+          ]
+        : request.input;
+      const messages: Anthropic.MessageParam[] = [{ role: 'user', content }];
       const usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
       let webSearches = 0;
       let message: Anthropic.Message;

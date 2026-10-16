@@ -5,7 +5,7 @@ import { escapeXml, motifPaths, type MotifName } from './motifs';
 // headline font: sharp, editable and accessible. Converting to outlines for favicons and OG
 // images comes with those assets (M4/M7).
 
-export const mastheadStyleNames = ['centered-serif', 'left-motif'] as const;
+export const mastheadStyleNames = ['centered-serif', 'left-motif', 'ruled-nameplate'] as const;
 export type MastheadStyle = (typeof mastheadStyleNames)[number];
 
 export type MastheadInput = {
@@ -51,6 +51,20 @@ export function mastheadSvg({
       icon(cx - 22, 0, 44),
       `<text x="${cx}" y="90" text-anchor="middle" ${textAttrs}>${name}</text>`,
       `<path d="M${cx - textWidth * 0.3} 108H${cx + textWidth * 0.3}" stroke="currentColor" stroke-width="1.5"/>`,
+    ]);
+  }
+
+  if (style === 'ruled-nameplate') {
+    // A newspaper nameplate: the name between a heavy and a hairline rule, the motif small at
+    // the right end of the top rule.
+    const width = textWidth + 8;
+    const height = 84;
+    const iconSize = 22;
+    return svg(width, height, siteName, [
+      `<path d="M0 3H${width - iconSize - 10}" stroke="currentColor" stroke-width="3"/>`,
+      icon(width - iconSize, -4, iconSize),
+      `<text x="${width / 2}" y="58" text-anchor="middle" ${textAttrs}>${name}</text>`,
+      `<path d="M0 78H${width}" stroke="currentColor" stroke-width="1"/>`,
     ]);
   }
 
