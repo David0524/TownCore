@@ -24,14 +24,24 @@ export async function QuoteRequest({
   town,
   category,
   status,
+  houseOffOnPhones,
 }: {
   town: Town;
   category: DirectoryCategory;
   status?: string;
+  /** On a short list, the house ad (no sponsors yet) is left out on phones. */
+  houseOffOnPhones?: boolean;
 }) {
   const recipients = directoryMailDeps() ? await quoteRecipients(db(), town.id, category.slug) : [];
   if (recipients.length === 0)
-    return <Slot town={town} name="directory.quote-request" context={{ category }} />;
+    return (
+      <Slot
+        town={town}
+        name="directory.quote-request"
+        context={{ category }}
+        houseOffOnPhones={houseOffOnPhones}
+      />
+    );
   const names = recipients.map((r) => r.name).join(', ');
   return (
     <section

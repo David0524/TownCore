@@ -42,6 +42,9 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
  * the header, the Top spot, sponsored listings, then every organic listing in the same order for
  * everyone (verified license, completeness, recently claimed, name), and the quote request.
  */
+/** Fewer listings than this on the page is a short list (see shortOnPhones below). */
+const SHORT_LIST = 20;
+
 export default async function CategoryPage({ params, searchParams }: Props) {
   const town = await requireTown(params);
   const category = directoryCategory((await params).category);
@@ -53,9 +56,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     enhancedListingIds(db(), town.id),
   ]);
   const context = { category };
+  // A short list on a phone would be mostly ads: five units stack. Unsold house ads in the rail
+  // box, the quote slot and the sponsored cards (which repeat the Top spot's offer) step aside
+  // there (owner decision, 2026-10-16); paid units always show.
+  const shortOnPhones = listings.length < SHORT_LIST;
 
   return (
-    <StandardPage town={town}>
+    <StandardPage town={town} shortOnPhones={shortOnPhones}>
       <p className="meta">
         <Link href={directoryPath()}>Places</Link> › {category.name}
       </p>
@@ -67,7 +74,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           : `${total} ${total === 1 ? 'business holds' : 'businesses hold'} an active Florida license as ${category.name.toLowerCase()} with a ${town.name} mailing address, which can be outside city limits. Check any license with the state before you hire.`}
       </p>
       <Slot town={town} name="directory.topspot" context={context} />
-      <SponsoredCards town={town} category={category} />
+      <SponsoredCards town={town} category={category} houseOffOnPhones={shortOnPhones} />
       <form method="get" role="search" className={styles.search}>
         <label htmlFor="category-q" className="sr-only">
           Search {category.name.toLowerCase()} by name
@@ -117,7 +124,12 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           }
         />
       )}
-      <QuoteRequest town={town} category={category} status={quoteStatus} />
+      <QuoteRequest
+        town={town}
+        category={category}
+        status={quoteStatus}
+        houseOffOnPhones={shortOnPhones}
+      />
     </StandardPage>
   );
 }

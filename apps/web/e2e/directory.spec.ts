@@ -183,7 +183,16 @@ test('directory pages do not shift, and keep ads at or below 30% of a phone page
   page,
   isMobile,
 }) => {
-  for (const url of [`${harbor}/directory`, plumbers, unclaimed, claimed]) {
+  // Short lists on phones: 5 plumbers, 2 roofers, a one-result and a no-result search.
+  for (const url of [
+    `${harbor}/directory`,
+    plumbers,
+    `${harbor}/directory/roofers`,
+    `${plumbers}?q=anchor`,
+    `${plumbers}?q=nothing-matches`,
+    unclaimed,
+    claimed,
+  ]) {
     await page.goto(url);
     const { density, cls } = await page.evaluate(
       () =>
@@ -208,11 +217,15 @@ test('directory pages do not shift, and keep ads at or below 30% of a phone page
         }),
     );
     expect(cls, url).toBeLessThan(0.1);
-    // The density rule is for phones (Coalition for Better Ads); desktop has a rail. Category
-    // pages with short lists are over it (five units stack on a phone; see the M6 status in
-    // CLAUDE.md) until the owner decides how they collapse.
-    if (isMobile && url !== plumbers) expect(density, url).toBeLessThanOrEqual(0.3);
+    // The density rule is for phones (Coalition for Better Ads); desktop has a rail. On a short
+    // list, unsold house ads in the rail box, quote slot and sponsored cards step aside on phones.
+    if (isMobile) expect(density, url).toBeLessThanOrEqual(0.3);
   }
+  await page.goto(plumbers);
+  for (const name of ['rail.box', 'directory.quote-request', 'directory.category.top'])
+    await (isMobile
+      ? expect(page.locator(`[data-slot="${name}"]`), name).toBeHidden()
+      : expect(page.locator(`[data-slot="${name}"]`), name).toBeVisible());
 });
 
 test.describe.serial('a category campaign fills that category only', () => {

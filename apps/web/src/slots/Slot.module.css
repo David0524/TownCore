@@ -136,3 +136,10 @@
   max-width: 300px;
   margin: 0 auto;
 }
+
+/* A house ad left out on a short phone page to keep ad density at or below 30% (§11b). */
+@media (max-width: 599.98px) {
+  .phoneOff {
+    display: none;
+  }
+}

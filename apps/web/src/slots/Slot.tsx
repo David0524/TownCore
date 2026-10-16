@@ -13,16 +13,33 @@ export async function Slot({
   town,
   name,
   context,
+  houseOffOnPhones,
 }: {
   town: Town;
   name: SlotName;
   context?: SlotContext;
+  /** Leave a house-ad fill out on phones (a short page over the ad-density limit). */
+  houseOffOnPhones?: boolean;
 }) {
-  return <SlotUnit name={name} fill={await resolveSlotFill(town, name, new Date(), context)} />;
+  return (
+    <SlotUnit
+      name={name}
+      fill={await resolveSlotFill(town, name, new Date(), context)}
+      houseOffOnPhones={houseOffOnPhones}
+    />
+  );
 }
 
 /** One filled unit in the locked slot style (also used for each of several sponsor cards). */
-export function SlotUnit({ name, fill }: { name: SlotName; fill: SlotFill }) {
+export function SlotUnit({
+  name,
+  fill,
+  houseOffOnPhones,
+}: {
+  name: SlotName;
+  fill: SlotFill;
+  houseOffOnPhones?: boolean;
+}) {
   const { height, format } = slots[name];
   const style = {
     '--slot-h-mobile': `${height.mobile + SLOT_LABEL_PX}px`,
@@ -33,7 +50,9 @@ export function SlotUnit({ name, fill }: { name: SlotName; fill: SlotFill }) {
 
   return (
     <aside
-      className={`${styles.slot} ${styles[format]}`}
+      // A paid unit always shows; only our own house ad may step aside on a short phone page,
+      // in CSS from the first paint, so nothing shifts (§11b ad density).
+      className={`${styles.slot} ${styles[format]}${houseOffOnPhones && fill.source === 'house' ? ` ${styles.phoneOff}` : ''}`}
       style={style}
       data-slot={name}
       data-fill={fill.source}

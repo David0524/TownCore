@@ -15,9 +15,12 @@ const SLOT = 'directory.category.top';
 export async function SponsoredCards({
   town,
   category,
+  houseOffOnPhones,
 }: {
   town: Town;
   category: DirectoryCategory;
+  /** With no cards sold, its house ad repeats the Top spot's offer; a short list drops it. */
+  houseOffOnPhones?: boolean;
 }) {
   const live = await getActiveCampaigns(db(), town.id, SLOT, category.slug, 3);
   const fills = live.flatMap((campaign) => {
@@ -38,7 +41,10 @@ export async function SponsoredCards({
       },
     ];
   });
-  if (fills.length === 0) return <Slot town={town} name={SLOT} context={{ category }} />;
+  if (fills.length === 0)
+    return (
+      <Slot town={town} name={SLOT} context={{ category }} houseOffOnPhones={houseOffOnPhones} />
+    );
   return (
     <div data-testid="sponsored-cards">
       {fills.map(({ key, fill }) => (
