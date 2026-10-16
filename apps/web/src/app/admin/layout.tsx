@@ -32,6 +32,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <Link href="/admin/pins">Pins</Link>
             <Link href="/admin/newsletter">Newsletter</Link>
             <Link href="/admin/directory">Directory</Link>
+            <Link href="/admin/launches">Launches</Link>
             <Link href="/admin/mail/subscribers">Subscribers</Link>
             <Link href="/admin/mail/campaigns">Campaigns</Link>
             <Link href="/admin/mail/domains">Mail domains</Link>

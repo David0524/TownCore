@@ -69,6 +69,18 @@ export const DOCUMENTED_APIS: Record<string, { name: string; terms: string }> = 
     name: 'EPA Envirofacts data service (UV index)',
     terms: 'https://www.epa.gov/enviro/web-services',
   },
+  // Owner approved 2026-10-16 (D-M7-12). The Census Bureau's public data downloads (its former FTP
+  // server): Gazetteer, population estimates, ACS summary files, relationship files and business
+  // patterns, used by `pnpm towns:rank`. Its robots.txt opens with `User-agent: *` and no rules,
+  // then a blank line and six named crawlers with `Disallow: /`; RFC 9309 reads that as one group
+  // disallowing everyone, though the evident intent is to block those six. The open-data page
+  // points to this server "to download full datasets". Only this host; www.census.gov pages are
+  // never fetched by code.
+  'www2.census.gov': {
+    name: 'U.S. Census Bureau public data downloads',
+    terms:
+      'https://www.census.gov/topics/research/research-transparency-public-access/open-data.html',
+  },
 };
 
 export function documentedApi(url: URL): { name: string; terms: string } | null {

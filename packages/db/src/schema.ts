@@ -124,6 +124,41 @@ export const towns = pgTable('towns', {
   updatedAt: updatedAt(),
 });
 
+// Towns ranked by `pnpm towns:rank` (CLAUDE.md §10a; docs/plans/M7.md §1). A launch starts only
+// from an approved row; re-ranking updates scores and inputs but never a staff decision.
+export const townCandidates = pgTable(
+  'town_candidates',
+  {
+    id: id(),
+    state: text('state').notNull(),
+    /** Census place GEOID (state FIPS + place code), the town's future `census_id`. */
+    geoid: text('geoid').notNull(),
+    /** "Delray Beach" (the Census name without its "city"/"town" suffix). */
+    name: text('name').notNull(),
+    /** Raw figures and normalized inputs, with their sources and vintages. */
+    inputs: jsonb('inputs').notNull(),
+    score: real('score').notNull(),
+    rank: integer('rank').notNull(),
+    status: text('status')
+      .$type<'proposed' | 'approved' | 'rejected' | 'live'>()
+      .notNull()
+      .default('proposed'),
+    rankedAt: timestamp('ranked_at', { withTimezone: true }).notNull(),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    note: text('note'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('town_candidates_geoid_uq').on(t.geoid),
+    index('town_candidates_state_rank_idx').on(t.state, t.rank),
+    check(
+      'town_candidates_status',
+      sql`${t.status} in ('proposed', 'approved', 'rejected', 'live')`,
+    ),
+  ],
+);
+
 export const staff = pgTable('staff', {
   id: id(),
   email: text('email').notNull().unique(),

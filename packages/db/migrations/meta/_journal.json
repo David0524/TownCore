@@ -239,6 +239,13 @@
       "when": 1792119299609,
       "tag": "0033_outreach_drafts",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792121418045,
+      "tag": "0034_town_candidates",
+      "breakpoints": true
     }
   ]
 }
