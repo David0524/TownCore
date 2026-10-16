@@ -234,7 +234,7 @@ export const NewsletterCta: HomeModuleComponent = async ({ town }) => {
         </>
       ) : (
         <p>
-          {what} Launching soon. <Link href="/methods">How we report</Link>.
+          {what} Our newsletter is launching soon. <Link href="/methods">How we report</Link>.
         </p>
       )}
     </section>
