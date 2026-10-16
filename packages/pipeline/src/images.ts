@@ -457,7 +457,10 @@ async function pickStockPhoto(
   };
 }
 
-/** Chooses and records an article's visual (idempotent: re-running replaces the choice). */
+/**
+ * Chooses and records an article's visual (idempotent: re-running replaces the choice), except a
+ * picture a person pinned to the story, which stays.
+ */
 export async function assignArticleImage(
   db: Db,
   articleId: string,
@@ -476,6 +479,20 @@ export async function assignArticleImage(
     .leftJoin(storyCandidates, eq(storyCandidates.id, articles.candidateId))
     .where(eq(articles.id, articleId));
   if (!row) throw new Error(`Unknown article ${articleId}`);
+  // A picture a person pinned to this story stays (`pnpm illustrations pin`).
+  const [current] = await db.select().from(images).where(eq(images.articleId, articleId));
+  if (current?.spec.type === 'illustration' && current.spec.pinned) {
+    return {
+      kind: current.kind,
+      spec: current.spec,
+      alt: current.alt,
+      license: current.license,
+      attribution: current.attribution,
+      sourceUrl: current.sourceUrl,
+      aiGenerated: current.aiGenerated,
+      approvedBy: current.approvedBy,
+    };
+  }
   // Articles written before `articles.kind` existed are roundups if their candidate was.
   const kind = row.candidateKind === 'roundup' ? 'roundup' : row.article.kind;
   const choice = await chooseArticleImage(
@@ -650,4 +667,4 @@ async function pickSectionIllustration(
 }
 
 /** Made by the publisher with ChatGPT image generation; OpenAI assigns its outputs to the user. */
-const ILLUSTRATION_LICENSE = 'own-work (AI-generated with ChatGPT)';
+export const ILLUSTRATION_LICENSE = 'own-work (AI-generated with ChatGPT)';

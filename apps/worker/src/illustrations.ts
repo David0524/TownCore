@@ -2,13 +2,14 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { basename, extname, join } from 'node:path';
 import {
+  aiLabel,
   ILLUSTRATION_STYLE,
   illustrationShots,
   type IllustrationSection,
   type LibraryIllustration,
 } from '@towncore/config';
-import { and, articles, eq, images, inArray, type Db } from '@towncore/db';
-import { assignArticleImage } from '@towncore/pipeline';
+import { and, articles, eq, images, inArray, staff, type Db } from '@towncore/db';
+import { assignArticleImage, ILLUSTRATION_LICENSE } from '@towncore/pipeline';
 import { processIllustration } from '@towncore/photos';
 
 // Section illustrations (CLAUDE.md §11c): the shot list, importing the owner's approved images,
@@ -157,4 +158,64 @@ export async function assignIllustrations(
     if (choice.spec.type === 'illustration') illustrated++;
   }
   return { tried: rows.length, illustrated };
+}
+
+/**
+ * Pins a picture a person chose to one story (owner, 2026-10-16: "Use this as the image for the
+ * cover story"): converted like the library, saved as /illustrations/<id>.webp, recorded as
+ * AI-generated with its approver and alt text, labeled, and kept by the router from then on.
+ */
+export async function pinIllustration(
+  db: Db,
+  opts: {
+    townId: string;
+    articleSlug: string;
+    file: Buffer;
+    alt: string;
+    approvedBy: string;
+    photoreal: boolean;
+    webDir: string;
+  },
+): Promise<{ id: string; articleId: string }> {
+  const alt = opts.alt.trim();
+  if (!alt) throw new Error('--alt is required: describe what the picture shows');
+  const [article] = await db
+    .select({ id: articles.id })
+    .from(articles)
+    .where(and(eq(articles.townId, opts.townId), eq(articles.slug, opts.articleSlug)));
+  if (!article) throw new Error(`no story ${opts.articleSlug} in that town`);
+  const [approver] = await db
+    .select({ id: staff.id })
+    .from(staff)
+    .where(and(eq(staff.email, opts.approvedBy.toLowerCase()), eq(staff.active, true)));
+  if (!approver) throw new Error(`${opts.approvedBy} isn't active staff, so can't approve it`);
+  const { webp, width, height } = await processIllustration(opts.file);
+  const id = `story-${article.id.slice(0, 8)}`;
+  await writeFile(join(opts.webDir, `${id}.webp`), webp);
+  const label = aiLabel({ photoreal: opts.photoreal });
+  const values = {
+    articleId: article.id,
+    kind: 'ai-illustration' as const,
+    spec: {
+      type: 'illustration' as const,
+      illustrationId: id,
+      width,
+      height,
+      pinned: true,
+      ...(opts.photoreal ? { photoreal: true } : {}),
+    },
+    alt: `${label}: ${alt}`,
+    license: ILLUSTRATION_LICENSE,
+    attribution: label,
+    sourceUrl: null,
+    aiGenerated: true,
+    approvedBy: approver.id,
+    mapCheckedAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await db
+    .insert(images)
+    .values(values)
+    .onConflictDoUpdate({ target: images.articleId, set: values });
+  return { id, articleId: article.id };
 }

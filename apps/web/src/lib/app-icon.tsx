@@ -1,5 +1,5 @@
 import { motifSvg } from '@towncore/brand';
-import type { Theme } from '@towncore/config';
+import type { Theme, TownConfig } from '@towncore/config';
 import type { Town } from '@towncore/db';
 import { ImageResponse } from 'next/og';
 import { resolveTown } from './town';
@@ -40,10 +40,24 @@ export function appIconResponse(theme: Theme, size: number): ImageResponse {
   );
 }
 
-/** Route handler body for one icon size on the requesting town's domain. */
+/** The town's ready-made icon folder (`app_icon` in its config), if it has one. */
+export const townIconDir = (town: Pick<Town, 'config'>) =>
+  (town.config as Pick<TownConfig, 'app_icon'>).app_icon?.replace(/\/$/, '');
+
+/**
+ * Route handler body for one icon size on the requesting town's domain: the town's own icon file
+ * when it has one, else the motif icon drawn in code.
+ */
 export async function appIconRoute(host: string, size: number): Promise<Response> {
   const town = await resolveTown(host);
   if (!town) return new Response('Not found', { status: 404 });
+  const dir = townIconDir(town);
+  if (dir) {
+    return new Response(null, {
+      status: 307,
+      headers: { Location: `${dir}/icon-${size}.png`, 'Cache-Control': 'public, max-age=3600' },
+    });
+  }
   return appIconResponse(themeFor(town), size);
 }
 
@@ -59,9 +73,24 @@ export function webManifest(town: Town, theme: Theme) {
     background_color: theme.palette.background,
     theme_color: theme.palette.background,
     icons: [
-      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      {
+        src: `${townIconDir(town) ?? ''}/icon-192.png`,
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: `${townIconDir(town) ?? ''}/icon-512.png`,
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: `${townIconDir(town) ?? ''}/icon-512.png`,
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
     ],
   };
 }

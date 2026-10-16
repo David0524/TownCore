@@ -182,4 +182,30 @@ describe('the router with the library', () => {
     const opening = await story({ beat: 'business', headline: 'Grand opening of a bakery' });
     expect((await assignArticleImage(db, opening.id)).kind).toBe('typographic-card');
   });
+
+  it('keeps a picture a person pinned to the story', async () => {
+    const a = await story({ headline: 'New businesses registered this week' });
+    const pinned = {
+      articleId: a.id,
+      kind: 'ai-illustration' as const,
+      spec: {
+        type: 'illustration' as const,
+        illustrationId: 'story-pinned',
+        width: 1200,
+        height: 800,
+        pinned: true,
+        photoreal: true,
+      },
+      alt: 'Image (AI-generated): Storefronts.',
+      license: 'own-work',
+      attribution: 'Image (AI-generated)',
+      aiGenerated: true,
+      approvedBy: ownerId,
+    };
+    await db.insert(images).values(pinned);
+    const choice = await assignArticleImage(db, a.id);
+    expect(choice.spec).toMatchObject({ illustrationId: 'story-pinned', pinned: true });
+    const [row] = await db.select().from(images).where(eq(images.articleId, a.id));
+    expect(row!.spec).toMatchObject({ illustrationId: 'story-pinned' });
+  });
 });

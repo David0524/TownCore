@@ -104,6 +104,18 @@ export const townConfigSchema = z.strictObject({
       }),
     ])
     .optional(),
+  // The town's own illustration beside the homepage greeting, in place of the motif drawing
+  // (owner's art from its logo; decorative), with its size so the page reserves its shape.
+  hero_art: z
+    .object({
+      src: z.string().min(1),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    })
+    .optional(),
+  // A folder of ready-made icons (icon-32.png for the browser tab; icon-180, -192 and -512.png
+  // for Home Screens and the app manifest), in place of the motif icons drawn in code.
+  app_icon: z.string().min(1).optional(),
   // Public contact shown on the site; defaults to news@{domain} (forwarded to the publisher inbox).
   contact_email: z.email().optional(),
   tier: z.enum(townTiers),

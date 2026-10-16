@@ -30,26 +30,42 @@ export function greeting(now: Date, timeZone: string): string {
  */
 export const GoodMorning: HomeModuleComponent = async ({ town, theme }) => {
   const now = new Date();
+  const art = (town.config as TownConfig).hero_art;
   const weekday = new Intl.DateTimeFormat('en-US', {
     timeZone: town.timezone,
     weekday: 'long',
   }).format(now);
   return (
     <div className={`${styles.greeting} not-phone`} data-module="good-morning">
-      <span
-        className={styles.heroMotif}
-        aria-hidden="true"
-        dangerouslySetInnerHTML={{ __html: motifSvg(theme.motif, 220) }}
-      />
-      <p className={styles.hello}>
-        {greeting(now, town.timezone)}, {townShortName(town.config as TownConfig)}
-      </p>
-      <p className="meta">
-        {weekday}, {apDate(now, town.timezone)}
-      </p>
-      <p className={styles.tagline}>
-        News, events and local businesses in {town.name}, from the public record.
-      </p>
+      <div className={styles.heroText}>
+        <p className={styles.hello}>
+          {greeting(now, town.timezone)}, {townShortName(town.config as TownConfig)}
+        </p>
+        <p className="meta">
+          {weekday}, {apDate(now, town.timezone)}
+        </p>
+        <p className={styles.tagline}>
+          News, events and local businesses in {town.name}, from the public record.
+        </p>
+      </div>
+      {art ? (
+        // The town's own illustration (its logo art), decorative: the greeting says the rest.
+        <img
+          className={styles.heroArt}
+          src={art.src}
+          width={art.width}
+          height={art.height}
+          alt=""
+          fetchPriority="high"
+          decoding="async"
+        />
+      ) : (
+        <span
+          className={styles.heroMotif}
+          aria-hidden="true"
+          dangerouslySetInnerHTML={{ __html: motifSvg(theme.motif, 220) }}
+        />
+      )}
     </div>
   );
 };

@@ -17,6 +17,7 @@ import { townWeather } from '@/modules/data';
 import { rssAlternate } from '@/lib/discovery';
 import { themeCssVariables, themeFor } from '@/lib/theme';
 import { requireTown, resolveTown } from '@/lib/town';
+import { townIconDir } from '@/lib/app-icon';
 
 type Props = { children: ReactNode; params: Promise<{ host: string }> };
 
@@ -31,10 +32,18 @@ export async function generateMetadata({ params }: Pick<Props, 'params'>): Promi
     // Nothing is indexed until a human sets the town live (rules 7 and 10).
     robots: town.status === 'live' ? undefined : { index: false, follow: false },
     manifest: '/manifest.webmanifest',
-    icons: {
-      icon: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
-      apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
-    },
+    icons: townIconDir(town)
+      ? {
+          icon: [
+            { url: `${townIconDir(town)}/icon-32.png`, sizes: '32x32', type: 'image/png' },
+            { url: `${townIconDir(town)}/icon-192.png`, sizes: '192x192', type: 'image/png' },
+          ],
+          apple: [{ url: `${townIconDir(town)}/icon-180.png`, sizes: '180x180' }],
+        }
+      : {
+          icon: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+        },
     // Opens standalone from the Home Screen, under the town's short name.
     appleWebApp: { capable: true, title: town.siteName, statusBarStyle: 'default' },
   };

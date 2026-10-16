@@ -4,19 +4,26 @@
 .greeting {
   position: relative;
   overflow: hidden;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem 2rem;
   margin: 0 0 -2.25rem;
-  padding: 2.5rem 2.25rem 4.25rem;
+  padding: 2rem 2.25rem 4.25rem;
   border-radius: var(--radius-tile);
   background: var(--tint);
 }
 
+.heroText {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+}
+
 .greeting p {
   margin: 0;
-  position: relative;
 }
 
 .hello {
@@ -40,6 +47,25 @@
   color: var(--accent);
   opacity: 0.14;
   pointer-events: none;
+}
+
+/* The town's own illustration beside the greeting, at its own shape. */
+.heroArt {
+  display: block;
+  width: min(34rem, 42vw);
+  height: auto;
+  margin-bottom: -1rem;
+  pointer-events: none;
+}
+
+@media (max-width: 63.99rem) {
+  .greeting {
+    grid-template-columns: minmax(0, 1fr) min(16rem, 38vw);
+  }
+
+  .heroArt {
+    width: 100%;
+  }
 }
 
 .heroMotif :global(svg) {
