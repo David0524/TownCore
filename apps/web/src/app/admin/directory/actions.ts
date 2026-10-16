@@ -1,6 +1,12 @@
 'use server';
 
-import { ClaimNotPending, decideClaim, decideNameChange } from '@towncore/directory';
+import {
+  CardNotWaiting,
+  ClaimNotPending,
+  decideClaim,
+  decideNameChange,
+  decideSponsorCard,
+} from '@towncore/directory';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireStaff } from '@/lib/admin/session';
@@ -51,4 +57,23 @@ export async function decideNameAction(form: FormData): Promise<void> {
   await decideNameChange(db(), { businessId: str(form, 'businessId'), staffId: me.id, decision });
   revalidatePath('/admin/directory');
   done({ done: decision === 'approve' ? 'New name approved' : 'New name rejected' });
+}
+
+export async function decideCardAction(form: FormData): Promise<void> {
+  const me = await requireStaff();
+  const decision = str(form, 'decision');
+  if (decision !== 'approve' && decision !== 'reject') throw new Error('bad decision');
+  try {
+    await decideSponsorCard(db(), {
+      campaignId: str(form, 'campaignId'),
+      staffId: me.id,
+      decision,
+      note: str(form, 'note'),
+    });
+  } catch (error) {
+    if (error instanceof CardNotWaiting) done({ error: error.message });
+    throw error;
+  }
+  revalidatePath('/admin/directory');
+  done({ done: decision === 'approve' ? 'Card approved and live' : 'Card rejected' });
 }

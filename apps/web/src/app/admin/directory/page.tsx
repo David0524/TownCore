@@ -1,10 +1,15 @@
 import { eq, towns } from '@towncore/db';
-import { listClaims, listPlacements, pendingNameChanges } from '@towncore/directory';
+import {
+  listClaims,
+  listPlacements,
+  pendingNameChanges,
+  pendingSponsorCards,
+} from '@towncore/directory';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import { listingPath } from '@/lib/directory';
 import styles from '../admin.module.css';
-import { decideClaimAction, decideNameAction } from './actions';
+import { decideCardAction, decideClaimAction, decideNameAction } from './actions';
 
 export const metadata = { title: 'Directory' };
 
@@ -27,6 +32,7 @@ export default async function DirectoryAdmin({
     pendingNameChanges(db()),
     listPlacements(db()),
   ]);
+  const cards = await pendingSponsorCards(db());
   const townRows = names.length
     ? await Promise.all(
         [...new Set(names.map((n) => n.townId))].map(
@@ -132,6 +138,47 @@ export default async function DirectoryAdmin({
                     <input type="hidden" name="businessId" value={listing.id} />
                     <button type="submit" name="decision" value="approve" className={styles.button}>
                       Approve name
+                    </button>
+                    <button
+                      type="submit"
+                      name="decision"
+                      value="reject"
+                      className={styles.secondary}
+                    >
+                      Reject
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Sponsor cards waiting ({cards.length})</h2>
+      <p className={styles.muted}>
+        Check the text is accurate, about the business itself, and makes no claims we can&apos;t
+        stand behind. The &quot;Sponsored&quot; label is added by the site.
+      </p>
+      {cards.length === 0 ? <p>No cards are waiting.</p> : null}
+      <div className={styles.scroll}>
+        <table className={styles.table} data-testid="cards-waiting">
+          <tbody>
+            {cards.map((c) => (
+              <tr key={c.campaignId}>
+                <td>
+                  <strong>{c.headline}</strong>
+                  {c.body ? <div>{c.body}</div> : null}
+                  <div className={styles.muted}>
+                    {c.business.name} · {c.business.category} · {c.town.name}
+                  </div>
+                </td>
+                <td>
+                  <form action={decideCardAction} className={styles.actions}>
+                    <input type="hidden" name="campaignId" value={c.campaignId} />
+                    <input name="note" placeholder="Reason if rejecting" aria-label="Note" />
+                    <button type="submit" name="decision" value="approve" className={styles.button}>
+                      Approve card
                     </button>
                     <button
                       type="submit"

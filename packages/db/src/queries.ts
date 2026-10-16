@@ -93,6 +93,32 @@ export async function getActiveCampaign(
   return campaign ?? null;
 }
 
+/** Up to `limit` active campaigns for a slot and category, oldest first (first come, first shown). */
+export async function getActiveCampaigns(
+  db: Db,
+  townId: string,
+  slot: string,
+  category: string,
+  limit: number,
+  now: Date = new Date(),
+): Promise<Campaign[]> {
+  return db
+    .select()
+    .from(campaigns)
+    .where(
+      and(
+        eq(campaigns.townId, townId),
+        eq(campaigns.slot, slot),
+        eq(campaigns.category, category),
+        eq(campaigns.status, 'active'),
+        lte(campaigns.startsAt, now),
+        or(isNull(campaigns.endsAt), gt(campaigns.endsAt, now)),
+      ),
+    )
+    .orderBy(campaigns.startsAt)
+    .limit(limit);
+}
+
 const isPublic = or(eq(articles.status, 'published'), eq(articles.status, 'corrected'));
 
 /** A published (or corrected) article by slug; drafts, review items and blocked items are never served. */

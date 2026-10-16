@@ -12,6 +12,7 @@ import {
   inArray,
   isNotNull,
   or,
+  placements,
   records,
   sql,
   type Db,
@@ -272,4 +273,19 @@ export async function relatedListings(
     if (listings.length) return { named, category, listings };
   }
   return { named, category: null, listings: [] };
+}
+
+/** Listings in the town with an active Enhanced listing (D-M6-6): shown richer, same order. */
+export async function enhancedListingIds(db: Db, townId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ id: placements.businessId })
+    .from(placements)
+    .where(
+      and(
+        eq(placements.townId, townId),
+        eq(placements.product, 'enhanced'),
+        eq(placements.status, 'active'),
+      ),
+    );
+  return new Set(rows.map((r) => r.id));
 }
