@@ -14,6 +14,7 @@ import {
   applyPricePlan,
   handleStripeEvent,
   isLiveKey,
+  openFeaturedRanks,
   LiveModeRefused,
   placementStatusFor,
   placesLeft,
@@ -74,7 +75,7 @@ describe('Stripe for the directory', () => {
         domain: 'paytown.test',
         siteName: 'The Paytown Post',
         tier: 'small',
-        config: { pricing: { sponsored_slot_usd: 199, enhanced_usd: 39 } },
+        config: { pricing: { featured_usd: [19, 12, 7], enhanced_usd: 39, free_trial_days: 30 } },
       })
       .returning();
     townId = town!.id;
@@ -102,68 +103,87 @@ describe('Stripe for the directory', () => {
     expect(stripeClient(undefined)).toBeNull();
   });
 
-  it('plans and creates one monthly price per enabled product, idempotently', async () => {
+  it('plans and creates one monthly price per product and featured spot, idempotently', async () => {
     const plan = await planPrices(db);
-    expect(plan.map((p) => [p.product, p.amountCents, p.action])).toEqual([
-      ['enhanced', 3900, 'create'],
-      ['sponsored_slot', 19900, 'create'],
+    expect(plan.map((p) => [p.product, p.rank, p.amountCents, p.action])).toEqual([
+      ['enhanced', null, 3900, 'create'],
+      ['sponsored_slot', 1, 1900, 'create'],
+      ['sponsored_slot', 2, 1200, 'create'],
+      ['sponsored_slot', 3, 700, 'create'],
     ]);
     await applyPricePlan(db, fakeStripe, plan);
     expect(created[1]).toMatchObject({
       currency: 'usd',
-      unit_amount: 19900,
+      unit_amount: 1900,
       recurring: { interval: 'month' },
-      lookup_key: 'towncore:paytown:sponsored_slot:19900',
+      lookup_key: 'towncore:paytown:sponsored_slot:r1:1900',
+      product_data: { name: 'The Paytown Post: Featured spot #1' },
+      metadata: { rank: '1' },
     });
     expect((await planPrices(db)).every((p) => p.action === 'current')).toBe(true);
-    // A new price makes a new Price and retires the old one.
+    // A new #1 price makes a new Price and retires the old one; #2 and #3 stay.
     await db
       .update(towns)
-      .set({ config: { pricing: { sponsored_slot_usd: 249, enhanced_usd: 39 } } })
+      .set({
+        config: { pricing: { featured_usd: [25, 12, 7], enhanced_usd: 39, free_trial_days: 30 } },
+      })
       .where(eq(towns.id, townId));
     await applyPricePlan(db, fakeStripe, await planPrices(db));
     const rows = await db
       .select()
       .from(stripePrices)
       .where(eq(stripePrices.product, 'sponsored_slot'));
-    expect(rows.map((r) => [r.unitAmountCents, r.active])).toEqual([
-      [19900, false],
-      [24900, true],
+    expect(
+      rows
+        .map((r) => [r.rank, r.unitAmountCents, r.active])
+        .sort((a, b) => Number(a[0]) - Number(b[0]) || Number(a[1]) - Number(b[1])),
+    ).toEqual([
+      [1, 1900, false],
+      [1, 2500, true],
+      [2, 1200, true],
+      [3, 700, true],
     ]);
   });
 
-  it('starts Checkout only for the listing’s owner, with metadata and return links', async () => {
-    const checkout = (i: number, slug = `plumber-${i}`) =>
-      startCheckout(
-        db,
-        fakeStripe,
-        {
-          townId,
-          email: owner(i),
-          slug,
-          product: 'sponsored_slot',
-          origin: 'https://paytown.test',
-        },
-        now,
-      );
-    expect(await checkout(1, 'plumber-2')).toEqual({ status: 'not_owner' });
-    expect(await checkout(1)).toEqual({
+  const checkout = (i: number, rank: 1 | 2 | 3, at = now, slug = `plumber-${i}`) =>
+    startCheckout(
+      db,
+      fakeStripe,
+      {
+        townId,
+        email: owner(i),
+        slug,
+        product: 'sponsored_slot',
+        rank,
+        origin: 'https://paytown.test',
+      },
+      at,
+    );
+
+  it('starts Checkout only for the listing’s owner, one business per featured spot', async () => {
+    expect(await checkout(1, 1, now, 'plumber-2')).toEqual({ status: 'not_owner' });
+    expect(await checkout(1, 1)).toEqual({
       status: 'redirect',
       url: 'https://checkout.stripe.test/1',
     });
     expect(sessions[0]).toMatchObject({
       mode: 'subscription',
       customer_email: owner(1),
-      line_items: [{ price: 'price_3', quantity: 1 }],
+      line_items: [{ price: 'price_5', quantity: 1 }],
       success_url: 'https://paytown.test/owner/plumber-1?s=paid',
-      metadata: { product: 'sponsored_slot', category: 'plumbers' },
+      metadata: { product: 'sponsored_slot', category: 'plumbers', rank: '1' },
+      // A business's first spot: the first 30 days free.
+      subscription_data: { trial_period_days: 30 },
     });
-    // A started Checkout holds a place for an hour.
+    // A started Checkout holds its spot for an hour.
+    expect(await placesLeft(db, townId, 'sponsored_slot', 'plumbers', now, 1)).toBe(0);
     expect(await placesLeft(db, townId, 'sponsored_slot', 'plumbers', now)).toBe(2);
-    await checkout(2);
-    await checkout(3);
-    expect(await checkout(4)).toEqual({ status: 'sold_out' });
-    // After an hour, abandoned Checkouts stop holding places.
+    expect(await openFeaturedRanks(db, townId, 'plumbers', now)).toEqual([2, 3]);
+    expect(await checkout(2, 1)).toEqual({ status: 'sold_out' });
+    await checkout(2, 2);
+    await checkout(3, 3);
+    expect(await checkout(4, 2)).toEqual({ status: 'sold_out' });
+    // After an hour, abandoned Checkouts stop holding spots.
     expect(
       await placesLeft(
         db,
@@ -214,7 +234,7 @@ describe('Stripe for the directory', () => {
     expect(await db.select().from(stripeEvents)).toHaveLength(2);
   });
 
-  it('holds a paid placement over the category cap instead of showing a fourth', async () => {
+  it('holds a paid placement whose spot someone else took first', async () => {
     // Owner 4 got a Checkout once the hour passed; three others are now active.
     const later = new Date(now.getTime() + 61 * 60_000);
     for (const id of ['cs_test_2', 'cs_test_3']) {
@@ -234,20 +254,9 @@ describe('Stripe for the directory', () => {
         later,
       );
     }
-    const fourth = await startCheckout(
-      db,
-      fakeStripe,
-      {
-        townId,
-        email: owner(4),
-        slug: 'plumber-4',
-        product: 'sponsored_slot',
-        origin: 'https://paytown.test',
-      },
-      later,
-    );
+    const fourth = await checkout(4, 1, later);
     expect(fourth).toEqual({ status: 'sold_out' });
-    // A race: a fourth Checkout was already open and completes anyway.
+    // A race: a second Checkout for #1 was already open and completes anyway.
     const [race] = await db
       .insert(placements)
       .values({
@@ -256,6 +265,7 @@ describe('Stripe for the directory', () => {
         townId,
         product: 'sponsored_slot',
         category: 'plumbers',
+        rank: 1,
         status: 'pending',
         stripeCheckoutSessionId: 'cs_race',
         createdAt: now,
@@ -355,6 +365,15 @@ describe('Stripe for the directory', () => {
       (await db.select().from(placements).where(eq(placements.id, pending!.id)))[0],
     ).toMatchObject({ status: 'canceled' });
     expect(await handleStripeEvent(db, event('invoice.paid', { id: 'in_1' }), now)).toBe('ignored');
+  });
+
+  it('gives the free month only on a business’s first spot', async () => {
+    // Owner 1's spot #1 was canceled above; buying it again starts billing at once.
+    const later = new Date(now.getTime() + 2 * 61 * 60_000);
+    await db.update(placements).set({ status: 'canceled' }).where(eq(placements.status, 'held'));
+    expect(await checkout(1, 1, later)).toMatchObject({ status: 'redirect' });
+    const last = sessions[sessions.length - 1]!;
+    expect(last.subscription_data).not.toHaveProperty('trial_period_days');
   });
 
   it('maps every subscription status', () => {

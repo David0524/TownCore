@@ -404,10 +404,19 @@ export function directoryCategory(slug: string): DirectoryCategory | null {
 export const maxSponsoredPerCategory = 3;
 
 /**
+ * Featured spots (owner, 2026-10-16, after bocatownsquare.com): the sponsored listings of a
+ * category are sold as ranked spots, #1 (the Top spot), #2 and #3, each to one business at a
+ * time, at the town's `pricing.featured_usd` (Boca $19, $12, $7 a month), with the first
+ * `pricing.free_trial_days` free for a business's first spot. Payment never changes organic order.
+ */
+export const featuredRanks = [1, 2, 3] as const;
+export type FeaturedRank = (typeof featuredRanks)[number];
+
+/**
  * What businesses can buy (D-M6-6). Prices come from each town's `pricing`; a product without
  * a price there stays off. Category exclusive and newsletter sponsorship are built but off
  * until the owner prices them. Paid placements are always labeled (Rule 6) and never change
- * organic order.
+ * organic order. A ranked product sells one place per rank and category.
  */
 export const directoryProducts = {
   enhanced: {
@@ -415,25 +424,57 @@ export const directoryProducts = {
     priceKey: 'enhanced_usd',
     enabled: true,
     perCategory: null,
+    ranked: false,
   },
   sponsored_slot: {
-    name: 'Sponsored slot',
-    priceKey: 'sponsored_slot_usd',
+    name: 'Featured spot',
+    priceKey: 'featured_usd',
     enabled: true,
     perCategory: maxSponsoredPerCategory,
+    ranked: true,
   },
-  exclusive: { name: 'Category exclusive', priceKey: null, enabled: false, perCategory: 1 },
-  newsletter: { name: 'Newsletter sponsorship', priceKey: null, enabled: false, perCategory: null },
-  spotlight: { name: 'Business spotlight', priceKey: null, enabled: false, perCategory: null },
+  exclusive: {
+    name: 'Category exclusive',
+    priceKey: null,
+    enabled: false,
+    perCategory: 1,
+    ranked: false,
+  },
+  newsletter: {
+    name: 'Newsletter sponsorship',
+    priceKey: null,
+    enabled: false,
+    perCategory: null,
+    ranked: false,
+  },
+  spotlight: {
+    name: 'Business spotlight',
+    priceKey: null,
+    enabled: false,
+    perCategory: null,
+    ranked: false,
+  },
 } as const;
 export type DirectoryProduct = keyof typeof directoryProducts;
 
-/** Monthly price in whole dollars for a town, or null when the product is off there. */
+/**
+ * Monthly price in whole dollars for a town, or null when the product is off there. A ranked
+ * product has one price per rank (#1 first).
+ */
 export function productPrice(
-  pricing: Record<string, number> | undefined,
+  pricing: Record<string, unknown> | undefined,
   product: DirectoryProduct,
+  rank?: FeaturedRank,
 ): number | null {
   const def = directoryProducts[product];
   if (!def.enabled || !def.priceKey) return null;
-  return pricing?.[def.priceKey] ?? null;
+  const value = pricing?.[def.priceKey];
+  if (def.ranked) {
+    if (!Array.isArray(value) || !rank) return null;
+    return typeof value[rank - 1] === 'number' ? (value[rank - 1] as number) : null;
+  }
+  return typeof value === 'number' ? value : null;
 }
+
+/** "#1 spot", for owners and house ads. */
+export const featuredName = (rank: FeaturedRank) => `Featured spot #${rank}`;

@@ -134,9 +134,16 @@ export const townConfigSchema = z.strictObject({
   // Daily AI spend cap (CLAUDE.md §8) and a call cap that also protects free-tier quotas.
   ai_daily_cap_usd: z.number().positive().default(5),
   ai_daily_call_cap: z.number().int().positive().default(400),
+  // Monthly prices in whole dollars. Featured spots #1, #2 and #3 each have their own price,
+  // and a business's first spot is free for `free_trial_days` (owner, 2026-10-16).
   pricing: z.strictObject({
-    sponsored_slot_usd: z.number().int().positive(),
+    featured_usd: z.tuple([
+      z.number().int().positive(),
+      z.number().int().positive(),
+      z.number().int().positive(),
+    ]),
     enhanced_usd: z.number().int().positive(),
+    free_trial_days: z.number().int().min(0).max(90).default(30),
   }),
 });
 

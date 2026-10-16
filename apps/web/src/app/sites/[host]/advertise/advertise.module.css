@@ -1,0 +1,77 @@
+.lead {
+  font-size: var(--fs-dek);
+  margin: 0 0 1.25rem;
+}
+
+.spots {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+.spot {
+  position: relative;
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+  padding: 1rem 1.1rem 1.1rem;
+  border: var(--hairline);
+  border-radius: var(--radius-tile);
+  background: var(--background);
+}
+
+.spot:first-child {
+  background: var(--tint);
+  border-color: transparent;
+}
+
+.spot[data-taken] {
+  opacity: 0.6;
+}
+
+.rank {
+  font-family: var(--font-meta);
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.title {
+  font-family: var(--font-headline);
+  font-size: var(--fs-brief);
+}
+
+.price {
+  font-family: var(--font-headline);
+  font-size: var(--fs-secondary);
+  font-weight: 600;
+}
+
+.per {
+  font-family: var(--font-body);
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.where {
+  font-size: 0.9375rem;
+}
+
+.status {
+  position: absolute;
+  top: 1rem;
+  right: 1.1rem;
+  font-family: var(--font-meta);
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.steps {
+  margin: 0 0 1.5rem;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.5rem;
+}

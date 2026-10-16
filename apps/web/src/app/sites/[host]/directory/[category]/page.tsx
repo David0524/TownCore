@@ -2,7 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { directoryCategory } from '@towncore/config';
-import { categoryListings, enhancedListingIds, MIN_INDEXABLE } from '@towncore/directory';
+import {
+  categoryListings,
+  enhancedListingIds,
+  MIN_INDEXABLE,
+  openFeaturedRanks,
+} from '@towncore/directory';
 import { PlaceCard } from '@/components/directory/PlaceCard';
 import places from '@/components/directory/places.module.css';
 import { Grouped } from '@/components/phone/Grouped';
@@ -53,11 +58,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   if (!category) notFound();
   const { q: rawQ, quote: quoteStatus } = await searchParams;
   const q = queryOf(rawQ);
-  const [{ listings, total }, enhanced] = await Promise.all([
+  const [{ listings, total }, enhanced, openRanks] = await Promise.all([
     categoryListings(db(), town.id, category.slug, { q }),
     enhancedListingIds(db(), town.id),
+    openFeaturedRanks(db(), town.id, category.slug),
   ]);
-  const context = { category };
+  // House ads offer only the featured spots still open here.
+  const context = { category, openRanks };
   // A short list on a phone would be mostly ads: five units stack. Unsold house ads in the rail
   // box, the quote slot and the sponsored cards (which repeat the Top spot's offer) step aside
   // there (owner decision, 2026-10-16); paid units always show.
@@ -80,7 +87,12 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             }. An area address can be outside city limits.`}
       </p>
       <Slot town={town} name="directory.topspot" context={context} />
-      <SponsoredCards town={town} category={category} houseOffOnPhones={shortOnPhones} />
+      <SponsoredCards
+        town={town}
+        category={category}
+        openRanks={openRanks}
+        houseOffOnPhones={shortOnPhones}
+      />
       <form method="get" role="search" className={styles.search}>
         <label htmlFor="category-q" className="sr-only">
           Search {category.name.toLowerCase()} by name

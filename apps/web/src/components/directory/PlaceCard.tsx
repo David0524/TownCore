@@ -11,7 +11,8 @@ import styles from './places.module.css';
  * details may show (claimed, or a mapped storefront; D-M6-2); the Call tap logs a lead (D-M6-8).
  */
 export function PlaceCard({ listing, label }: { listing: Listing; label?: string | null }) {
-  const kind = listing.cuisine ?? directoryCategory(listing.category ?? '')?.singular ?? null;
+  const raw = listing.cuisine ?? directoryCategory(listing.category ?? '')?.singular ?? null;
+  const kind = raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : null;
   // A license address can be a home: street and contact only when they may show (D-M6-2).
   const contact = contactShown(listing);
   return (

@@ -308,7 +308,7 @@ domain: testtownsquare.com
 tier: small
 newsletter_send_time: "06:30"
 agencies: [City of Test Town]
-pricing: { sponsored_slot_usd: 199, enhanced_usd: 39 }
+pricing: { featured_usd: [19, 12, 7], enhanced_usd: 39 }
 `);
     await syncTowns(db, [{ config: other, theme: defaultTheme, hasThemeFile: false }]);
     expect((await boca()).siteName).toBe('Boca Town Square');

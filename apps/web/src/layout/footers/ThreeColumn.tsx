@@ -27,7 +27,7 @@ export async function ThreeColumn({ town }: PartProps) {
     { href: '/newsletter', label: 'Morning email' },
     { href: '/guides', label: 'Guides' },
     { href: '/photos', label: 'Send a photo' },
-    { href: `mailto:${contact}?subject=Advertising`, label: 'Advertise' },
+    { href: '/advertise', label: 'Advertise' },
   ];
   const column = (label: string, items: Array<{ href: string; label: string }>) => (
     <nav aria-label={label}>

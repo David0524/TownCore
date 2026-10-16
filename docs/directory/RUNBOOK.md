@@ -89,10 +89,16 @@ Staff never charge a card. Refunds happen in the Stripe dashboard:
    placement turns on, then cancel and refund it in the dashboard.
 
 ### Products
+`pnpm directory:stripe sync` makes one Price per featured spot (lookup key
+`towncore:<town>:sponsored_slot:r<rank>:<cents>`). The trial is Stripe's own
+`trial_period_days`: Stripe takes the card at Checkout and charges when the trial ends; a
+subscription in `trialing` counts as active. `/advertise` on each town site shows the offer at
+that town's prices, and which spots are open in a category.
+
 | Product | Price | Status |
 | --- | --- | --- |
 | Enhanced listing | town `pricing.enhanced_usd` (Boca $39) | on |
-| Sponsored slot | town `pricing.sponsored_slot_usd` (Boca $199), 3 per category | on |
+| Featured spots #1, #2, #3 | town `pricing.featured_usd` (Boca $19, $12, $7), one business per spot and category; a business's first spot is free for `pricing.free_trial_days` (30) | on |
 | Category exclusive | not priced | built, off |
 | Newsletter sponsorship | not priced | built, off |
 

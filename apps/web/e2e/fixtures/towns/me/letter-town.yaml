@@ -11,4 +11,4 @@ domain: lettertown.test
 tier: small
 newsletter_send_time: '06:45'
 agencies: [Town of Letter Town]
-pricing: { sponsored_slot_usd: 99, enhanced_usd: 19 }
+pricing: { featured_usd: [19, 12, 7], enhanced_usd: 19 }

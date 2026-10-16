@@ -1,4 +1,9 @@
-import { directoryProducts, type DirectoryProduct } from '@towncore/config';
+import {
+  directoryProducts,
+  featuredRanks,
+  type DirectoryProduct,
+  type FeaturedRank,
+} from '@towncore/config';
 import { startCheckout } from '@towncore/directory';
 import { db } from '@/lib/db';
 import { currentOwner, sameOrigin } from '@/lib/owner';
@@ -26,6 +31,8 @@ export async function POST(request: Request, { params }: Ctx) {
   const client = stripe();
   const product = String(form.get('product') ?? '') as DirectoryProduct;
   if (!client || !(product in directoryProducts)) return back('unavailable');
+  const rawRank = Number(form.get('rank'));
+  const rank = featuredRanks.find((r) => r === rawRank) ?? null;
   const proto =
     request.headers.get('x-forwarded-proto') ?? new URL(request.url).protocol.replace(':', '');
   const result = await startCheckout(db(), client, {
@@ -33,6 +40,7 @@ export async function POST(request: Request, { params }: Ctx) {
     email,
     slug,
     product,
+    rank: rank as FeaturedRank | null,
     origin: `${proto === 'http' ? 'http' : 'https'}://${townHost}`,
   });
   if (result.status === 'redirect')

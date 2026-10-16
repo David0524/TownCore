@@ -91,17 +91,20 @@ test('a signed checkout.session.completed turns the owner’s placement on', asy
     .update(businesses)
     .set({ claimedAt: new Date(), claimedByEmail: email })
     .where(eq(businesses.id, listing!.id));
-  for (const [product, cents] of [
-    ['enhanced', 1900],
-    ['sponsored_slot', 9900],
+  for (const [product, rank, cents] of [
+    ['enhanced', null, 1900],
+    ['sponsored_slot', 1, 1900],
+    ['sponsored_slot', 2, 1200],
+    ['sponsored_slot', 3, 700],
   ] as const) {
     await db
       .insert(stripePrices)
       .values({
         townId: town!.id,
         product,
-        stripeProductId: `prod_e2e_${product}`,
-        stripePriceId: `price_e2e_${product}`,
+        rank,
+        stripeProductId: `prod_e2e_${product}_${rank ?? 0}`,
+        stripePriceId: `price_e2e_${product}_${rank ?? 0}`,
         unitAmountCents: cents,
       })
       .onConflictDoNothing();
@@ -115,6 +118,7 @@ test('a signed checkout.session.completed turns the owner’s placement on', asy
       townId: town!.id,
       product: 'sponsored_slot',
       category: 'restaurants',
+      rank: 2,
       status: 'pending',
       stripeCheckoutSessionId: sessionId,
       buyerEmail: email,
@@ -160,7 +164,9 @@ test('a signed checkout.session.completed turns the owner’s placement on', asy
   await context.addCookies([{ name: 'tc_owner', value: token, url: 'http://harborpoint.test/' }]);
   await page.goto(`http://harborpoint.test/owner/${slug}`);
   const promote = page.getByTestId('promote');
-  await expect(promote).toContainText('Sponsored slot · $99/month');
+  // The spot it holds, at that spot's price; the others aren't offered to it.
+  await expect(promote).toContainText('Featured spot #2 · $12/month');
+  await expect(promote).not.toContainText('Featured spot #1');
   await expect(page.getByTestId('placement-sponsored_slot')).toContainText('Active');
   await expect(promote.getByRole('button', { name: 'Buy enhanced listing' })).toBeVisible();
 
@@ -196,6 +202,7 @@ test('a paid sponsor card goes live only after staff approve it; Enhanced is lab
       townId: town!.id,
       product: 'sponsored_slot',
       category: 'restaurants',
+      rank: 2,
       status: 'active',
       stripeSubscriptionId: `sub_card_${Date.now()}`,
       buyerEmail: email,

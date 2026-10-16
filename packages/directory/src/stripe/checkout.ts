@@ -1,4 +1,10 @@
-import { directoryProducts, type DirectoryProduct } from '@towncore/config';
+import {
+  directoryProducts,
+  featuredRanks,
+  type DirectoryProduct,
+  type FeaturedRank,
+  type TownConfig,
+} from '@towncore/config';
 import {
   and,
   businesses,
@@ -14,11 +20,13 @@ import {
 } from '@towncore/db';
 import type Stripe from 'stripe';
 import { ownerListings } from '../owners';
-import { currentPrice } from './prices';
+import { currentPrice, offerName } from './prices';
 
 // Buying a placement (M6 PR D): an owner of a claimed listing starts Stripe Checkout from the
 // owner portal (subscription mode). We never create access here or on the success page: only
-// the verified webhook turns a placement on (./webhook.ts).
+// the verified webhook turns a placement on (./webhook.ts). Featured spots are ranked: each of
+// #1, #2 and #3 in a category belongs to one business at a time, and a business's first spot
+// starts with the town's free trial (owner, 2026-10-16).
 
 /** Placements that count against a category's inventory. */
 export const HOLDS_INVENTORY = ['pending', 'active', 'held'] as const;
@@ -29,7 +37,10 @@ export type CheckoutOutcome =
   | { status: 'redirect'; url: string }
   | { status: 'not_owner' | 'unavailable' | 'sold_out' | 'already_active' };
 
-/** Sold places in the category (active, held, or a Checkout started in the last hour). */
+/**
+ * Sold places in the category (active, held, or a Checkout started in the last hour); with a
+ * rank, only that featured spot's.
+ */
 export async function placesTaken(
   db: Db,
   townId: string,
@@ -37,6 +48,7 @@ export async function placesTaken(
   category: string | null,
   now = new Date(),
   excludeId?: string,
+  rank?: FeaturedRank | null,
 ): Promise<number> {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
@@ -46,6 +58,7 @@ export async function placesTaken(
         eq(placements.townId, townId),
         eq(placements.product, product),
         category ? eq(placements.category, category) : undefined,
+        rank ? eq(placements.rank, rank) : undefined,
         excludeId ? ne(placements.id, excludeId) : undefined,
         or(
           inArray(placements.status, ['active', 'held']),
@@ -59,17 +72,54 @@ export async function placesTaken(
   return row?.n ?? 0;
 }
 
-/** Places left for a product in a category, or null when the product has no cap. */
+/**
+ * Places left for a product in a category, or null when the product has no cap. A featured spot
+ * is one place: 1 when open, 0 when sold.
+ */
 export async function placesLeft(
   db: Db,
   townId: string,
   product: DirectoryProduct,
   category: string | null,
   now = new Date(),
+  rank?: FeaturedRank | null,
 ): Promise<number | null> {
-  const cap = directoryProducts[product].perCategory;
+  const cap = rank ? 1 : directoryProducts[product].perCategory;
   if (cap === null) return null;
-  return Math.max(0, cap - (await placesTaken(db, townId, product, category, now)));
+  return Math.max(
+    0,
+    cap - (await placesTaken(db, townId, product, category, now, undefined, rank)),
+  );
+}
+
+/** The featured spots still open in a category, #1 first. */
+export async function openFeaturedRanks(
+  db: Db,
+  townId: string,
+  category: string,
+  now = new Date(),
+): Promise<FeaturedRank[]> {
+  const open: FeaturedRank[] = [];
+  for (const rank of featuredRanks)
+    if ((await placesLeft(db, townId, 'sponsored_slot', category, now, rank)) !== 0)
+      open.push(rank);
+  return open;
+}
+
+/** A business's first featured spot gets the trial; one it has had before doesn't. */
+async function hadPlacement(db: Db, businessId: string, product: DirectoryProduct) {
+  const [row] = await db
+    .select({ id: placements.id })
+    .from(placements)
+    .where(
+      and(
+        eq(placements.businessId, businessId),
+        eq(placements.product, product),
+        sql`${placements.startsAt} is not null`,
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }
 
 export async function startCheckout(
@@ -80,6 +130,8 @@ export async function startCheckout(
     email: string;
     slug: string;
     product: DirectoryProduct;
+    /** Which featured spot, for a ranked product. */
+    rank?: FeaturedRank | null;
     /** https://<town domain>, for the return links. */
     origin: string;
   },
@@ -90,7 +142,9 @@ export async function startCheckout(
   );
   if (!listing) return { status: 'not_owner' };
   const def = directoryProducts[input.product];
-  const price = def.enabled ? await currentPrice(db, input.townId, input.product) : null;
+  const rank = def.ranked ? (input.rank ?? null) : null;
+  if (def.ranked && !rank) return { status: 'unavailable' };
+  const price = def.enabled ? await currentPrice(db, input.townId, input.product, rank) : null;
   if (!price) return { status: 'unavailable' };
   const category = def.perCategory !== null ? listing.category : null;
   const [existing] = await db
@@ -104,8 +158,16 @@ export async function startCheckout(
       ),
     );
   if (existing) return { status: 'already_active' };
-  if ((await placesLeft(db, input.townId, input.product, category, now)) === 0)
+  if ((await placesLeft(db, input.townId, input.product, category, now, rank)) === 0)
     return { status: 'sold_out' };
+  const [town] = await db
+    .select({ config: towns.config })
+    .from(towns)
+    .where(eq(towns.id, input.townId));
+  const trialDays = def.ranked
+    ? ((town?.config as TownConfig | undefined)?.pricing?.free_trial_days ?? 0)
+    : 0;
+  const trial = trialDays > 0 && !(await hadPlacement(db, listing.id, input.product));
 
   const [placement] = await db
     .insert(placements)
@@ -114,6 +176,7 @@ export async function startCheckout(
       townId: input.townId,
       product: input.product,
       category,
+      rank,
       status: 'pending',
       stripePriceId: price.stripePriceId,
       buyerEmail: input.email,
@@ -126,6 +189,7 @@ export async function startCheckout(
     business_id: listing.id,
     product: input.product,
     category: category ?? '',
+    rank: rank ? String(rank) : '',
   };
   const back = `${input.origin}/owner/${encodeURIComponent(listing.slug)}`;
   const session = await stripe.checkout.sessions.create({
@@ -134,7 +198,8 @@ export async function startCheckout(
     customer_email: input.email,
     client_reference_id: placement!.id,
     metadata,
-    subscription_data: { metadata },
+    // The first month free: Stripe takes the card now and charges when the trial ends.
+    subscription_data: { metadata, ...(trial ? { trial_period_days: trialDays } : {}) },
     success_url: `${back}?s=paid`,
     cancel_url: `${back}?s=canceled`,
     // Checkout holds a place for an hour at most (PENDING_HOLD_MS); expire the page with it.
@@ -175,29 +240,41 @@ export async function billingPortalUrl(
 
 export type ProductOffer = {
   product: DirectoryProduct;
+  /** The featured spot, for a ranked product. */
+  rank: FeaturedRank | null;
   name: string;
   monthlyUsd: number;
+  /** Free days before the first charge, when this business would get the trial. */
+  trialDays: number;
   /** Places left in the listing's category, or null when there is no cap. */
   left: number | null;
-  /** The listing's current placement of this product, if any. */
+  /** The listing's current placement of this product (and rank), if any. */
   placement: { id: string; status: string; endsAt: Date | null } | null;
 };
 
-/** What the owner can buy for a listing, with availability and what they already have. */
+/**
+ * What the owner can buy for a listing, with availability and what they already have. A ranked
+ * product is one offer per spot; once the listing holds a spot, only that one is shown.
+ */
 export async function listingOffers(
   db: Db,
   townId: string,
   listing: { id: string; category: string | null },
   now = new Date(),
 ): Promise<ProductOffer[]> {
+  const [town] = await db.select({ config: towns.config }).from(towns).where(eq(towns.id, townId));
+  const freeDays = (town?.config as TownConfig | undefined)?.pricing?.free_trial_days ?? 0;
   const offers: ProductOffer[] = [];
   for (const product of Object.keys(directoryProducts) as DirectoryProduct[]) {
     const def = directoryProducts[product];
     if (!def.enabled) continue;
-    const price = await currentPrice(db, townId, product);
-    if (!price) continue;
     const [current] = await db
-      .select({ id: placements.id, status: placements.status, endsAt: placements.endsAt })
+      .select({
+        id: placements.id,
+        status: placements.status,
+        endsAt: placements.endsAt,
+        rank: placements.rank,
+      })
       .from(placements)
       .where(
         and(
@@ -206,19 +283,34 @@ export async function listingOffers(
           inArray(placements.status, ['active', 'held']),
         ),
       );
-    offers.push({
-      product,
-      name: def.name,
-      monthlyUsd: price.unitAmountCents / 100,
-      left: await placesLeft(
-        db,
-        townId,
+    const trialDays = def.ranked && !(await hadPlacement(db, listing.id, product)) ? freeDays : 0;
+    const ranks: Array<FeaturedRank | null> = !def.ranked
+      ? [null]
+      : current?.rank
+        ? [current.rank as FeaturedRank]
+        : [...featuredRanks];
+    for (const rank of ranks) {
+      const price = await currentPrice(db, townId, product, rank);
+      if (!price) continue;
+      offers.push({
         product,
-        def.perCategory !== null ? listing.category : null,
-        now,
-      ),
-      placement: current ?? null,
-    });
+        rank,
+        name: offerName(product, rank),
+        monthlyUsd: price.unitAmountCents / 100,
+        trialDays,
+        left: await placesLeft(
+          db,
+          townId,
+          product,
+          def.perCategory !== null ? listing.category : null,
+          now,
+          rank,
+        ),
+        placement: current
+          ? { id: current.id, status: current.status, endsAt: current.endsAt }
+          : null,
+      });
+    }
   }
   return offers;
 }
@@ -227,6 +319,7 @@ export type PlacementRow = {
   id: string;
   product: string;
   category: string | null;
+  rank: number | null;
   status: string;
   buyerEmail: string | null;
   endsAt: Date | null;
@@ -250,6 +343,7 @@ export async function listPlacements(db: Db, limit = 100): Promise<PlacementRow[
     id: placement.id,
     product: placement.product,
     category: placement.category,
+    rank: placement.rank,
     status: placement.status,
     buyerEmail: placement.buyerEmail,
     endsAt: placement.endsAt,
