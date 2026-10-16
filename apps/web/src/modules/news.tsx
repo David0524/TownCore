@@ -3,6 +3,7 @@ import { EnvelopeIcon } from '@/components/phone/icons';
 import { NewsletterForm } from '@/components/NewsletterForm';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { StoryBlock } from '@/components/news/StoryBlock';
+import { TopStoriesRow } from '@/components/news/StoryCards';
 import { ArticleVisual } from '@/components/visuals/ArticleVisual';
 import { StoryThumb } from '@/components/visuals/StoryThumb';
 import { WeatherTile } from '@/components/weather/WeatherTile';
@@ -26,8 +27,12 @@ import type { HomeModuleComponent } from './types';
 import styles from './modules.module.css';
 
 export const LeadStory: HomeModuleComponent = async ({ town, theme }) => {
-  const lead = pickLead(await recentArticles(town.id));
+  const articles = await recentArticles(town.id);
+  const lead = pickLead(articles);
   if (!lead) return null;
+  // Phones: the next stories as a row of picture cards under the lead, so there's always more
+  // in view (owner, 2026-10-16). "Also today" steps aside there, since the row covers it.
+  const next = articles.filter((a) => a.id !== lead.id && a.kind !== 'guide').slice(0, 6);
   const figure = await roundupFigure(lead);
   return (
     <section className={styles.module} data-module="lead-story">
@@ -38,6 +43,9 @@ export const LeadStory: HomeModuleComponent = async ({ town, theme }) => {
         as="h2"
         visual={<ArticleVisual town={town} theme={theme} article={lead} figure={figure} cover />}
       />
+      <div className="phone-only">
+        <TopStoriesRow town={town} theme={theme} stories={next} />
+      </div>
     </section>
   );
 };
@@ -69,7 +77,7 @@ export const TodayBento: HomeModuleComponent = async ({ town, theme, modules }) 
         ) : null}
       </div>
       {also.length > 0 ? (
-        <section aria-labelledby="also-h">
+        <section aria-labelledby="also-h" className="not-phone">
           <h2 id="also-h" className={`meta ${styles.alsoHeading}`}>
             Also today
           </h2>

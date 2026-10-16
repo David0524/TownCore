@@ -191,3 +191,25 @@ test.describe('Your town, app icons and the Home Screen card', () => {
     await expect(third.getByTestId('home-screen-card')).toHaveCount(0);
   });
 });
+
+test('phones get a row of more top stories under the lead, and every story ends with Up next', async ({
+  page,
+  isMobile,
+}) => {
+  // Harbor Point has enough stories for the row (it needs two besides the lead).
+  await page.goto(`${harbor}/`);
+  const row = page.getByTestId('top-stories-row');
+  if (isMobile) {
+    await expect(row).toBeVisible();
+    expect(await row.getByRole('link').count()).toBeGreaterThanOrEqual(2);
+  } else {
+    await expect(row).toBeHidden();
+  }
+  const first = await page.locator('[data-module="lead-story"] h2 a').first().getAttribute('href');
+  await page.goto(`${harbor}${first}`);
+  const upNext = page.getByTestId('up-next');
+  await expect(upNext).toBeVisible();
+  const next = await upNext.getByRole('link').getAttribute('href');
+  expect(next).toMatch(/^\/news\//);
+  expect(next).not.toBe(first);
+});

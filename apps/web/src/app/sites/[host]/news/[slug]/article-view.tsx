@@ -27,6 +27,7 @@ import {
   articleImage,
   guideLastChecked,
   rankedBeatArticles,
+  recentArticles,
   roundupFigure,
   storyMeetingVideo,
   storyTopics,
@@ -37,6 +38,7 @@ import { NewsletterCta } from '@/modules/news';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { ShareButton } from '@/components/news/ShareButton';
 import { StoryBlock } from '@/components/news/StoryBlock';
+import { UpNext } from '@/components/news/StoryCards';
 import { JsonLd, newsArticleJsonLd } from '@/lib/structured-data';
 import styles from './article.module.css';
 
@@ -116,6 +118,9 @@ export async function ArticleView({
       guide ? listPublishedGuides(db(), town.id) : [],
     ]);
   const otherGuides = guides.filter((g) => g.id !== article.id).slice(0, 6);
+  // Up next (owner, 2026-10-16): the most related story, else the top-ranked one; for a guide,
+  // another guide. Never this story or a test fixture.
+  const ranked = guide ? [] : await recentArticles(town.id);
   const video = guide ? null : await storyMeetingVideo(town.id, town.timezone, sourceRecords);
   // Test fixtures never appear beside real stories.
   const fixture = (a: { slug: string }) =>
@@ -124,6 +129,10 @@ export async function ArticleView({
   const related = (await listArticlesByIds(db(), relatedIds)).filter((a) => !fixture(a));
   // Then up to three more from the same section, none already listed.
   const shown = new Set([article.id, ...related.map((a) => a.id)]);
+  const upNext = guide
+    ? otherGuides[0]
+    : [...related, ...ranked].find((a) => a.id !== article.id && a.kind !== 'guide' && !fixture(a));
+  if (upNext) shown.add(upNext.id);
   const more = sameBeat.filter((a) => !shown.has(a.id) && !fixture(a)).slice(0, 3);
   const beat = beats.find((b) => b.slug === article.beat);
   const blocks = markdownBlocks(article.bodyMd);
@@ -268,6 +277,8 @@ export async function ArticleView({
           </a>
           .
         </p>
+
+        {upNext ? <UpNext town={town} theme={theme} story={upNext} /> : null}
 
         {await NewsletterCta({ town, theme, modules: [] })}
 
