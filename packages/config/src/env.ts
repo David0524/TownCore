@@ -81,6 +81,7 @@ export const envSchema = z.object({
   UNSPLASH_ACCESS_KEY: optional(z.string()),
   /** YouTube Data API v3 key: finds town meeting videos to embed (packages/adapters/src/youtube). */
   YOUTUBE_API_KEY: optional(z.string()),
+  SOCRATA_APP_TOKEN: optional(z.string()),
   DEV_TOWN_SLUG: optional(z.string().regex(/^[a-z0-9-]+$/)),
 });
 
