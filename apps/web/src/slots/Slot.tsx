@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { Town } from '@towncore/db';
-import { resolveSlotFill } from './fill';
+import { resolveSlotFill, type SlotContext } from './fill';
 import { SLOT_LABEL_PX, slots, type SlotName } from './registry';
 import styles from './Slot.module.css';
 
@@ -9,8 +9,16 @@ import styles from './Slot.module.css';
  * Paid units sit on the network's sand tile; house ads on the town's surface. Both are visibly
  * not editorial, and neither ever renders empty.
  */
-export async function Slot({ town, name }: { town: Town; name: SlotName }) {
-  const fill = await resolveSlotFill(town, name);
+export async function Slot({
+  town,
+  name,
+  context,
+}: {
+  town: Town;
+  name: SlotName;
+  context?: SlotContext;
+}) {
+  const fill = await resolveSlotFill(town, name, new Date(), context);
   const { height, format } = slots[name];
   const style = {
     '--slot-h-mobile': `${height.mobile + SLOT_LABEL_PX}px`,

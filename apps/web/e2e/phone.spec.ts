@@ -14,7 +14,13 @@ test.describe('phone chrome', () => {
       await page.goto(`${url}/`);
       const tabs = page.getByTestId('tab-bar');
       await expect(tabs).toBeVisible();
-      await expect(tabs.getByRole('link')).toHaveText(['Today', 'Sections', 'Events', 'Search']);
+      await expect(tabs.getByRole('link')).toHaveText([
+        'Today',
+        'Sections',
+        'Events',
+        'Places',
+        'Search',
+      ]);
       await expect(tabs.getByRole('link', { name: 'Today' })).toHaveAttribute(
         'aria-current',
         'page',

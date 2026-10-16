@@ -33,6 +33,7 @@
     "@fontsource/spectral": "5.3.0",
     "@towncore/brand": "workspace:*",
     "@towncore/config": "workspace:*",
+    "@towncore/directory": "workspace:*",
     "@towncore/email": "workspace:*",
     "@towncore/mail": "workspace:*",
     "@towncore/prompts": "workspace:*",

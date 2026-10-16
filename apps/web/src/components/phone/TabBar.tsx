@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactElement } from 'react';
-import { EventsIcon, SearchIcon, SectionsIcon, TodayIcon } from './icons';
+import { EventsIcon, PlacesIcon, SearchIcon, SectionsIcon, TodayIcon } from './icons';
 import { phonePath } from './path';
 import styles from './phone.module.css';
 
@@ -15,7 +15,6 @@ type Tab = {
   owns: (path: string) => boolean;
 };
 
-// Places (the directory) joins as the fourth tab when the directory ships (M6).
 const tabs: Tab[] = [
   {
     href: '/',
@@ -33,6 +32,13 @@ const tabs: Tab[] = [
       ),
   },
   { href: '/events', label: 'Events', icon: EventsIcon, owns: (p) => p.startsWith('/events') },
+  // Places: the directory (M6).
+  {
+    href: '/directory',
+    label: 'Places',
+    icon: PlacesIcon,
+    owns: (p) => p.startsWith('/directory'),
+  },
   { href: '/search', label: 'Search', icon: SearchIcon, owns: (p) => p.startsWith('/search') },
 ];
 

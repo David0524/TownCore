@@ -49,6 +49,27 @@ export const slots = {
     height: { mobile: 120, desktop: 104 },
     paidLabel: 'Sponsored',
   },
+  // Directory (M6): category header, the first listing, sponsored listings and the quote form.
+  'directory.category.exclusive': {
+    format: 'card',
+    height: { mobile: 112, desktop: 96 },
+    paidLabel: 'Sponsored',
+  },
+  'directory.topspot': {
+    format: 'card',
+    height: { mobile: 120, desktop: 104 },
+    paidLabel: 'Sponsored',
+  },
+  'directory.category.top': {
+    format: 'card',
+    height: { mobile: 120, desktop: 104 },
+    paidLabel: 'Sponsored',
+  },
+  'directory.quote-request': {
+    format: 'card',
+    height: { mobile: 128, desktop: 112 },
+    paidLabel: 'Sponsored',
+  },
 } as const satisfies Record<string, SlotDef>;
 
 export type SlotName = keyof typeof slots;

@@ -1,4 +1,4 @@
-import { and, arrayContains, desc, eq, gt, inArray, isNull, lte, or } from 'drizzle-orm';
+import { and, arrayContains, desc, eq, gt, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import type { Db } from './client';
 import { articles, campaigns, corrections, records, towns } from './schema';
 
@@ -66,6 +66,7 @@ export async function getActiveCampaign(
   townId: string,
   slot: string,
   now: Date = new Date(),
+  category?: string | null,
 ): Promise<Campaign | null> {
   const [campaign] = await db
     .select()
@@ -77,9 +78,17 @@ export async function getActiveCampaign(
         eq(campaigns.status, 'active'),
         lte(campaigns.startsAt, now),
         or(isNull(campaigns.endsAt), gt(campaigns.endsAt, now)),
+        // A category page takes that category's campaign first, then a slot-wide one.
+        category
+          ? or(isNull(campaigns.category), eq(campaigns.category, category))
+          : isNull(campaigns.category),
       ),
     )
-    .orderBy(desc(campaigns.priority), desc(campaigns.startsAt))
+    .orderBy(
+      sql`(${campaigns.category} is not null) desc`,
+      desc(campaigns.priority),
+      desc(campaigns.startsAt),
+    )
     .limit(1);
   return campaign ?? null;
 }

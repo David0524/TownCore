@@ -76,6 +76,19 @@ export const EventsIcon = ({ size = 26, filled }: IconProps) =>
     </>,
   );
 
+/** Places: a map pin. */
+export const PlacesIcon = ({ size = 26, filled }: IconProps) =>
+  svg(
+    size,
+    <>
+      <path
+        d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"
+        fill={filled ? 'currentColor' : 'none'}
+      />
+      <circle cx="12" cy="10" r="2.4" stroke={filled ? 'var(--ios-chrome)' : 'currentColor'} />
+    </>,
+  );
+
 /** Search: a magnifying glass. */
 export const SearchIcon = ({ size = 26 }: IconProps) =>
   svg(
