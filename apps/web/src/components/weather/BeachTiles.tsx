@@ -88,8 +88,12 @@ export function BeachTiles({
             <span className={styles.beachNote}>
               {[
                 uv ? (
-                  <span key="uv" data-testid="beach-uv" title={uvCategory(uv.index)}>
-                    UV {uv.index} ({uvCategory(uv.index).toLowerCase()})
+                  <span
+                    key="uv"
+                    data-testid="beach-uv"
+                    title={`UV index ${uv.index}: ${uvCategory(uv.index).toLowerCase()}`}
+                  >
+                    UV {uv.index}
                   </span>
                 ) : null,
                 windNote ? <span key="wind">Wind {windNote}</span> : null,

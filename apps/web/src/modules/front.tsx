@@ -108,16 +108,9 @@ export async function CategoryCapsules({ town }: { town: Town }) {
 export const ComingUp: HomeModuleComponent = async ({ town }) => {
   const meetings = await upcomingMeetings(town.id);
   if (meetings.length === 0) return null;
-  const day = (d: Date) =>
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: town.timezone,
-      weekday: 'short',
-      day: 'numeric',
-    })
-      .formatToParts(d)
-      .filter((p) => p.type === 'weekday' || p.type === 'day')
-      .map((p) => p.value)
-      .join(' ');
+  const part = (d: Date, o: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat('en-US', { timeZone: town.timezone, ...o }).format(d);
+  const day = (d: Date) => `${part(d, { weekday: 'short' })} ${part(d, { day: 'numeric' })}`;
   return (
     <section className={styles.coming} aria-labelledby="coming-h" data-module="coming-up">
       <SectionHeader title="City Hall this week" href="/events" more="Calendar" id="coming-h" />

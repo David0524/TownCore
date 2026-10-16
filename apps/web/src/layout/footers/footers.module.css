@@ -28,6 +28,17 @@
   }
 }
 
+/* Phones: the name and contact across, the link lists two by two. */
+@media (max-width: 599.98px) {
+  .masthead {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .about {
+    grid-column: 1 / -1;
+  }
+}
+
 .about {
   display: flex;
   flex-direction: column;

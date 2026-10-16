@@ -74,7 +74,8 @@ test.describe.serial('beach tiles', () => {
     await expect(tiles.getByTestId('beach-rip')).toHaveAttribute('title', 'Surf around 3 feet');
     await expect(tiles.getByTestId('beach-water')).toContainText('Water 58°');
     await expect(tiles.getByTestId('beach-tides')).toContainText('tide');
-    await expect(tiles.getByTestId('beach-uv')).toContainText('UV 4 (moderate)');
+    await expect(tiles.getByTestId('beach-uv')).toContainText('UV 4');
+    await expect(tiles.getByTestId('beach-uv')).toHaveAttribute('title', 'UV index 4: moderate');
     await expect(tiles.getByRole('link', { name: /surf forecast/ })).toBeVisible();
     await expect(
       tiles.getByRole('link', { name: /NOAA Tides & Currents \(preliminary\)/ }),
