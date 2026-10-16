@@ -348,7 +348,13 @@ test('quote requests and call taps become leads; slots are counted; the owner se
 
   // A reader taps the call button on the listing; the slot counters see the page.
   await page.goto(`http://harborpoint.test/directory/restaurants/${slug}`);
-  await page.getByRole('link', { name: 'Call Harbor Light Chowder House' }).dispatchEvent('click');
+  const call = page.getByRole('link', { name: 'Call Harbor Light Chowder House' });
+  await call.scrollIntoViewIfNeeded();
+  // Let the IntersectionObserver report the slot as seen (two frames) before tapping.
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  await call.dispatchEvent('click');
   await expect
     .poll(async () => (await db.select().from(leads).where(eq(leads.kind, 'call'))).length)
     .toBeGreaterThan(0);
