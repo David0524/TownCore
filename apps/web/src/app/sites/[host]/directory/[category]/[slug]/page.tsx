@@ -1,14 +1,26 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { getListing, listingCategory, listingInTheNews, listingPlace } from '@towncore/directory';
+import {
+  contactShown,
+  getListing,
+  listingCategory,
+  listingInTheNews,
+  listingPlace,
+} from '@towncore/directory';
 import { listingPhotos, photoPath } from '@towncore/photos/queries';
 import { apDate } from '@towncore/pipeline';
 import { CallButton } from '@/components/directory/CallButton';
 import { Grouped } from '@/components/phone/Grouped';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
-import { directoryPath, LICENSE_LOOKUP, listingPath, localBusinessJsonLd } from '@/lib/directory';
+import {
+  directoryPath,
+  LICENSE_LOOKUP,
+  listingPath,
+  localBusinessJsonLd,
+  osmPlaceUrl,
+} from '@/lib/directory';
 import { articlePath, rssAlternate } from '@/lib/discovery';
 import { StandardPage } from '@/lib/pages';
 import { JsonLd } from '@/lib/structured-data';
@@ -24,7 +36,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const category = listingCategory(listing);
   return {
     title: listing.name,
-    description: `${listing.name}: ${listing.licenseType ?? category?.singular ?? 'business'} in the ${town.name} area, with its Florida license.`,
+    description: listing.licenseVerified
+      ? `${listing.name}: ${listing.licenseType ?? category?.singular ?? 'business'} in the ${town.name} area, with its Florida license.`
+      : `${listing.name}: ${category?.singular ?? 'business'} in the ${town.name} area.`,
     alternates: { canonical: listingPath(listing), types: rssAlternate(town) },
     // An unclaimed listing is only what the state file says: thin, so noindex (D-M4-5).
     robots: listing.claimedAt ? undefined : { index: false, follow: true },
@@ -45,6 +59,8 @@ export default async function BusinessPage({ params }: Props) {
   const category = listingCategory(listing);
   const news = await listingInTheNews(db(), town.id, listing.name);
   const claimed = Boolean(listing.claimedAt);
+  // Street, phone, website and hours: once claimed, or for a mapped storefront (D-M6-2).
+  const contact = contactShown(listing);
   const claimHref = `/directory/claim/${listing.slug}`;
   // The owner's own photos, once staff approved them (M9); a claimed listing only.
   const photos = claimed ? await listingPhotos(db(), listing.id) : [];
@@ -69,7 +85,10 @@ export default async function BusinessPage({ params }: Props) {
       ) : null}
       <dl className={styles.facts}>
         <dt>Type</dt>
-        <dd>{listing.licenseType ?? category?.name}</dd>
+        <dd>
+          {listing.licenseType ?? category?.name}
+          {listing.cuisine ? ` · ${listing.cuisine}` : ''}
+        </dd>
         <dt>Where</dt>
         <dd data-testid="listing-place">{listingPlace(listing, town.name)}</dd>
         {listing.licenseNumber ? (
@@ -87,13 +106,13 @@ export default async function BusinessPage({ params }: Props) {
             </dd>
           </>
         ) : null}
-        {claimed && listing.phone ? (
+        {contact && listing.phone ? (
           <>
             <dt>Phone</dt>
             <dd>{listing.phone}</dd>
           </>
         ) : null}
-        {claimed && listing.website ? (
+        {contact && listing.website ? (
           <>
             <dt>Website</dt>
             <dd>
@@ -103,7 +122,7 @@ export default async function BusinessPage({ params }: Props) {
             </dd>
           </>
         ) : null}
-        {claimed && listing.hours ? (
+        {contact && listing.hours ? (
           <>
             <dt>Hours</dt>
             <dd className={styles.pre}>{listing.hours}</dd>
@@ -133,6 +152,15 @@ export default async function BusinessPage({ params }: Props) {
           ))}
         </ul>
       ) : null}
+      {listing.osmRef ? (
+        <p className="meta" data-testid="osm-credit">
+          Details from{' '}
+          <a href={osmPlaceUrl(listing.osmRef)} rel="noopener nofollow">
+            OpenStreetMap
+          </a>{' '}
+          (© OpenStreetMap contributors, ODbL).
+        </p>
+      ) : null}
       {claimed && listing.description ? (
         <p className={`${styles.note} ${styles.pre}`} data-testid="listing-description">
           {listing.description}
@@ -144,7 +172,7 @@ export default async function BusinessPage({ params }: Props) {
         data-business={listing.id}
         aria-label="Contact"
       >
-        {claimed && listing.phone ? (
+        {contact && listing.phone ? (
           <CallButton slug={listing.slug} phone={listing.phone} name={listing.name} />
         ) : null}
         {claimed ? (
@@ -169,10 +197,18 @@ export default async function BusinessPage({ params }: Props) {
         />
       ) : null}
       <p className={`muted ${styles.note}`}>
-        This listing comes from the Florida Department of Business and Professional
-        Regulation&apos;s license records{claimed ? ' and details added by the business' : ''}. A{' '}
-        {town.name} mailing address can be outside city limits.{' '}
-        {claimed ? null : 'Contact details appear once the owner claims the listing.'}
+        This listing comes from{' '}
+        {[
+          listing.licenseNumber
+            ? "the Florida Department of Business and Professional Regulation's license records"
+            : null,
+          listing.osmRef ? 'OpenStreetMap' : null,
+          claimed ? 'details added by the business' : null,
+        ]
+          .filter(Boolean)
+          .join(' and ')}
+        . A {town.name} area address can be outside city limits.{' '}
+        {contact ? null : 'Contact details appear once the owner claims the listing.'}
       </p>
     </StandardPage>
   );

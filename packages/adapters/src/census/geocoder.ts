@@ -57,3 +57,41 @@ export async function geocodeAddress(
     placeGeoid: match.geographies?.['Incorporated Places']?.[0]?.GEOID ?? null,
   };
 }
+
+const COORDINATES_ENDPOINT = 'https://geocoding.geo.census.gov/geocoder/geographies/coordinates';
+
+export type PlaceAt = { placeGeoid: string | null; zcta: string | null };
+
+export function placeAtUrl(lat: number, lng: number): string {
+  const params = new URLSearchParams({
+    x: lng.toFixed(6),
+    y: lat.toFixed(6),
+    benchmark: 'Public_AR_Current',
+    vintage: 'Current_Current',
+    layers: 'Incorporated Places,2020 Census ZIP Code Tabulation Areas',
+    format: 'json',
+  });
+  return `${COORDINATES_ENDPOINT}?${params}`;
+}
+
+type CoordinatesResponse = {
+  result?: {
+    geographies?: {
+      'Incorporated Places'?: Array<{ GEOID: string }>;
+      '2020 Census ZIP Code Tabulation Areas'?: Array<{ GEOID: string }>;
+    };
+  };
+};
+
+/**
+ * What lies at a point: the incorporated place (null for unincorporated land) and the ZIP Code
+ * Tabulation Area. Used to keep mapped places to a town's area (owner, 2026-10-16).
+ */
+export async function censusPlaceAt(fetcher: Fetcher, lat: number, lng: number): Promise<PlaceAt> {
+  const data = await fetcher.getJson<CoordinatesResponse>(placeAtUrl(lat, lng));
+  const g = data.result?.geographies;
+  return {
+    placeGeoid: g?.['Incorporated Places']?.[0]?.GEOID ?? null,
+    zcta: g?.['2020 Census ZIP Code Tabulation Areas']?.[0]?.GEOID ?? null,
+  };
+}

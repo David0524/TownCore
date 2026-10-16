@@ -5,6 +5,7 @@ import {
   bboxAround,
   downloadTo,
   extractBasemaps,
+  extractPlaces,
   Fetcher,
   geofabrikStateUrl,
   pbfFileFrames,
@@ -23,12 +24,14 @@ import {
   towns,
   type Db,
 } from '@towncore/db';
+import { seedOsmPlaces } from '@towncore/directory';
 import { assignArticleImage, imageOptions } from '@towncore/pipeline';
 import type { Logger } from 'pino';
 
 // Maps (CLAUDE.md §11c; docs/plans/M4.md §3, D-M4-1).
 // - Monthly: download each state's OpenStreetMap extract from Geofabrik once, clip it to every
-//   town in that state (a box around the town's forecast point), store the lines, delete the file.
+//   town in that state (a box around the town's forecast point), store the lines, refresh the
+//   directory's mapped places from the same file (owner, 2026-10-16), delete the file.
 // - Every 30 minutes: give recent stories on map beats (development, public safety) a
 //   block-level map when their text has a street address and the town has a base map.
 
@@ -67,6 +70,8 @@ export async function refreshBasemaps(
     now?: Date;
     /** A state extract downloaded by hand (same file as the Geofabrik URL), instead of fetching. */
     file?: string;
+    /** Also refresh the directory's mapped places from the extract (default true). */
+    places?: boolean;
   } = {},
 ): Promise<{ towns: number; failed: number }> {
   const fetcher = opts.fetcher ?? new Fetcher({ timeoutMs: DOWNLOAD_TIMEOUT_MS });
@@ -90,6 +95,22 @@ export async function refreshBasemaps(
           .onConflictDoUpdate({ target: townBasemaps.townId, set: values });
         logger.info({ town: town.slug, lines: lines.length }, 'base map refreshed');
         done++;
+      }
+      if (opts.places !== false) {
+        for (const [i, town] of list.entries()) {
+          const places = await extractPlaces(pbfFileFrames(file), boxes[i]!);
+          const [row] = await db
+            .select({ name: towns.name, censusId: towns.censusId })
+            .from(towns)
+            .where(eq(towns.id, town.id));
+          const seeded = await seedOsmPlaces(
+            db,
+            { id: town.id, name: row!.name, censusId: row!.censusId },
+            places,
+            { fetcher, now: opts.now },
+          );
+          logger.info({ town: town.slug, places: places.length, ...seeded }, 'directory places');
+        }
       }
     } catch (error) {
       failed += list.length;

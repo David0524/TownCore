@@ -139,10 +139,19 @@ export async function listingInTheNews(
     .limit(limit);
 }
 
-/** How a listing's place is shown. Unclaimed listings never show a street (D-M6-2, D-M6-3). */
+/**
+ * Whether a listing's street, phone, website and hours show: once claimed, or for a storefront
+ * mapped in OpenStreetMap, whose address is public (owner, 2026-10-16). A state license address
+ * alone never shows: it can be a home (D-M6-2).
+ */
+export function contactShown(listing: Pick<Listing, 'claimedAt' | 'addressPublic'>): boolean {
+  return Boolean(listing.claimedAt) || listing.addressPublic;
+}
+
+/** How a listing's place is shown: the street only when contactShown (D-M6-2, D-M6-3). */
 export function listingPlace(listing: Listing, townName: string): string {
   const area = `${townName} area`;
-  if (listing.claimedAt && listing.address) {
+  if (contactShown(listing) && listing.address) {
     return [listing.address, area, listing.zip].filter(Boolean).join(', ');
   }
   return [area, listing.zip].filter(Boolean).join(' · ');

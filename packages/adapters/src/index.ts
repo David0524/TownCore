@@ -40,6 +40,8 @@ export { flSunbizAdapter } from './fl-sunbiz';
 export { fetchWeather, parsePoint } from './nws/weather';
 export { beachConfig, fetchBeach, parseSurfSegment, type BeachConfig } from './nws/beach';
 export {
+  censusPlaceAt,
+  type PlaceAt,
   geocodeAddress,
   geocodeUrl,
   type GeocodeInput,
@@ -61,6 +63,13 @@ export {
   type Bbox,
 } from './osm/basemap';
 export { pbfFileFrames } from './osm/pbf';
+export {
+  cleanWebsite,
+  extractPlaces,
+  formatPhone,
+  placeFromTags,
+  type OsmPlace,
+} from './osm/places';
 export { parseCsvLine } from './lib/csv';
 export {
   searchPhotos,

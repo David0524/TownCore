@@ -3,6 +3,7 @@ export { geocodeListings, type GeocodeRunResult } from './geocode';
 export { listingFromRecord, type LicenseRecord, type ListingDraft } from './listings';
 export { displayName, listingSlug, titleCase } from './names';
 export { DBPR, seedDirectory, type SeedResult } from './seed';
+export { matchName, OSM, seedOsmPlaces, type OsmSeedResult } from './osm';
 export {
   categoryCounts,
   categoryListings,
@@ -14,6 +15,7 @@ export {
   getListing,
   listingCategory,
   listingInTheNews,
+  contactShown,
   listingPlace,
   MIN_INDEXABLE,
   PAGE_SIZE,

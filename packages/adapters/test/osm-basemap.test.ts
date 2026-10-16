@@ -11,6 +11,7 @@ import {
   simplify,
 } from '../src/osm/basemap';
 import { pbfFileFrames } from '../src/osm/pbf';
+import { cleanWebsite, extractPlaces, formatPhone } from '../src/osm/places';
 
 // The OSM PBF reader and base-map clipping, against a small file written here to the published
 // format (https://wiki.openstreetmap.org/wiki/PBF_Format): a header blob, then one OSMData blob
@@ -55,7 +56,7 @@ const delta = (xs: number[]) => xs.map((x, i) => x - (i ? xs[i - 1]! : 0));
 
 /** A PBF file with the given nodes (degrees) and ways. */
 function pbf(
-  nodes: Array<{ id: number; lat: number; lon: number }>,
+  nodes: Array<{ id: number; lat: number; lon: number; tags?: Record<string, string> }>,
   ways: Array<{ id: number; tags: Record<string, string>; refs: number[] }>,
 ): Uint8Array {
   const strings = [''];
@@ -93,9 +94,10 @@ function pbf(
         )
         .done(),
     )
+    // keys_vals: each node's key/value string indexes, then a 0.
     .packed(
       10,
-      nodes.map(() => 0),
+      nodes.flatMap((n) => [...Object.entries(n.tags ?? {}).flatMap(([k, v]) => [s(k), s(v)]), 0]),
     )
     .done();
   const group = new Writer().bytes(2, dense);
@@ -188,5 +190,80 @@ describe('OSM base maps', () => {
       'https://download.geofabrik.de/north-america/us/florida-latest.osm.pbf',
     );
     expect(() => geofabrikStateUrl('ZZ')).toThrow();
+  });
+});
+
+describe('OSM places for the directory', () => {
+  it('reads named, categorized nodes and buildings in the box, with their details', async () => {
+    const box = bboxAround(26.35, -80.08, 1);
+    const file = pbf(
+      [
+        {
+          id: 1,
+          lat: 26.351,
+          lon: -80.081,
+          tags: {
+            amenity: 'cafe',
+            name: 'Sample Café',
+            'addr:housenumber': '12',
+            'addr:street': 'Test Road',
+            'addr:postcode': '33432-1234',
+            phone: '+1 561-555-0100',
+            website: 'samplecafe.example',
+            cuisine: 'coffee_shop;bagel',
+          },
+        },
+        // A house number without a street isn't an address.
+        {
+          id: 2,
+          lat: 26.352,
+          lon: -80.08,
+          tags: { shop: 'florist', name: 'Petals', 'addr:housenumber': '7B' },
+        },
+        { id: 3, lat: 26.353, lon: -80.079 }, // a bare point
+        { id: 4, lat: 26.5, lon: -80.08, tags: { amenity: 'bar', name: 'Far Away Bar' } },
+        {
+          id: 5,
+          lat: 26.354,
+          lon: -80.081,
+          tags: { shop: 'clothes', name: 'Gone', disused: 'yes' },
+        },
+        { id: 6, lat: 26.349, lon: -80.082 },
+        { id: 7, lat: 26.349, lon: -80.081 },
+        { id: 8, lat: 26.348, lon: -80.081 },
+      ],
+      [
+        {
+          id: 20,
+          tags: { amenity: 'restaurant', name: 'Sample Grill', building: 'yes' },
+          refs: [6, 7, 8, 6],
+        },
+      ],
+    );
+    const dir = mkdtempSync(join(tmpdir(), 'osm-'));
+    writeFileSync(join(dir, 'p.osm.pbf'), file);
+    const places = await extractPlaces(pbfFileFrames(join(dir, 'p.osm.pbf')), box);
+    expect(places.map((p) => [p.ref, p.name, p.category])).toEqual([
+      ['node/1', 'Sample Café', 'coffee-and-bakeries'],
+      ['node/2', 'Petals', 'shopping'],
+      ['way/20', 'Sample Grill', 'restaurants'],
+    ]);
+    expect(places[0]).toMatchObject({
+      street: '12 Test Road',
+      zip: '33432',
+      phone: '(561) 555-0100',
+      website: 'https://samplecafe.example/',
+      cuisine: 'Coffee shop, bagel',
+    });
+    expect(places[1]!.street).toBeNull();
+    // A building sits at the average of its points.
+    expect(places[2]!.lat).toBeCloseTo((26.349 * 3 + 26.348) / 4, 6);
+  });
+
+  it('formats phones and keeps only web links', () => {
+    expect(formatPhone('561.555.0100; 561-555-0199')).toBe('(561) 555-0100');
+    expect(formatPhone('+44 20 7946 0000')).toBe('+44 20 7946 0000');
+    expect(cleanWebsite('javascript:alert(1)')).toBeNull();
+    expect(cleanWebsite('http://example.com/menu')).toBe('http://example.com/menu');
   });
 });

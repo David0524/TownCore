@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { categoryCounts, MIN_INDEXABLE, searchListings } from '@towncore/directory';
+import { CategoryIcon } from '@/components/directory/CategoryIcon';
 import { Grouped } from '@/components/phone/Grouped';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
@@ -17,8 +18,12 @@ type Props = {
 };
 
 const GROUPS = [
-  { key: 'home', title: 'Home services' },
   { key: 'food', title: 'Food and drink' },
+  { key: 'shops', title: 'Shopping' },
+  { key: 'health', title: 'Health, beauty and fitness' },
+  { key: 'services', title: 'Services' },
+  { key: 'home', title: 'Home services' },
+  { key: 'fun', title: 'Hotels and things to do' },
 ] as const;
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
@@ -28,7 +33,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const total = counts.reduce((n, c) => n + c.count, 0);
   return {
     title: 'Local directory',
-    description: `Licensed businesses in ${town.name}, from Florida's state license records.`,
+    description: `Restaurants, shops, services and licensed contractors in the ${town.name} area.`,
     alternates: { canonical: '/directory', types: rssAlternate(town) },
     // Search results and a thin directory stay out of search engines (D-M4-5).
     robots: q || total < MIN_INDEXABLE ? { index: false, follow: true } : undefined,
@@ -81,8 +86,15 @@ export default async function DirectoryPage({ params, searchParams }: Props) {
             {items.map(({ category, count }) => (
               <li key={category.slug}>
                 <Link className={styles.tile} href={directoryPath(category.slug)}>
-                  <strong>{category.name}</strong>
-                  <span className="meta">{count} listed</span>
+                  <span className={styles.tileIcon}>
+                    <CategoryIcon category={category} />
+                  </span>
+                  <span className={styles.tileText}>
+                    <strong>{category.name}</strong>
+                    <span className="meta">
+                      {count.toLocaleString('en-US')} {count === 1 ? 'place' : 'places'}
+                    </span>
+                  </span>
                 </Link>
               </li>
             ))}
@@ -108,9 +120,9 @@ export default async function DirectoryPage({ params, searchParams }: Props) {
     <StandardPage town={town}>
       <LargeTitle title="Places" as="h1" always />
       <p className={`muted ${styles.intro}`}>
-        Businesses licensed by the State of Florida with a {town.name} address. Listings come from
-        the state&apos;s license records; sponsored listings are labeled, and payment never changes
-        the order of the rest.
+        Restaurants, shops and services in the {town.name} area, from OpenStreetMap, and contractors
+        and food businesses licensed by the State of Florida. Sponsored listings are labeled, and
+        payment never changes the order of the rest.
       </p>
       {layout === 'search-first' || q ? search : null}
       {q ? (
@@ -130,7 +142,7 @@ export default async function DirectoryPage({ params, searchParams }: Props) {
       ) : null}
       {counts.length === 0 ? (
         <p data-testid="directory-empty">
-          The {town.siteName} directory is being built from state license records. Check back soon.
+          The {town.siteName} directory is being built. Check back soon.
         </p>
       ) : (
         categories

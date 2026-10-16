@@ -33,19 +33,40 @@
   padding: 0;
   margin: 0 0 1.5rem;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
   gap: 0.75rem;
 }
 
+/* Category tiles (owner's request, after bocatownsquare.com): an icon in a tint, the name and
+   the count, on a hairline card. */
 .tile {
   display: grid;
-  gap: 0.25rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
   min-height: 44px;
-  padding: 0.9rem 1rem;
+  padding: 0.875rem 1rem;
+  border: var(--hairline);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--background);
   color: var(--ink);
   text-decoration: none;
+}
+
+.tileIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-capsule);
+  background: var(--tint);
+  color: var(--accent);
+}
+
+.tileText {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
 }
 
 .tile:hover strong {
