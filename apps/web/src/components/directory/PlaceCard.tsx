@@ -30,6 +30,7 @@ export function PlaceCard({ listing, label }: { listing: Listing; label?: string
           {[listing.address, listing.zip].filter(Boolean).join(', ')}
         </p>
       ) : null}
+      {contact && listing.phone ? <p className={styles.where}>{listing.phone}</p> : null}
       {contact && (listing.phone || listing.website) ? (
         <div className={styles.actions}>
           {listing.phone ? (

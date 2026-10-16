@@ -102,11 +102,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           {q ? `No ${category.name.toLowerCase()} match “${q}”.` : 'No businesses listed yet.'}
         </p>
       ) : category.group !== 'home' ? (
-        <>
+        <section aria-labelledby="organic">
           <h2 className="sr-only" id="organic">
             {q ? `Matching “${q}”` : `All ${category.name.toLowerCase()}`}
           </h2>
-          <ul className={places.grid} aria-labelledby="organic">
+          <ul className={places.grid}>
             {listings.map((listing) => (
               <li key={listing.id}>
                 <PlaceCard
@@ -131,7 +131,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
               Showing {listings.length} of {total}. Search by name to find others.
             </p>
           ) : null}
-        </>
+        </section>
       ) : (
         <Grouped
           title={q ? `Matching “${q}”` : `All ${category.name.toLowerCase()}`}

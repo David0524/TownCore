@@ -24,12 +24,12 @@ test('the directory home lists categories with counts', async ({ page }) => {
   await page.goto(`${harbor}/directory`);
   const main = page.getByRole('main');
   await expect(main.getByRole('heading', { name: 'Places', level: 1 })).toBeVisible();
-  await expect(main.getByRole('link', { name: /Plumbers\s*5 listed/ })).toHaveAttribute(
+  await expect(main.getByRole('link', { name: /Plumbers\s*5 places/ })).toHaveAttribute(
     'href',
     '/directory/plumbers',
   );
-  await expect(main.getByRole('link', { name: /Roofers\s*2 listed/ })).toBeVisible();
-  await expect(main.getByRole('link', { name: /Restaurants\s*1 listed/ })).toBeVisible();
+  await expect(main.getByRole('link', { name: /Roofers\s*2 places/ })).toBeVisible();
+  await expect(main.getByRole('link', { name: /Restaurants\s*1 place\b/ })).toBeVisible();
 });
 
 test('search finds a business by name and is not indexed', async ({ page }) => {
