@@ -12,7 +12,8 @@
     "smoke": "node scripts/smoke.mjs",
     "weather:once": "tsx src/weather-once.ts",
     "maps:once": "tsx src/maps-once.ts",
-    "photos:once": "tsx src/photos-once.ts"
+    "photos:once": "tsx src/photos-once.ts",
+    "illustrations": "tsx src/illustrations-cli.ts"
   },
   "dependencies": {
     "@towncore/adapters": "workspace:*",
@@ -21,6 +22,7 @@
     "@towncore/directory": "workspace:*",
     "@towncore/email": "workspace:*",
     "@towncore/mail": "workspace:*",
+    "@towncore/photos": "workspace:*",
     "@towncore/pipeline": "workspace:*",
     "pg-boss": "^12.38.0",
     "pino": "^10.4.0"

@@ -4,13 +4,14 @@ import { TypographicCard, type CardFigure } from '@/components/news/TypographicC
 import { articleImage } from '@/modules/data';
 import { DataGraphic } from './DataGraphic';
 import { MapGraphic } from './MapGraphic';
+import { SectionIllustration } from './SectionIllustration';
 import { SentPhoto } from './SentPhoto';
 import { StockPhoto } from './StockPhoto';
 
 /**
  * The article's chosen visual (CLAUDE.md §11c): a data graphic built from its records, or the
  * block-level map, a guide's credited stock photo, an approved photo someone sent us (or an
- * approved, labeled AI illustration), or the typographic card the router always falls back to.
+ * approved, labeled AI illustration, its own or a section one from the library), or the typographic card the router always falls back to.
  */
 export async function ArticleVisual({
   town,
@@ -38,6 +39,9 @@ export async function ArticleVisual({
   }
   if (image.spec.type === 'photo') {
     return <SentPhoto kind={image.kind} spec={image.spec} alt={image.alt} />;
+  }
+  if (image.spec.type === 'illustration') {
+    return <SectionIllustration spec={image.spec} alt={image.alt} />;
   }
   return (
     <TypographicCard

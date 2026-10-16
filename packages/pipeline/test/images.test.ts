@@ -10,6 +10,7 @@ describe('image options by beat', () => {
     expect(imageOptions({ beat: 'development', kind: 'story' })).toEqual([
       'map',
       'data-graphic',
+      'ai-illustration',
       'typographic-card',
     ]);
     expect(imageOptions({ beat: 'public-safety', kind: 'story' })).toEqual([
