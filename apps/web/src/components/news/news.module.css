@@ -32,9 +32,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid var(--ink);
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.25rem;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .sectionHeader h1,

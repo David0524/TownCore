@@ -1,0 +1,145 @@
+/* The directory's category bar: colored round icons over the name and count, one row that
+   scrolls sideways; the current kind is underlined in the brand color. */
+.bar {
+  margin: 0.5rem 0 1.5rem;
+  border-bottom: var(--hairline);
+}
+
+.frame {
+  position: relative;
+}
+
+.scroller {
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.row {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.25rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.row li {
+  flex: none;
+  scroll-snap-align: start;
+}
+
+.groupStart {
+  margin-left: 0.75rem;
+  padding-left: 0.75rem;
+  border-left: var(--hairline);
+}
+
+.item {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  width: 6.75rem;
+  min-height: 44px;
+  padding: 0.5rem 0.25rem 0.75rem;
+  border-bottom: 3px solid transparent;
+  color: var(--ink);
+  text-align: center;
+  text-decoration: none;
+}
+
+.item:hover .name {
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.item[aria-current='page'] {
+  border-bottom-color: var(--accent);
+}
+
+.item[aria-current='page'] .name {
+  font-weight: 600;
+}
+
+.round {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-capsule);
+  background: var(--tint-bg);
+  color: var(--tint-ink);
+}
+
+.item[aria-current='page'] .round {
+  outline: 2px solid var(--tint-ink);
+  outline-offset: 2px;
+}
+
+.name {
+  font-size: 0.875rem;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.count {
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.arrow {
+  position: absolute;
+  top: 1.25rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: var(--hairline);
+  border-radius: var(--radius-capsule);
+  background: var(--background);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.375rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.arrow[hidden] {
+  display: none;
+}
+
+.prev {
+  left: -0.5rem;
+}
+
+.next {
+  right: -0.5rem;
+}
+
+/* Phones swipe; the arrows are for pointers. */
+@media (max-width: 599.98px) {
+  .arrow {
+    display: none;
+  }
+
+  .item {
+    width: 5.75rem;
+  }
+}
+
+.round svg {
+  width: 1.375rem;
+  height: 1.375rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

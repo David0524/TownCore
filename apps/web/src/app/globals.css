@@ -7,7 +7,8 @@
 :root {
   --measure: 42rem;
   --gutter: 1rem;
-  --wide: 72rem;
+  /* Wide enough to use the screen (owner, 2026-10-16: "use the full screen"). */
+  --wide: 84rem;
   /* Type scale by role (docs/plans/M4b.md, revisions 1 and 4); rem so it follows the reader's
      text size setting. */
   --fs-display: clamp(2.125rem, 1.4rem + 3vw, 3.625rem);
@@ -226,5 +227,34 @@ a:hover {
   /* No mono on phones; metadata is Footnote in secondary label. */
   .meta {
     letter-spacing: 0;
+  }
+}
+
+/* Wide screens: roomier gutters. */
+@media (min-width: 64rem) {
+  :root {
+    --gutter: 2rem;
+  }
+}
+
+/* The town header stays at the top while the page scrolls (owner, 2026-10-16: "the header
+   should slide down with the rest of the page"), on a translucent bar; phones have their own
+   sticky navigation bar. In-page links land below it. */
+@media (min-width: 600px) {
+  html {
+    scroll-padding-top: 5.5rem;
+  }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: color-mix(in srgb, var(--background) 88%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    backdrop-filter: saturate(180%) blur(16px);
+  }
+
+  .site-header header {
+    background: transparent;
   }
 }

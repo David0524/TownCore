@@ -50,20 +50,6 @@ export const GoodMorning: HomeModuleComponent = async ({ town, theme }) => {
       <p className={styles.tagline}>
         News, events and local businesses in {town.name}, from the public record.
       </p>
-      <form action="/search" method="get" role="search" className={styles.heroSearch}>
-        <label htmlFor="hero-q" className="sr-only">
-          Search {town.siteName}
-        </label>
-        <input
-          id="hero-q"
-          name="q"
-          type="search"
-          placeholder="Search news and guides"
-          autoComplete="off"
-          maxLength={100}
-        />
-        <button type="submit">Search</button>
-      </form>
     </div>
   );
 };
