@@ -3,7 +3,9 @@ import type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from '../
 
 // YouTube meeting videos through the YouTube Data API v3 (owner's decision, 2026-10-16), the only
 // allowed way to list a town's videos: youtube.com's robots.txt disallows the channel RSS feed,
-// and Granicus video is off-limits. www.googleapis.com has no robots.txt rules (404). Records keep
+// and Granicus video is off-limits. The API's own host, youtube.googleapis.com, serves YouTube's
+// robots.txt, which has no rule for /youtube/v3/. (www.googleapis.com serves the same API, but
+// cloud sessions add a Google OAuth token there that overrides the key.) Records keep
 // metadata only (title, times, duration, whether the owner allows embedding); the site embeds the
 // video itself with a click-to-play player. Captions aren't available: the API gives them only to
 // the channel's owner.
@@ -14,7 +16,7 @@ import type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from '../
 // Source config: { handle?: '@cityofdelraybeachfl' | channelId?: 'UC…',
 //                  titleMatch?: regex source (default: meeting words), days?: number }
 
-export const YOUTUBE_API = 'https://www.googleapis.com/youtube/v3';
+export const YOUTUBE_API = 'https://youtube.googleapis.com/youtube/v3';
 /** Titles that look like public meetings; a channel also posts promos and event clips. */
 const MEETING_TITLE =
   /\b(meeting|commission|council|board|committee|workshop|hearing|magistrate|agency|cra)\b/i;

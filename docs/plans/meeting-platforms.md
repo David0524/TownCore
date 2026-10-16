@@ -111,7 +111,7 @@ Tally for the 27 municipalities above (Broward County excluded): Legistar 9, Civ
 
 ### 3.5 YouTube Data API v3
 - Docs: `https://developers.google.com/youtube/v3`; quota page (fetched): "default quota allocation of 100 search.list calls, 100 videos.insert calls, and 10,000 units per day combined for all other endpoints"; `channels.list`, `playlistItems.list`, `videos.list` cost 1; `captions.list` 50. Terms: `https://developers.google.com/youtube/terms/api-services-terms-of-service` (not fetched today).
-- `www.youtube.com/robots.txt` includes `Disallow: /feeds/videos.xml` (confirmed again). `www.googleapis.com/robots.txt` -> 404.
+- `www.youtube.com/robots.txt` includes `Disallow: /feeds/videos.xml` (confirmed again). `www.googleapis.com/robots.txt` -> 404. The adapter calls the same API at `youtube.googleapis.com` (2026-10-16), whose robots.txt is YouTube's and has no rule for `/youtube/v3/`; cloud sessions inject a Google OAuth token on `www.googleapis.com` that overrides the API key (HTTP 401).
 - Caption download through the API needs OAuth from the video owner (unverified today); plan on metadata only.
 
 ### 3.6 CivicPlus Agenda Center - `/AgendaCenter` on CivicEngage sites
