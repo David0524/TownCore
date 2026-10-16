@@ -29,6 +29,7 @@ import { llmTown } from './finder';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { uniqueSlug } from './publish';
 import {
+  inspectionsRoundup,
   meetingsRoundup,
   newBusinessesRoundup,
   newLicensesRoundup,
@@ -279,6 +280,7 @@ function buildTemplate(
   if (key.startsWith('roundup:new-businesses:'))
     return newBusinessesRoundup(info, weekOf(week!), recs);
   if (key.startsWith('roundup:new-licenses:')) return newLicensesRoundup(info, weekOf(week!), recs);
+  if (key.startsWith('roundup:inspections:')) return inspectionsRoundup(info, weekOf(week!), recs);
   if (key.startsWith('alert:') && recs[0]) return weatherAlert(info, recs[0]);
   return null;
 }

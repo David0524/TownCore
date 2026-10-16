@@ -93,6 +93,12 @@ sources:
   - kind: business_filings
     platform: fl-dbpr
     options: { city: BOCA RATON, files: [newfood.csv] }
+  # Verified 2026-10-16: DBPR food service inspections this fiscal year, district 2 (Palm Beach,
+  # Broward, Martin), refreshed weekly; filtered to the location city. Weekly roundup (Tier 3
+  # when it names a closure or an administrative complaint).
+  - kind: inspections
+    platform: fl-dbpr
+    options: { city: BOCA RATON, files: [2fdinspi.csv] }
   # Verified 2026-10-15: Florida Division of Corporations daily filings (new businesses).
   - kind: business_filings
     platform: fl-sunbiz

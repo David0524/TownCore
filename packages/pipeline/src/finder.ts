@@ -31,7 +31,7 @@ import {
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { MIN_SOURCE_CHARS, scoreCandidate, titleSimilarity } from './scoring';
 import { createGuideCandidates } from './guides';
-import { isIssuedLicense, isNewsworthyAlert } from './templates';
+import { hasInspectionFailures, isIssuedLicense, isNewsworthyAlert } from './templates';
 import { cannotBeArticle, decideTier } from './tiers';
 import { isoLocalDate, localDate, localWeekStart, startOfLocalDay } from './time';
 
@@ -240,6 +240,19 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       recordIds: licenses.map((r) => r.id),
       now,
     });
+    // Restaurant inspections: a week that names a closure or complaint needs a person (§7).
+    const inspections = await townRecords(db, town.id, 'inspection', from, to);
+    const failures = hasInspectionFailures(inspections.map((r) => r.raw));
+    await roundup(db, town, report, {
+      key: `roundup:inspections:${week}`,
+      title: `Restaurant inspections, week of ${week}`,
+      beat: 'business',
+      recordIds: inspections.map((r) => r.id),
+      now,
+      ...(failures
+        ? { tier: 3, tierReason: 'names businesses with failed inspections (§7 Tier 3)' }
+        : {}),
+    });
   }
 }
 
@@ -247,7 +260,15 @@ async function roundup(
   db: Db,
   town: TownRow,
   report: FinderReport,
-  item: { key: string; title: string; beat: string; recordIds: string[]; now: Date },
+  item: {
+    key: string;
+    title: string;
+    beat: string;
+    recordIds: string[];
+    now: Date;
+    tier?: 1 | 3;
+    tierReason?: string;
+  },
 ) {
   if (item.recordIds.length === 0) return;
   const id = await insertCandidate(db, {
@@ -257,8 +278,11 @@ async function roundup(
     title: item.title,
     beat: item.beat,
     recordIds: item.recordIds,
-    proposedTier: 1,
-    tierReasons: ['roundup built in code from public records'],
+    proposedTier: item.tier ?? 1,
+    tierReasons: [
+      'roundup built in code from public records',
+      ...(item.tierReason ? [item.tierReason] : []),
+    ],
     status: 'accepted',
     acceptedAt: item.now,
   });
