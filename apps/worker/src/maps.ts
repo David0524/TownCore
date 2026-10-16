@@ -61,7 +61,13 @@ async function townsWithPoints(db: Db, slug?: string) {
 export async function refreshBasemaps(
   db: Db,
   logger: Logger,
-  opts: { slug?: string; fetcher?: Fetcher; now?: Date } = {},
+  opts: {
+    slug?: string;
+    fetcher?: Fetcher;
+    now?: Date;
+    /** A state extract downloaded by hand (same file as the Geofabrik URL), instead of fetching. */
+    file?: string;
+  } = {},
 ): Promise<{ towns: number; failed: number }> {
   const fetcher = opts.fetcher ?? new Fetcher({ timeoutMs: DOWNLOAD_TIMEOUT_MS });
   let done = 0;
@@ -70,8 +76,8 @@ export async function refreshBasemaps(
     const dir = await mkdtemp(join(tmpdir(), 'osm-'));
     try {
       const url = geofabrikStateUrl(state);
-      const file = join(dir, 'extract.osm.pbf');
-      await downloadTo(fetcher, url, file);
+      const file = opts.file ?? join(dir, 'extract.osm.pbf');
+      if (!opts.file) await downloadTo(fetcher, url, file);
       // One pass over the state's file for all its towns.
       const boxes = list.map((t) => bboxAround(t.lat, t.lon, BASEMAP_RADIUS_KM));
       const all = await extractBasemaps(pbfFileFrames(file), boxes);

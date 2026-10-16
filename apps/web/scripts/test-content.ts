@@ -45,6 +45,11 @@ type TestStory = {
   address?: string;
   /** A roundup: extra sample filing records this many days ago each (one record per entry). */
   roundupDaysAgo?: number[];
+  /**
+   * A meeting recap: the source record is the clerk's recorded actions for this body, and the
+   * town's channel has a video of the meeting the same day (owner's decision, 2026-10-16).
+   */
+  meeting?: { body: string; videoId: string; videoTitle: string };
 };
 
 const testParagraph = (siteName: string, n: number) =>
@@ -113,6 +118,22 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
           url: 'https://www.myboca.us/',
         },
         correction: 'Test correction: this note shows how a correction appears on a story.',
+      },
+      {
+        slug: 'test-meeting-recap',
+        headline: `[TEST] Sample meeting recap for ${siteName}`,
+        dek: 'A fictional recap used to check the meeting video. It is not news.',
+        beat: 'government',
+        paragraphs: paragraphs(4),
+        source: {
+          title: 'Actions: City Commission: Regular Meeting (test source)',
+          url: 'https://www.myboca.us/',
+        },
+        meeting: {
+          body: 'City Commission',
+          videoId: 'testVideo01',
+          videoTitle: 'City Commission Regular Meeting (test video)',
+        },
       },
       {
         slug: 'test-guide-trash',
@@ -240,13 +261,31 @@ export async function seedTestContent(
           sourceId: source!.id,
           townId: town.id,
           externalId: `test-${story.slug}`,
-          type: 'agenda',
+          type: story.meeting ? 'meeting-actions' : 'agenda',
           title: story.source.title,
           url: story.source.url,
           occurredAt: publishedAt,
           contentHash: `test-${story.slug}`,
+          ...(story.meeting ? { raw: { body: story.meeting.body } } : {}),
         })
         .returning();
+      if (story.meeting) {
+        await tx.insert(records).values({
+          sourceId: source!.id,
+          townId: town.id,
+          externalId: `test-${story.slug}-video`,
+          type: 'meeting-video',
+          title: story.meeting.videoTitle,
+          url: `https://www.youtube.com/watch?v=${story.meeting.videoId}`,
+          occurredAt: new Date(publishedAt.getTime() + 60_000),
+          contentHash: `test-${story.slug}-video`,
+          raw: {
+            videoId: story.meeting.videoId,
+            channelTitle: 'Sample city channel (test)',
+            embeddable: true,
+          },
+        });
+      }
       const chart = story.roundupDaysAgo
         ? await tx
             .insert(records)

@@ -30,6 +30,7 @@ import {
   type ImageChoice,
 } from '@towncore/pipeline';
 import { db } from '@/lib/db';
+import { pickMeetingVideo, type MeetingVideo } from '@/lib/meeting-video';
 
 /**
  * The town's published articles in rank order (CLAUDE.md §6a): newsworthiness × freshness ×
@@ -327,3 +328,38 @@ export async function indexableTopics(townId: string): Promise<string[]> {
     .groupBy(entities.slug);
   return rows.filter((r) => r.n >= TOPIC_INDEX_MIN_ARTICLES).map((r) => r.slug);
 }
+
+/**
+ * The meeting video to embed on a story about a meeting (owner's decision, 2026-10-16): a cited
+ * video, the meeting platform's own YouTube link, or the town channel's video of that meeting.
+ */
+export const storyMeetingVideo = cache(
+  async (
+    townId: string,
+    timeZone: string,
+    sourceRecords: Array<
+      Pick<typeof records.$inferSelect, 'type' | 'title' | 'occurredAt' | 'raw'>
+    >,
+  ): Promise<MeetingVideo | null> => {
+    const days = sourceRecords.filter((r) => r.occurredAt).map((r) => r.occurredAt!.getTime());
+    if (days.length === 0) return pickMeetingVideo(sourceRecords, [], timeZone);
+    // Channel videos within a day of the story's meetings.
+    const videos = await db()
+      .select({
+        type: records.type,
+        title: records.title,
+        occurredAt: records.occurredAt,
+        raw: records.raw,
+      })
+      .from(records)
+      .where(
+        and(
+          eq(records.townId, townId),
+          eq(records.type, 'meeting-video'),
+          gte(records.occurredAt, new Date(Math.min(...days) - 86_400_000)),
+          lt(records.occurredAt, new Date(Math.max(...days) + 2 * 86_400_000)),
+        ),
+      );
+    return pickMeetingVideo(sourceRecords, videos, timeZone);
+  },
+);

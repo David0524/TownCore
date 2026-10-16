@@ -17,7 +17,7 @@ export {
   toSourceConfig,
   type IngestResult,
 } from './ingest';
-export { findAdapter, getAdapter, listAdapters, registerAdapter } from './registry';
+export { findAdapter, getAdapter, listAdapters, missingEnv, registerAdapter } from './registry';
 export { defaultSchedule, intervalMs, isDue } from './schedule';
 export type {
   AdapterContext,
@@ -31,6 +31,8 @@ export { nwsAdapter } from './nws';
 export { civicplusAdapter } from './civicplus';
 export { legistarAdapter, legistarClient } from './legistar';
 export { civicclerkAdapter, civicclerkTenant } from './civicclerk';
+export { fetchSwagitTranscript, swagitVideo, tidyTranscript } from './swagit';
+export { isoDurationSeconds, youtubeAdapter, youtubeChannel } from './youtube';
 export { extractPage, pageAdapter } from './page';
 export { parseIcal, zonedTimeToUtc } from './lib/ical';
 export { flDbprAdapter } from './fl-dbpr';

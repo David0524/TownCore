@@ -6,7 +6,7 @@ import { createDb, eq, sources, towns } from '@towncore/db';
 import '../adapters';
 import { Fetcher } from '../http/fetcher';
 import { ingestSource } from '../ingest';
-import { getAdapter } from '../registry';
+import { getAdapter, missingEnv } from '../registry';
 
 loadDotEnv();
 const slug = process.argv[2];
@@ -22,6 +22,13 @@ try {
     const adapter = getAdapter(source.adapter);
     if (!adapter) {
       console.log(`${town} ${source.kind}/${source.platform}: no adapter, skipped`);
+      continue;
+    }
+    const missing = missingEnv(adapter);
+    if (missing.length > 0) {
+      console.log(
+        `${town} ${source.kind}/${source.platform}: needs ${missing.join(', ')}, skipped`,
+      );
       continue;
     }
     const result = await ingestSource(db, source, adapter, fetcher);
