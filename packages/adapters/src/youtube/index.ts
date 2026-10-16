@@ -128,17 +128,28 @@ export function titleTime(title: string, timeZone: string): Date | null {
   return zonedTimeToUtc(year, month, day, hour, m[5] ? Number(m[5]) : 0, 0, timeZone);
 }
 
+/** Uploads come days after the meeting at most; a title date further off is something else. */
+const TITLE_DATE_MAX_DAYS_BEFORE_UPLOAD = 14;
+
 /**
  * When the meeting happened: the stream's start; for an upload, the date in its title (a meeting
- * can be posted days later); else the upload time.
+ * can be posted days later) when it's plausible for that upload; else the upload time.
  */
 export function videoTime(video: YouTubeVideo, timeZone: string): Date | null {
   const at =
     video.liveStreamingDetails?.actualStartTime ?? video.liveStreamingDetails?.scheduledStartTime;
   if (at) return new Date(at);
+  const uploaded = video.snippet?.publishedAt ? new Date(video.snippet.publishedAt) : null;
   const titled = titleTime(video.snippet?.title ?? '', timeZone);
-  if (titled) return titled;
-  return video.snippet?.publishedAt ? new Date(video.snippet.publishedAt) : null;
+  if (
+    titled &&
+    (!uploaded ||
+      (titled.getTime() <= uploaded.getTime() + 86_400_000 &&
+        uploaded.getTime() - titled.getTime() <= TITLE_DATE_MAX_DAYS_BEFORE_UPLOAD * 86_400_000))
+  ) {
+    return titled;
+  }
+  return uploaded;
 }
 
 async function fetchVideos(source: SourceConfig, ctx: AdapterContext): Promise<RawRecord[]> {

@@ -5,7 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Fetcher } from '../src/http/fetcher';
 import { replayFetch, type FixtureFile } from '../src/http/fixtures';
 import { missingEnv } from '../src/registry';
-import { isoDurationSeconds, titleTime, youtubeAdapter, youtubeChannel } from '../src/youtube';
+import {
+  isoDurationSeconds,
+  titleTime,
+  videoTime,
+  youtubeAdapter,
+  youtubeChannel,
+} from '../src/youtube';
 import type { SourceConfig } from '../src/types';
 
 // Recorded live from the City of Delray Beach channel (linked from delraybeach.legistar.com)
@@ -164,6 +170,34 @@ describe('youtube', () => {
     expect(titleTime('CRA Meeting 12-01-2026', tz)).toEqual(new Date('2026-12-01T17:00:00Z'));
     expect(titleTime('Budget Discussion for Fiscal Year 2026-27', tz)).toBeNull();
     expect(titleTime('Meeting 13-45-2026', tz)).toBeNull();
+  });
+
+  it("dates an upload by its title only when that's plausible", () => {
+    const tz = 'America/New_York';
+    const upload = (title: string) => ({
+      id: 'x',
+      snippet: { title, publishedAt: '2026-09-26T02:28:09Z' },
+    });
+    expect(videoTime(upload('City Commission 09-22-2026 5:00 PM'), tz)).toEqual(
+      new Date('2026-09-22T21:00:00Z'),
+    );
+    // A stream's start always wins.
+    expect(
+      videoTime(
+        {
+          ...upload('City Commission 09-22-2026 5:00 PM'),
+          liveStreamingDetails: { actualStartTime: '2026-09-22T21:03:00Z' },
+        },
+        tz,
+      ),
+    ).toEqual(new Date('2026-09-22T21:03:00Z'));
+    // A title date after the upload, or weeks before it, isn't the meeting's: upload time.
+    expect(videoTime(upload('Commission 10-30-2026'), tz)).toEqual(
+      new Date('2026-09-26T02:28:09Z'),
+    );
+    expect(videoTime(upload('Commission 06-02-2026'), tz)).toEqual(
+      new Date('2026-09-26T02:28:09Z'),
+    );
   });
 
   it('needs its key; ingest skips the source while it is missing', async () => {

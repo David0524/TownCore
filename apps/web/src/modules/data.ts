@@ -345,8 +345,9 @@ export const storyMeetingVideo = cache(
   ): Promise<MeetingVideo | null> => {
     const days = sourceRecords.filter((r) => r.occurredAt).map((r) => r.occurredAt!.getTime());
     if (days.length === 0) return pickMeetingVideo(sourceRecords, [], timeZone);
-    // Channel videos within a day of the story's meetings.
-    const videos = await db()
+    // Channel videos and the town's meetings within a day of the story's meetings (a video goes
+    // to one meeting when a body meets twice in a day).
+    const nearby = await db()
       .select({
         type: records.type,
         title: records.title,
@@ -357,11 +358,13 @@ export const storyMeetingVideo = cache(
       .where(
         and(
           eq(records.townId, townId),
-          eq(records.type, 'meeting-video'),
+          inArray(records.type, ['meeting-video', 'meeting']),
           gte(records.occurredAt, new Date(Math.min(...days) - 86_400_000)),
           lt(records.occurredAt, new Date(Math.max(...days) + 2 * 86_400_000)),
         ),
       );
-    return pickMeetingVideo(sourceRecords, videos, timeZone);
+    const videos = nearby.filter((r) => r.type === 'meeting-video');
+    const meetings = nearby.filter((r) => r.type === 'meeting');
+    return pickMeetingVideo(sourceRecords, videos, timeZone, meetings);
   },
 );
