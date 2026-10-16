@@ -29,7 +29,8 @@
     "weather:once": "pnpm --filter @towncore/worker weather:once",
     "maps:once": "pnpm --filter @towncore/worker maps:once",
     "mail:import": "pnpm --silent --filter @towncore/mail import",
-    "towns:rank": "pnpm --silent --filter @towncore/launcher towns:rank"
+    "towns:rank": "pnpm --silent --filter @towncore/launcher towns:rank",
+    "launch": "pnpm --silent --filter @towncore/launcher launch"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

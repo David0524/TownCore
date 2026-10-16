@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "towns:rank": "tsx scripts/rank.ts"
+    "towns:rank": "tsx scripts/rank.ts",
+    "launch": "tsx scripts/launch.ts"
   },
   "dependencies": {
     "@towncore/adapters": "workspace:*",
