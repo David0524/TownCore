@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { townContactEmail, type TownConfig } from '@towncore/config';
 import { getListing, listingCategory, listingInTheNews, listingPlace } from '@towncore/directory';
 import { apDate } from '@towncore/pipeline';
 import { Grouped } from '@/components/phone/Grouped';
@@ -44,8 +43,7 @@ export default async function BusinessPage({ params }: Props) {
   const category = listingCategory(listing);
   const news = await listingInTheNews(db(), town.id, listing.name);
   const claimed = Boolean(listing.claimedAt);
-  const contact = townContactEmail(town.config as TownConfig);
-  const claimHref = `mailto:${contact}?subject=${encodeURIComponent(`Claim my listing: ${listing.name} (${listing.licenseNumber ?? listing.slug})`)}`;
+  const claimHref = `/directory/claim/${listing.slug}`;
 
   return (
     <StandardPage town={town}>
@@ -101,14 +99,35 @@ export default async function BusinessPage({ params }: Props) {
             </dd>
           </>
         ) : null}
+        {claimed && listing.hours ? (
+          <>
+            <dt>Hours</dt>
+            <dd className={styles.pre}>{listing.hours}</dd>
+          </>
+        ) : null}
+        {claimed && listing.serviceArea ? (
+          <>
+            <dt>Serves</dt>
+            <dd>{listing.serviceArea}</dd>
+          </>
+        ) : null}
       </dl>
+      {claimed && listing.description ? (
+        <p className={`${styles.note} ${styles.pre}`} data-testid="listing-description">
+          {listing.description}
+        </p>
+      ) : null}
       <section className={styles.cta} data-slot="directory.business.cta" aria-label="Contact">
         {claimed && listing.phone ? (
           <a className="button" href={`tel:${listing.phone.replace(/[^\d+]/g, '')}`}>
             Call {listing.name}
           </a>
         ) : null}
-        {claimed ? null : (
+        {claimed ? (
+          <a className={`button ${styles.secondary}`} href="/owner" data-testid="manage">
+            Owner? Manage this listing
+          </a>
+        ) : (
           <a className={`button ${styles.secondary}`} href={claimHref} data-testid="claim">
             Is this your business? Claim this listing
           </a>

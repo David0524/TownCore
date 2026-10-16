@@ -18,6 +18,9 @@ export type MimeInput = {
   inReplyTo?: string | null;
   references?: string[];
   attachments?: OutboundAttachment[];
+  replyTo?: string;
+  /** Automatic account mail (sign-in links, verifications): marked so auto-responders stay quiet. */
+  autoSubmitted?: boolean;
 };
 
 export function newMessageId(domain: string): string {
@@ -42,7 +45,10 @@ export async function buildMime(input: MimeInput): Promise<Buffer> {
       contentType: a.contentType,
       content: a.content,
     })),
-    headers: { 'X-Auto-Response-Suppress': 'OOF, AutoReply' },
+    replyTo: input.replyTo,
+    headers: input.autoSubmitted
+      ? { 'Auto-Submitted': 'auto-generated', 'X-Auto-Response-Suppress': 'All' }
+      : { 'X-Auto-Response-Suppress': 'OOF, AutoReply' },
   });
   return new Promise((resolve, reject) =>
     composer.compile().build((error, message) => (error ? reject(error) : resolve(message))),

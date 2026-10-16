@@ -1,4 +1,14 @@
-import { and, businesses, eq, records, sources, type Db, type Town } from '@towncore/db';
+import {
+  and,
+  businessClaims,
+  businesses,
+  eq,
+  inArray,
+  records,
+  sources,
+  type Db,
+  type Town,
+} from '@towncore/db';
 
 // Fictional directory listings for the fixture towns (never Boca), so e2e covers the directory
 // pages: one category with enough listings to be indexed, one thin one, and a claimed listing.
@@ -52,6 +62,17 @@ const fixtures: Fixture[] = [
 ];
 
 export async function seedTestDirectory(db: Db, town: Town): Promise<number> {
+  const old = await db
+    .select({ id: businesses.id })
+    .from(businesses)
+    .where(and(eq(businesses.townId, town.id), eq(businesses.dataSource, TEST_DIRECTORY_SOURCE)));
+  if (old.length)
+    await db.delete(businessClaims).where(
+      inArray(
+        businessClaims.businessId,
+        old.map((b) => b.id),
+      ),
+    );
   await db
     .delete(businesses)
     .where(and(eq(businesses.townId, town.id), eq(businesses.dataSource, TEST_DIRECTORY_SOURCE)));
