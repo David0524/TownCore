@@ -55,8 +55,8 @@
   }
 }
 
-/* Phones (canvas HomePhone): the band's columns step aside so the Today conditions, which
-   order themselves first, come before the top story; the rest keeps its order. */
+/* Phones: the band's columns step aside into one column: the top story, the signup, the Today
+   conditions, then the rest. */
 @media (max-width: 599.98px) {
   .band {
     display: flex;

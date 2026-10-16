@@ -75,15 +75,15 @@
   gap: 0.75rem;
 }
 
-/* Phones: the Today wrapper steps aside so its conditions can lead the band (see home.module.css)
-   while "Also today" keeps its place after the lead and the signup. */
+/* Phones: the top story leads, its picture showing on the first screen so there's a reason to
+   scroll (owner, 2026-10-16); the conditions follow the signup, then "Also today". The phone bar
+   (or the weather line) keeps the weather above the fold. */
 @media (max-width: 599.98px) {
   .today {
     display: contents;
   }
 
   .conditions {
-    order: -1;
     margin-bottom: 1.5rem;
   }
 
