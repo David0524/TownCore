@@ -23,6 +23,9 @@ export const censusFiles = {
     `${WWW2}/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/acsdt5y2024-${table}.dat`,
   zctaPlace: `${WWW2}/geo/docs/maps-data/data/rel2020/zcta520/tab20_zcta520_place20_natl.txt`,
   zipBusiness: `${WWW2}/programs-surveys/cbp/datasets/2023/zbp23detail.zip`,
+  nationalPlaces: `${WWW2}/geo/docs/maps-data/data/gazetteer/2026_Gazetteer/2026_Gaz_place_national.zip`,
+  counties: (fips: string) =>
+    `${WWW2}/geo/docs/maps-data/data/gazetteer/2026_Gazetteer/2026_gaz_counties_${fips}.txt`,
 } as const;
 
 export const STATE_FIPS: Record<string, string> = {
@@ -86,6 +89,8 @@ async function* lines(path: string): AsyncGenerator<string> {
 
 export type Place = {
   geoid: string;
+  /** Two-letter state (the Gazetteer's USPS column). */
+  state?: string;
   /** "Delray Beach" (the Census name without its "city"/"town"/"village" suffix). */
   name: string;
   censusName: string;
@@ -108,6 +113,7 @@ export function parseGazetteerPlaces(text: string): Place[] {
     .filter((f) => f[col.FUNCSTAT!] === 'A')
     .map((f) => ({
       geoid: f[col.GEOID!]!,
+      state: f[col.USPS!]!,
       censusName: f[col.NAME!]!,
       name: f[col.NAME!]!.replace(SUFFIX, ''),
       lat: Number(f[col.INTPTLAT!]),
@@ -213,4 +219,41 @@ export async function readZipBusiness(path: string, state: string, naics: string
     out.set(zip, byCode);
   }
   return out;
+}
+
+/** County GEOID → name without "County"/"Parish" (Gazetteer counties file: "Palm Beach County"). */
+export function parseGazetteerCounties(text: string): Map<string, string> {
+  const [header, ...rows] = text
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .split(/\r?\n/);
+  const col = Object.fromEntries(header!.split('|').map((h, i) => [h.trim(), i]));
+  return new Map(
+    rows.map((row) => {
+      const f = row.split('|').map((v) => v.trim());
+      return [f[col.GEOID!]!, f[col.NAME!]!.replace(/\s+(County|Parish|Borough|Census Area)$/, '')];
+    }),
+  );
+}
+
+/**
+ * The county holding most of a place's people, from the population estimates' place-by-county
+ * rows (SUMLEV 157): place GEOID → county GEOID.
+ */
+export async function readPlaceCounties(path: string, fips: string) {
+  const best = new Map<string, { county: string; pop: number }>();
+  let col: Record<string, number> | null = null;
+  for await (const line of lines(path)) {
+    const f = parseCsvLine(line);
+    if (!col) {
+      col = Object.fromEntries(f.map((h, i) => [h, i]));
+      continue;
+    }
+    if (f[col.SUMLEV!] !== '157' || f[col.STATE!] !== fips) continue;
+    const place = `${fips}${f[col.PLACE!]}`;
+    const pop = Number(f[col.POPESTIMATE2025!]);
+    if ((best.get(place)?.pop ?? -1) < pop)
+      best.set(place, { county: `${fips}${f[col.COUNTY!]}`, pop });
+  }
+  return new Map([...best].map(([place, v]) => [place, v.county]));
 }

@@ -3,8 +3,10 @@ export {
   CENSUS_ATTRIBUTION,
   cachedFile,
   censusFiles,
+  parseGazetteerCounties,
   parseGazetteerPlaces,
   readAcsPlaces,
+  readPlaceCounties,
   readPopEstimates,
   readZctaPlaces,
   readZipBusiness,
@@ -38,3 +40,22 @@ export {
   listCandidates,
   type Candidate,
 } from './candidates';
+export {
+  governmentName,
+  nwsPoint,
+  resolveFrom,
+  resolveTown,
+  townSlug,
+  type NwsPoint,
+  type ResolvedTown,
+} from './resolve';
+export {
+  approvedCandidate,
+  DEFAULT_LAUNCH_DIR,
+  draftTownYaml,
+  LaunchRefused,
+  runLaunch,
+  type LaunchDeps,
+  type LaunchOptions,
+  type LaunchResult,
+} from './launch';

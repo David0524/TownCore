@@ -159,6 +159,66 @@ export const townCandidates = pgTable(
   ],
 );
 
+// A run of `pnpm launch` (docs/plans/M7.md §2). Dry run unless the operator asked for an approved
+// spend; one record per step so a stopped run resumes. Only from an approved candidate (§10).
+export const launches = pgTable(
+  'launches',
+  {
+    id: id(),
+    candidateId: uuid('candidate_id')
+      .notNull()
+      .references(() => townCandidates.id),
+    geoid: text('geoid').notNull(),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    state: text('state').notNull(),
+    status: text('status')
+      .$type<'running' | 'stopped' | 'failed' | 'ready' | 'approved'>()
+      .notNull()
+      .default('running'),
+    dryRun: boolean('dry_run').notNull().default(true),
+    /** What the operator passed (e.g. --domain), kept for resumes and the report. */
+    options: jsonb('options').notNull().default({}),
+    /** The operator's machine user, for the record; staff identity comes with go-live. */
+    startedBy: text('started_by'),
+    stoppedReason: text('stopped_reason'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('launches_geoid_idx').on(t.geoid),
+    check(
+      'launches_status',
+      sql`${t.status} in ('running', 'stopped', 'failed', 'ready', 'approved')`,
+    ),
+  ],
+);
+
+export const launchStepRecords = pgTable(
+  'launch_steps',
+  {
+    id: id(),
+    launchId: uuid('launch_id')
+      .notNull()
+      .references(() => launches.id, { onDelete: 'cascade' }),
+    step: text('step').notNull(),
+    status: text('status')
+      .$type<'pending' | 'done' | 'failed' | 'skipped'>()
+      .notNull()
+      .default('pending'),
+    /** What the step found (resolved town facts, name checks, sources …). */
+    detail: jsonb('detail'),
+    error: text('error'),
+    attempts: integer('attempts').notNull().default(0),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('launch_steps_launch_step_uq').on(t.launchId, t.step),
+    check('launch_steps_status', sql`${t.status} in ('pending', 'done', 'failed', 'skipped')`),
+  ],
+);
+
 export const staff = pgTable('staff', {
   id: id(),
   email: text('email').notNull().unique(),
