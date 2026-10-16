@@ -62,6 +62,11 @@ export function EventCard({ event, timeZone }: { event: EventCardData; timeZone:
           </span>
         ) : null}
       </span>
+      {event.url ? (
+        <svg viewBox="0 0 8 14" aria-hidden="true" className={styles.chevron}>
+          <path d="M1.5 1.5 6.5 7l-5 5.5" />
+        </svg>
+      ) : null}
     </>
   );
   return event.url ? (
