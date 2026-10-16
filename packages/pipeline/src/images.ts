@@ -506,6 +506,14 @@ export async function assignArticleImage(
 /** A library illustration isn't shown again in the same town for this long. */
 const ILLUSTRATION_REPEAT_DAYS = 14;
 
+// Words too common in guide titles to say what a guide is about.
+const GENERIC_TAGS = new Set(
+  (
+    'city town county government public local of use work works residents resident residential ' +
+    'services service state event events new rules law program programs property information'
+  ).split(' '),
+);
+
 const illustrationWords = (text: string) => new Set(text.toLowerCase().match(/[a-z][a-z-]*/g));
 
 /** A stable small number from a string, so the same story always gets the same pick. */
@@ -517,7 +525,7 @@ function stableHash(text: string): number {
 
 /**
  * The library illustration for a story (§11c, section illustrations): one made for its section
- * (guides use `guide`) and region, not shown in the town in the last two weeks, with the most of
+ * (a guide: any scene its own words name) and region, not shown in the town in the last two weeks, with the most of
  * its keywords in the headline and dek; ties broken by a stable hash, so a story keeps its pick.
  * A story that already shows one keeps it while it's in the library. Null for public safety,
  * which has none, and when nothing fits.
@@ -526,6 +534,8 @@ export function chooseLibraryIllustration(input: {
   section: string;
   state: string;
   text: string;
+  /** The headline alone: a guide is matched on its title, not its summary. */
+  title?: string;
   articleId: string;
   current: string | null;
   recent: ReadonlySet<string>;
@@ -534,19 +544,32 @@ export function chooseLibraryIllustration(input: {
 }): { shot: IllustrationShot; art: LibraryIllustration } | null {
   const shots = input.shots ?? illustrationShots;
   const library = new Map((input.library ?? illustrationLibrary).map((a) => [a.id, a]));
+  const words = illustrationWords(input.text);
+  const score = (s: IllustrationShot) => s.tags.filter((t) => words.has(t)).length;
+  // A guide explains one thing, so it only takes a scene its own words name ("garbage" → the
+  // garbage truck), from any section; otherwise it keeps its title card. Words every guide could
+  // share ("city") don't count.
+  const guide = input.section === 'guide';
+  const titleWords = illustrationWords(input.title ?? input.text);
+  const named = (s: IllustrationShot) =>
+    s.tags.some((t) => titleWords.has(t) && !GENERIC_TAGS.has(t));
+  const titleScore = (s: IllustrationShot) =>
+    s.tags.filter((t) => titleWords.has(t) && !GENERIC_TAGS.has(t)).length;
   const fits = shots.filter(
     (s) =>
       library.has(s.id) &&
-      s.sections.includes(input.section as IllustrationSection) &&
+      (guide ? named(s) : s.sections.includes(input.section as IllustrationSection)) &&
       (s.region === 'any' || s.region === input.state),
   );
   const kept = fits.find((s) => s.id === input.current);
   if (kept) return { shot: kept, art: library.get(kept.id)! };
-  const words = illustrationWords(input.text);
-  const score = (s: IllustrationShot) => s.tags.filter((t) => words.has(t)).length;
   const best = fits
     .filter((s) => !input.recent.has(s.id))
-    .map((s) => ({ s, score: score(s), tie: stableHash(`${input.articleId}:${s.id}`) }))
+    .map((s) => ({
+      s,
+      score: guide ? titleScore(s) : score(s),
+      tie: stableHash(`${input.articleId}:${s.id}`),
+    }))
     .sort((a, b) => b.score - a.score || a.tie - b.tie)[0];
   return best ? { shot: best.s, art: library.get(best.s.id)! } : null;
 }
@@ -583,6 +606,7 @@ async function pickSectionIllustration(
     section: article.kind === 'guide' ? 'guide' : article.beat,
     state: town?.state ?? '',
     text: `${article.headline} ${article.dek ?? ''}`,
+    title: article.headline,
     articleId: article.id,
     current: idOf(current?.spec),
     recent: new Set(used.map((u) => idOf(u.spec)).filter((id): id is string => id !== null)),

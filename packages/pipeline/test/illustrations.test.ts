@@ -90,6 +90,16 @@ describe('choosing a library illustration', () => {
     ).toBeNull();
   });
 
+  it('gives a guide a scene its own words name, and nothing unrelated', () => {
+    expect(
+      chooseLibraryIllustration({ ...base, section: 'guide', text: 'How the city budget works' })
+        ?.shot.id,
+    ).toBe('gov-05');
+    expect(
+      chooseLibraryIllustration({ ...base, section: 'guide', text: 'How to get a library card' }),
+    ).toBeNull();
+  });
+
   it('is stable for the same story', () => {
     const input = { ...base, section: 'government', text: 'Nothing that matches a tag' };
     expect(chooseLibraryIllustration(input)?.shot.id).toBe(
