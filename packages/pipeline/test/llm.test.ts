@@ -372,6 +372,61 @@ describe('providers', () => {
       stop: 'refusal',
       model: 'claude-sonnet-5-5',
       usage: { inputTokens: 13, outputTokens: 5, cacheReadTokens: 20 },
+      webSearches: 0,
+    });
+  });
+
+  it('anthropic: web search sends the tool, continues a paused turn and counts searches', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const reply = (content: unknown[], stop: string, searches: number) =>
+      Response.json({
+        id: `msg_${bodies.length}`,
+        type: 'message',
+        role: 'assistant',
+        model: 'claude-opus-5-5',
+        content,
+        stop_reason: stop,
+        stop_sequence: null,
+        usage: {
+          input_tokens: 100,
+          output_tokens: 10,
+          server_tool_use: { web_search_requests: searches },
+        },
+      });
+    const client = new Anthropic({
+      apiKey: 'test',
+      maxRetries: 0,
+      fetch: async (_url, init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return bodies.length === 1
+          ? reply([{ type: 'text', text: 'Searching the city site.' }], 'pause_turn', 3)
+          : reply(
+              [
+                { type: 'text', text: 'Here is what I found.' },
+                { type: 'text', text: '{"sources":[]}' },
+              ],
+              'end_turn',
+              2,
+            );
+      },
+    });
+    const response = await anthropicProvider(client).generate({
+      ...request,
+      webSearch: { maxUses: 5 },
+    });
+    expect(bodies[0]).toMatchObject({
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+    });
+    // The paused turn goes back as the assistant's partial answer.
+    expect(bodies[1]!.messages).toEqual([
+      { role: 'user', content: 'I' },
+      { role: 'assistant', content: [{ type: 'text', text: 'Searching the city site.' }] },
+    ]);
+    expect(response).toMatchObject({
+      text: '{"sources":[]}',
+      stop: 'end',
+      webSearches: 5,
+      usage: { inputTokens: 200, outputTokens: 20, cacheReadTokens: 0 },
     });
   });
 

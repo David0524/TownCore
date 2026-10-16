@@ -23,6 +23,7 @@ export {
 } from './brand';
 export {
   estimateCostUsd,
+  WEB_SEARCH_USD,
   llmProviders,
   modelPrices,
   modelRoles,
@@ -136,8 +137,11 @@ export {
   type RankingInput,
 } from './ranking';
 export {
+  LAUNCH_AI_CAP_USD,
   launchStepLabels,
   launchSteps,
+  READINESS_DAYS,
+  readinessMinimum,
   tierForPopulation,
   tierThresholds,
   type LaunchStep,

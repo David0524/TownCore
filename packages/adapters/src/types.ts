@@ -35,4 +35,23 @@ export interface SourceAdapter {
   detect(url: string, html: string): Promise<number>;
   fetch(source: SourceConfig, since: Date | null, ctx: AdapterContext): Promise<RawRecord[]>;
   healthCheck(source: SourceConfig, ctx: AdapterContext): Promise<{ ok: boolean; detail?: string }>;
+  /**
+   * Launcher discovery (M7): source settings for a page this adapter runs, for the kind wanted.
+   * Each proposal is then health-checked live before it enters a town's config.
+   */
+  propose?(
+    url: string,
+    html: string,
+    kind: SourceKind,
+    ctx: AdapterContext,
+  ): Promise<SourceProposal[]>;
 }
+
+/** A source an adapter can run for a discovered page: what goes in the town YAML. */
+export type SourceProposal = {
+  kind: SourceKind;
+  url: string;
+  options?: Record<string, string>;
+  /** What it is, for the launch report ("CivicPlus calendar: City Council & Public Meetings"). */
+  label: string;
+};

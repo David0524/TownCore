@@ -314,9 +314,18 @@ importers:
       '@towncore/db':
         specifier: workspace:*
         version: link:../db
+      '@towncore/pipeline':
+        specifier: workspace:*
+        version: link:../pipeline
+      '@towncore/prompts':
+        specifier: workspace:*
+        version: link:../prompts
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
     devDependencies:
       tsx:
         specifier: ^4.23.15

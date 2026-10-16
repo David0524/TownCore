@@ -54,6 +54,7 @@ function fakeRegistry(
   const calls: Call[] = [];
   const fetcher = new Fetcher({
     minIntervalMs: 0,
+    sleep: async () => {},
     fetchImpl: async (input, init) => {
       const url = String(input);
       const headers = new Headers(init?.headers);
@@ -97,7 +98,8 @@ function fakeRegistry(
       }
       const snap = url.match(/web\.archive\.org\/web\/(\d+)id_\/http:\/\/([^/]+)\//);
       if (snap) return new Response(opts.pages?.[snap[2]!] ?? '<html></html>');
-      throw new Error(`unexpected request ${url}`);
+      // Later launch steps (state sources for Florida) aren't part of these tests.
+      return new Response('not found', { status: 404 });
     },
   });
   return { fetcher, calls };
@@ -351,7 +353,8 @@ describe('step 2 in a launch', () => {
       site_name: 'The Delray Ledger',
       domain: 'delrayledger.com',
     });
-    expect(run.launch.stoppedReason).toMatch(/Find sources isn't built yet|isn't built yet/);
+    // The run goes on to steps 3–5 (sources.test.ts); with no sources Delray fails Rule 7 here.
+    expect(run.launch.stoppedReason).toMatch(/below the 3 a mid town needs \(Rule 7\)/);
     expect(confirms).toHaveLength(0);
   });
 

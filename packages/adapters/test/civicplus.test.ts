@@ -145,3 +145,69 @@ describe('helpers', () => {
     expect(await civicplusAdapter.detect('https://example.com/', '<html></html>')).toBe(0);
   });
 });
+
+describe('civicplus discovery (launcher, M7)', () => {
+  // An excerpt of www.myboca.us/Calendar.aspx as served on 2026-10-16: one label per calendar.
+  const label = (id: string, name: string) => `<li>
+  <label for="chkCalendarID_${id}">
+		<input type="checkbox" id="chkCalendarID_${id}" name="chkCalendarID" title="CalendarID" value="${id}" checked="checked">
+${name}
+	  </label>
+	</li>`;
+  const page = [
+    label('48', "Children's Science Explorium"),
+    label('29', 'City Council &amp; Public Meetings'),
+    label('61', 'Community Events'),
+  ].join('\n');
+  const discover = () => {
+    const urls: string[] = [];
+    const fetcher = new Fetcher({
+      fetchImpl: async (url) => {
+        urls.push(String(url));
+        if (String(url).endsWith('/robots.txt')) return new Response('', { status: 404 });
+        return new Response(page);
+      },
+      sleep: async () => {},
+      now: () => 0,
+      minIntervalMs: 0,
+    });
+    return { urls, ctx: { fetcher, now: new Date('2026-10-16T12:00:00Z') } };
+  };
+
+  it('reads the calendar list and proposes meetings, events and News Flash', async () => {
+    const { calendarCategories } = await import('../src/civicplus');
+    expect(calendarCategories(page)).toEqual([
+      { id: '48', name: "Children's Science Explorium" },
+      { id: '29', name: 'City Council & Public Meetings' },
+      { id: '61', name: 'Community Events' },
+    ]);
+    const { urls, ctx: c } = discover();
+    const home = 'https://www.example-city.gov/Home';
+    expect(await civicplusAdapter.propose!(home, '', 'agenda', c)).toEqual([
+      {
+        kind: 'agenda',
+        url: 'https://www.example-city.gov/',
+        options: { module: 'calendar', catId: '29' },
+        label: 'CivicPlus calendar: City Council & Public Meetings',
+      },
+    ]);
+    expect(urls).toContain('https://www.example-city.gov/Calendar.aspx');
+    expect((await civicplusAdapter.propose!(home, '', 'events', c))[0]!.options).toEqual({
+      module: 'calendar',
+      catId: '61',
+    });
+    expect(await civicplusAdapter.propose!(home, '', 'city_news', c)).toEqual([
+      {
+        kind: 'city_news',
+        url: 'https://www.example-city.gov/',
+        options: { module: 'newsflash', catId: 'All-newsflash.xml' },
+        label: 'CivicPlus News Flash (all categories)',
+      },
+    ]);
+    expect((await civicplusAdapter.propose!(home, '', 'police', c))[0]!.options).toEqual({
+      module: 'newsflash',
+      catId: 'All-newsflash.xml',
+    });
+    expect(await civicplusAdapter.propose!(home, '', 'permits', c)).toEqual([]);
+  });
+});

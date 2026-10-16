@@ -5,23 +5,54 @@ import type { LlmProvider, LlmRequest, LlmResponse, StopKind } from './types';
 // model default (adaptive); effort sets its depth. A refusal is returned as such so the caller
 // can send the item to human review instead of publishing.
 
+// With `webSearch`, the server-side web search tool runs inside the request; a long search can
+// pause the turn, which is continued (up to 3 times) by sending the partial answer back.
+
+/** The most continuations of a paused (searching) turn before giving up. */
+const MAX_CONTINUATIONS = 3;
+
 export function anthropicProvider(client: Anthropic = new Anthropic()): LlmProvider {
   return {
     name: 'anthropic',
+    webSearch: true,
     async generate(request: LlmRequest): Promise<LlmResponse> {
-      const message = await client.messages.create({
-        model: request.model,
-        max_tokens: request.maxOutputTokens,
-        system: [{ type: 'text', text: request.system, cache_control: { type: 'ephemeral' } }],
-        messages: [{ role: 'user', content: request.input }],
-        output_config: {
-          effort: request.effort,
-          format: { type: 'json_schema', schema: request.schema },
-        },
-      });
-      const text = message.content
-        .map((block) => (block.type === 'text' ? block.text : ''))
-        .join('');
+      const messages: Anthropic.MessageParam[] = [{ role: 'user', content: request.input }];
+      const usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
+      let webSearches = 0;
+      let message: Anthropic.Message;
+      for (let turn = 0; ; turn++) {
+        message = await client.messages.create({
+          model: request.model,
+          max_tokens: request.maxOutputTokens,
+          system: [{ type: 'text', text: request.system, cache_control: { type: 'ephemeral' } }],
+          messages,
+          ...(request.webSearch
+            ? {
+                tools: [
+                  {
+                    type: 'web_search_20250305',
+                    name: 'web_search',
+                    max_uses: request.webSearch.maxUses,
+                  },
+                ],
+              }
+            : {}),
+          output_config: {
+            effort: request.effort,
+            format: { type: 'json_schema', schema: request.schema },
+          },
+        });
+        usage.inputTokens +=
+          message.usage.input_tokens + (message.usage.cache_creation_input_tokens ?? 0);
+        usage.outputTokens += message.usage.output_tokens;
+        usage.cacheReadTokens += message.usage.cache_read_input_tokens ?? 0;
+        webSearches += message.usage.server_tool_use?.web_search_requests ?? 0;
+        if (message.stop_reason !== 'pause_turn' || turn >= MAX_CONTINUATIONS) break;
+        messages.push({ role: 'assistant', content: message.content });
+      }
+      // With tools, the JSON answer is the last text block (earlier ones narrate the search).
+      const texts = message.content.flatMap((block) => (block.type === 'text' ? [block.text] : []));
+      const text = request.webSearch ? (texts.at(-1) ?? '') : texts.join('');
       const stop: StopKind =
         message.stop_reason === 'end_turn'
           ? 'end'
@@ -30,17 +61,7 @@ export function anthropicProvider(client: Anthropic = new Anthropic()): LlmProvi
             : message.stop_reason === 'refusal'
               ? 'refusal'
               : 'other';
-      return {
-        text,
-        stop,
-        model: message.model,
-        usage: {
-          inputTokens:
-            message.usage.input_tokens + (message.usage.cache_creation_input_tokens ?? 0),
-          outputTokens: message.usage.output_tokens,
-          cacheReadTokens: message.usage.cache_read_input_tokens ?? 0,
-        },
-      };
+      return { text, stop, model: message.model, usage, webSearches };
     },
   };
 }

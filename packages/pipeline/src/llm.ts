@@ -1,6 +1,7 @@
 import {
   estimateCostUsd,
   loadEnv,
+  WEB_SEARCH_USD,
   providerModels,
   type Env,
   type LlmProviderName,
@@ -32,6 +33,8 @@ export type Prompt<T> = {
   maxOutputTokens: number;
   system: string;
   schema: z.ZodType<T>;
+  /** Web search for this prompt (launcher discovery; Anthropic only). */
+  webSearch?: { maxUses: number };
 };
 
 export type LlmTown = {
@@ -159,6 +162,8 @@ export async function callModel<T>(
   const { job, town, prompt, input } = args;
   const now = llm.now?.() ?? new Date();
 
+  if (prompt.webSearch && !provider.webSearch)
+    throw new Error(`${prompt.id} needs web search, which the ${providerName} provider lacks.`);
   const today = await todaysUsage(db, town, now);
   if (today.costUsd >= town.aiDailyCapUsd) {
     throw new SpendCapReached(town.id, `$${today.costUsd.toFixed(2)} of $${town.aiDailyCapUsd}`);
@@ -174,7 +179,9 @@ export async function callModel<T>(
   ): Promise<number> => {
     const usage = response?.usage ?? { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
     const servedBy = response?.model ?? model;
-    const costUsd = estimateCostUsd(priceKey(servedBy, model), usage);
+    const costUsd =
+      estimateCostUsd(priceKey(servedBy, model), usage) +
+      (response?.webSearches ?? 0) * WEB_SEARCH_USD;
     await db.insert(aiUsage).values({
       townId: town.id,
       job,
@@ -200,6 +207,7 @@ export async function callModel<T>(
       schema: portableSchema(prompt.schema),
       effort: prompt.effort,
       maxOutputTokens: prompt.maxOutputTokens,
+      ...(prompt.webSearch ? { webSearch: prompt.webSearch } : {}),
     });
   } catch (error) {
     await log('error');

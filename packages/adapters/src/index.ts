@@ -19,7 +19,13 @@ export {
 } from './ingest';
 export { findAdapter, getAdapter, listAdapters, registerAdapter } from './registry';
 export { defaultSchedule, intervalMs, isDue } from './schedule';
-export type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from './types';
+export type {
+  AdapterContext,
+  RawRecord,
+  SourceAdapter,
+  SourceConfig,
+  SourceProposal,
+} from './types';
 export { DOCUMENTED_APIS, documentedApi } from './http/policy';
 export { nwsAdapter } from './nws';
 export { civicplusAdapter } from './civicplus';

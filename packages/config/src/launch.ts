@@ -37,3 +37,16 @@ export function tierForPopulation(population: number): 'small' | 'mid' | 'large'
   if (population >= tierThresholds.mid) return 'mid';
   return 'small';
 }
+
+/** Rule 7 (CLAUDE.md §10 step 5): real items a day a town must reach to launch. */
+export const readinessMinimum: Record<'small' | 'mid' | 'large', number> = {
+  small: 3,
+  mid: 3,
+  large: 10,
+};
+
+/** How many days of each source the readiness step reads. */
+export const READINESS_DAYS = 30;
+
+/** AI spend cap for one launch run, across all its steps (D-M7-11). */
+export const LAUNCH_AI_CAP_USD = 25;
