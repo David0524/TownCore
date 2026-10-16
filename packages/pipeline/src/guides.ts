@@ -30,6 +30,13 @@ import { decideTier } from './tiers';
 // they fail a check.
 
 type TownRow = typeof towns.$inferSelect;
+
+/**
+ * The same fact-check prompt (wording and version) with more room to answer: a guide makes two
+ * or three times as many claims as a story, and the first live run cut 2 of 12 answers off at
+ * the stories' 12,000-token limit.
+ */
+const GUIDE_FACTCHECK = { ...factcheckV1, maxOutputTokens: 24_000 };
 type PageRecord = typeof records.$inferSelect;
 
 /** A short fingerprint of a topic's pages: changes whenever any page's text does. */
@@ -173,7 +180,7 @@ export async function writeGuide(
       const { value: checked } = await callModel(llm, {
         job: 'guide.fact-check',
         town: tTown,
-        prompt: factcheckV1,
+        prompt: GUIDE_FACTCHECK,
         input: [
           ...townLines,
           '',
