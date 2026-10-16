@@ -81,6 +81,13 @@ export const DOCUMENTED_APIS: Record<string, { name: string; terms: string }> = 
     terms:
       'https://www.census.gov/topics/research/research-transparency-public-access/open-data.html',
   },
+  // Owner approved 2026-10-16 with the M7 plan (D-M7-8): Vercel's REST API, our registrar and
+  // DNS provider. robots.txt is `Disallow: /` (an API host). Domain search needs no auth; buying
+  // needs the team token and runs only behind `--approve-spend` and a typed confirmation.
+  'api.vercel.com': {
+    name: 'Vercel REST API (domains registrar)',
+    terms: 'https://vercel.com/docs/rest-api',
+  },
 };
 
 export function documentedApi(url: URL): { name: string; terms: string } | null {

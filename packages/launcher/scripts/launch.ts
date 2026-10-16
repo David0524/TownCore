@@ -1,10 +1,14 @@
-// pnpm launch "Delray Beach, FL" [--domain delraytownsquare.com] [--approve-spend] [--resume]
+// pnpm launch "Delray Beach, FL" [--short-name Delray] [--nickname "Atlantic"] [--outlet "Name"]...
+//   [--resume] [--pick N] [--approve-spend]
 // Launches a town from an approved candidate (CLAUDE.md §10). A dry run unless --approve-spend:
-// nothing is bought, sent or deployed. Steps not built yet stop the run with that reason.
-import { launchStepLabels, requireEnv } from '@towncore/config';
+// nothing is bought, sent or deployed. Step 2 proposes names and waits for --pick; a domain is
+// bought only with --approve-spend and the domain typed back at the price shown (Rule 10).
+import { createInterface } from 'node:readline/promises';
+import { Fetcher } from '@towncore/adapters';
+import { launchStepLabels, loadEnv, requireEnv } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
 import { createDb } from '@towncore/db';
-import { LaunchRefused, resolveTown, runLaunch } from '../src';
+import { LaunchRefused, resolveTown, runLaunch, statePlaces } from '../src';
 
 loadDotEnv();
 const args = process.argv.slice(2);
@@ -12,21 +16,68 @@ const flag = (name: string) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 ? args[i + 1] : undefined;
 };
-const town = args.find((a) => !a.startsWith('--') && a.includes(','));
+const flags = (name: string) =>
+  args.flatMap((a, i) => (a === `--${name}` && args[i + 1] ? [args[i + 1]!] : []));
+const VALUE_FLAGS = ['--domain', '--short-name', '--nickname', '--outlet', '--pick'];
+const town = args.find(
+  (a, i) => !a.startsWith('--') && a.includes(',') && !VALUE_FLAGS.includes(args[i - 1] ?? ''),
+);
 if (!town) {
   console.error(
-    'Usage: pnpm launch "Town, ST" [--domain example.com] [--approve-spend] [--resume]',
+    'Usage: pnpm launch "Town, ST" [--short-name X] [--nickname X] [--outlet "Name"]... [--resume] [--pick N] [--approve-spend]',
   );
   process.exit(1);
 }
+
+/** The operator types the domain back to approve its price. Never without a terminal. */
+async function confirmPurchase(q: { domain: string; price: number; renewalPrice: number }) {
+  if (!process.stdin.isTTY) {
+    console.error('Buying a domain needs a terminal to confirm it; nothing was bought.');
+    return false;
+  }
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    console.log(
+      `\nBuy ${q.domain} for $${q.price} (renews at $${q.renewalPrice}/year, auto-renew on)?`,
+    );
+    const typed = await rl.question(`Type the domain to buy it, anything else to cancel: `);
+    return typed.trim().toLowerCase() === q.domain;
+  } finally {
+    rl.close();
+  }
+}
+
 const db = createDb(requireEnv('DATABASE_URL'), { max: 1 });
 try {
+  const fetcher = new Fetcher({ timeoutMs: 15 * 60_000 });
   const domain = flag('domain');
+  const shortName = flag('short-name');
+  const nickname = flag('nickname');
+  const outlets = flags('outlet');
+  const pick = flag('pick');
+  if (pick !== undefined && !/^[1-9]$/.test(pick))
+    throw new LaunchRefused('--pick takes 1, 2 or 3.');
   const result = await runLaunch(
-    { db, resolve: (t) => resolveTown(t) },
+    {
+      db,
+      resolve: (t) => resolveTown(t, { fetcher }),
+      names: {
+        fetcher,
+        places: (state) => statePlaces(state, { fetcher }),
+        // Only the string settings (registrar token, team, registrant contact) are read.
+        env: Object.fromEntries(
+          Object.entries(loadEnv()).filter((e): e is [string, string] => typeof e[1] === 'string'),
+        ),
+        confirmPurchase,
+      },
+    },
     {
       town,
       ...(domain ? { domain } : {}),
+      ...(shortName ? { shortName } : {}),
+      ...(nickname ? { nickname } : {}),
+      ...(outlets.length ? { outlets } : {}),
+      ...(pick ? { pick: Number(pick) } : {}),
       approveSpend: args.includes('--approve-spend'),
       resume: args.includes('--resume'),
     },

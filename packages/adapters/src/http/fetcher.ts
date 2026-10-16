@@ -94,6 +94,29 @@ export class Fetcher {
     return (await response.json()) as T;
   }
 
+  /**
+   * POST JSON to a documented API (Rule 8 allowlist only; never a page). Sent once unless
+   * `attempts` says otherwise, so a request that changes something (a purchase) is never repeated.
+   */
+  async postJson<T>(
+    url: string,
+    body: unknown,
+    headers: Record<string, string> = {},
+    attempts = 1,
+  ): Promise<{ status: number; body: T }> {
+    const target = new URL(url);
+    if (!documentedApi(target))
+      throw new FetchPolicyError(`Refusing to POST to ${url}: not a documented API`);
+    const response = await this.request(
+      target,
+      { accept: 'application/json', 'content-type': 'application/json', ...headers },
+      attempts,
+      { method: 'POST', body: JSON.stringify(body) },
+    );
+    const text = await response.text();
+    return { status: response.status, body: (text ? JSON.parse(text) : null) as T };
+  }
+
   /** RFC 9309: 4xx robots.txt → no restrictions; 5xx or unreachable → treat as fully disallowed. */
   async allowedByRobots(target: URL): Promise<boolean> {
     const origin = target.origin;
@@ -123,12 +146,14 @@ export class Fetcher {
     target: URL,
     headers: Record<string, string>,
     attempts = this.retries,
+    init: { method?: string; body?: string } = {},
   ): Promise<Response> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
         const response = await this.throttled(target.host, () =>
           this.fetchImpl(target.toString(), {
+            ...init,
             headers: { 'user-agent': this.userAgent, ...headers },
             signal: AbortSignal.timeout(this.timeoutMs),
             redirect: 'follow',
