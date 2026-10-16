@@ -14,6 +14,39 @@ test('the guides index lists guides by section and links to them', async ({ page
   await expect(link).toHaveAttribute('href', `/guides/${guide}`);
 });
 
+test('links to other sites open in a new tab; our own links stay in this one', async ({
+  page,
+  context,
+}) => {
+  await context.route('https://www.myboca.us/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<p>City page</p>' }),
+  );
+  await page.goto(`${boca}/guides/${guide}`);
+  // Any link to another site, even one written without a target (article text, say).
+  await page.evaluate(() => {
+    const link = document.createElement('a');
+    link.href = 'https://www.myboca.us/1/Plain';
+    link.textContent = 'A plain outside link';
+    document.querySelector('main')!.append(link);
+  });
+  const [popup] = await Promise.all([
+    context.waitForEvent('page'),
+    page.getByRole('link', { name: 'A plain outside link' }).click(),
+  ]);
+  await expect(popup).toHaveURL('https://www.myboca.us/1/Plain');
+  await expect(page).toHaveURL(`${boca}/guides/${guide}`);
+  await expect(page.getByRole('link', { name: 'A plain outside link' })).toHaveAttribute(
+    'rel',
+    'noopener',
+  );
+  await page
+    .getByRole('contentinfo')
+    .getByRole('link', { name: 'Corrections', exact: true })
+    .click();
+  await expect(page).toHaveURL(`${boca}/corrections`);
+  expect(context.pages()).toHaveLength(2);
+});
+
 test('a guide shows when it was updated and checked, the official-pages note and its sources', async ({
   page,
 }) => {

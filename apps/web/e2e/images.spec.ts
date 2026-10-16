@@ -17,6 +17,16 @@ test('a roundup over several days gets a data graphic built from its records', a
   );
 });
 
+test('a chart is never a cover: homepages show a picture or the title card instead', async ({
+  page,
+}) => {
+  for (const url of [boca, harbor]) {
+    await page.goto(`${url}/`);
+    await expect(page.locator('[data-module]').first()).toBeAttached();
+    await expect(page.locator('[data-module] [data-visual="data-graphic"]')).toHaveCount(0);
+  }
+});
+
 test('a story with a street address gets a block-level map with the OpenStreetMap credit', async ({
   page,
 }) => {

@@ -4,12 +4,13 @@ import { listPublishedGuides } from '@towncore/db';
 import { apDate } from '@towncore/pipeline';
 import Link from 'next/link';
 import { SectionHeader } from '@/components/news/SectionHeader';
+import { StoryThumb } from '@/components/visuals/StoryThumb';
 import { clockTime } from '@/components/weather/format';
 import { db } from '@/lib/db';
 import { articlePath } from '@/lib/paths';
 import type { Town } from '@towncore/db';
 import { readerCategories } from './categories';
-import { cityPostings, upcomingMeetings } from './data';
+import { articleImage, cityPostings, upcomingMeetings } from './data';
 import type { HomeModuleComponent } from './types';
 import styles from './front.module.css';
 
@@ -170,21 +171,30 @@ function placeName(where: string): string {
  * Essentials (M4 PR F): quick links to the town's evergreen guides, in the order its config
  * lists the topics (the most-asked first), linking to the full list.
  */
-export const Essentials: HomeModuleComponent = async ({ town }) => {
+export const Essentials: HomeModuleComponent = async ({ town, theme }) => {
   const order: string[] = ((town.config as TownConfig).guides ?? []).map((g) => g.topic);
-  const guides = (await listPublishedGuides(db(), town.id))
+  const listed = (await listPublishedGuides(db(), town.id))
     .filter((g) => g.guideTopic && order.includes(g.guideTopic))
-    .sort((a, b) => order.indexOf(a.guideTopic!) - order.indexOf(b.guideTopic!))
-    .slice(0, 6);
-  if (guides.length === 0) return null;
+    .sort((a, b) => order.indexOf(a.guideTopic!) - order.indexOf(b.guideTopic!));
+  if (listed.length === 0) return null;
+  // Picture cards (owner: "more article pictures on the home page"): each guide's own visual,
+  // the most-asked guides with a real picture first, then the rest in topic order.
+  const pictured = await Promise.all(
+    listed.map(async (g) => (await articleImage(g, town.timezone)).spec.type !== 'card'),
+  );
+  const guides = [
+    ...listed.filter((_, i) => pictured[i]),
+    ...listed.filter((_, i) => !pictured[i]),
+  ].slice(0, 6);
   return (
     <section className={styles.coming} aria-labelledby="essentials-h" data-module="essentials">
       <SectionHeader title="Essentials" href="/guides" id="essentials-h" />
-      <ul className={styles.meetings}>
+      <ul className={styles.guideCards}>
         {guides.map((g) => (
           <li key={g.id}>
-            <Link href={articlePath(g.slug, g.kind)} className={styles.meetingTitle}>
-              {g.headline}
+            <Link href={articlePath(g.slug, g.kind)} className={styles.guideCard}>
+              <StoryThumb town={town} theme={theme} article={g} />
+              <span className={styles.guideTitle}>{g.headline}</span>
             </Link>
           </li>
         ))}

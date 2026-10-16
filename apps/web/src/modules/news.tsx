@@ -36,14 +36,14 @@ export const LeadStory: HomeModuleComponent = async ({ town, theme }) => {
         town={town}
         variant="lead"
         as="h2"
-        visual={<ArticleVisual town={town} theme={theme} article={lead} figure={figure} />}
+        visual={<ArticleVisual town={town} theme={theme} article={lead} figure={figure} cover />}
       />
     </section>
   );
 };
 
 /** The Today tile: weather now (docs/plans/M4b.md). Hidden when the town has no NWS data. */
-export const TodayBento: HomeModuleComponent = async ({ town, modules }) => {
+export const TodayBento: HomeModuleComponent = async ({ town, theme, modules }) => {
   const [weather, point, articles] = await Promise.all([
     townWeather(town.id),
     townPoint(town.id),
@@ -76,7 +76,12 @@ export const TodayBento: HomeModuleComponent = async ({ town, modules }) => {
           <ul className={styles.list}>
             {also.map((article) => (
               <li key={article.id}>
-                <StoryBlock story={article} town={town} variant="today" />
+                <StoryBlock
+                  story={article}
+                  town={town}
+                  variant="today"
+                  visual={<StoryThumb town={town} theme={theme} article={article} />}
+                />
               </li>
             ))}
           </ul>

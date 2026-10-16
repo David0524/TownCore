@@ -402,3 +402,30 @@ a.meetingTitle:hover {
 :global([data-family='community']) .button :global(.meta) {
   white-space: nowrap;
 }
+
+/* Essentials as picture cards: three across in the main column, fewer where narrower. */
+.guideCards {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 1.25rem 1rem;
+}
+
+.guideCard {
+  display: grid;
+  gap: 0.5rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.guideCard:hover .guideTitle {
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.guideTitle {
+  font-weight: 500;
+  line-height: 1.3;
+}
