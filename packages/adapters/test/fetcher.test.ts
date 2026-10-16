@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { Fetcher, FetchPolicyError, retryAfterMs, type FetchFn } from '../src/http/fetcher';
+import {
+  Fetcher,
+  FetchPolicyError,
+  insideVisitTime,
+  OutsideVisitTime,
+  retryAfterMs,
+  visitWindows,
+  type FetchFn,
+} from '../src/http/fetcher';
 import { replayFetch } from '../src/http/fixtures';
 import { DOCUMENTED_APIS, isBlockedUrl, USER_AGENT } from '../src/http/policy';
 
@@ -244,6 +252,46 @@ describe('Fetcher', () => {
     expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(5_000);
     await fetcher.getText('https://slower.example/a');
     expect(fetcher.intervalFor('slower.example')).toBe(60_000);
+  });
+
+  it('reads robots.txt Visit-time for our agent, else everyone', () => {
+    const text = [
+      'User-agent: Slurp',
+      'Disallow: /',
+      'Visit-time: 0000-2359',
+      '',
+      'User-agent: *',
+      'Disallow: /images/',
+      'Crawl-delay: 5',
+      'Visit-time: 0100-0645 # UTC',
+    ].join('\n');
+    expect(visitWindows(text, USER_AGENT)).toEqual([{ from: 60, to: 405 }]);
+    expect(visitWindows(`${text}\nUser-agent: TownCoreBot\nAllow: /\n`, USER_AGENT)).toEqual([]);
+    expect(visitWindows('User-agent: *\nDisallow:\n', USER_AGENT)).toEqual([]);
+    const at = (iso: string) => new Date(`2026-10-16T${iso}:00Z`);
+    const night = [{ from: 60, to: 405 }];
+    expect(insideVisitTime(night, at('02:30'))).toBe(true);
+    expect(insideVisitTime(night, at('21:15'))).toBe(false);
+    expect(insideVisitTime([{ from: 1380, to: 120 }], at('00:30'))).toBe(true);
+    expect(insideVisitTime([], at('12:00'))).toBe(true);
+  });
+
+  it('fetches a Visit-time host only inside its window', async () => {
+    let t = Date.parse('2026-10-16T21:15:00Z');
+    const fetched: string[] = [];
+    const fetchImpl: FetchFn = async (url) => {
+      if (url.endsWith('/robots.txt'))
+        return new Response('User-agent: *\nAllow: /\nVisit-time: 0100-0645\n');
+      fetched.push(url);
+      return new Response('ok');
+    };
+    const fetcher = new Fetcher({ fetchImpl, now: () => t, sleep: async (ms) => void (t += ms) });
+    await expect(fetcher.getText('https://night.example/a')).rejects.toBeInstanceOf(
+      OutsideVisitTime,
+    );
+    expect(fetched).toEqual([]);
+    t = Date.parse('2026-10-17T02:00:00Z');
+    expect(await fetcher.getText('https://night.example/a')).toBe('ok');
   });
 
   it('parses Retry-After seconds and dates, capped at a minute', () => {

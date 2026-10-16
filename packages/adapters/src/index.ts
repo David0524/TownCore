@@ -4,6 +4,7 @@ export {
   Fetcher,
   FetchPolicyError,
   NotModified,
+  OutsideVisitTime,
   type FetchFn,
   type FetcherOptions,
 } from './http/fetcher';
@@ -34,6 +35,7 @@ export { civicclerkAdapter, civicclerkTenant } from './civicclerk';
 export { fetchSwagitTranscript, swagitVideo, tidyTranscript } from './swagit';
 export { isoDurationSeconds, titleTime, youtubeAdapter, youtubeChannel } from './youtube';
 export { extractPage, pageAdapter } from './page';
+export { feedAdapter, feedLinks, htmlToText, pageText, parseFeed } from './feed';
 export { parseIcal, zonedTimeToUtc } from './lib/ical';
 export { flDbprAdapter } from './fl-dbpr';
 export { flSunbizAdapter } from './fl-sunbiz';
