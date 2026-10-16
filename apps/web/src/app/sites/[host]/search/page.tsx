@@ -23,7 +23,9 @@ export default async function SearchPage({
   const town = await requireTown(params);
   const raw = (await searchParams).q;
   const q = (Array.isArray(raw) ? raw[0] : raw)?.trim().slice(0, MAX_QUERY) ?? '';
-  const results = q ? await listRankableArticles(db(), town.id, { search: q, limit: 30 }) : [];
+  const results = q
+    ? await listRankableArticles(db(), town.id, { search: q, limit: 30, guides: true })
+    : [];
   return (
     <StandardPage town={town}>
       <LargeTitle title="Search" as="h1" always search={{ defaultValue: q }} />

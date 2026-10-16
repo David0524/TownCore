@@ -1,7 +1,7 @@
 export * as schema from './schema';
 export * from './schema';
 export { createDb, getDb, type Db } from './client';
-export { syncTowns, type SyncTownsResult } from './towns';
+export { guideSourceKey, syncTowns, type SyncTownsResult } from './towns';
 export {
   loadRoutingTable,
   syncMailRouting,
@@ -13,6 +13,7 @@ export {
 export {
   and,
   asc,
+  count,
   desc,
   eq,
   gt,
@@ -42,6 +43,7 @@ export {
   getTownBySlug,
   listLiveTowns,
   listPublishedArticles,
+  listPublishedGuides,
   normalizeHost,
   type Article,
   type Campaign,

@@ -158,6 +158,8 @@ export const homeModules = [
   'category-buttons',
   'coming-up',
   'documents-posted',
+  // Quick links to the town's evergreen guides (M4 PR F).
+  'essentials',
   'lead-story',
   'latest-list',
   'briefs',

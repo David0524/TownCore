@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { guideTopic } from '../src/guides';
 import { findTbdFields, loadTownConfigs, parseTownConfig } from '../src/town';
 
 const townsDir = fileURLToPath(new URL('../../../towns', import.meta.url));
@@ -45,6 +46,34 @@ describe('town config', () => {
       'business_filings/fl-sunbiz',
       'weather/nws',
     ]);
+  });
+
+  it('Boca has 30 guide topics, each from official pages over https', () => {
+    const boca = loadTownConfigs(townsDir).find((t) => t.slug === 'boca-raton')!;
+    expect(boca.guides).toHaveLength(30);
+    for (const guide of boca.guides) {
+      expect(guideTopic(guide.topic), guide.topic).toBeDefined();
+      for (const page of guide.pages) {
+        // Government sites, plus the county school district's own domain.
+        expect(new URL(page).hostname).toMatch(
+          /(^|\.)(myboca\.us|floridadisaster\.org|dos\.fl\.gov|pbcpao\.gov|pbctax\.gov|palmbeachschools\.org)$/,
+        );
+      }
+    }
+  });
+
+  it('rejects unknown guide topics, repeated topics and plain-http pages', () => {
+    const guides = (body: string) => parseTownConfig(`${minimal}\nguides:\n${body}`);
+    expect(() => guides('  - { topic: astrology, pages: [https://city.example/a] }')).toThrow(
+      /topic/,
+    );
+    expect(() =>
+      guides(
+        '  - { topic: recycling, pages: [https://city.example/a] }\n  - { topic: recycling, pages: [https://city.example/b] }',
+      ),
+    ).toThrow(/only once/);
+    expect(() => guides('  - { topic: recycling, pages: [http://city.example/a] }')).toThrow();
+    expect(() => guides('  - { topic: recycling, pages: [] }')).toThrow();
   });
 
   it('applies defaults', () => {

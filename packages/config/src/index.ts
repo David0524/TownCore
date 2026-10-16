@@ -118,3 +118,11 @@ export {
   TOPIC_INDEX_MIN_ARTICLES,
   type EntityKind,
 } from './entities';
+export {
+  FIRST_GUIDE_BATCH,
+  guideTopic,
+  guideTopicKeys,
+  guideTopics,
+  type GuideTopic,
+  type GuideTopicKey,
+} from './guides';

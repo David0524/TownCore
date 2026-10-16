@@ -27,7 +27,7 @@
       "new-businesses",
       "real-estate"
     ],
-    "homeRail": ["coming-up"],
+    "homeRail": ["coming-up", "essentials"],
     "article": "classic-rail",
     "directory": "list-map",
     "footer": "three-column"

@@ -77,10 +77,36 @@ export async function syncTowns(db: Db, loaded: LoadedTown[]): Promise<SyncTowns
           });
         sourceCount++;
       }
+
+      // Evergreen guides (M4 PR F): one reference source per topic, so each guide has its own
+      // health and "last checked" date. Keyed by topic, so editing its pages updates it in place.
+      for (const guide of config.guides) {
+        const row = {
+          townId: town!.id,
+          key: guideSourceKey(guide.topic),
+          kind: 'reference' as const,
+          platform: 'page',
+          adapter: 'page',
+          url: guide.pages[0]!,
+          schedule: null,
+          config: { timezone: config.timezone, topic: guide.topic, pages: guide.pages },
+        };
+        await tx
+          .insert(sources)
+          .values(row)
+          .onConflictDoUpdate({
+            target: [sources.townId, sources.key],
+            set: { url: row.url, config: row.config, updatedAt: sql`now()` },
+          });
+        sourceCount++;
+      }
     }
   });
   return { upserted, sources: sourceCount, skippedSources };
 }
+
+/** Stable identity of a guide topic's reference source within its town. */
+export const guideSourceKey = (topic: string) => `reference:page:guide:${topic}`;
 
 /** Stable identity of a YAML source within its town. */
 export function sourceKey(source: TownSourceConfig): string {

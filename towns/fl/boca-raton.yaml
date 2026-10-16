@@ -60,3 +60,99 @@ sources:
 pricing:
   sponsored_slot_usd: 199
   enhanced_usd: 39
+# Evergreen guides (D-M4-2): official pages only, each verified 2026-10-16 through the bot's own
+# fetcher (robots.txt allows them; palmbeachschools.org asks a 5-second Crawl-delay, honored).
+# URLs are the final ones after the city's redirects. City pages unless noted.
+guides:
+  - topic: trash-pickup
+    pages:
+      - https://www.myboca.us/680/Garbage-Collection-Containers
+      - https://www.myboca.us/665/Sanitation
+  - topic: recycling
+    pages: [https://www.myboca.us/689/Recycling]
+  - topic: bulk-waste
+    pages: [https://www.myboca.us/684/Bulk-Waste]
+  - topic: hurricane-prep
+    pages:
+      - https://www.myboca.us/1106/Hurricane-Information
+      # Florida Division of Emergency Management (state).
+      - https://www.floridadisaster.org/planprepare/
+  - topic: evacuation
+    pages: [https://www.myboca.us/1155/Evacuation-Information]
+  - topic: storm-debris
+    pages: [https://www.myboca.us/1476/Hurricane-Debris-Management]
+  - topic: flood-zones
+    pages:
+      - https://www.myboca.us/1881/Know-Your-Flood-Zone
+      - https://www.myboca.us/1883/Facts-on-Flooding
+  - topic: emergency-alerts
+    pages:
+      - https://www.myboca.us/2062/Alert-Boca
+      - https://www.myboca.us/1177/Notify-Me---Sign-Up-for-Alerts
+  - topic: building-permits
+    pages:
+      - https://www.myboca.us/157/Building-Permits-and-Inspections
+      - https://www.myboca.us/1417/Permit-Process-Information
+  - topic: hire-a-contractor
+    pages: [https://www.myboca.us/243/Hire-a-Licensed-Contractor]
+  - topic: permit-search
+    pages:
+      - https://www.myboca.us/2269/Permit-History
+      - https://www.myboca.us/1570/Building-Permit-Code-Violation-Search-In
+  - topic: parking
+    pages: [https://www.myboca.us/209/Parking]
+  - topic: parking-tickets
+    pages: [https://www.myboca.us/1937/Parking-Citations]
+  - topic: beach-parks
+    pages: [https://www.myboca.us/2462/Beaches]
+  - topic: beach-permits
+    pages: [https://myboca.us/950/Annual-Permits]
+  - topic: pets
+    pages: [https://www.myboca.us/2638/Pets-in-Boca-Raton]
+  - topic: voting
+    pages:
+      - https://www.myboca.us/2199/Municipal-Election
+      # Florida Division of Elections (state).
+      - https://dos.fl.gov/elections/for-voters/voter-registration/
+      - https://dos.fl.gov/elections/for-voters/check-your-voter-status-and-polling-place/
+  - topic: council-meetings
+    pages:
+      - https://www.myboca.us/765/Mayor-City-Council
+      - https://www.myboca.us/129/Agendas
+  - topic: public-records
+    pages: [https://www.myboca.us/647/Public-Records-Request]
+  - topic: report-a-concern
+    pages: [https://www.myboca.us/2061/Report-a-Concern-or-Compliment]
+  - topic: water-billing
+    pages: [https://www.myboca.us/500/Customer-Care-Team-Water-Billing]
+  - topic: water-restrictions
+    pages: [https://www.myboca.us/485/Water-Conservation-and-Programs]
+  - topic: boil-water-notices
+    pages: [https://www.myboca.us/2301/Boil-Water-Notices]
+  - topic: library-card
+    pages: [https://www.myboca.us/965/Get-a-Library-Card]
+  - topic: recreation-registration
+    pages:
+      - https://www.myboca.us/716/Learn-About-Webtrac
+      - https://www.myboca.us/2506/How-to-register
+  - topic: camps
+    pages: [https://www.myboca.us/531/Camps]
+  - topic: tennis-pickleball
+    pages:
+      - https://www.myboca.us/2564/Tennis-Pickleball
+      - https://www.myboca.us/2563/Tennis-Fees
+  - topic: business-tax-receipt
+    pages:
+      - https://www.myboca.us/2334/Applying-for-a-New-Business-Tax-Receipt
+      - https://www.myboca.us/2955/Business-Tax-FAQs
+  - topic: property-tax
+    pages:
+      # Palm Beach County Property Appraiser and Tax Collector (county).
+      - https://pbcpao.gov/homestead-exemption.htm
+      - https://www.pbctax.gov/taxes/property-tax/
+      - https://www.pbctax.gov/resources/payment-options/
+  - topic: schools-enrollment
+    pages:
+      # School District of Palm Beach County.
+      - https://www.palmbeachschools.org/studentsparents/student-registration
+      - https://www.palmbeachschools.org/studentsparents/school-choice

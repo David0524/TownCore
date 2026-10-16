@@ -179,6 +179,26 @@ describe('Fetcher', () => {
     expect(times[2]! - times[1]!).toBeGreaterThanOrEqual(2_000);
   });
 
+  it('honors robots.txt Crawl-delay for our agent or everyone, capped at a minute', async () => {
+    const clock = fakeClock();
+    const times: number[] = [];
+    const fetchImpl: FetchFn = async (url) => {
+      if (url === 'https://slow.example/robots.txt')
+        return new Response('User-agent: *\nCrawl-delay: 5\nDisallow: /admin\n');
+      if (url === 'https://slower.example/robots.txt')
+        return new Response('User-agent: *\nCrawl-delay: 600\n');
+      times.push(clock.now());
+      return new Response('ok');
+    };
+    const fetcher = new Fetcher({ fetchImpl, ...clock });
+    await fetcher.getText('https://slow.example/a');
+    await fetcher.getText('https://slow.example/b');
+    expect(fetcher.intervalFor('slow.example')).toBe(5_000);
+    expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(5_000);
+    await fetcher.getText('https://slower.example/a');
+    expect(fetcher.intervalFor('slower.example')).toBe(60_000);
+  });
+
   it('parses Retry-After seconds and dates, capped at a minute', () => {
     expect(retryAfterMs('5')).toBe(5_000);
     expect(retryAfterMs('600')).toBe(60_000);

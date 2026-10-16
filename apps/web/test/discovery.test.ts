@@ -16,6 +16,7 @@ const town = {
 const now = new Date('2026-10-15T12:00:00Z');
 const article = (slug: string, hoursAgo: number): ListedArticle => ({
   slug,
+  kind: 'story',
   headline: `Story ${slug} & more`,
   dek: null,
   beat: 'government',

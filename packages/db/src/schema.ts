@@ -57,7 +57,14 @@ export const candidateStatus = pgEnum('candidate_status', [
 ]);
 // story: one source item written by the writer; roundup / template: built in code from
 // structured records; update: a follow-up note on a published article (CLAUDE.md §6a).
-export const candidateKind = pgEnum('candidate_kind', ['story', 'roundup', 'template', 'update']);
+export const candidateKind = pgEnum('candidate_kind', [
+  'story',
+  'roundup',
+  'template',
+  'update',
+  // An evergreen guide to write or rewrite from its topic's pages (M4 PR F).
+  'guide',
+]);
 export const articleStatus = pgEnum('article_status', [
   'draft',
   'in_review',
@@ -404,12 +411,18 @@ export const articles = pgTable(
     rejectionReason: text('rejection_reason'),
     // When its entities were extracted (M4 PR D); null until the entities job has run on it.
     entitiesExtractedAt: timestamp('entities_extracted_at', { withTimezone: true }),
+    // Guides only (M4 PR F): the guide topic. One guide per topic per town, rewritten in place
+    // when its pages change.
+    guideTopic: text('guide_topic'),
     publishedAt: timestamp('published_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     uniqueIndex('articles_town_slug_uq').on(t.townId, t.slug),
+    uniqueIndex('articles_town_guide_topic_uq')
+      .on(t.townId, t.guideTopic)
+      .where(sql`${t.guideTopic} is not null`),
     index('articles_town_status_published_idx').on(t.townId, t.status, t.publishedAt.desc()),
     check('articles_tier_range', sql`${t.tier} between 1 and 4`),
     // Rule 5: Tier 4 is never public.
