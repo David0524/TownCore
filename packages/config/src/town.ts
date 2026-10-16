@@ -56,9 +56,18 @@ const sourceSchema = z.strictObject({
   // adding or changing them never changes the source's identity (its key).
   beach: z
     .strictObject({
-      surf_office: z.string().regex(/^[A-Z]{3}$/, 'expected an NWS office like "MFL"').optional(),
-      tide_station: z.string().regex(/^\d{7}$/, 'expected a 7-digit NOAA station ID').optional(),
-      uv_zip: z.string().regex(/^\d{5}$/, 'expected a 5-digit ZIP code').optional(),
+      surf_office: z
+        .string()
+        .regex(/^[A-Z]{3}$/, 'expected an NWS office like "MFL"')
+        .optional(),
+      tide_station: z
+        .string()
+        .regex(/^\d{7}$/, 'expected a 7-digit NOAA station ID')
+        .optional(),
+      uv_zip: z
+        .string()
+        .regex(/^\d{5}$/, 'expected a 5-digit ZIP code')
+        .optional(),
     })
     .optional(),
   schedule: scheduleSchema.optional(),
