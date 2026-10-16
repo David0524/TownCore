@@ -114,6 +114,8 @@ export {
 } from './directory';
 export {
   AI_ILLUSTRATION_LABEL,
+  AI_IMAGE_LABEL,
+  aiLabel,
   illustrationSrc,
   imageDefaults,
   imageKinds,

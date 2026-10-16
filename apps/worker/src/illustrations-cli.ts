@@ -5,6 +5,9 @@
 //   library, with alt text from alts.json ({ "gov-01": "…" }), written from what each shows.
 // pnpm illustrations assign [town-slug]
 //   Gives stories that only have a title card a section illustration, if one fits.
+// pnpm illustrations pin <town-slug> <story-slug> <image> --alt "<what it shows>"
+//     --approved-by <email> [--photoreal]
+//   Pins an AI picture a person chose to one story; the router keeps it from then on.
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -15,6 +18,7 @@ import {
   assignIllustrations,
   formatWithPrettier,
   importIllustrations,
+  pinIllustration,
   librarySource,
   shotListMarkdown,
 } from './illustrations';
@@ -66,6 +70,35 @@ if (command === 'shotlist') {
   } finally {
     await db.$client.end();
   }
+} else if (command === 'pin') {
+  const [townSlug, storySlug, file] = rest;
+  const alt = flag('alt');
+  const approvedBy = flag('approved-by');
+  if (!townSlug || !storySlug || !file || !alt || !approvedBy) {
+    throw new Error(
+      'usage: pnpm illustrations pin <town-slug> <story-slug> <image> --alt "…" --approved-by <email> [--photoreal]',
+    );
+  }
+  loadDotEnv();
+  const db = createDb(requireEnv('DATABASE_URL'), { max: 1 });
+  try {
+    const town = await getTownBySlug(db, townSlug);
+    if (!town) throw new Error(`unknown town: ${townSlug}`);
+    const pinned = await pinIllustration(db, {
+      townId: town.id,
+      articleSlug: storySlug,
+      file: await readFile(file),
+      alt,
+      approvedBy,
+      photoreal: rest.includes('--photoreal'),
+      webDir: join(root, 'apps/web/public/illustrations'),
+    });
+    console.log(
+      `pinned ${pinned.id} to ${storySlug}; commit apps/web/public/illustrations/${pinned.id}.webp`,
+    );
+  } finally {
+    await db.$client.end();
+  }
 } else {
-  throw new Error('usage: pnpm illustrations <shotlist|import|assign> …');
+  throw new Error('usage: pnpm illustrations <shotlist|import|assign|pin> …');
 }

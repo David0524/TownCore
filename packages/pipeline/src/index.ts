@@ -92,6 +92,7 @@ export {
 export { apDate } from './time';
 export {
   assignArticleImage,
+  ILLUSTRATION_LICENSE,
   cardAlt,
   chooseArticleImage,
   coverIllustration,

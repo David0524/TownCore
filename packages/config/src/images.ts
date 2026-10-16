@@ -121,12 +121,20 @@ export type IllustrationSpec = {
   illustrationId: string;
   width: number;
   height: number;
+  /** Chosen for this story by a person (`pnpm illustrations pin`): the router never replaces it. */
+  pinned?: boolean;
+  /** Photorealistic rather than drawn (owner, 2026-10-16): labeled as an AI image, not an illustration. */
+  photoreal?: boolean;
 };
 
 export const illustrationSrc = (id: string) => `/illustrations/${id}.webp`;
 
 /** The label every AI illustration carries, on the page and in its alt text (§11c). */
 export const AI_ILLUSTRATION_LABEL = 'Illustration (AI-generated)';
+export const AI_IMAGE_LABEL = 'Image (AI-generated)';
+/** The label an AI picture carries: an illustration, or a photorealistic image. */
+export const aiLabel = (spec: { photoreal?: boolean }) =>
+  spec.photoreal ? AI_IMAGE_LABEL : AI_ILLUSTRATION_LABEL;
 
 export type ImageSpec =
   DailyCountsSpec | MapSpec | StockPhotoSpec | PhotoSpec | IllustrationSpec | { type: 'card' };

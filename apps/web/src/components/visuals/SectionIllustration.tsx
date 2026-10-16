@@ -1,9 +1,10 @@
-import { AI_ILLUSTRATION_LABEL, illustrationSrc, type IllustrationSpec } from '@towncore/config';
+import { aiLabel, illustrationSrc, type IllustrationSpec } from '@towncore/config';
 import styles from './visuals.module.css';
 
 /**
- * A section illustration from the network library (CLAUDE.md §11c): a generic AI-generated
- * picture of the kind of thing a story is about, never its scene. Always labeled underneath.
+ * An AI-generated picture (CLAUDE.md §11c): a library illustration, or one a person pinned to the
+ * story; generic, never the story's scene. Always labeled underneath, as an illustration or,
+ * when photorealistic, an AI image.
  */
 export function SectionIllustration({ spec, alt }: { spec: IllustrationSpec; alt: string }) {
   return (
@@ -17,7 +18,7 @@ export function SectionIllustration({ spec, alt }: { spec: IllustrationSpec; alt
         className={styles.stockImage}
       />
       <p className={`meta ${styles.stockCredit}`} data-testid="photo-credit">
-        {AI_ILLUSTRATION_LABEL}
+        {aiLabel(spec)}
       </p>
     </div>
   );
@@ -37,7 +38,7 @@ export function SectionIllustrationThumb({ spec }: { spec: IllustrationSpec }) {
         className={styles.thumbImage}
       />
       <span className={styles.thumbTag} aria-hidden="true">
-        Illustration
+        {spec.photoreal ? 'AI image' : 'Illustration'}
       </span>
     </span>
   );
