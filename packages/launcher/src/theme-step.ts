@@ -41,7 +41,7 @@ export const familyPresets: Record<
 > = {
   'coastal-modern': {
     family: 'coastal-modern',
-    type: 'instrumentserif-geist',
+    type: 'outfit-geist',
     masthead: 'centered-serif',
     layout: {
       header: 'slim-left',

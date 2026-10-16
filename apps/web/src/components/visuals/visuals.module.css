@@ -1,5 +1,7 @@
-/* Data graphics (CLAUDE.md §11c): the town's colors from tokens, no shadows. */
+/* Data graphics (CLAUDE.md §11c): the town's colors from tokens, no shadows, and the network's
+   chart face (--font-chart) for every word and number, so a chart never reads as a headline. */
 .chart {
+  font-family: var(--font-chart);
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -18,10 +20,15 @@
 }
 
 .chartTitle {
-  font-family: var(--font-headline);
-  font-weight: var(--headline-weight);
-  font-size: clamp(1.25rem, 1rem + 1vw, 1.625rem);
-  line-height: 1.1;
+  font-weight: 600;
+  font-size: clamp(1.125rem, 0.95rem + 0.8vw, 1.375rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.chart :global(.meta) {
+  font-family: var(--font-chart);
+  font-style: normal;
 }
 
 .bars {

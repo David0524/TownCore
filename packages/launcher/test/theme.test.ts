@@ -175,7 +175,7 @@ describe('the screenshot review', () => {
     expect(ok.theme.masthead).toBe('centered-serif');
     // Turning it into Boca's colors and parts would break the neighbor rule: nothing applied.
     const bad = applyReview(
-      { ...theme, family: 'coastal-modern', type: 'instrumentserif-geist' },
+      { ...theme, family: 'coastal-modern', type: 'outfit-geist' },
       {
         verdict: 'fix',
         problems: [],

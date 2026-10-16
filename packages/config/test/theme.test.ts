@@ -20,7 +20,7 @@ describe('theme schema', () => {
   it('accepts the Boca theme as specified in CLAUDE.md §11a (coastal-modern, M4b canvas)', () => {
     const theme = parseTheme(bocaThemeJson);
     expect(theme.family).toBe('coastal-modern');
-    expect(theme.type).toBe('instrumentserif-geist');
+    expect(theme.type).toBe('outfit-geist');
     expect(theme.palette.ink).toBe('#111418');
     expect(theme.palette.accent).toBe('#0E6FA8');
     expect(theme.layout.header).toBe('slim-left');
@@ -179,6 +179,6 @@ describe('loadTowns', () => {
   it('loads Boca with its theme file', () => {
     const boca = loadTowns(townsDir).find((t) => t.config.slug === 'boca-raton')!;
     expect(boca.hasThemeFile).toBe(true);
-    expect(boca.theme.type).toBe('instrumentserif-geist');
+    expect(boca.theme.type).toBe('outfit-geist');
   });
 });

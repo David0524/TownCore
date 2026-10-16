@@ -72,7 +72,7 @@ type TypeSet = {
   body: string;
   meta: string;
   metaStyle: 'mono' | 'italic' | 'sans';
-  headlineWeight: 400 | 700 | 800;
+  headlineWeight: 400 | 600 | 700 | 800;
   headlineAdvanceEm: number;
   legacy?: true;
 };
@@ -87,6 +87,15 @@ const legacyPair = (headline: string, body: string, headlineAdvanceEm: number): 
 });
 
 export const typePairings = {
+  // Boca's (owner, 2026-10-16): a round geometric sans instead of a newspaper serif.
+  'outfit-geist': {
+    headline: 'Outfit Variable',
+    body: 'Geist Variable',
+    meta: 'Geist Mono Variable',
+    metaStyle: 'mono',
+    headlineWeight: 600,
+    headlineAdvanceEm: 0.482,
+  },
   'instrumentserif-geist': {
     headline: 'Instrument Serif',
     body: 'Geist Variable',
@@ -128,7 +137,7 @@ export const cornerRadii = { square: '0', soft: '6px', round: '14px' } as const;
  * pairings are allowed anywhere until they retire).
  */
 export const styleFamilies = {
-  'coastal-modern': { types: ['instrumentserif-geist'] },
+  'coastal-modern': { types: ['outfit-geist', 'instrumentserif-geist'] },
   heritage: { types: ['librecaslondisplay-publicsans'] },
   community: { types: ['bricolage-figtree'] },
 } as const satisfies Record<string, { types: readonly string[] }>;

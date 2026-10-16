@@ -20,6 +20,7 @@ import {
 const serifFallback = "Georgia, 'Times New Roman', serif";
 const sansFallback = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 const monoFallback = "ui-monospace, 'SF Mono', Menlo, monospace";
+const chartFont = "'Space Grotesk Variable'";
 // Today tiles are rounder than images in soft and round themes (canvas: 6px images, 16px tiles).
 const tileRadii = { square: '0', soft: '16px', round: '16px' } as const;
 
@@ -73,6 +74,10 @@ export function themeCssVariables(theme: Theme): string {
     '--font-meta': `'${fonts.meta}', ${metaFallback}`,
     '--meta-style': fonts.metaStyle === 'italic' ? 'italic' : 'normal',
     '--headline-weight': String(fonts.headlineWeight),
+    // The wordmark is the town's brand: its own face on every screen, phones included.
+    '--font-wordmark': `'${fonts.headline}', ${serifFallback}`,
+    // Charts and data graphics use one network face, apart from every town's headlines.
+    '--font-chart': `${chartFont}, ${sansFallback}`,
     '--radius': cornerRadii[theme.corners],
     '--radius-tile': tileRadii[theme.corners],
     // iOS chrome (phones only; see phoneCssVariables). Set everywhere so the tokens resolve.
@@ -110,9 +115,9 @@ export function themeCssVariables(theme: Theme): string {
 
 /**
  * Phones (below 600px) wear Apple-native chrome on every town (docs/plans/M4b.md revision 5):
- * system fonts (San Francisco for text, New York for headlines and the wordmark, no mono), iOS
- * system colors and shapes, with the town's brand as the tint. Towns still differ by tint,
- * wordmark and modules.
+ * system fonts (San Francisco for text and headlines, no mono; the owner dropped the New York serif
+ * on 2026-10-16), iOS system colors and shapes, with the town's brand as the tint. Towns still
+ * differ by tint, wordmark (in the town's own face) and modules.
  */
 function phoneCssVariables(theme: Theme): Record<string, string> {
   const { palette } = theme;
@@ -121,7 +126,7 @@ function phoneCssVariables(theme: Theme): Record<string, string> {
     '--muted': phoneSecondaryLabel(palette),
     '--rule': iosColors.separator,
     '--surface': iosColors.grouped,
-    '--font-headline': iosFonts.serif,
+    '--font-headline': iosFonts.display,
     '--font-body': iosFonts.text,
     '--font-display': iosFonts.display,
     '--font-meta': iosFonts.text,

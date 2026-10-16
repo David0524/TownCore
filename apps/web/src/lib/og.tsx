@@ -23,7 +23,8 @@ export const OG_SIZE = { width: 1200, height: 630 } as const;
 // The renderer reads woff/ttf, not woff2, so display faces come from Fontsource's static
 // packages (self-hosted, never fetched from Google). A face without a static file falls back to
 // the renderer's built-in sans.
-const DISPLAY_FONTS: Record<string, { file: string; weight: 400 | 700 | 800 }> = {
+const DISPLAY_FONTS: Record<string, { file: string; weight: 400 | 600 | 700 | 800 }> = {
+  'Outfit Variable': { file: '@fontsource/outfit/files/outfit-latin-600-normal.woff', weight: 600 },
   'Instrument Serif': {
     file: '@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff',
     weight: 400,
@@ -43,10 +44,18 @@ const DISPLAY_FONTS: Record<string, { file: string; weight: 400 | 700 | 800 }> =
   Spectral: { file: '@fontsource/spectral/files/spectral-latin-700-normal.woff', weight: 700 },
 };
 
+// Chart numbers use the network's chart face, as on the site (--font-chart).
+const CHART_FONT = {
+  file: '@fontsource/space-grotesk/files/space-grotesk-latin-600-normal.woff',
+  weight: 600,
+} as const;
+
 const fontCache = new Map<string, Promise<ArrayBuffer | null>>();
 
-async function displayFont(name: string) {
-  const entry = DISPLAY_FONTS[name];
+async function loadFont(
+  entry: { file: string; weight: 400 | 600 | 700 | 800 } | undefined,
+  name: string,
+) {
   if (!entry) return null;
   if (!fontCache.has(entry.file)) {
     fontCache.set(
@@ -57,7 +66,7 @@ async function displayFont(name: string) {
     );
   }
   const data = await fontCache.get(entry.file)!;
-  return data ? { name: 'Display', data, weight: entry.weight, style: 'normal' as const } : null;
+  return data ? { name, data, weight: entry.weight, style: 'normal' as const } : null;
 }
 
 const headlineSize = (text: string, narrow: boolean) => {
@@ -77,9 +86,10 @@ export async function articleOgImage({
   image: ImageChoice;
 }): Promise<ImageResponse> {
   const { palette } = theme;
-  const font = await displayFont(typePairings[theme.type].headline);
+  const font = await loadFont(DISPLAY_FONTS[typePairings[theme.type].headline], 'Display');
   const chart =
     image.kind === 'data-graphic' && image.spec.type === 'daily-counts' ? image.spec : null;
+  const chartFont = chart ? await loadFont(CHART_FONT, 'Chart') : null;
   const map = image.kind === 'map' && image.spec.type === 'map' ? image.spec : null;
   const beatLabel = beats.find((b) => b.slug === article.beat)?.label ?? 'News';
   const dot = categoryColors[beatCategory[article.beat] ?? 'news'];
@@ -149,7 +159,9 @@ export async function articleOgImage({
                   gap: 8,
                 }}
               >
-                <span style={{ fontSize: 22 }}>{bar.count}</span>
+                <span style={{ fontFamily: chartFont ? 'Chart' : undefined, fontSize: 22 }}>
+                  {bar.count}
+                </span>
                 <div
                   style={{
                     width: '100%',
@@ -181,7 +193,7 @@ export async function articleOgImage({
     </div>,
     {
       ...OG_SIZE,
-      fonts: font ? [font] : undefined,
+      fonts: [font, chartFont].filter((f) => f !== null),
       headers: { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' },
     },
   );
