@@ -98,7 +98,10 @@ const SUFFIX = /\s+(city|town|village|borough|municipality|township|city and bor
 
 /** Incorporated places (FUNCSTAT A) from a Gazetteer state file. */
 export function parseGazetteerPlaces(text: string): Place[] {
-  const [header, ...rows] = text.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+  const [header, ...rows] = text
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .split(/\r?\n/);
   const col = Object.fromEntries(header!.split('|').map((h, i) => [h.trim(), i]));
   return rows
     .map((row) => row.split('|').map((v) => v.trim()))
