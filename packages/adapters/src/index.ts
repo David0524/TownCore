@@ -52,3 +52,11 @@ export {
 } from './osm/basemap';
 export { pbfFileFrames } from './osm/pbf';
 export { parseCsvLine } from './lib/csv';
+export {
+  searchPhotos,
+  trackDownload,
+  UNSPLASH_LICENSE,
+  UNSPLASH_LICENSE_URL,
+  unsplashLink,
+  type UnsplashPhoto,
+} from './unsplash';

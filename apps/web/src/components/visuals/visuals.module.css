@@ -181,3 +181,24 @@
     border-radius: var(--radius-widget);
   }
 }
+
+/* Stock photos (§11c): the photo at a reserved 16:9, its credit always underneath. */
+.stock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.stockImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.stockCredit {
+  margin: 0;
+}

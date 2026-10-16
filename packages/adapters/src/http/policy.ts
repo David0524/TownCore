@@ -69,6 +69,14 @@ export const DOCUMENTED_APIS: Record<string, { name: string; terms: string }> = 
     name: 'EPA Envirofacts data service (UV index)',
     terms: 'https://www.epa.gov/enviro/web-services',
   },
+  // Owner approved 2026-10-16 (Unsplash for guide photos). api.unsplash.com's robots.txt is
+  // `Disallow: /` for crawlers; the API itself is for registered apps, which send their access
+  // key. Only this API host; unsplash.com pages are never fetched by code. Images are hotlinked
+  // by readers' browsers from images.unsplash.com, as Unsplash requires.
+  'api.unsplash.com': {
+    name: 'Unsplash API',
+    terms: 'https://unsplash.com/api-terms',
+  },
   // Owner approved 2026-10-16 (D-M7-12). The Census Bureau's public data downloads (its former FTP
   // server): Gazetteer, population estimates, ACS summary files, relationship files and business
   // patterns, used by `pnpm towns:rank`. Its robots.txt opens with `User-agent: *` and no rules,

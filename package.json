@@ -28,6 +28,7 @@
     "mail:onboard": "pnpm --silent --filter @towncore/mail onboard",
     "weather:once": "pnpm --filter @towncore/worker weather:once",
     "maps:once": "pnpm --filter @towncore/worker maps:once",
+    "photos:once": "pnpm --filter @towncore/worker photos:once",
     "mail:import": "pnpm --silent --filter @towncore/mail import",
     "towns:rank": "pnpm --silent --filter @towncore/launcher towns:rank",
     "launch": "pnpm --silent --filter @towncore/launcher launch"

@@ -6,12 +6,24 @@ import {
   type ImageKind,
   type ImageSpec,
   type MapSpec,
+  type StockPhotoSpec,
+  guideTopic,
 } from '@towncore/config';
-import { OSM_ATTRIBUTION, OSM_COPYRIGHT_URL, OSM_LICENSE, type Fetcher } from '@towncore/adapters';
 import {
+  OSM_ATTRIBUTION,
+  OSM_COPYRIGHT_URL,
+  OSM_LICENSE,
+  searchPhotos,
+  trackDownload,
+  UNSPLASH_LICENSE,
+  type Fetcher,
+} from '@towncore/adapters';
+import {
+  and,
   articles,
   eq,
   images,
+  ne,
   inArray,
   records,
   storyCandidates,
@@ -34,14 +46,20 @@ import { apDate, isoLocalDate, localMidnight } from './time';
 // typographic card, so every article has a visual. Generated visuals are drawn by us from the
 // article's own text and records: no photos from other sites, no image model.
 
-/** Options the router can build today (maps need the deps below). Photos arrive with M9. */
-const BUILDABLE = new Set<ImageKind>(['map', 'data-graphic', 'typographic-card']);
+/**
+ * Options the router can build today (maps and stock photos need the deps below). Business,
+ * reader and government photos and AI illustrations arrive with M9.
+ */
+const BUILDABLE = new Set<ImageKind>(['map', 'stock', 'data-graphic', 'typographic-card']);
 
 /**
- * What drawing a map needs: the polite Fetcher for the Census Geocoder. Without it (or without
- * a base map for the town) the router skips maps; the maps job retries with it.
+ * What the network options need: the polite Fetcher (Census Geocoder for maps, the Unsplash API
+ * for stock photos) and, for stock photos, the Unsplash access key. Without them the router skips
+ * those options; the visuals jobs in the worker retry with them.
  */
-export type ImageDeps = { fetcher: Fetcher };
+export type ImageDeps = { fetcher: Fetcher; unsplash?: { accessKey: string } };
+
+type TownForImage = { name: string; state: string };
 
 /** What a roundup's main record type counts, singular and plural. */
 export const recordCountLabels: Record<string, [string, string]> = {
@@ -65,7 +83,10 @@ export type ImageChoice = {
 };
 
 type ArticleForImage = {
+  /** Set for an existing article, so a stock photo it already uses isn't counted against it. */
+  id?: string;
   townId: string;
+  guideTopic?: string | null;
   headline: string;
   dek: string | null;
   bodyMd: string;
@@ -163,7 +184,7 @@ export async function chooseArticleImage(
   db: Db,
   article: ArticleForImage,
   timeZone: string,
-  deps?: ImageDeps & { town: { name: string; state: string } },
+  deps?: ImageDeps & { town: TownForImage },
 ): Promise<ImageChoice> {
   for (const option of imageOptions(article)) {
     if (!BUILDABLE.has(option)) continue;
@@ -179,6 +200,10 @@ export async function chooseArticleImage(
           sourceUrl: OSM_COPYRIGHT_URL,
         };
       }
+    }
+    if (option === 'stock' && deps?.unsplash) {
+      const photo = await pickStockPhoto(db, article, { ...deps, unsplash: deps.unsplash });
+      if (photo) return photo;
     }
     if (option === 'data-graphic' && article.sourceRecordIds.length >= MIN_RECORDS) {
       const rows = await db
@@ -213,7 +238,7 @@ export async function chooseArticleImage(
 async function buildArticleMap(
   db: Db,
   article: ArticleForImage,
-  deps: ImageDeps & { town: { name: string; state: string } },
+  deps: ImageDeps & { town: TownForImage },
 ): Promise<MapSpec | null> {
   const address = findStreetAddress(
     [article.headline, article.dek ?? '', article.bodyMd].join('\n'),
@@ -234,6 +259,62 @@ async function buildArticleMap(
   );
   // A point outside the base map (or with no streets around it) makes no map.
   return spec.lines.some((l) => l.c !== 'water' && l.c !== 'coast') ? spec : null;
+}
+
+/**
+ * A stock photo for an evergreen guide (§11c: generic topics only, never the scene of a story):
+ * the first landscape result for the topic's fixed search that no other article in the town
+ * uses, with a description to write the alt text from. Unsplash is told the photo is used.
+ */
+async function pickStockPhoto(
+  db: Db,
+  article: ArticleForImage,
+  deps: ImageDeps & { unsplash: { accessKey: string } },
+): Promise<ImageChoice | null> {
+  const query = article.kind === 'guide' ? guideTopic(article.guideTopic ?? '')?.photo : undefined;
+  if (!query) return null;
+  const results = await searchPhotos(deps.fetcher, deps.unsplash.accessKey, query);
+  const used = new Set(
+    (
+      await db
+        .select({ spec: images.spec })
+        .from(images)
+        .innerJoin(articles, eq(articles.id, images.articleId))
+        .where(
+          and(
+            eq(articles.townId, article.townId),
+            eq(images.kind, 'stock'),
+            article.id ? ne(images.articleId, article.id) : undefined,
+          ),
+        )
+    ).map((r) => (r.spec as StockPhotoSpec).photoId),
+  );
+  const photo = results.find(
+    (p) => !used.has(p.id) && (p.alt_description ?? p.description ?? '').trim(),
+  );
+  if (!photo) return null;
+  await trackDownload(deps.fetcher, deps.unsplash.accessKey, photo);
+  const described = (photo.alt_description ?? photo.description)!.trim().replace(/\.$/, '');
+  const spec: StockPhotoSpec = {
+    type: 'stock',
+    provider: 'unsplash',
+    photoId: photo.id,
+    src: photo.urls.raw,
+    width: photo.width,
+    height: photo.height,
+    color: photo.color,
+    photographer: photo.user.name,
+    photographerUrl: photo.user.links.html,
+    photoUrl: photo.links.html,
+  };
+  return {
+    kind: 'stock',
+    spec,
+    alt: `Stock photo: ${described.charAt(0).toLowerCase()}${described.slice(1)}.`,
+    license: UNSPLASH_LICENSE,
+    attribution: `Photo by ${photo.user.name} on Unsplash`,
+    sourceUrl: photo.links.html,
+  };
 }
 
 /** Chooses and records an article's visual (idempotent: re-running replaces the choice). */
@@ -268,7 +349,10 @@ export async function assignArticleImage(
     articleId,
     aiGenerated: false,
     updatedAt: new Date(),
-    ...(deps ? { mapCheckedAt: new Date() } : {}),
+    // When the router last ran with its network options (maps, stock photos). A run without
+    // them (a story approved in review, a guide rewritten) clears it, so the worker's visuals
+    // jobs draw the map or photo again instead of leaving the text card for good.
+    mapCheckedAt: deps ? new Date() : null,
   };
   await db
     .insert(images)

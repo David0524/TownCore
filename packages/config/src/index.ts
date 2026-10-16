@@ -110,6 +110,7 @@ export {
   type ImageKind,
   type ImageSpec,
   type MapSpec,
+  type StockPhotoSpec,
 } from './images';
 export {
   entityKey,
