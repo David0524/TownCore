@@ -1,10 +1,20 @@
+import type { SignupPlacement } from '@towncore/config';
 import styles from './NewsletterForm.module.css';
 
 /**
  * The signup form (Mail-5): a plain HTML form, so it works without JavaScript. The "website"
  * field is a honeypot: hidden from people, often filled in by bots.
  */
-export function NewsletterForm({ source, id = 'newsletter' }: { source: string; id?: string }) {
+export function NewsletterForm({
+  source,
+  id = 'newsletter',
+  placement,
+}: {
+  source: string;
+  id?: string;
+  /** Which prompt this is, so sign-ups can be compared by placement (counted in aggregate). */
+  placement?: SignupPlacement;
+}) {
   return (
     <form
       method="post"
@@ -30,6 +40,7 @@ export function NewsletterForm({ source, id = 'newsletter' }: { source: string; 
         <input id={`${id}-website`} name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
       <input type="hidden" name="source" value={source} />
+      {placement ? <input type="hidden" name="placement" value={placement} /> : null}
       <p className={styles.fine}>
         Free. We’ll email you a link to confirm. Unsubscribe any time.{' '}
         <a href="/privacy">Privacy</a>

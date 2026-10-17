@@ -12,6 +12,7 @@ import {
   slotStatsDaily,
   sql,
   towns,
+  townVariant,
   type Db,
 } from '@towncore/db';
 import { CTA_SLOT } from './leads';
@@ -128,6 +129,8 @@ export async function sendMonthlyReports(
     if (paying.length === 0) continue;
     const mail = await townMailDomain(db, town.id);
     if (!mail) continue;
+    // The subject line is an experiment per town or cohort (owner, 2026-10-17).
+    const wording = await townVariant(db, 'proof-report-wording', town);
     for (const business of paying) {
       const totals = await proofReport(db, {
         businessId: business.id,
@@ -149,7 +152,7 @@ export async function sendMonthlyReports(
       await sendDirectoryMail(deps, mail, {
         to: business.email!,
         kind: 'proof_report',
-        subject: `${business.name} on ${mail.siteName}: your ${monthName} report`,
+        subject: reportSubject(wording, business.name, mail.siteName, monthName, totals),
         lines: [
           `Here is what your listing on ${mail.siteName} did in ${monthName}.`,
           `Listing views: ${totals.listingViews}. Sponsored card: ${totals.cardImpressions} views, ${totals.cardClicks} clicks.`,
@@ -165,4 +168,18 @@ export async function sendMonthlyReports(
     }
   }
   return { sent };
+}
+
+/** The proof report's subject: the control names the month; `people-saw` leads with the views. */
+export function reportSubject(
+  wording: 'control' | 'people-saw',
+  businessName: string,
+  siteName: string,
+  monthName: string,
+  totals: { listingViews: number; cardImpressions: number },
+): string {
+  const seen = totals.listingViews + totals.cardImpressions;
+  if (wording === 'people-saw' && seen > 0)
+    return `${seen.toLocaleString('en-US')} ${seen === 1 ? 'view' : 'views'} of ${businessName} on ${siteName} in ${monthName}`;
+  return `${businessName} on ${siteName}: your ${monthName} report`;
 }

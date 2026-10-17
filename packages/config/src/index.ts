@@ -210,3 +210,22 @@ export {
   type CountyRole,
   type CountySource,
 } from './county';
+export {
+  assignVariant,
+  classifyReferral,
+  EXPERIMENTS,
+  FUNNEL_ADVICE,
+  FUNNEL_FLOORS,
+  isReferralSource,
+  isSignupPlacement,
+  placementOf,
+  REFERRAL_SOURCES,
+  resolveVariant,
+  SIGNUP_PLACEMENTS,
+  signupSource,
+  type ExperimentKey,
+  type ExperimentState,
+  type ExperimentVariant,
+  type ReferralSource,
+  type SignupPlacement,
+} from './audience';

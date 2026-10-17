@@ -11,6 +11,7 @@ import {
   type Article,
 } from '@towncore/db';
 import { ViewBeacon } from '@/components/Beacon';
+import { SecondArticleOffer } from '@/components/SecondArticleOffer';
 import { RelatedBusinesses } from '@/components/directory/RelatedBusinesses';
 import { BeatLabel } from '@/components/news/BeatLabel';
 import { MeetingVideo } from '@/components/news/MeetingVideo';
@@ -229,6 +230,9 @@ export async function ArticleView({
           ))}
         </div>
 
+        {/* The email offer on a reader's second story (owner, 2026-10-17), shown in their browser. */}
+        <SecondArticleOffer town={town} slug={article.slug} />
+
         {video ? <MeetingVideo {...video} /> : null}
 
         {REAL_ESTATE_BEATS.has(article.beat) ? (
@@ -283,7 +287,7 @@ export async function ArticleView({
 
         {upNext ? <UpNext town={town} theme={theme} story={upNext} /> : null}
 
-        {await NewsletterCta({ town, theme, modules: [] })}
+        {await NewsletterCta({ town, theme, modules: [], placement: 'article' })}
 
         <RelatedBusinesses town={town} article={article} />
 

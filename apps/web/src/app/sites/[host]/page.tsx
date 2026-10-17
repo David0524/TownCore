@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Fragment, type ReactNode } from 'react';
 import type { HomeModule } from '@towncore/config';
 import { bandNeedsCta, homeModules, homeOrder, SPANNING_MODULES } from '@/modules/registry';
+import { townVariant } from '@towncore/db';
+import { db } from '@/lib/db';
 import { themeFor } from '@/lib/theme';
 import { thinUnless } from '@/lib/indexing';
 import { requireTown, resolveTown } from '@/lib/town';
@@ -41,11 +43,23 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
   const render = (module: HomeModule) => homeModules[module]({ town, theme, modules });
 
   // Render each module now so empty ones (null) drop out before we place inline slots.
-  const rendered: Array<{ key: string; node: ReactNode; mobileOnly: boolean }> = [];
-  for (const { module, mobileOnly } of homeOrder(list, top)) {
+  // Sign-up box first on phones is an experiment per town or cohort (owner, 2026-10-17).
+  const signupFirst = (await townVariant(db(), 'module-order', town)) === 'signup-first';
+  const rendered: Array<{
+    key: string;
+    node: ReactNode;
+    mobileOnly: boolean;
+    desktopOnly?: boolean;
+  }> = [];
+  for (const { module, mobileOnly, desktopOnly } of homeOrder(list, top, signupFirst)) {
     const node = await render(module);
     if (node !== null)
-      rendered.push({ key: `${module}${mobileOnly ? '-mobile' : ''}`, node, mobileOnly });
+      rendered.push({
+        key: `${module}${mobileOnly ? '-mobile' : ''}`,
+        node,
+        mobileOnly,
+        desktopOnly,
+      });
   }
   const hello = top.includes('good-morning') ? await render('good-morning') : null;
   // The quick-links bar spans the band right under the greeting (desktop; phones have tabs).
@@ -106,10 +120,15 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
         {quick}
         <Slot town={town} name="home.top" />
         {spanning}
+        {signupFirst && bandCta ? (
+          <div className="mobile-only" data-order="signup-first">
+            {bandCta}
+          </div>
+        ) : null}
         {threeColumn ? (
           <div className={styles.band3} data-band="three-column">
             <div className={styles.bandCol} data-band-col="side">
-              {nodeList(topNodes.slice(0, leadAt), true)}
+              {nodeList(topNodes.slice(0, leadAt), !signupFirst)}
             </div>
             <div className={styles.bandCol} data-band-col="main">
               {topNodes[leadAt]!.node}
@@ -125,7 +144,7 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
                 {topNodes[0].node}
               </div>
             ) : null}
-            {bandCta ? <div className="mobile-only">{bandCta}</div> : null}
+            {bandCta && !signupFirst ? <div className="mobile-only">{bandCta}</div> : null}
             {topNodes.slice(1).some(({ node }) => node !== null) ? (
               <div className={styles.bandSide} data-band-col="side">
                 {nodeList(topNodes.slice(1), false)}
@@ -161,14 +180,14 @@ export default async function HomePage({ params }: { params: Promise<{ host: str
         {town.siteName}: local news for {town.name}, {town.state}
       </h1>
       {top.length > 0 ? null : <Slot town={town} name="home.top" />}
-      {rendered.map(({ key, node, mobileOnly }, i) => (
+      {rendered.map(({ key, node, mobileOnly, desktopOnly }, i) => (
         <Fragment key={key}>
           <div
             className={
               mobileOnly
                 ? 'mobile-only'
                 : // On phones the signup already sits in the band, right after the lead.
-                  bandCta && key === 'newsletter-cta'
+                  desktopOnly || (bandCta && key === 'newsletter-cta')
                   ? 'desktop-only'
                   : undefined
             }

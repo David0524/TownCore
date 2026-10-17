@@ -11,6 +11,7 @@ import {
   towns,
   type Db,
 } from '@towncore/db';
+import { signupSource, type SignupPlacement } from '@towncore/config';
 import { parseAddress } from '../address';
 import { suppress, suppressedAddresses } from '../outbound/suppression';
 import type { MailTransport } from '../outbound/transport';
@@ -84,6 +85,8 @@ export type SignupInput = {
   sourceUrl: string;
   /** The hidden field; anything in it means a bot. */
   honeypot?: string | null;
+  /** Which prompt the reader used (counted in aggregate, never per reader). */
+  placement?: SignupPlacement | null;
 };
 
 export type SignupOutcome = 'ok' | 'invalid' | 'unavailable' | 'rate_limited';
@@ -128,7 +131,7 @@ export async function signup(deps: BulkDeps, input: SignupInput): Promise<Signup
     consentAt: now,
     consentSource: input.sourceUrl.slice(0, 500),
     consentIp: input.ip,
-    source: 'signup_form',
+    source: signupSource(input.placement),
   };
   const [sub] = existing
     ? await db

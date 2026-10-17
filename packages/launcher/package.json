@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "towns:rank": "tsx scripts/rank.ts",
-    "launch": "tsx scripts/launch.ts"
+    "launch": "tsx scripts/launch.ts",
+    "towns:households": "tsx scripts/households.ts"
   },
   "dependencies": {
     "@towncore/adapters": "workspace:*",

@@ -146,3 +146,27 @@ export {
   weatherTargets,
   type WeatherTarget,
 } from './weather-refresh';
+export {
+  addCounts,
+  AUDIENCE_DAYS,
+  byCohort,
+  byPlatform,
+  byState,
+  emptyCounts,
+  funnelRates,
+  groupAudience,
+  townAudience,
+  type AudienceGroup,
+  type FunnelCounts,
+  type FunnelRates,
+  type TownAudience,
+} from './audience';
+export {
+  decideExperiment,
+  ExperimentRefused,
+  experimentReports,
+  startExperiment,
+  stopExperiment,
+  variantMetric,
+  type ExperimentReport,
+} from './experiments';

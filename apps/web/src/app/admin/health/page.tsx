@@ -1,9 +1,20 @@
 import { mailAlerts, isNull, desc } from '@towncore/db';
-import { COVERAGE_DAYS, storyCoverage, townHealth } from '@towncore/pipeline';
+import {
+  byCohort,
+  byPlatform,
+  byState,
+  COVERAGE_DAYS,
+  experimentReports,
+  groupAudience,
+  storyCoverage,
+  townAudience,
+  townHealth,
+} from '@towncore/pipeline';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../admin.module.css';
 import { searchSwitchAction } from './actions';
+import { AudienceSection, ExperimentsSection } from './audience';
 
 export const metadata = { title: 'Health' };
 export const dynamic = 'force-dynamic';
@@ -22,7 +33,7 @@ export default async function Health({
   const me = await requireStaff();
   const admin = me.role === 'admin';
   const params = await searchParams;
-  const [rows, coverage, alerts] = await Promise.all([
+  const [rows, coverage, alerts, audience] = await Promise.all([
     townHealth(db()),
     storyCoverage(db()),
     db()
@@ -30,7 +41,9 @@ export default async function Health({
       .from(mailAlerts)
       .where(isNull(mailAlerts.resolvedAt))
       .orderBy(desc(mailAlerts.severity), desc(mailAlerts.firstSeenAt)),
+    townAudience(db()),
   ]);
+  const experiments = await experimentReports(db(), audience);
   return (
     <main>
       <h1>Health</h1>
@@ -153,6 +166,15 @@ export default async function Health({
           </form>
         </section>
       ) : null}
+
+      <AudienceSection
+        towns={audience}
+        cohorts={groupAudience(audience, byCohort)}
+        platforms={groupAudience(audience, byPlatform)}
+        states={groupAudience(audience, byState)}
+      />
+
+      <ExperimentsSection reports={experiments} admin={admin} />
 
       <h2>Stories against the target</h2>
       <p className={styles.muted}>

@@ -5,7 +5,7 @@ import {
   type FeaturedRank,
   type TownConfig,
 } from '@towncore/config';
-import { getActiveCampaign, type Town } from '@towncore/db';
+import { getActiveCampaign, townVariant, type Town } from '@towncore/db';
 import { db } from '@/lib/db';
 import { newsletterOpen } from '@/lib/newsletter';
 import { slots, type SlotName } from './registry';
@@ -83,14 +83,18 @@ export async function resolveSlotFill(
     );
   }
   // 2. Sponsored directory placements: M6. 3. Programmatic: gated, later.
-  return houseAd(town, slot, { newsletter: await newsletterOpen(town), ...context });
+  return houseAd(town, slot, {
+    newsletter: await newsletterOpen(town),
+    adCopy: await townVariant(db(), 'house-ad-copy', town),
+    ...context,
+  });
 }
 
 /** House ads promote the site itself. They're labeled as the site's own, never as editorial. */
 export function houseAd(
   town: Town,
   slot: SlotName,
-  opts: { newsletter?: boolean } & SlotContext = {},
+  opts: { newsletter?: boolean; adCopy?: 'control' | 'reach-readers' } & SlotContext = {},
 ): SlotFill {
   const contact = townContactEmail(town.config as TownConfig);
   // Every money house ad sells the same concrete offer: featured spots at the town's prices,
@@ -103,7 +107,9 @@ export function houseAd(
   const advertise: SlotFill = {
     source: 'house',
     label: `From ${town.siteName}`,
-    headline: 'Get your business featured',
+    // The headline is an experiment per town or cohort (owner, 2026-10-17).
+    headline:
+      opts.adCopy === 'reach-readers' ? `Reach ${town.name} readers` : 'Get your business featured',
     body: `Featured spots in ${town.siteName}'s directory from ${offer.from} a month.${freeLine}`,
     href: advertisePath(),
     cta: offer.trial ? `Try ${offer.trialDays} days free` : 'See the spots',

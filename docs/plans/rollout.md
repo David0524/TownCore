@@ -85,6 +85,8 @@ The next cohort goes out only when the last one shows all of these:
 
 If a cohort is unhealthy: pause launches, use the kill switch if needed, fix the cause, then resume.
 
+"Sign-ups coming in" is read on Admin → Health → Audience and revenue → By cohort (built 2026-10-17): active subscribers per 1,000 households (Census ACS B11001, filled by `pnpm towns:households`), sign-ups by prompt, story views by source, claim rate, trial starts, trial to paid and revenue per town, with the same numbers by meeting platform and state. Where a number is weak the table says where to look: low claims → discovery; trials not converting → proof reports and lead flow; low traffic → content and the newsletter. Experiments (copy, prompt placement, proof-report wording, sign-up box first on phones) are assigned per town or cohort and compared on the same page; a winner rolls out to every town.
+
 ## Launch order
 
 - **By state:** Florida first. Then the states where one state-level source serves every town (licenses, business filings, sales, inspections).

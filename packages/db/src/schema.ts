@@ -120,6 +120,8 @@ export const towns = pgTable('towns', {
   // Town theme (CLAUDE.md §11a); null means the network default theme.
   theme: jsonb('theme'),
   readinessScore: real('readiness_score'),
+  // Census ACS households (B11001), for subscribers per 1,000 households (owner, 2026-10-17).
+  households: integer('households'),
   // The search kill switch (owner, 2026-10-17): a live town hidden from search keeps serving
   // readers but is noindex everywhere and lists nothing in its sitemaps, until staff show it again.
   searchHidden: boolean('search_hidden').notNull().default(false),
@@ -1988,3 +1990,57 @@ export const identityArt = pgTable(
   (t) => [index('identity_art_town_idx').on(t.townId, t.createdAt)],
 );
 export type IdentityArt = typeof identityArt.$inferSelect;
+
+// Where article views came from, by class only (owner, 2026-10-17: Facebook referrals, search,
+// newsletter). The class is worked out in the reader's browser; the referrer URL is never sent.
+// Cookieless: no identifiers, only per-town daily counts (D-M4-3).
+export const referralStatsDaily = pgTable(
+  'referral_stats_daily',
+  {
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    day: date('day').notNull(),
+    source: text('source').notNull(),
+    views: integer('views').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.townId, t.day, t.source] })],
+);
+
+// Experiments (§11a-2, owner 2026-10-17): the variants live in code (packages/config audience.ts);
+// this records which experiments run, by town or cohort, and the winner once decided, which then
+// shows in every town. Assignment is by a hash of the town or cohort: never per reader.
+export const experiments = pgTable(
+  'experiments',
+  {
+    key: text('key').primaryKey(),
+    status: text('status').$type<'off' | 'running' | 'decided'>().notNull().default('off'),
+    unit: text('unit').$type<'town' | 'cohort'>().notNull().default('town'),
+    winner: text('winner'),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    updatedBy: uuid('updated_by').references(() => staff.id),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check('experiments_status', sql`${t.status} in ('off', 'running', 'decided')`),
+    check('experiments_unit', sql`${t.unit} in ('town', 'cohort')`),
+    check('experiments_winner', sql`${t.status} <> 'decided' or ${t.winner} is not null`),
+  ],
+);
+
+/** The variant each town got when an experiment started (or when it first showed after). */
+export const experimentAssignments = pgTable(
+  'experiment_assignments',
+  {
+    experimentKey: text('experiment_key')
+      .notNull()
+      .references(() => experiments.key, { onDelete: 'cascade' }),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    variant: text('variant').notNull(),
+    assignedAt: timestamp('assigned_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.experimentKey, t.townId] })],
+);
