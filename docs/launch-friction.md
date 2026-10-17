@@ -23,3 +23,7 @@ when a step repeats across towns, automate it.
 ## Every town: Facebook page (2026-10-17)
 
 - Facebook pages can't be created through the Graph API, so each town's page is made by hand. Batch it: make every page in a cohort in one sitting, then add each page's address and numeric page id as `facebook:` in its town YAML and run `pnpm towns:sync`. Admin → Facebook lists towns still missing a page. Page tokens for the Post button go in `META_PAGE_TOKENS` (a secret, never committed). See docs/plans/facebook.md.
+
+## Every town: development projects map (2026-10-17)
+
+- Launch discovery doesn't look for a city's development activity map yet, so it's added by hand: find the city's ArcGIS service with proposed, approved, under-construction and completed projects (one layer per stage, or one layer with a status column), check its robots.txt, and add a `permits` / `arcgis` source with `stages` and only the columns to show (never owners or staff). Boca's entry in `towns/fl/boca-raton.yaml` is the model. Next step to automate: search ArcGIS Online for the city's "development" layers in `packages/launcher/src/county.ts`'s catalog search, and draft the entry for a person to confirm.
