@@ -160,6 +160,47 @@ pnpm mail:onboard retry testtown.com --execute     # after fixing whatever faile
   "Re-check SES status" button asks the worker to look again on its next tick. If SES gives up (DKIM or MAIL FROM `FAILED`),
   the domain fails with the reason; check the records in Vercel, then `retry`.
 
+### Warm-up starts when we buy the domain
+
+Every town domain starts building its sending reputation as soon as we own it (owner,
+2026-10-17). Nobody has to remember to onboard it:
+
+1. **Bought.** `pnpm launch … --approve-spend` buys the domain (step 2, Rule 10: typed back at
+   the quoted price). That approval also covers its mail onboarding, so no `--approved` is needed
+   and the `MAIL_TEST_DOMAINS` limit doesn't apply to it.
+2. **Onboarded.** Step 2b ("Mail domain and warm-up") runs right after the purchase: the two
+   SES identities, DKIM, MAIL FROM, and the SPF, DMARC and MX records on Vercel. It never
+   overwrites a record; a conflict becomes a launch to-do (and a line in
+   `docs/launch-friction.md`), and the launch carries on.
+3. **Verified.** The worker's 5-minute check takes the domain live once SES sees the DNS, and
+   warm-up starts at 50 emails a day, doubling every 3 healthy days.
+4. **Warming in draft.** Staff test issues (Admin → Newsletter, test mode) and `news@` replies
+   go out from the domain while the site is still a draft. That's real mail to real people who
+   asked for it, which is how reputation is built.
+5. **Launch.** Sign-up opens with the site; confirmations and the first daily issues grow within
+   the day's cap, and anything over it waits for the next day.
+
+Plan ahead by cohort: pass `--cohort 2026-12` (the planned go-live month) to `pnpm launch`, and
+buy each cohort's domains at least three weeks (`MAIL_LEAD_DAYS`, 21) before that month, so
+they're verified and warming at go-live. The launch report shows the date onboarding should
+start by.
+
+**Catching up.** If onboarding couldn't run at purchase (credentials not set yet, a conflict,
+an API error), the launch report lists it as a to-do and Mail health raises
+"bought … but its mail onboarding hasn't started" an hour after the purchase. Then:
+
+```sh
+pnpm mail:onboard bought             # dry-run: every bought domain, soonest cohort first
+pnpm mail:onboard bought --execute   # onboards the ones not yet onboarded (or failed)
+```
+
+A resumed launch (`pnpm launch … --resume`) also retries its own step 2b.
+
+**Never** use paid "warm-up networks" or seed lists that trade fake mail. They break the SES
+terms and Google's sender rules, and they put the whole account at risk. Rule 10 is unchanged:
+the daily newsletter still needs its per-town standing approval (off → test → live after 3 test
+issues), campaigns need "Approve send", and replies need a person to press Send.
+
 ## Newsletters and bulk mail
 
 **Before a town takes signups**, all of these must hold (otherwise its site keeps saying

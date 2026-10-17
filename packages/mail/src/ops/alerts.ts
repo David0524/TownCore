@@ -16,6 +16,7 @@ import {
   type Db,
 } from '@towncore/db';
 import { publisher } from '@towncore/config';
+import { boughtDomains, ONBOARD_GRACE_MS } from '../bought';
 import { healthTotals, networkBulkPause } from '../bulk/health';
 import type { MailTransport } from '../outbound/transport';
 import { storedAccountStatus } from './account';
@@ -90,6 +91,16 @@ export async function currentConditions(db: Db, now = new Date()): Promise<Condi
       severity: 'warning',
       message: `Onboarding failed for ${d.name}: ${d.reason ?? 'see Admin → Mail domains'}`,
     });
+
+  // Warm-up starts at purchase (owner, 2026-10-17): a bought domain must not sit un-onboarded.
+  for (const d of await boughtDomains(db)) {
+    if (d.mail || !d.boughtAt || now.getTime() - d.boughtAt.getTime() < ONBOARD_GRACE_MS) continue;
+    out.push({
+      key: `bought_not_onboarded:${d.domain}`,
+      severity: 'warning',
+      message: `${d.domain} was bought ${d.boughtAt.toISOString().slice(0, 10)} but its mail onboarding hasn't started, so it isn't warming up${d.startBy ? ` (cohort ${d.cohort} wants it by ${d.startBy})` : ''}. Run pnpm mail:onboard bought --execute (see the runbook).`,
+    });
+  }
 
   const [events] = await db
     .select({ n: sql<number>`count(*)::int` })

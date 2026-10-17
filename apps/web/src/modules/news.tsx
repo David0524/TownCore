@@ -8,7 +8,7 @@ import { ArticleVisual } from '@/components/visuals/ArticleVisual';
 import { StoryThumb } from '@/components/visuals/StoryThumb';
 import { WeatherTile } from '@/components/weather/WeatherTile';
 import { newsletterOpen } from '@/lib/newsletter';
-import { beats, townShortName, type TownConfig } from '@towncore/config';
+import { beats, townShortName, tropicsLine, type TownConfig } from '@towncore/config';
 import { townVariant, type Article } from '@towncore/db';
 import { db } from '@/lib/db';
 import { formatTownDate } from '@/lib/town';
@@ -23,6 +23,7 @@ import {
   recentArticles,
   roundupFigure,
   townPoint,
+  townTropics,
   townWeather,
 } from './data';
 import type { HomeModuleComponent } from './types';
@@ -60,10 +61,11 @@ export const LeadStory: HomeModuleComponent = async ({ town }) => {
 
 /** The Today tile: weather now (docs/plans/M4b.md). Hidden when the town has no NWS data. */
 export const TodayBento: HomeModuleComponent = async ({ town, modules }) => {
-  const [weather, point, articles] = await Promise.all([
+  const [weather, point, articles, tropics] = await Promise.all([
     townWeather(town.id),
     townPoint(town.id),
     recentArticles(town.id),
+    townTropics(town.state),
   ]);
   const sunset = point ? townSunset(new Date(), town.timezone, point[0], point[1]) : null;
   const { also } = await frontSplit(articles, modules, town.timezone);
@@ -76,7 +78,9 @@ export const TodayBento: HomeModuleComponent = async ({ town, modules }) => {
       {/* On phones the conditions move above the top story (canvas HomePhone), so weather is
           above the fold; "Also today" stays where it is. */}
       <div className={styles.conditions}>
-        {weather ? <WeatherTile town={town} weather={weather} /> : null}
+        {weather ? (
+          <WeatherTile town={town} weather={weather} tropics={tropics && tropicsLine(tropics)} />
+        ) : null}
         {/* Coastal towns: the beach tile beside sunset; others: sunset alone. */}
         {beach ? (
           <BeachTiles town={town} beach={beach} sunset={sunset} wind={wind} />

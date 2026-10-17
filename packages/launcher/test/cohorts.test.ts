@@ -295,7 +295,10 @@ describe('runLaunch until', () => {
       expect(result.launch.status).toBe('stopped');
       expect(result.launch.stoppedReason).toMatch(/Paused after 1\. Resolve the town/);
       expect(result.launch.options).not.toHaveProperty('until');
-      expect(result.steps.map((s) => s.status)).toEqual(['done', ...Array(8).fill('pending')]);
+      expect(result.steps.map((s) => s.status)).toEqual([
+        'done',
+        ...Array(launchSteps.length - 1).fill('pending'),
+      ]);
     } finally {
       await tmp.drop();
     }

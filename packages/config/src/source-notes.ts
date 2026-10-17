@@ -63,6 +63,24 @@ const DESCRIPTIONS: Record<string, SourceDescription> = {
     dataset: 'building permits',
     about: "Permits from the local government's open data. Costs are the applicants' estimates.",
   },
+  'usaspending:federal-award': {
+    publisher: 'USASpending.gov (U.S. Treasury)',
+    dataset: 'federal awards',
+    about:
+      "New federal contracts and grants. The recipient's address is its mailing address, and the work can be done anywhere; amounts are what the government obligated, which can grow later. Defense contracts appear 90 days late.",
+  },
+  'cms:nursing-home-inspection': {
+    publisher: 'Centers for Medicare & Medicaid Services',
+    dataset: 'nursing home health inspections',
+    about:
+      "Federal health inspections as published on Medicare's Care Compare, two to six months after the visit. Each citation is rated A to L for scope and severity; J to L is immediate jeopardy. An inspection that found nothing isn't listed. The address is the home's mailing address, which can be outside city limits.",
+  },
+  'cms:nursing-home-penalty': {
+    publisher: 'Centers for Medicare & Medicaid Services',
+    dataset: 'nursing home penalties',
+    about:
+      'Fines and payment denials Medicare imposed, posted months later. A home may appeal; amounts are as CMS lists them.',
+  },
   'road-work': {
     dataset: 'road and bridge construction list',
     about: "The county's list of planned work. Dates and lane closures can change.",

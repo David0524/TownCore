@@ -161,13 +161,21 @@ export async function searchListings(
   townId: string,
   q: string,
   limit = 25,
+  /** Only listings of this kind (the advertise page's search for a category product). */
+  category?: string | null,
 ): Promise<Listing[]> {
   const term = q.trim();
   if (term.length < 2) return [];
   return db
     .select()
     .from(businesses)
-    .where(and(active(townId), ilike(businesses.name, likeTerm(term))))
+    .where(
+      and(
+        active(townId),
+        ilike(businesses.name, likeTerm(term)),
+        category ? eq(businesses.category, category) : undefined,
+      ),
+    )
     .orderBy(...organicOrder)
     .limit(limit);
 }

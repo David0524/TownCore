@@ -156,17 +156,13 @@ export async function provisionStep(input: {
           ? []
           : [
               {
-                what: `Buy ${config.domain} (Rule 10)`,
+                what: `Buy ${config.domain} (Rule 10; step 2b then onboards its mail under the same approval, so warm-up starts at once)`,
                 command: `pnpm launch "${town.name}, ${town.state}" --resume --approve-spend`,
               },
             ]),
         {
           what: 'Stripe test prices for this town',
           command: `pnpm directory:stripe sync --town ${town.slug} --execute`,
-        },
-        {
-          what: 'Mail domain: SES identities and DNS on Vercel (Rule 10)',
-          command: `pnpm mail:onboard add ${config.domain} --execute --approved`,
         },
         {
           what: 'Attach the domain to the Vercel web project (production deploy, Rule 10)',

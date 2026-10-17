@@ -8,9 +8,24 @@ import styles from './weather.module.css';
  * The Today weather tile (docs/plans/M4b.md): this hour's forecast in large light numerals,
  * today's high and low, and an hourly row, with the National Weather Service named as the
  * source (no outside link: the full forecast is our own Weather page). It's a forecast for the
- * hour, not a measurement, and says so.
+ * hour, not a measurement, and says so. In hurricane country, an active storm or a likely one
+ * adds a line that leads to the Weather page's tropics panel.
  */
-export function WeatherTile({ town, weather }: { town: Town; weather: TownWeather }) {
+export function WeatherTile({
+  town,
+  weather,
+  tropics = null,
+}: {
+  town: Town;
+  weather: TownWeather;
+  /** The Hurricane Center's one line for the town's basin, when something is active or likely. */
+  tropics?: string | null;
+}) {
+  const tropicsLink = tropics ? (
+    <p className={styles.tropics} data-testid="tropics-line">
+      <Link href="/weather#tropics">Tropics: {tropics}</Link>
+    </p>
+  ) : null;
   if (weather.kind === 'zone') {
     return (
       <section className={styles.tile} aria-labelledby="weather-h" data-testid="weather-tile">
@@ -21,6 +36,7 @@ export function WeatherTile({ town, weather }: { town: Town; weather: TownWeathe
         </div>
         <p className={styles.zonePeriod}>{weather.period}</p>
         <p className={styles.zoneText}>{weather.text}</p>
+        {tropicsLink}
         <p className={`meta ${styles.source}`}>
           National Weather Service forecast, issued {clockTime(weather.issuedAt, town.timezone)} ·{' '}
           <Link href="/weather">Full forecast</Link>
@@ -64,6 +80,7 @@ export function WeatherTile({ town, weather }: { town: Town; weather: TownWeathe
           </li>
         ))}
       </ol>
+      {tropicsLink}
       <p className={`meta ${styles.source}`}>
         Forecast: National Weather Service, updated {clockTime(w.updatedAt, town.timezone)}
       </p>

@@ -2,6 +2,18 @@
 // sending, MIME, threading, suppression and bulk sending arrive phase by phase.
 export { parseAddress, type ParsedAddress } from './address';
 export {
+  boughtDomains,
+  MAIL_LEAD_DAYS,
+  missingForOnboarding,
+  needsOnboarding,
+  ONBOARD_GRACE_MS,
+  onboardBoughtDomain,
+  onboardBy,
+  type BoughtDomain,
+  type MailStart,
+} from './bought';
+export { offlineProviders, providersFromEnv, type Providers } from './providers';
+export {
   desiredRecords,
   MAIL_FROM_LABEL,
   NEWS_LABEL,
@@ -40,7 +52,7 @@ export {
 } from './onboarding';
 export { dryRunStore, pgOnboardingStore } from './pg-store';
 export { onboardLaunchDomain } from './launch-onboard';
-export { offlineProviders, realProviders, type Providers } from './cli/onboard';
+export { realProviders } from './cli/onboard';
 export { RetryableError, withRetry, type RetryOptions } from './retry';
 export { routeRecipient, type Route, type RoutingInput } from './routing';
 export {

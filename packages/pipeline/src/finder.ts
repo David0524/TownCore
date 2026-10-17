@@ -31,7 +31,12 @@ import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { MIN_SOURCE_CHARS, scoreCandidate, titleSimilarity } from './scoring';
 import { createGuideCandidates } from './guides';
 import { roundupWeekRecords, townRecords } from './roundup-weeks';
-import { inspectionSpotlights, permitSpotlights, type Spotlight } from './spotlights';
+import {
+  inspectionSpotlights,
+  nursingHomeSpotlights,
+  permitSpotlights,
+  type Spotlight,
+} from './spotlights';
 import { hasInspectionFailures, isNewsworthyAlert } from './templates';
 import { cannotBeArticle, decideTier } from './tiers';
 import { isoLocalDate, localDate, localWeekStart, startOfLocalDay } from './time';
@@ -262,6 +267,17 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       recordIds: sales.map((r) => r.id),
       now,
     });
+    // New federal contracts and grants to town recipients (USASpending, every town). One award
+    // is too thin for a story (Rule 7); the second makes a week worth telling.
+    const federal = await roundupWeekRecords(db, town, 'federal', lastWeek);
+    await roundup(db, town, report, {
+      key: `roundup:federal:${week}`,
+      title: `Federal awards, week of ${week}`,
+      beat: 'business',
+      recordIds: federal.map((r) => r.id),
+      min: 2,
+      now,
+    });
     // Restaurant inspections: a week that names a closure or complaint needs a person (§7).
     const inspections = await roundupWeekRecords(db, town, 'inspections', lastWeek);
     const failures = hasInspectionFailures(inspections.map((r) => r.raw));
@@ -276,6 +292,19 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
         : {}),
     });
     await spotlights(db, town, report, week, inspectionSpotlights(inspections), now);
+    // Nursing-home inspections and penalties (CMS, every town): CMS publishes them monthly, months
+    // after the visit, so this rounds up what was first read last week. Always Tier 3 (§7).
+    const nursingHomes = await roundupWeekRecords(db, town, 'nursing-homes', lastWeek);
+    await roundup(db, town, report, {
+      key: `roundup:nursing-homes:${week}`,
+      title: `Nursing home inspections, week of ${week}`,
+      beat: 'business',
+      recordIds: nursingHomes.map((r) => r.id),
+      now,
+      tier: 3,
+      tierReason: 'health inspection findings at named nursing homes (§7 Tier 3)',
+    });
+    await spotlights(db, town, report, week, nursingHomeSpotlights(nursingHomes), now);
   }
 }
 
@@ -338,7 +367,13 @@ async function spotlights(
       proposedTier: item.tier,
       tierReasons: [
         'spotlight built in code from public records',
-        ...(item.tier === 3 ? ['names a business with inspection problems (§7 Tier 3)'] : []),
+        ...(item.tier === 3
+          ? [
+              item.kind === 'nursing-home'
+                ? 'names a nursing home with health findings (§7 Tier 3)'
+                : 'names a business with inspection problems (§7 Tier 3)',
+            ]
+          : []),
       ],
       status: 'accepted',
       acceptedAt: now,

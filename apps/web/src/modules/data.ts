@@ -3,7 +3,9 @@ import {
   cardLabel,
   GAME_RECORD,
   TOPIC_INDEX_MIN_ARTICLES,
+  tropicsBasin,
   type Game,
+  type TropicsSnapshot,
   type WeatherSnapshot,
 } from '@towncore/config';
 import {
@@ -13,6 +15,7 @@ import {
   engagementByArticle,
   eq,
   getTownWeather,
+  getTropics,
   gte,
   inArray,
   listRankableArticles,
@@ -159,6 +162,16 @@ export const townWeather = cache(async (townId: string): Promise<TownWeather | n
     url: forecast.url,
     issuedAt: forecast.occurredAt,
   };
+});
+
+/**
+ * The National Hurricane Center's latest for the basin whose storms can reach towns in this
+ * state (packages/config/src/tropics.ts), or null for inland states and when NHC's data is stale.
+ */
+export const townTropics = cache(async (state: string): Promise<TropicsSnapshot | null> => {
+  const basin = tropicsBasin(state);
+  if (!basin) return null;
+  return (await getTropics(db(), basin))?.snapshot ?? null;
 });
 
 // What a roundup's records are, for its number card ("101 new business filings").

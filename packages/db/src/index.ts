@@ -79,6 +79,9 @@ export {
 export {
   claimWeatherRefresh,
   getTownWeather,
+  getTropics,
+  saveTropics,
+  TROPICS_MAX_AGE_MS,
   saveTownWeatherAlerts,
   saveTownWeather,
   WEATHER_MAX_AGE_MS,

@@ -6,6 +6,8 @@ import {
   type EntityKind,
   type ImageKind,
   type ImageSpec,
+  type TropicsBasin,
+  type TropicsSnapshot,
   type WeatherSnapshot,
 } from '@towncore/config';
 import { sql } from 'drizzle-orm';
@@ -623,6 +625,16 @@ export const townWeather = pgTable('town_weather', {
     .primaryKey()
     .references(() => towns.id),
   snapshot: jsonb('snapshot').$type<WeatherSnapshot>(),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }).notNull(),
+});
+
+// The tropics panel (packages/config/src/tropics.ts): the National Hurricane Center's latest
+// storms and outlook per basin, shared by every town and refreshed hourly by the worker.
+export const tropics = pgTable('tropics', {
+  basin: text('basin').$type<TropicsBasin>().primaryKey(),
+  snapshot: jsonb('snapshot').$type<TropicsSnapshot>(),
   fetchedAt: timestamp('fetched_at', { withTimezone: true }),
   lastError: text('last_error'),
   lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }).notNull(),

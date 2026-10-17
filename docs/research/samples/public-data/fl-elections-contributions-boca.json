@@ -1,0 +1,71 @@
+{
+  "_note": "Research sample, 2026-10-17. Florida Division of Elections contributions database, tab-delimited output (queryformat=2): GET https://dos.elections.myflorida.com/cgi-bin/contrib.exe?election=20261103-GEN&search_on=1&ccity=Boca+Raton&cstate=FL&cdatefrom=10/01/2026&rowlimit=5&queryformat=2 (plus the form's empty fields). Contributor names and street addresses are private individuals and were redacted here. Covers state-level candidates and committees only, not city or county races.",
+  "columns": [
+    "Candidate/Committee",
+    "Date",
+    "Amount",
+    "Typ",
+    "Contributor Name",
+    "Address",
+    "City State Zip",
+    "Occupation",
+    "Inkind Desc"
+  ],
+  "rows": [
+    {
+      "Candidate/Committee": "Miami Realtors Politcal Action Committee (PAC)",
+      "Date": "10/01/2026",
+      "Amount": "10.00",
+      "Typ": "CHE",
+      "Contributor Name": "[redacted: private individual]",
+      "Address": "[redacted: private individual]",
+      "City State Zip": "BOCA RATON, FL 33498",
+      "Occupation": "REAL ESTATE BROKER",
+      "Inkind Desc": ""
+    },
+    {
+      "Candidate/Committee": "Miami Realtors Politcal Action Committee (PAC)",
+      "Date": "10/01/2026",
+      "Amount": "10.00",
+      "Typ": "CHE",
+      "Contributor Name": "[redacted: private individual]",
+      "Address": "[redacted: private individual]",
+      "City State Zip": "BOCA RATON, FL 33486",
+      "Occupation": "REAL ESTATE BROKER",
+      "Inkind Desc": ""
+    },
+    {
+      "Candidate/Committee": "Miami Realtors Politcal Action Committee (PAC)",
+      "Date": "10/01/2026",
+      "Amount": "40.00",
+      "Typ": "CHE",
+      "Contributor Name": "[redacted: private individual]",
+      "Address": "[redacted: private individual]",
+      "City State Zip": "BOCA RATON, FL 33486",
+      "Occupation": "REAL ESTATE BROKER",
+      "Inkind Desc": ""
+    },
+    {
+      "Candidate/Committee": "Miami Realtors Politcal Action Committee (PAC)",
+      "Date": "10/01/2026",
+      "Amount": "40.00",
+      "Typ": "CHE",
+      "Contributor Name": "[redacted: private individual]",
+      "Address": "[redacted: private individual]",
+      "City State Zip": "BOCA RATON, FL 33487",
+      "Occupation": "REAL ESTATE BROKER",
+      "Inkind Desc": ""
+    },
+    {
+      "Candidate/Committee": "Miami Realtors Politcal Action Committee (PAC)",
+      "Date": "10/01/2026",
+      "Amount": "40.00",
+      "Typ": "CHE",
+      "Contributor Name": "[redacted: private individual]",
+      "Address": "[redacted: private individual]",
+      "City State Zip": "BOCA RATON, FL 33432",
+      "Occupation": "REAL ESTATE BROKER",
+      "Inkind Desc": ""
+    }
+  ]
+}

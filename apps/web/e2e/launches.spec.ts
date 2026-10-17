@@ -4,6 +4,7 @@ import { loadEnv } from '@towncore/config';
 import { launchSteps } from '@towncore/config';
 import {
   adminActions,
+  asc,
   createDb,
   eq,
   hashToken,
@@ -148,15 +149,22 @@ test('a ready launch goes live only when every check passes; an admin can pause 
           picked: { siteName: 'Testcove Square', domain: 'testcove.test' },
           purchase: { orderId: 'ord_1', status: 'completed', price: 11.25 },
         }
-      : step === 'report'
+      : step === 'mail'
         ? {
-            passed: true,
-            report: 'docs/launches/testcove-zz/launch-report.md',
-            checks: [{ name: 'Readiness (Rule 7)', status: 'pass', detail: '3.4 a day' }],
-            manual: [],
-            aiCostUsd: 0,
+            domain: 'testcove.test',
+            state: 'not started',
+            detail: 'needs VERCEL_DNS_TOKEN and AWS credentials',
+            startBy: '2026-11-10',
           }
-        : {};
+        : step === 'report'
+          ? {
+              passed: true,
+              report: 'docs/launches/testcove-zz/launch-report.md',
+              checks: [{ name: 'Readiness (Rule 7)', status: 'pass', detail: '3.4 a day' }],
+              manual: [],
+              aiCostUsd: 0,
+            }
+          : {};
   await db.insert(launchStepRecords).values(
     launchSteps.map((step) => ({
       launchId: run!.id,
@@ -182,6 +190,9 @@ test('a ready launch goes live only when every check passes; an admin can pause 
     'The mail domain testcove.test is not onboarded, not live',
   );
   await expect(row.getByRole('button', { name: /Approve launch/ })).toHaveCount(0);
+  // Step 2b's record shows until the mail domain exists (warm-up starts at purchase).
+  await expect(row.getByTestId('mail-warmup')).toContainText('not started');
+  await expect(row.getByTestId('mail-warmup')).toContainText('Onboard by 2026-11-10');
 
   await db.insert(mailDomains).values({
     name: 'testcove.test',
@@ -189,8 +200,12 @@ test('a ready launch goes live only when every check passes; an admin can pause 
     displayName: 'Testcove Square',
     isTest: true,
     status: 'live',
+    bulkStatus: 'warming',
+    warmupDay: 3,
+    bulkDailyCap: 50,
   });
   await page.reload();
+  await expect(row.getByTestId('mail-warmup')).toContainText('Warming: day 3, 50 a day');
   await row.getByRole('button', { name: 'Approve launch: take Testcove Square live' }).click();
   await expect(page.getByRole('status')).toHaveText('Testcove Square is live');
   const [live] = await db.select().from(towns).where(eq(towns.slug, 'testcove-zz'));
@@ -204,6 +219,11 @@ test('a ready launch goes live only when every check passes; an admin can pause 
   await expect(page.getByRole('status')).toHaveText('Testcove Square paused');
   const [paused] = await db.select().from(towns).where(eq(towns.slug, 'testcove-zz'));
   expect(paused!.status).toBe('paused');
-  const audit = await db.select().from(adminActions).where(eq(adminActions.staffId, me.id));
+  // In the order they happened: a select without ORDER BY can return them either way.
+  const audit = await db
+    .select()
+    .from(adminActions)
+    .where(eq(adminActions.staffId, me.id))
+    .orderBy(asc(adminActions.createdAt));
   expect(audit.map((a) => a.action)).toEqual(['launch.approve', 'town.pause']);
 });

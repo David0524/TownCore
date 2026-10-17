@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "tsx scripts/migrate-on-deploy.ts && next build",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run --passWithNoTests",

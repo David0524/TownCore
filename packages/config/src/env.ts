@@ -12,6 +12,8 @@ export const envSchema = z.object({
   DATABASE_URL: optional(z.url({ protocol: /^postgres(ql)?$/ })),
   // The Vercel demo's database (Neon), for pnpm demo:migrate and demo:sync only.
   DEMO_DATABASE_URL: optional(z.url({ protocol: /^postgres(ql)?$/ })),
+  // Neon's direct (unpooled) connection, set by Vercel's Neon integration: migrations on deploy.
+  DATABASE_URL_UNPOOLED: optional(z.url({ protocol: /^postgres(ql)?$/ })),
   ANTHROPIC_API_KEY: optional(z.string()),
   GEMINI_API_KEY: optional(z.string()),
   // Which model provider the pipeline uses. Unset: Anthropic if its key is set, else Gemini.
@@ -54,6 +56,8 @@ export const envSchema = z.object({
   // Set by Vercel itself on its deployments (never in .env): its disk doesn't keep photos, and
   // with no worker there, town pages refresh stale weather themselves (apps/web/src/lib/weather.ts).
   VERCEL: optional(z.string()),
+  // Set by Vercel: production, preview or development. Only production deploys migrate.
+  VERCEL_ENV: optional(z.string()),
   // How outbound mail leaves: 'ses', or 'log' (development and CI: written to the server log,
   // never sent). Unset: SES when AWS credentials are set, otherwise sending is off.
   MAIL_TRANSPORT: optional(z.enum(['ses', 'log'])),
@@ -91,6 +95,7 @@ export const envSchema = z.object({
   /** YouTube Data API v3 key: finds town meeting videos to embed (packages/adapters/src/youtube). */
   YOUTUBE_API_KEY: optional(z.string()),
   SOCRATA_APP_TOKEN: optional(z.string()),
+  CENSUS_API_KEY: optional(z.string()),
   // Facebook page access tokens as JSON, {"<page id>": "<token>"} (owner, 2026-10-17). Only
   // used when staff press Post in Admin → Facebook; never committed.
   META_PAGE_TOKENS: optional(

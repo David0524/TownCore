@@ -34,7 +34,9 @@ import { llmTown } from './finder';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { uniqueSlug } from './publish';
 import {
+  federalAwardsRoundup,
   inspectionsRoundup,
+  nursingHomesRoundup,
   meetingsRoundup,
   newBusinessesRoundup,
   newLicensesRoundup,
@@ -49,6 +51,7 @@ import {
 import { pastWeekCounts, roundupWeekRecords } from './roundup-weeks';
 import {
   inspectionSpotlight,
+  nursingHomeSpotlight,
   permitSpotlight,
   SPOTLIGHT_ROUNDUP,
   type SpotlightKind,
@@ -290,6 +293,8 @@ const ROUNDUPS: Record<RoundupKind, typeof meetingsRoundup> = {
   sales: propertySalesRoundup,
   'new-places': newPlacesRoundup,
   roads: roadWorkRoundup,
+  federal: federalAwardsRoundup,
+  'nursing-homes': nursingHomesRoundup,
 };
 
 /** Builds a templated item; a roundup also gets the town's own past weeks to compare with. */
@@ -319,6 +324,7 @@ export async function buildTemplate(
       const history = await inspectionHistory(db, town.id, license, weekStart);
       return inspectionSpotlight(info, recs, history);
     }
+    if (k === 'nursing-home') return nursingHomeSpotlight(info, weekStart, recs);
     return permitSpotlight(info, recs[0], weekRecs);
   }
   return null;

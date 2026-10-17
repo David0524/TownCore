@@ -79,6 +79,28 @@ sources:
     platform: civicplus
     url: https://www.myboca.us/
     options: { module: newsflash, catId: All-newsflash.xml }
+  # Verified 2026-10-17: police and fire releases never reach the News Flash RSS feeds, so their
+  # category list pages are read (/m/newsflash?cat=…, allowed by robots.txt), with each release's
+  # PDF from /DocumentCenter (allowed). Official releases only; always Tier 3 (§7).
+  - kind: police
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: newsflash-list, catId: '17' } # Police News Releases
+  - kind: fire
+    platform: civicplus
+    url: https://www.myboca.us/
+    options: { module: newsflash-list, catId: '37' } # Fire Rescue News
+  # Verified 2026-10-17: new federal contracts and grants to recipients with a Boca Raton address
+  # (USASpending API, no key; robots.txt 404). Every town gets this source from the launcher.
+  - kind: federal_awards
+    platform: usaspending
+    options: { city: Boca Raton, state: FL }
+  # Verified 2026-10-17: federal health inspections and penalties of the 11 nursing homes with a
+  # Boca Raton address (CMS Provider Data Catalog API, no key; robots.txt allows /provider-data/,
+  # crawl-delay 10). Always Tier 3. Every town gets this source from the launcher.
+  - kind: health_facilities
+    platform: cms
+    options: { city: Boca Raton, state: FL }
   # Verified 2026-10-15: Florida DBPR licensee files (contractors, electricians), filtered to the city.
   - kind: business_filings
     platform: fl-dbpr
