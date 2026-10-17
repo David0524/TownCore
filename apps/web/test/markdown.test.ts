@@ -11,6 +11,53 @@ describe('renderMarkdown', () => {
   it('renders ordinary Markdown', () => {
     expect(renderMarkdown('Hello **world**')).toBe('<p>Hello <strong>world</strong></p>');
   });
+
+  it('renders roundup tables in their own scrolling box, escaping every cell', () => {
+    const html = renderMarkdown(
+      [
+        'Lede.',
+        '',
+        '| Business | ZIP |',
+        '| --- | --- |',
+        '| A \\| B <script>x</script> | [33431](https://x.gov/a) |',
+        '| **C** | 33432 |',
+      ].join('\n'),
+    );
+    expect(html).toContain('<p>Lede.</p>');
+    expect(html).toContain('<div class="data-table" role="region"');
+    expect(html).toContain('<th scope="col">Business</th>');
+    expect(html).toContain('<td>A | B &lt;script&gt;x&lt;/script&gt;</td>');
+    expect(html).toContain('<a href="https://x.gov/a">33431</a>');
+    expect(html).toContain('<td><strong>C</strong></td>');
+    expect(html).not.toContain('<script>');
+  });
+
+  it('renders ":::details" blocks closed, with an escaped summary', () => {
+    const md = [
+      '| A |',
+      '| --- |',
+      '| 1 |',
+      ':::details Show all <b>3</b> rows',
+      '| A |',
+      '| --- |',
+      '| 2 |',
+      '| 3 |',
+      ':::',
+      '',
+      'After.',
+    ].join('\n');
+    const blocks = markdownBlocks(md);
+    expect(blocks).toHaveLength(3);
+    const html = renderMarkdown(md);
+    expect(html).toMatch(
+      /<details class="data-more"><summary>Show all &lt;b&gt;3&lt;\/b&gt; rows<\/summary><div class="data-table"/,
+    );
+    expect(html).not.toContain('<details class="data-more" open');
+    expect(html.match(/<tr>/g)).toHaveLength(5);
+    expect(html).toContain('<p>After.</p>');
+    // Tables and collapsed blocks never count as paragraphs for ad slots.
+    expect(inlineSlotPositions(blocks)).toEqual([]);
+  });
 });
 
 describe('markdownBlocks and inline slot positions', () => {

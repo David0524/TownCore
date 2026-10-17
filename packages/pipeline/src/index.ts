@@ -42,6 +42,7 @@ export {
   type ScoreComponents,
 } from './scoring';
 export {
+  dayRange,
   isIssuedLicense,
   isNewsworthyAlert,
   meetingsRoundup,
@@ -72,6 +73,7 @@ export {
   uniqueSlug,
   type Reviewer,
 } from './publish';
+export { rerenderRoundups, type RerenderChange } from './rerender';
 export { roadClosurePin, severeWeatherPin, writeCandidate, type WriteOutcome } from './write';
 export {
   applyUpdate,

@@ -239,3 +239,4 @@ export {
   type ReferralSource,
   type SignupPlacement,
 } from './audience';
+export { describeSource, sourceHost, type SourceDescription } from './source-notes';

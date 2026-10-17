@@ -19,6 +19,7 @@ import { factcheckV1, writerV1, type FactcheckResult, type WriterDraft } from '@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Llm, LlmProvider, LlmResponse } from '../src/llm';
 import { publishArticle, slugify, type Reviewer } from '../src/publish';
+import { rerenderRoundups } from '../src/rerender';
 import { writeCandidate } from '../src/write';
 import { classification } from './helpers';
 
@@ -323,12 +324,12 @@ describe('writeCandidate: templated items', () => {
     expect(outcome.status).toBe('published');
     const a = await article((outcome as { articleId: string }).articleId);
     expect(a).toMatchObject({
-      headline: 'New businesses registered with a Boca Raton address, Oct. 5–Oct. 11',
+      headline: 'Teens Academy LLC registered with a Boca Raton address',
       tier: 1,
       promptVersions: ['template'],
       sourceRecordIds: [filing!.id],
     });
-    expect(a.bodyMd).toContain('TEENS ACADEMY LLC');
+    expect(a.bodyMd).toContain('Teens Academy LLC');
     expect(a.bodyMd).not.toContain('1 Main St');
     // One record is too little for a chart: the router falls back to the typographic card.
     const [image] = await db.select().from(images).where(eq(images.articleId, a.id));
@@ -375,6 +376,87 @@ describe('writeCandidate: templated items', () => {
     expect(image?.kind).toBe('data-graphic');
     expect(image?.spec).toMatchObject({ type: 'daily-counts', total: 5 });
     expect(image?.alt).toMatch(/^Bar chart of new business filings by day, Oct\. 6 to Oct\. 9/);
+  });
+});
+
+describe('rerenderRoundups', () => {
+  it('rewrites code-built roundups in place and leaves model-written stories alone', async () => {
+    const [filing] = await db
+      .insert(records)
+      .values({
+        sourceId: sourceIds.business_filings!,
+        townId,
+        externalId: 'filing:rerender',
+        type: 'new-filing',
+        title: 'SEASIDE BREWING LLC',
+        text: 'Florida limited liability company, document number L9, filed 09/29/2026.',
+        contentHash: 'rr',
+        occurredAt: new Date('2026-09-29T00:00:00Z'),
+        raw: { zip: '33432' },
+      })
+      .returning();
+    const [candidate] = await db
+      .insert(storyCandidates)
+      .values({
+        townId,
+        kind: 'roundup',
+        key: 'roundup:new-businesses:2026-09-28',
+        beat: 'business',
+        recordIds: [filing!.id],
+        proposedTier: 1,
+        status: 'accepted',
+      })
+      .returning();
+    const outcome = await writeCandidate(db, candidate!.id, { now: NOW });
+    const id = (outcome as { articleId: string }).articleId;
+    const original = await article(id);
+    // An old-style roundup body, as written before the new layout.
+    await db
+      .update(articles)
+      .set({ headline: 'New businesses, old style', bodyMd: '- **SEASIDE BREWING LLC**: LLC' })
+      .where(eq(articles.id, id));
+    // A model-written story is never touched.
+    const [story] = await db
+      .insert(articles)
+      .values({
+        townId,
+        slug: 'a-story-a-model-wrote',
+        headline: 'A story a model wrote',
+        bodyMd: 'Text.',
+        beat: 'government',
+        tier: 2,
+        status: 'published',
+        byline: 'Boca Town Square Newsroom',
+        sourceRecordIds: [filing!.id],
+        kind: 'story',
+        promptVersions: ['writer@1'],
+        publishedAt: NOW,
+      })
+      .returning();
+
+    const dry = await rerenderRoundups(db, 'boca-raton', { now: NOW });
+    const mine = dry.changes.find((c) => c.id === id)!;
+    expect(mine.after.headline).toBe('A brewery registered with a Boca Raton address');
+    expect(dry.changes.some((c) => c.id === story!.id)).toBe(false);
+    expect((await article(id)).headline).toBe('New businesses, old style');
+
+    const later = new Date(NOW.getTime() + 3_600_000);
+    await rerenderRoundups(db, 'boca-raton', { apply: true, now: later });
+    const after = await article(id);
+    expect(after).toMatchObject({
+      slug: original.slug,
+      status: original.status,
+      tier: original.tier,
+      publishedAt: original.publishedAt,
+      sourceRecordIds: original.sourceRecordIds,
+      headline: 'A brewery registered with a Boca Raton address',
+    });
+    expect(after.updatedAt.getTime()).toBe(later.getTime());
+    expect((await article(story!.id)).bodyMd).toBe('Text.');
+    // Nothing left to change.
+    expect((await rerenderRoundups(db, 'boca-raton')).changes.find((c) => c.id === id)).toBe(
+      undefined,
+    );
   });
 });
 

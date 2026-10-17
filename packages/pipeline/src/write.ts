@@ -281,7 +281,7 @@ const ROUNDUPS: Record<RoundupKind, typeof meetingsRoundup> = {
 };
 
 /** Builds a templated item; a roundup also gets the town's own past weeks to compare with. */
-async function buildTemplate(
+export async function buildTemplate(
   db: Db,
   key: string,
   town: typeof towns.$inferSelect,
