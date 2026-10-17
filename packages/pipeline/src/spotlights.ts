@@ -2,19 +2,27 @@ import { foodViolations } from '@towncore/adapters';
 import { titleCase } from '@towncore/config';
 import {
   cap,
+  CARE_COMPARE_HOMES,
+  citationArea,
   count,
   INSPECTIONS_PAGE,
   inspectedPlaces,
+  isoDay,
   linked,
   md,
   mdy,
   numWord,
+  nursingHomeRows,
+  penaltyLine,
+  penaltyWords,
   permitRows,
+  ratedWords,
   SEVERITY_RANK,
   usd,
   type Inspection,
   type TemplatedDraft,
   type TemplateRecord,
+  worstCitation,
 } from './templates';
 
 // Spotlights (owner, 2026-10-17: "evaluate what Boca News Now publishes"; plan
@@ -33,7 +41,7 @@ import {
 // targets (docs/research/metric-media.md). They stay in their weekly roundups.
 
 /** The weekly roundups that can produce spotlights, and the spotlight kinds they produce. */
-export type SpotlightKind = 'inspection' | 'permit';
+export type SpotlightKind = 'inspection' | 'permit' | 'nursing-home';
 
 export type Spotlight = {
   kind: SpotlightKind;
@@ -41,7 +49,7 @@ export type Spotlight = {
   id: string;
   title: string;
   recordIds: string[];
-  /** Tier 3 for inspections that name a business with problems (§7). */
+  /** Tier 3 for inspections that name a business or nursing home with problems (§7). */
   tier: 1 | 3;
 };
 
@@ -49,6 +57,7 @@ export type Spotlight = {
 export const SPOTLIGHTS_PER_WEEK: Record<SpotlightKind, number> = {
   inspection: 3,
   permit: 2,
+  'nursing-home': 2,
 };
 
 /** Inspections: a closure order or complaint, or a visit with this many high-priority violations. */
@@ -57,6 +66,8 @@ export const SPOT_HIGH_PRIORITY = 5;
 export const SPOT_TOTAL = 15;
 /** Permits: at least this estimated cost. */
 export const SPOT_PERMIT_MIN = 1_000_000;
+/** Nursing homes: a citation rated actual harm or worse, a payment denial, or fines this large. */
+export const SPOT_FINE = 25_000;
 
 const bySeverity = (a: { worst: Inspection }, b: { worst: Inspection }) =>
   SEVERITY_RANK[b.worst.severity ?? 'ok'] - SEVERITY_RANK[a.worst.severity ?? 'ok'] ||
@@ -239,8 +250,111 @@ export function permitSpotlight(
   };
 }
 
+// --- Nursing homes ---------------------------------------------------------------------------
+
+/**
+ * Nursing homes whose new CMS records clear the bar: a citation rated actual harm or immediate
+ * jeopardy, a fine of at least SPOT_FINE, or a payment denial. Most serious first.
+ */
+export function nursingHomeSpotlights(recs: TemplateRecord[]): Spotlight[] {
+  const { visits, penalties } = nursingHomeRows(recs);
+  const homes = new Map<string, { name: string; level: number; fine: number; ids: string[] }>();
+  const home = (ccn: string, name: string) => {
+    const h = homes.get(ccn) ?? { name, level: 0, fine: 0, ids: [] };
+    homes.set(ccn, h);
+    return h;
+  };
+  for (const x of visits) {
+    const h = home(x.v.ccn, x.name);
+    h.level = Math.max(h.level, x.level);
+    h.ids.push(x.r.id);
+  }
+  for (const x of penalties) {
+    const h = home(x.p.ccn, x.name);
+    h.fine += x.p.amount ?? 0;
+    if (x.p.type === 'payment denial') h.level = Math.max(h.level, 3);
+    h.ids.push(x.r.id);
+  }
+  return [...homes]
+    .filter(([, h]) => h.level >= 3 || h.fine >= SPOT_FINE)
+    .sort(([, a], [, b]) => b.level - a.level || b.fine - a.fine || a.name.localeCompare(b.name))
+    .slice(0, SPOTLIGHTS_PER_WEEK['nursing-home'])
+    .map(([ccn, h]) => ({
+      kind: 'nursing-home' as const,
+      id: ccn,
+      title: `Nursing home: ${h.name}`,
+      recordIds: h.ids,
+      tier: 3 as const,
+    }));
+}
+
+/**
+ * One nursing home's new federal findings: what inspectors cited, rated on CMS's scale and
+ * quoted from the federal requirement, its previous inspection and any penalty. Tier 3 (§7).
+ * CMS's files carry no resident, worker or inspector names, and none are written.
+ */
+export function nursingHomeSpotlight(
+  town: TownInfo,
+  weekStart: Date,
+  recs: TemplateRecord[],
+): TemplatedDraft {
+  const { visits, penalties } = nursingHomeRows(recs);
+  const top = visits[0];
+  const first = top?.v ?? penalties[0]!.p;
+  const name = top?.name ?? penalties[0]!.name;
+  const url = top?.r.url ?? penalties[0]!.r.url;
+  const day = (iso: string) => isoDay(iso, weekStart);
+  const addr = first.address ? titleCase(first.address) : null;
+  const fined = penalties.reduce((sum, x) => sum + (x.p.amount ?? 0), 0);
+  const what = top
+    ? top.level === 4
+      ? 'immediate jeopardy'
+      : top.level === 3
+        ? 'actual harm'
+        : count(top.v.citations.length, 'citation', 'citations')
+    : null;
+  const headline = top
+    ? `Federal inspectors cite ${what} at ${name}${fined ? `; regulators fine it ${usd(fined)}` : ''}`
+    : `Federal regulators give ${name} ${penaltyWords(penalties[0]!.p)}`;
+  const c = top ? worstCitation(top.v) : null;
+  const lede = [
+    top
+      ? `Federal health inspectors visited ${md(name)}${first.beds ? `, a ${first.beds}-bed nursing home` : ''}${addr ? ` at ${md(addr)}` : ''}, on ${day(top.v.date)} and issued ${count(top.v.citations.length, 'citation', 'citations')}.`
+      : null,
+    c
+      ? `The most serious citation, ${ratedWords(c.severity)}, was under ${md(citationArea(c.category))}.`
+      : null,
+    ...penalties.map((x) => penaltyLine(x.name, x.p, day)),
+    top?.v.previous
+      ? `At its previous inspection with citations, on ${day(top.v.previous.date)}, it received ${numWord(top.v.previous.citations)}.`
+      : null,
+  ].filter(Boolean);
+  const citations = visits.flatMap((x) =>
+    x.v.citations.map(
+      (ci) =>
+        `**${md(cap(citationArea(ci.category)))}** (${ci.severity}${visits.length > 1 ? `, ${day(x.v.date)}` : ''}${ci.complaint ? ', from a complaint' : ''}): ${md(ci.description)}`,
+    ),
+  );
+  return {
+    headline,
+    dek: `${cap(count(citations.length, 'citation', 'citations'))}${fined ? ` and ${usd(fined)} in fines` : ''} for ${name}, a nursing home with a ${town.name} address.`,
+    bodyMd: [
+      lede.join(' '),
+      citations.length
+        ? ['## What inspectors cited', citations.map((l) => `- ${l}`).join('\n')].join('\n\n')
+        : null,
+      `[Its ratings and inspection reports](${url ?? CARE_COMPARE_HOMES}) are on Medicare's Care Compare.`,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    beat: 'business',
+    sourceRecordIds: recs.map((r) => r.id),
+  };
+}
+
 /** What each spotlight kind is called in its candidate key and which roundup's week it reads. */
 export const SPOTLIGHT_ROUNDUP = {
   inspection: 'inspections',
   permit: 'permits',
+  'nursing-home': 'nursing-homes',
 } as const;

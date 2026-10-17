@@ -162,7 +162,8 @@ export async function verifyUrl(
 /**
  * State-level and federal sources a town gets without discovery (CLAUDE.md §9: written once,
  * reused), each health-checked live. Every town: new federal contracts and grants to recipients
- * with a town address (USASpending). Florida: DBPR licenses and new food service approvals,
+ * with a town address (USASpending), and federal inspections and penalties of its nursing homes
+ * (CMS Care Compare; a town without one simply gets no records). Florida: DBPR licenses and new food service approvals,
  * Sunbiz filings, filtered to the town's mailing city.
  */
 export async function stateSources(
@@ -184,6 +185,13 @@ export async function stateSources(
       url: 'https://www.usaspending.gov/',
       options: { city: town.name, state: town.state },
       label: 'USASpending.gov federal contracts and grants',
+    },
+    {
+      kind: 'health_facilities',
+      platform: 'cms',
+      url: 'https://data.cms.gov/provider-data/',
+      options: { city: town.name, state: town.state },
+      label: 'CMS nursing home inspections and penalties',
     },
   ];
   if (town.state !== 'FL') return checkPlanned(fetcher, planned, now);

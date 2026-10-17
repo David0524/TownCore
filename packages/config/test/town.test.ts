@@ -46,6 +46,7 @@ describe('town config', () => {
       'police/civicplus',
       'fire/civicplus',
       'federal_awards/usaspending',
+      'health_facilities/cms',
       'business_filings/fl-dbpr',
       'business_filings/fl-dbpr',
       'business_filings/fl-dbpr',

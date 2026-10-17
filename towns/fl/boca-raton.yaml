@@ -95,6 +95,12 @@ sources:
   - kind: federal_awards
     platform: usaspending
     options: { city: Boca Raton, state: FL }
+  # Verified 2026-10-17: federal health inspections and penalties of the 11 nursing homes with a
+  # Boca Raton address (CMS Provider Data Catalog API, no key; robots.txt allows /provider-data/,
+  # crawl-delay 10). Always Tier 3. Every town gets this source from the launcher.
+  - kind: health_facilities
+    platform: cms
+    options: { city: Boca Raton, state: FL }
   # Verified 2026-10-15: Florida DBPR licensee files (contractors, electricians), filtered to the city.
   - kind: business_filings
     platform: fl-dbpr

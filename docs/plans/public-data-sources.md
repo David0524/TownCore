@@ -117,8 +117,8 @@ Research for new beats beyond meetings, licenses and weather (2026-10-17). Seven
 
 ### 7. CMS Care Compare / Provider Data Catalog
 
-- **Endpoint:** `GET https://data.cms.gov/provider-data/api/1/datastore/query/{datasetId}/0?conditions[0][property]=citytown&conditions[0][value]=BOCA RATON&conditions[0][operator]==&...`. Datasets: nursing home provider information `4pq5-n9py` (star ratings, health inspection rating, deficiencies, fines, abuse icon), hospital general information `xubh-q36u` (overall star rating). Penalties and health deficiencies have their own datasets (IDs not checked).
-- **Robots:** allowed; `crawl-delay: 10`; only `/data-api/v1/download-request` and admin paths disallowed.
+- **Endpoint:** `GET https://data.cms.gov/provider-data/api/1/datastore/query/{datasetId}/0?conditions[0][property]=citytown&conditions[0][value]=BOCA RATON&conditions[0][operator]==&...`. Datasets: nursing home provider information `4pq5-n9py` (star ratings, health inspection rating, deficiencies, fines, abuse icon), hospital general information `xubh-q36u` (overall star rating). Health deficiencies `r5ix-sfxw` and penalties `g6vv-u9sr` (checked 2026-10-17; both filter by `citytown` and `state`, take `>=` date conditions, and return at most 1,500 rows a page).
+- **Robots:** allowed; `crawl-delay: 10`; only `/data-api/v1/download-request` and admin paths disallowed. The crawl-delay line comes before the first `User-agent` group, where RFC 9309 parsers ignore it; the Fetcher reads it anyway (2026-10-17).
 - **Terms:** federal data, `accessLevel: public` in the dataset metadata. The docs pages are JavaScript-only; no key or rate limit is stated (unverified).
 - **Granularity:** facility, with city and ZIP. Boca has 11 nursing homes and 2 hospitals by mailing city; West Boca Medical Center is in 33428 (unincorporated), so use the city-limits check.
 - **Cadence:** monthly (`processing_date` 2026-09-01; metadata modified 2026-09-30).

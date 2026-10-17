@@ -31,7 +31,12 @@ import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { MIN_SOURCE_CHARS, scoreCandidate, titleSimilarity } from './scoring';
 import { createGuideCandidates } from './guides';
 import { roundupWeekRecords, townRecords } from './roundup-weeks';
-import { inspectionSpotlights, permitSpotlights, type Spotlight } from './spotlights';
+import {
+  inspectionSpotlights,
+  nursingHomeSpotlights,
+  permitSpotlights,
+  type Spotlight,
+} from './spotlights';
 import { hasInspectionFailures, isNewsworthyAlert } from './templates';
 import { cannotBeArticle, decideTier } from './tiers';
 import { isoLocalDate, localDate, localWeekStart, startOfLocalDay } from './time';
@@ -287,6 +292,19 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
         : {}),
     });
     await spotlights(db, town, report, week, inspectionSpotlights(inspections), now);
+    // Nursing-home inspections and penalties (CMS, every town): CMS publishes them monthly, months
+    // after the visit, so this rounds up what was first read last week. Always Tier 3 (§7).
+    const nursingHomes = await roundupWeekRecords(db, town, 'nursing-homes', lastWeek);
+    await roundup(db, town, report, {
+      key: `roundup:nursing-homes:${week}`,
+      title: `Nursing home inspections, week of ${week}`,
+      beat: 'business',
+      recordIds: nursingHomes.map((r) => r.id),
+      now,
+      tier: 3,
+      tierReason: 'health inspection findings at named nursing homes (§7 Tier 3)',
+    });
+    await spotlights(db, town, report, week, nursingHomeSpotlights(nursingHomes), now);
   }
 }
 
@@ -349,7 +367,13 @@ async function spotlights(
       proposedTier: item.tier,
       tierReasons: [
         'spotlight built in code from public records',
-        ...(item.tier === 3 ? ['names a business with inspection problems (§7 Tier 3)'] : []),
+        ...(item.tier === 3
+          ? [
+              item.kind === 'nursing-home'
+                ? 'names a nursing home with health findings (§7 Tier 3)'
+                : 'names a business with inspection problems (§7 Tier 3)',
+            ]
+          : []),
       ],
       status: 'accepted',
       acceptedAt: now,

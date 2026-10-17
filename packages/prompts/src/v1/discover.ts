@@ -8,8 +8,9 @@ import { z } from 'zod';
 export const discoverSchema = z.strictObject({
   sources: z.array(
     z.strictObject({
-      // Federal awards come from USASpending for every town, never from discovery.
-      kind: z.enum(sourceKinds).exclude(['federal_awards']),
+      // Federal awards (USASpending) and nursing-home inspections (CMS) come to every town
+      // without discovery.
+      kind: z.enum(sourceKinds).exclude(['federal_awards', 'health_facilities']),
       url: z.string(),
       publisher: z.string(),
       why: z.string(),

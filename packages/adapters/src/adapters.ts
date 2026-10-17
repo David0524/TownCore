@@ -1,5 +1,6 @@
 // Registers every built adapter. Import this module once at startup (worker, scripts).
 import { arcgisAdapter } from './arcgis';
+import { cmsAdapter } from './cms';
 import { civicclerkAdapter } from './civicclerk';
 import { civicplusAdapter } from './civicplus';
 import { escribeAdapter } from './escribe';
@@ -31,6 +32,7 @@ for (const adapter of [
   readerAdapter,
   pdfListAdapter,
   usaspendingAdapter,
+  cmsAdapter,
   // Last: the generic fallback for any RSS, Atom or iCalendar feed.
   feedAdapter,
 ]) {
