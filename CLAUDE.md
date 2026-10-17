@@ -664,6 +664,12 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
   - **Metrics:** traffic (subscribers per 1,000 households, return visits, Facebook referrals, search impressions) and funnel (claim rate, trial starts, trial-to-paid, revenue per town). What a weak number means: low claims → fix discovery; trials not converting → fix proof reports and lead flow; low traffic → fix content and the newsletter.
   - **Experiments:** house ads, signup prompts, proof-report wording and module order are tracked experiments across cohorts; winners go network-wide within the neighbor rule.
 - 2026-10-17 — **County source registry (owner: "build the system, not one paper").** County data sets live once in `counties/<state>/<county>.yaml`: platform, URL, column roles, the columns fetched (never owners or mailing addresses), a city-limits method (parcel municipality codes or a true jurisdiction column, never a mailing city), and the verification date and robots verdict. Towns take them with `county_sources` and their own city filter; Boca now uses Palm Beach County's entry, with the same source key. When a county is missing, launch discovery searches ArcGIS Online and Socrata for that county's data and drafts an entry for a person to confirm (`docs/plans/rollout.md`, Phase 1).
+- 2026-10-17 — **Near-duplicate guard (owner: "build the system, not one paper").**
+  - Code-built roundups lead with the town's own facts and compare with its own past weeks.
+  - Caveats are short and nothing is padded.
+  - CI fails any template two towns share more than `NEAR_DUP_MAX` (30%) of, measured in 8-word shingles with names and numbers masked.
+  - Privacy, and Corrections while empty, are `noindex, follow`.
+  - Methods opens with the town's own sources (`docs/plans/google-safety.md`).
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.

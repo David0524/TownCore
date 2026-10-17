@@ -7,7 +7,7 @@ import {
   urlset,
   xmlResponse,
 } from '@/lib/discovery';
-import { listPublishedGuides } from '@towncore/db';
+import { listPublishedGuides, listTownCorrections } from '@towncore/db';
 import { db } from '@/lib/db';
 import { MIN_INDEXABLE_STORIES } from '@/lib/indexing';
 import { resolveTown } from '@/lib/town';
@@ -32,7 +32,8 @@ export async function GET(_req: Request, { params }: Ctx) {
           ...(counts.total >= MIN_INDEXABLE_STORIES ? ['/'] : []),
           '/about',
           '/methods',
-          '/corrections',
+          // Only once it lists a correction; empty, it's the same text everywhere.
+          ...((await listTownCorrections(db(), town.id)).length ? ['/corrections'] : []),
           ...((await listPublishedGuides(db(), town.id)).length ? ['/guides'] : []),
           // Sections with 3+ real stories only; thinner ones are noindex.
           ...beats

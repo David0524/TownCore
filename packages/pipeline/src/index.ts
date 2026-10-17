@@ -40,9 +40,12 @@ export {
   newBusinessesRoundup,
   newLicensesRoundup,
   weatherAlert,
+  weekTrend,
   type TemplatedDraft,
   type TemplateRecord,
 } from './templates';
+export { nearDuplicateShare, normalizeWords } from './near-duplicate';
+export { pastWeekCounts, roundupWeekRecords } from './roundup-weeks';
 export { cannotBeArticle, decideTier, mentionsMinor, type Tier, type TierDecision } from './tiers';
 export {
   checkDraft,

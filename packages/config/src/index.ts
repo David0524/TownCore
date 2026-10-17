@@ -6,6 +6,8 @@ export {
   engagementSmoothing,
   freshnessHalfLifeHours,
   maxSameBeatInARow,
+  NEAR_DUP_MAX,
+  NEAR_DUP_SHINGLE_WORDS,
   factcheckPassScore,
   placeholderReviewerName,
   publicSafetyShare,

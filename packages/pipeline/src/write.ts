@@ -37,8 +37,10 @@ import {
   propertySalesRoundup,
   newPlacesRoundup,
   weatherAlert,
+  type RoundupKind,
   type TemplatedDraft,
 } from './templates';
+import { pastWeekCounts } from './roundup-weeks';
 import { decideTier, type Tier } from './tiers';
 import { localWeekStart } from './time';
 
@@ -91,7 +93,7 @@ export async function writeCandidate(
 
   // --- Templated items: built in code from the records.
   if (candidate.kind === 'roundup' || candidate.kind === 'template') {
-    const draft = buildTemplate(candidate.key, town!, config, rows);
+    const draft = await buildTemplate(db, candidate.key, town!, config, rows);
     if (!draft) {
       await backTo('skipped');
       return { status: 'skipped', reason: `no template for ${candidate.key}` };
@@ -269,25 +271,34 @@ export async function writeCandidate(
   });
 }
 
-function buildTemplate(
+const ROUNDUPS: Record<RoundupKind, typeof meetingsRoundup> = {
+  meetings: meetingsRoundup,
+  'new-businesses': newBusinessesRoundup,
+  'new-licenses': newLicensesRoundup,
+  inspections: inspectionsRoundup,
+  permits: permitsRoundup,
+  sales: propertySalesRoundup,
+  'new-places': newPlacesRoundup,
+};
+
+/** Builds a templated item; a roundup also gets the town's own past weeks to compare with. */
+async function buildTemplate(
+  db: Db,
   key: string,
   town: typeof towns.$inferSelect,
   config: TownConfig,
   rows: Row[],
-): TemplatedDraft | null {
+): Promise<TemplatedDraft | null> {
   const info = { name: town.name, timezone: town.timezone, agency: config.agencies[0]! };
   const recs = rows.map((r) => ({ ...r.record }));
-  const weekOf = (iso: string) => localWeekStart(new Date(`${iso}T12:00:00Z`), town.timezone);
-  const week = key.split(':')[2];
-  if (key.startsWith('roundup:meetings:')) return meetingsRoundup(info, weekOf(week!), recs);
-  if (key.startsWith('roundup:new-businesses:'))
-    return newBusinessesRoundup(info, weekOf(week!), recs);
-  if (key.startsWith('roundup:new-licenses:')) return newLicensesRoundup(info, weekOf(week!), recs);
-  if (key.startsWith('roundup:inspections:')) return inspectionsRoundup(info, weekOf(week!), recs);
-  if (key.startsWith('roundup:permits:')) return permitsRoundup(info, weekOf(week!), recs);
-  if (key.startsWith('roundup:sales:')) return propertySalesRoundup(info, weekOf(week!), recs);
-  if (key.startsWith('roundup:new-places:')) return newPlacesRoundup(info, weekOf(week!), recs);
-  if (key.startsWith('alert:') && recs[0]) return weatherAlert(info, recs[0]);
+  const [prefix, kind, week] = key.split(':');
+  if (prefix === 'roundup' && week && kind && kind in ROUNDUPS) {
+    const k = kind as RoundupKind;
+    const weekStart = localWeekStart(new Date(`${week}T12:00:00Z`), town.timezone);
+    const past = await pastWeekCounts(db, town, k, weekStart);
+    return ROUNDUPS[k](info, weekStart, recs, past);
+  }
+  if (prefix === 'alert' && recs[0]) return weatherAlert(info, recs[0]);
   return null;
 }
 

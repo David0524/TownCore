@@ -64,3 +64,13 @@ export const engagementCap = 0.3;
 export const engagementSmoothing = 50;
 /** No more than this many stories in a row from one beat (§6a). */
 export const maxSameBeatInARow = 2;
+
+/**
+ * Near-duplicate guard (owner, 2026-10-17: "no near-duplicate guides or roundups across towns").
+ * The same template built for two towns may share at most this share of its word shingles once
+ * town names and numbers are masked (packages/pipeline/src/near-duplicate.ts). CI checks every
+ * code-built template against it.
+ */
+export const NEAR_DUP_MAX = 0.3;
+/** Words per shingle: long enough that a shared shingle means a shared phrase, not a word. */
+export const NEAR_DUP_SHINGLE_WORDS = 8;

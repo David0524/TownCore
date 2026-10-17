@@ -11,6 +11,7 @@ import {
   propertySalesRoundup,
   newPlacesRoundup,
   weatherAlert,
+  weekTrend,
   type TemplateRecord,
 } from '../src/templates';
 
@@ -73,14 +74,15 @@ describe('newBusinessesRoundup', () => {
         raw: { zip: '33432' },
       }),
     ]);
-    expect(draft.bodyMd).toContain(
-      'recorded 2 new business filings with a Boca Raton mailing address',
+    expect(draft.dek).toBe(
+      'Alpha Corp and Zeta *services* LLC registered with a Boca Raton mailing address.',
     );
+    expect(draft.bodyMd).toContain('By type: 1 corporation and 1 LLC.');
     // State records give a mailing city, which can be outside city limits (wrong-town risk).
-    expect(draft.bodyMd).toContain('can be outside the city limits');
+    expect(draft.bodyMd).toContain('can be outside city limits');
     expect(draft.headline).not.toMatch(/ in Boca Raton/);
     expect(draft.bodyMd).toContain(
-      '- **ALPHA CORP**: Florida profit corporation, filed 10/07/2026, ZIP 33432\n- **ZETA \\*SERVICES\\* LLC**: Florida limited liability company, filed 10/06/2026, ZIP 33431',
+      '- **ALPHA CORP** (ZIP 33432): corporation, Oct. 7\n- **ZETA \\*SERVICES\\* LLC** (ZIP 33431): LLC, Oct. 6',
     );
     expect(draft.bodyMd).not.toMatch(/Main St|Elm Rd/);
     expect(draft.beat).toBe('business');
@@ -104,7 +106,9 @@ describe('newLicensesRoundup', () => {
     expect(draft.bodyMd).toContain(
       '- **DOE ROOFING LLC**: Certified Roofing Contractor, license CCC1234567',
     );
-    expect(draft.dek).toContain('issued 1 new license');
+    expect(draft.dek).toBe(
+      '1 certified roofing contractor with a Boca Raton mailing address got a first state license.',
+    );
   });
 });
 
@@ -218,10 +222,10 @@ describe('inspectionsRoundup', () => {
     );
     expect(draft.bodyMd).toContain('inspected 10/21/2026 (call-back visit)');
     expect(draft.bodyMd).toContain('## Warnings and follow-ups');
-    expect(draft.bodyMd).toContain('1 establishment needed no further action');
+    expect(draft.bodyMd).toContain('## Met inspection standards\n\nGamma Grill.');
     // Two visits to one place count once.
     expect(draft.bodyMd.match(/Gamma Grill/g)).toHaveLength(1);
-    expect(draft.bodyMd).toMatch(/snapshot of conditions/);
+    expect(draft.bodyMd).toContain('Each inspection is a snapshot of one visit.');
     expect(draft.sourceRecordIds).toEqual(['a', 'b', 'c', 'd', 'e']);
     expect(draft.beat).toBe('business');
   });
@@ -280,7 +284,7 @@ describe('permitsRoundup', () => {
     const draft = permitsRoundup(town, week, rows);
     expect(draft.headline).toBe('Building permits in Boca Raton, Oct. 19–Oct. 25');
     expect(draft.dek).toBe(
-      '3 permits with a combined estimated cost of $251,000, according to the official permit records.',
+      '3 permits worth an estimated $251,000; the largest is Building Permit: Addition at 12 NE 4 Ave ($250,000).',
     );
     const list = draft.bodyMd.split('## All permits')[1]!;
     expect(list.indexOf('12 NE 4 Ave')).toBeLessThan(list.indexOf('5641 Raleigh St'));
@@ -304,7 +308,7 @@ describe('propertySalesRoundup', () => {
       url: 'https://maps.example.gov/MapServer/1',
     });
 
-  it('lists the highest prices with the median and counts by kind, with no names', () => {
+  it('leads with the highest price, then the median and mix, with no names', () => {
     const draft = propertySalesRoundup(town, week, [
       sale('a', '6760 WILLOW WOOD DR 1201', 700000, 'CONDOMINIUM', '2026-10-20'),
       sale('b', '1200 S OCEAN BLVD', 12500000, 'SINGLE FAMILY', '2026-10-21'),
@@ -312,18 +316,17 @@ describe('propertySalesRoundup', () => {
     ]);
     expect(draft.headline).toBe('Property sales in Boca Raton, Oct. 19–Oct. 25');
     expect(draft.dek).toBe(
-      '3 sales recorded, with a median price of $700,000, according to county property records.',
+      '1200 S Ocean Blvd sold for $12,500,000, the highest of 3 sales recorded.',
     );
     expect(draft.beat).toBe('development');
     const items = draft.bodyMd.split('\n').filter((l) => l.startsWith('- **'));
     expect(items).toEqual([
-      '- **1200 S Ocean Blvd**: $12,500,000, single family, Oct. 21. [Record](https://maps.example.gov/MapServer/1)',
+      '- **1200 S Ocean Blvd**: $12,500,000, single-family home, Oct. 21. [Record](https://maps.example.gov/MapServer/1)',
       '- **6760 Willow Wood Dr 1201**: $700,000, condominium, Oct. 20. [Record](https://maps.example.gov/MapServer/1)',
       '- **22 NE 5th Ave**: $450,000, condominium, Oct. 22. [Record](https://maps.example.gov/MapServer/1)',
     ]);
-    expect(draft.bodyMd).toContain(
-      '## By kind of property\n\n- Condominium: 2\n- Single Family: 1',
-    );
+    expect(draft.bodyMd).toContain('median');
+    expect(draft.bodyMd).not.toMatch(/Buyer|Seller/i);
     expect(draft.sourceRecordIds).toEqual(['a', 'b', 'c']);
   });
 });
@@ -369,5 +372,14 @@ describe('newPlacesRoundup', () => {
     ]);
     expect(draft.bodyMd).not.toContain('Jane');
     expect(draft.sourceRecordIds).toEqual(['f1', 'l1']);
+  });
+});
+
+describe('weekTrend', () => {
+  it("compares with the town's own past weeks, and says nothing without them", () => {
+    expect(weekTrend(5, [])).toBeNull();
+    expect(weekTrend(5, [3])).toContain('up from 3 the week before');
+    expect(weekTrend(2, [3])).toContain('down from 3 the week before');
+    expect(weekTrend(9, [3, 4, 5])).toContain('the most in 4 weeks');
   });
 });

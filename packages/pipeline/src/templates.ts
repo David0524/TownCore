@@ -4,6 +4,11 @@ import { apDate } from './time';
 // Items built in code from structured records (CLAUDE.md §6 step 2: "templated jobs, not
 // candidates"). No model writes them, so every fact is copied straight from a record; the
 // tier router and publish rules still apply. Roundups link out to the official pages.
+//
+// The same template runs in thousands of towns, so each one leads with the town's own facts
+// (the biggest item, the mix, how the week compares with the town's own past weeks) and keeps
+// its fixed sentences to the few caveats readers need (owner, 2026-10-17: no near-duplicates
+// across towns; CI checks it in test/near-duplicate.test.ts). Never pad to vary the text.
 
 export type TemplateRecord = {
   id: string;
@@ -23,6 +28,16 @@ export type TemplatedDraft = {
   sourceRecordIds: string[];
 };
 
+/** The weekly roundups, by the name in their candidate key ("roundup:<kind>:<week>"). */
+export type RoundupKind =
+  | 'meetings'
+  | 'new-businesses'
+  | 'new-licenses'
+  | 'new-places'
+  | 'permits'
+  | 'sales'
+  | 'inspections';
+
 type TownInfo = { name: string; timezone: string; agency: string };
 
 const byTime = (a: TemplateRecord, b: TemplateRecord) =>
@@ -31,15 +46,73 @@ const byTime = (a: TemplateRecord, b: TemplateRecord) =>
 // Markdown-escape text that came from a record (names can contain * _ [ ]).
 const md = (s: string) => s.replace(/([\\*_[\]`<>])/g, '\\$1');
 
+const weekRange = (town: TownInfo, weekStart: Date) =>
+  `${apDate(weekStart, town.timezone)}–${apDate(new Date(weekStart.getTime() + 6 * 86_400_000), town.timezone)}`;
+
+const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+
+/** "a, b and c". */
+const list = (items: string[]) =>
+  items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+
+/** "3 limited liability companies": a count with its noun, singular or plural. */
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** The entries of a tally, largest first, ties alphabetically. */
+const ranked = (tally: Map<string, number>) =>
+  [...tally].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+const tally = <T>(items: T[], key: (item: T) => string | null) => {
+  const out = new Map<string, number>();
+  for (const item of items) {
+    const k = key(item);
+    if (k) out.set(k, (out.get(k) ?? 0) + 1);
+  }
+  return out;
+};
+
+/**
+ * How this week compares with the town's own past weeks (`past`: counts in the same units, the
+ * week before first; empty when the town has no earlier data). Null when there's nothing to
+ * compare with: a missing comparison is better than an invented one.
+ */
+export function weekTrend(n: number, past: number[] = []): string | null {
+  if (!past.length) return null;
+  const prev = past[0]!;
+  const base =
+    n > prev
+      ? `up from ${prev} the week before`
+      : n < prev
+        ? `down from ${prev} the week before`
+        : 'as many as the week before';
+  if (past.length >= 3) {
+    if (n > Math.max(...past)) return `${base}, and the most in ${past.length + 1} weeks`;
+    if (n < Math.min(...past)) return `${base}, and the fewest in ${past.length + 1} weeks`;
+  }
+  return base;
+}
+
+const withTrend = (n: number, past?: number[]) => {
+  const t = weekTrend(n, past);
+  return t ? `, ${t}` : '';
+};
+
+// State records give a mailing city, not a municipality: a "Boca Raton" address can be outside
+// city limits (e.g. West Boca). Roundups from state files say so, in a short clause.
+const OUTSIDE_LIMITS = 'Addresses can be outside city limits.';
+
 /** "Meetings this week" (D-M3-6): each public meeting on the city calendar for the week. */
 export function meetingsRoundup(
   town: TownInfo,
   weekStart: Date,
   meetings: TemplateRecord[],
+  past?: number[],
 ): TemplatedDraft {
-  const weekEnd = new Date(weekStart.getTime() + 6 * 86_400_000);
-  const range = `${apDate(weekStart, town.timezone)}–${apDate(weekEnd, town.timezone)}`;
-  const items = [...meetings].sort(byTime).map((m) => {
+  const range = weekRange(town, weekStart);
+  const sorted = [...meetings].sort(byTime);
+  const weekday = (d: Date) =>
+    new Intl.DateTimeFormat('en-US', { timeZone: town.timezone, weekday: 'long' }).format(d);
+  const items = sorted.map((m) => {
     const lines = Object.fromEntries(
       (m.text ?? '')
         .split('\n')
@@ -53,56 +126,97 @@ export function meetingsRoundup(
     const end = details && !details.endsWith('.') ? '.' : '';
     return `- **${md(m.title ?? 'Meeting')}**: ${details}${end}${link}`;
   });
+  const n = meetings.length;
+  const first = sorted[0];
+  const firstLine = first
+    ? `${first.title ?? 'A meeting'}${first.occurredAt ? ` on ${weekday(first.occurredAt)}` : ''}`
+    : '';
+  const byDay = tally(sorted, (m) => (m.occurredAt ? weekday(m.occurredAt) : null));
+  const [busiest] = ranked(byDay);
+  const busiestTitles = busiest
+    ? sorted
+        .filter((m) => m.occurredAt && weekday(m.occurredAt) === busiest[0])
+        .map((m) => md(m.title ?? 'a meeting'))
+    : [];
   return {
     headline: `Public meetings in ${town.name}, ${range}`,
-    dek: `${meetings.length} ${meetings.length === 1 ? 'meeting is' : 'meetings are'} on the ${town.agency} calendar this week.`,
+    dek:
+      n === 1
+        ? `${firstLine} is the only public meeting on the ${town.agency} calendar${withTrend(n, past)}.`
+        : `${count(n, 'public meeting', 'public meetings')} on the ${town.agency} calendar${withTrend(n, past)}, starting with ${firstLine}.`,
     bodyMd: [
-      `These public meetings are on the ${town.agency} calendar for the week of ${range}. Agendas are posted by the city; times can change, so check the meeting page before you go.`,
+      busiest && busiest[1] > 1 && byDay.size > 1
+        ? `${busiest[0]} is the busiest day: ${list(busiestTitles)}.`
+        : null,
       items.join('\n'),
-    ].join('\n\n'),
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
     beat: 'government',
     sourceRecordIds: meetings.map((m) => m.id),
   };
 }
 
-// State records give a mailing city, not a municipality: a "Boca Raton" address can be outside
-// city limits (e.g. West Boca). Roundups say so rather than claim the business is in the city.
-// Exact city limits need parcel lookups (planned with the directory, M6).
-const MAILING_CITY_NOTE = (name: string) =>
-  `A ${name} mailing address can be outside the city limits.`;
-
 type Filing = { name?: string; number?: string; fileDate?: string; zip?: string };
+
+/** A Florida filing type in short plain words, singular and plural. */
+function filingKind(kind: string): [string, string] {
+  const k = kind.toLowerCase();
+  const out = /foreign/.test(k) ? 'out-of-state ' : '';
+  if (/limited liability/.test(k)) return [`${out}LLC`, `${out}LLCs`];
+  if (/not for profit|nonprofit/.test(k)) return [`${out}nonprofit`, `${out}nonprofits`];
+  if (/partnership/.test(k)) return [`${out}partnership`, `${out}partnerships`];
+  if (/corporation/.test(k)) return [`${out}corporation`, `${out}corporations`];
+  return [k.replace(/^florida /, ''), `${k.replace(/^florida /, '')} filings`];
+}
+
+/** MM/DD/YYYY → "Oct. 13". */
+const mdyToAp = (value: string | undefined, timeZone: string) => {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value ?? '');
+  return m ? apDate(new Date(Date.UTC(+m[3]!, +m[1]! - 1, +m[2]!, 12)), timeZone) : null;
+};
 
 /** "New businesses registered" from Florida Division of Corporations daily filings. */
 export function newBusinessesRoundup(
   town: TownInfo,
   weekStart: Date,
   filings: TemplateRecord[],
+  past?: number[],
 ): TemplatedDraft {
-  const weekEnd = new Date(weekStart.getTime() + 6 * 86_400_000);
-  const range = `${apDate(weekStart, town.timezone)}–${apDate(weekEnd, town.timezone)}`;
+  const range = weekRange(town, weekStart);
   const rows = filings
     .map((f) => {
       const raw = (f.raw ?? {}) as Filing;
       // The record text starts "<kind>, document number <n>, filed <MM/DD/YYYY>."
-      const kind = f.text?.match(/^(.*?), document number/)?.[1] ?? 'Filing';
-      const filed = f.text?.match(/, filed (\d{2}\/\d{2}\/\d{4})\./)?.[1];
+      const kind = filingKind(f.text?.match(/^(.*?), document number/)?.[1] ?? 'Filing');
+      const filed = mdyToAp(f.text?.match(/, filed (\d{2}\/\d{2}\/\d{4})\./)?.[1], town.timezone);
       // Principal addresses are often homes: list the ZIP code only.
-      const zip = raw.zip?.slice(0, 5);
-      return {
-        name: f.title ?? raw.name ?? '',
-        line: [kind, filed ? `filed ${filed}` : null, zip ? `ZIP ${zip}` : null]
-          .filter(Boolean)
-          .join(', '),
-      };
+      const zip = raw.zip?.slice(0, 5) ?? null;
+      return { name: f.title ?? raw.name ?? '', kind, filed, zip };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
+  const n = filings.length;
+  const kinds = ranked(tally(rows, (r) => r.kind[0]));
+  const plurals = new Map(rows.map((r) => [r.kind[0], r.kind[1]]));
+  const mix = kinds.map(([k, c]) => `${c} ${c === 1 ? k : plurals.get(k)}`);
+  const [topZip] = ranked(tally(rows, (r) => r.zip));
   return {
     headline: `New businesses registered with a ${town.name} address, ${range}`,
-    dek: `${filings.length} new ${filings.length === 1 ? 'filing lists' : 'filings list'} a ${town.name} mailing address, according to the Florida Division of Corporations.`,
+    dek: `${list(n > 2 ? [...rows.slice(0, 2).map((r) => titleCase(r.name)), `${n - 2} more`] : rows.map((r) => titleCase(r.name)))} registered with a ${town.name} mailing address${withTrend(n, past)}.`,
     bodyMd: [
-      `The Florida Division of Corporations recorded ${filings.length} new business ${filings.length === 1 ? 'filing' : 'filings'} with a ${town.name} mailing address from ${range}. A filing registers a company with the state; it doesn't mean the business has opened. ${MAILING_CITY_NOTE(town.name)}`,
-      rows.map((r) => `- **${md(r.name)}**: ${md(r.line)}`).join('\n'),
+      [
+        kinds.length > 1 ? `By type: ${list(mix)}.` : null,
+        topZip && topZip[1] > 1 ? `ZIP code ${topZip[0]} had the most, ${topZip[1]}.` : null,
+        `Filings aren't openings. ${OUTSIDE_LIMITS}`,
+      ]
+        .filter(Boolean)
+        .join(' '),
+      rows
+        .map(
+          (r) =>
+            `- **${md(r.name)}**${r.zip ? ` (ZIP ${r.zip})` : ''}: ${r.kind[0]}${r.filed ? `, ${r.filed}` : ''}`,
+        )
+        .join('\n'),
     ].join('\n\n'),
     beat: 'business',
     sourceRecordIds: filings.map((f) => f.id),
@@ -133,9 +247,9 @@ export function newLicensesRoundup(
   town: TownInfo,
   weekStart: Date,
   licenses: TemplateRecord[],
+  past?: number[],
 ): TemplatedDraft {
-  const weekEnd = new Date(weekStart.getTime() + 6 * 86_400_000);
-  const range = `${apDate(weekStart, town.timezone)}–${apDate(weekEnd, town.timezone)}`;
+  const range = weekRange(town, weekStart);
   const rows = licenses
     .map((l) => {
       const raw = (l.raw ?? {}) as License;
@@ -143,16 +257,26 @@ export function newLicensesRoundup(
         raw.alternateLicenseNumber || `${raw.occupationCode ?? ''}${raw.licenseNumber ?? ''}`;
       return {
         name: raw.dbaName || raw.licenseeName || l.title || '',
-        line: [raw.occupation, license ? `license ${license}` : null].filter(Boolean).join(', '),
+        occupation: raw.occupation ?? null,
+        license: license || null,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
+  const n = licenses.length;
+  const trades = ranked(tally(rows, (r) => r.occupation?.toLowerCase() ?? null)).map(
+    ([o, c]) => `${c} ${c === 1 ? o : `${o}s`}`,
+  );
   return {
     headline: `New contractor licenses with a ${town.name} address, ${range}`,
-    dek: `The Florida Department of Business and Professional Regulation issued ${licenses.length} new ${licenses.length === 1 ? 'license' : 'licenses'} to contractors with a ${town.name} mailing address.`,
+    dek: `${trades.length ? list(trades) : count(n, 'contractor', 'contractors')} with a ${town.name} mailing address got ${n === 1 ? 'a first state license' : 'first state licenses'}${withTrend(n, past)}.`,
     bodyMd: [
-      `These contractors with a ${town.name} mailing address were first licensed by the Florida Department of Business and Professional Regulation from ${range}. You can check any contractor's license status on the state's licensing site before hiring. ${MAILING_CITY_NOTE(town.name)}`,
-      rows.map((r) => `- **${md(r.name)}**: ${md(r.line)}`).join('\n'),
+      rows
+        .map(
+          (r) =>
+            `- **${md(r.name)}**: ${md([r.occupation, r.license ? `license ${r.license}` : null].filter(Boolean).join(', '))}`,
+        )
+        .join('\n'),
+      `Verify a license with the state before hiring. ${OUTSIDE_LIMITS}`,
     ].join('\n\n'),
     beat: 'business',
     sourceRecordIds: licenses.map((l) => l.id),
@@ -163,11 +287,11 @@ const COMPANY_NAME =
   /\b(LLC|L\.L\.C|INC|CORP|CORPORATION|CO|COMPANY|LP|LLP|LTD|GROUP|HOLDINGS|ENTERPRISES)\b/i;
 
 /** Food service licenses that mean a place to eat, in plain words (vending and events left out). */
-const NEW_FOOD_KINDS: Record<string, string> = {
-  'Permanent Food Service, seating': 'restaurant with seating',
-  'Permanent Food Service, non-seating': 'takeout or counter service',
-  Catering: 'caterer',
-  'Mobile Food Dispensing Vehicle': 'food truck',
+const NEW_FOOD_KINDS: Record<string, [string, string]> = {
+  'Permanent Food Service, seating': ['restaurant with seating', 'restaurants with seating'],
+  'Permanent Food Service, non-seating': ['takeout or counter spot', 'takeout or counter spots'],
+  Catering: ['caterer', 'caterers'],
+  'Mobile Food Dispensing Vehicle': ['food truck', 'food trucks'],
 };
 
 type NewFood = {
@@ -179,27 +303,19 @@ type NewFood = {
 };
 type NewLiquor = { business?: string; sells?: string; street?: string; activityDate?: string };
 
+type Place = { name: string; street: string; notes: string[]; kinds: string[]; ids: string[] };
+
 /**
- * New places to eat and drink (owner, 2026-10-17): new food service establishments the state
- * approved and new alcoholic beverage licenses, the same week, one line per place. Built in code,
- * Tier 1. A place is named by its trade name, or its license holder only when that is a company,
- * never a person. Addresses are mailing cities, like the other state roundups.
+ * New places from new food service and liquor licenses, one per place (a place's food and liquor
+ * licenses merge). Named by trade name, or the license holder only when that is a company.
  */
-export function newPlacesRoundup(
-  town: TownInfo,
-  weekStart: Date,
-  items: TemplateRecord[],
-): TemplatedDraft {
-  const weekEnd = new Date(weekStart.getTime() + 6 * 86_400_000);
-  const range = `${apDate(weekStart, town.timezone)}–${apDate(weekEnd, town.timezone)}`;
-  const places = new Map<
-    string,
-    { name: string; street: string; notes: string[]; ids: string[] }
-  >();
-  const add = (name: string, street: string, note: string, id: string) => {
+function newPlaces(items: TemplateRecord[]): Place[] {
+  const places = new Map<string, Place>();
+  const add = (name: string, street: string, note: string, kind: string, id: string) => {
     const key = `${name.toUpperCase().replace(/[^A-Z0-9]/g, '')}|${street.toUpperCase().slice(0, 12)}`;
-    const place = places.get(key) ?? { name, street, notes: [], ids: [] };
+    const place = places.get(key) ?? { name, street, notes: [], kinds: [], ids: [] };
     if (!place.notes.includes(note)) place.notes.push(note);
+    if (!place.kinds.includes(kind)) place.kinds.push(kind);
     place.ids.push(id);
     places.set(key, place);
   };
@@ -211,7 +327,7 @@ export function newPlacesRoundup(
         raw.businessName ||
         (raw.licenseeName && COMPANY_NAME.test(raw.licenseeName) ? raw.licenseeName : '');
       if (!kind || !name) continue;
-      add(titleCase(name), titleCase(raw.address1 ?? ''), `new ${kind}`, item.id);
+      add(titleCase(name), titleCase(raw.address1 ?? ''), `new ${kind[0]}`, kind[0], item.id);
     } else if (item.type === 'liquor_license') {
       const raw = (item.raw ?? {}) as NewLiquor;
       if (!raw.business) continue;
@@ -219,17 +335,46 @@ export function newPlacesRoundup(
         titleCase(raw.business),
         titleCase(raw.street ?? ''),
         `liquor license for ${raw.sells}`,
+        'liquor license',
         item.id,
       );
     }
   }
-  const rows = [...places.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return [...places.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const PLACE_PLURALS: Record<string, string> = {
+  ...Object.fromEntries(Object.values(NEW_FOOD_KINDS)),
+  'liquor license': 'liquor licenses',
+};
+
+/**
+ * New places to eat and drink (owner, 2026-10-17): new food service establishments the state
+ * approved and new alcoholic beverage licenses, the same week, one line per place. Built in code,
+ * Tier 1. A place is named by its trade name, or its license holder only when that is a company,
+ * never a person. Addresses are mailing cities, like the other state roundups.
+ */
+export function newPlacesRoundup(
+  town: TownInfo,
+  weekStart: Date,
+  items: TemplateRecord[],
+  past?: number[],
+): TemplatedDraft {
+  const range = weekRange(town, weekStart);
+  const rows = newPlaces(items);
   const n = rows.length;
+  const mix = ranked(
+    tally(
+      rows.flatMap((r) => r.kinds),
+      (k) => k,
+    ),
+  ).map(([k, c]) => `${c} ${c === 1 ? k : (PLACE_PLURALS[k] ?? k)}`);
+  const named = rows.slice(0, 2).map((r) => r.name);
   return {
     headline: `New places to eat and drink with a ${town.name} address, ${range}`,
-    dek: `The state approved ${n} new ${n === 1 ? 'restaurant, bar or store' : 'restaurants, bars and stores'} serving food or drink with a ${town.name} mailing address, according to its licensing records.`,
+    dek: `${list(n > 2 ? [...named, `${n - 2} more`] : named)} got state approval to serve food or drink${withTrend(n, past)}.`,
     bodyMd: [
-      `These places with a ${town.name} mailing address were approved from ${range}: new food service establishments licensed by the Florida Division of Hotels and Restaurants, and new alcoholic beverage licenses from the Division of Alcoholic Beverages and Tobacco. An approval comes before opening day, so some aren't open yet. ${MAILING_CITY_NOTE(town.name)}`,
+      `${list(mix)}, from state food service and liquor license records. Approval comes before opening day. ${OUTSIDE_LIMITS}`,
       rows
         .map(
           (r) =>
@@ -269,28 +414,15 @@ const INSPECTIONS_PAGE = 'https://www2.myfloridalicense.com/hotels-restaurants/p
 /** MM/DD/YYYY sort key. */
 const mdy = (d: string | undefined) => (d ?? '').replace(/^(\d{2})\/(\d{2})\/(\d{4})$/, '$3$1$2');
 
-/**
- * Last week's state food service inspections (Florida DBPR), one line per establishment under
- * its most serious result that week: the visit's date, violation counts and, when a later
- * call-back the same week found the problems fixed, that too. Places that met standards are
- * listed by name. A week with any closure or complaint goes to review (Tier 3, §7), since it
- * names businesses.
- */
-export function inspectionsRoundup(
-  town: TownInfo,
-  weekStart: Date,
-  inspections: TemplateRecord[],
-): TemplatedDraft {
-  const weekEnd = new Date(weekStart.getTime() + 6 * 86_400_000);
-  const range = `${apDate(weekStart, town.timezone)}–${apDate(weekEnd, town.timezone)}`;
-  // Each establishment once: its visits in date order, judged by the most serious one.
+/** Inspection visits grouped by establishment, each judged by its most serious visit. */
+function inspectedPlaces(inspections: TemplateRecord[]) {
   const groups = new Map<string, Inspection[]>();
   for (const r of inspections) {
     const raw = (r.raw ?? {}) as Inspection;
     const key = raw.licenseNumber || raw.business || r.id;
     groups.set(key, [...(groups.get(key) ?? []), raw]);
   }
-  const places = [...groups.values()].map((visits) => {
+  return [...groups.values()].map((visits) => {
     const sorted = [...visits].sort((a, b) => mdy(a.date).localeCompare(mdy(b.date)));
     const worst = sorted.reduce((w, v) =>
       SEVERITY_RANK[v.severity ?? 'ok'] > SEVERITY_RANK[w.severity ?? 'ok'] ? v : w,
@@ -302,6 +434,23 @@ export function inspectionsRoundup(
         : null;
     return { name: titleCase(worst.business ?? ''), worst, fixedLater };
   });
+}
+
+/**
+ * Last week's state food service inspections (Florida DBPR), one line per establishment under
+ * its most serious result that week: the visit's date, violation counts and, when a later
+ * call-back the same week found the problems fixed, that too. Places that met standards are
+ * listed by name. A week with any closure or complaint goes to review (Tier 3, §7), since it
+ * names businesses.
+ */
+export function inspectionsRoundup(
+  town: TownInfo,
+  weekStart: Date,
+  inspections: TemplateRecord[],
+  past?: number[],
+): TemplatedDraft {
+  const range = weekRange(town, weekStart);
+  const places = inspectedPlaces(inspections);
   const by = (sev: keyof typeof SEVERITY_RANK) =>
     places
       .filter((p) => (p.worst.severity ?? 'ok') === sev)
@@ -321,41 +470,48 @@ export function inspectionsRoundup(
     ].filter(Boolean);
     return `- **${md(p.name)}**: ${parts.join('; ')}.`;
   };
-  const section = (title: string, list: typeof places, note: string) =>
-    list.length ? [`## ${title}`, note, list.map(line).join('\n')].join('\n\n') : null;
+  const section = (title: string, group: typeof places, note: string) =>
+    group.length ? [`## ${title}`, note, group.map(line).join('\n')].join('\n\n') : null;
   const counts = [
     closures.length ? `${closures.length} ordered closed` : null,
     complaints.length ? `${complaints.length} with an administrative complaint recommended` : null,
   ].filter(Boolean);
   const n = places.length;
-  const establishments = (k: number) => (k === 1 ? 'establishment' : 'establishments');
+  const names = (group: typeof places) => list(group.map((p) => md(p.name)));
+  const mostCited = [...places].sort(
+    (a, b) =>
+      (b.worst.highPriority ?? 0) - (a.worst.highPriority ?? 0) ||
+      (b.worst.total ?? 0) - (a.worst.total ?? 0),
+  )[0];
+  const lead = closures.length
+    ? `Inspectors ordered ${names(closures)} closed until a follow-up visit finds the problems fixed.`
+    : complaints.length
+      ? `Inspectors recommended an administrative complaint, which can lead to a fine, against ${names(complaints)}.`
+      : n > 1 && mostCited && (mostCited.worst.total ?? 0) > 0
+        ? `${md(mostCited.name)} was cited for the most violations, ${mostCited.worst.total} (${mostCited.worst.highPriority ?? 0} high priority).`
+        : n === 1
+          ? `${md(places[0]!.name)} was the only visit on file.`
+          : `All ${n} met inspection standards.`;
   return {
     headline: `Restaurant inspections with a ${town.name} address, ${range}`,
-    dek: `State inspectors visited ${n} food service ${establishments(n)}${counts.length ? `; ${counts.join(' and ')}` : ''}.`,
+    dek: `State inspectors visited ${count(n, 'food service establishment', 'food service establishments')}${withTrend(n, past)}${counts.length ? `; ${counts.join(' and ')}` : ''}.`,
     bodyMd: [
-      `The Florida Division of Hotels and Restaurants inspected ${n} food service ${establishments(n)} with a ${town.name} address from ${range}, according to the state's weekly inspection file. An inspection is a snapshot of conditions on the day of the visit; the state says it may not reflect an establishment's usual conditions. ${MAILING_CITY_NOTE(town.name)}`,
-      section(
-        'Ordered closed',
-        closures,
-        'Inspectors recommended an emergency order, which closes an establishment until a follow-up visit finds the problems fixed.',
-      ),
+      `${lead} ${OUTSIDE_LIMITS}`,
+      section('Ordered closed', closures, 'Closed until a follow-up visit finds them fixed.'),
       section(
         'Administrative complaint recommended',
         complaints,
-        'An administrative complaint can lead to a fine. The establishment stays open.',
+        'Open while the complaint is decided.',
       ),
       section(
         'Warnings and follow-ups',
         warnings,
-        'Inspectors issued a warning or gave more time to fix violations before a call-back visit.',
+        'Given time to fix violations before a call-back.',
       ),
       passed.length
-        ? [
-            '## Met inspection standards',
-            `${passed.length} ${establishments(passed.length)} needed no further action: ${passed.map((p) => md(p.name)).join(', ')}.`,
-          ].join('\n\n')
+        ? ['## Met inspection standards', `${list(passed.map((p) => md(p.name)))}.`].join('\n\n')
         : null,
-      `Inspection results come from the [Florida Department of Business and Professional Regulation](${INSPECTIONS_PAGE}), where you can also look up an establishment's full inspection history.`,
+      `Each inspection is a snapshot of one visit. [Full histories](${INSPECTIONS_PAGE}).`,
     ]
       .filter(Boolean)
       .join('\n\n'),
@@ -388,9 +544,9 @@ export function permitsRoundup(
   town: TownInfo,
   weekStart: Date,
   permits: TemplateRecord[],
+  past?: number[],
 ): TemplatedDraft {
-  const weekEnd = new Date(weekStart.getTime() + 6 * 86_400_000);
-  const range = `${apDate(weekStart, town.timezone)}–${apDate(weekEnd, town.timezone)}`;
+  const range = weekRange(town, weekStart);
   const rows = permits.map((p) => ({
     p,
     title: titleCase(p.title ?? 'Permit'),
@@ -398,23 +554,24 @@ export function permitsRoundup(
     cost: money(labeled(p.text, /cost|valuation|value/i)),
     contractor: labeled(p.text, /^contractor/i),
   }));
-  const ranked = [...rows].sort(
+  const byCost = [...rows].sort(
     (a, b) => (b.cost ?? 0) - (a.cost ?? 0) || a.title.localeCompare(b.title),
   );
-  const listed = ranked.slice(0, PERMITS_LISTED);
+  const listed = byCost.slice(0, PERMITS_LISTED);
   const total = rows.reduce((sum, r) => sum + (r.cost ?? 0), 0);
-  const byType = new Map<string, number>();
-  for (const r of rows) {
-    const t = r.type ? titleCase(r.type) : 'Other';
-    byType.set(t, (byType.get(t) ?? 0) + 1);
-  }
-  const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+  const byType = ranked(tally(rows, (r) => (r.type ? titleCase(r.type) : 'Other')));
+  const top = byCost[0];
   const n = permits.length;
   return {
     headline: `Building permits in ${town.name}, ${range}`,
-    dek: `${n} ${n === 1 ? 'permit' : 'permits'}${total > 0 ? ` with a combined estimated cost of ${usd(total)}` : ''}, according to the official permit records.`,
+    dek: `${count(n, 'permit', 'permits')}${total > 0 ? ` worth an estimated ${usd(total)}` : ''}${withTrend(n, past)}${top?.cost ? `; the largest is ${top.title} (${usd(top.cost)})` : ''}.`,
     bodyMd: [
-      `These are the permits in ${town.name}'s official permit records from ${range}. Estimated costs are the applicant's figures.`,
+      [
+        byType.length > 1 ? `${byType[0]![0]} permits led, ${byType[0]![1]} of ${n}.` : null,
+        total > 0 ? 'Costs are the applicants’ estimates.' : null,
+      ]
+        .filter(Boolean)
+        .join(' ') || null,
       `## ${listed.length < n ? `The ${listed.length} largest` : 'All permits'}`,
       listed
         .map((r) => {
@@ -426,14 +583,8 @@ export function permitsRoundup(
           return `- **${md(r.title)}**${parts.length ? `: ${parts.join('; ')}.` : ''}${link}`;
         })
         .join('\n'),
-      byType.size > 1
-        ? [
-            '## By type',
-            [...byType.entries()]
-              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-              .map(([t, k]) => `- ${md(t)}: ${k}`)
-              .join('\n'),
-          ].join('\n\n')
+      byType.length > 1
+        ? ['## By type', byType.map(([t, k]) => `- ${md(t)}: ${k}`).join('\n')].join('\n\n')
         : null,
     ]
       .filter(Boolean)
@@ -452,6 +603,38 @@ const saleDay = (value: string | null, timeZone: string) => {
   return d ? apDate(d, timeZone) : null;
 };
 
+/** County land-use names in plain words, singular and plural. */
+const USE_WORDS: Record<string, [string, string]> = {
+  'SINGLE FAMILY': ['single-family home', 'single-family homes'],
+  CONDOMINIUM: ['condominium', 'condominiums'],
+  TOWNHOUSE: ['townhouse', 'townhouses'],
+  VACANT: ['vacant lot', 'vacant lots'],
+  'MOBILE HOME/MANUFACTURED HOME': ['mobile home', 'mobile homes'],
+};
+const useWords = (use: string | null): [string, string] =>
+  USE_WORDS[(use ?? '').toUpperCase()] ?? [
+    (use ? titleCase(use) : 'other property').toLowerCase(),
+    `${(use ? titleCase(use) : 'other property').toLowerCase()} sales`,
+  ];
+
+const medianOf = (values: number[]) => {
+  const v = [...values].sort((a, b) => a - b);
+  if (!v.length) return 0;
+  return v.length % 2 ? v[(v.length - 1) / 2]! : (v[v.length / 2 - 1]! + v[v.length / 2]!) / 2;
+};
+
+function saleRows(sales: TemplateRecord[], timeZone: string) {
+  return sales
+    .map((s) => ({
+      s,
+      address: titleCase(labeled(s.text, /^address$/i) ?? s.title ?? ''),
+      price: money(labeled(s.text, /^price$/i)),
+      use: labeled(s.text, /^use$/i),
+      day: saleDay(labeled(s.text, /^sale date$/i), timeZone),
+    }))
+    .filter((r) => r.price !== null && r.address);
+}
+
 /**
  * A weekly roundup of property sales from the county property appraiser's records (owner,
  * 2026-10-17: "biggest home sales this week"). Built in code, Tier 1: addresses, prices and the
@@ -462,63 +645,60 @@ export function propertySalesRoundup(
   town: TownInfo,
   weekStart: Date,
   sales: TemplateRecord[],
+  past?: number[],
 ): TemplatedDraft {
-  const weekEnd = new Date(weekStart.getTime() + 6 * 86_400_000);
-  const range = `${apDate(weekStart, town.timezone)}–${apDate(weekEnd, town.timezone)}`;
-  const rows = sales
-    .map((s) => ({
-      s,
-      address: titleCase(labeled(s.text, /^address$/i) ?? s.title ?? ''),
-      price: money(labeled(s.text, /^price$/i)),
-      use: labeled(s.text, /^use$/i),
-      day: saleDay(labeled(s.text, /^sale date$/i), town.timezone),
-    }))
-    .filter((r) => r.price !== null && r.address);
-  const ranked = [...rows].sort(
+  const range = weekRange(town, weekStart);
+  const rows = saleRows(sales, town.timezone);
+  const byPrice = [...rows].sort(
     (a, b) => b.price! - a.price! || a.address.localeCompare(b.address),
   );
-  const listed = ranked.slice(0, SALES_LISTED);
-  const prices = rows.map((r) => r.price!).sort((a, b) => a - b);
-  const median = prices.length
-    ? prices.length % 2
-      ? prices[(prices.length - 1) / 2]!
-      : (prices[prices.length / 2 - 1]! + prices[prices.length / 2]!) / 2
-    : 0;
-  const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
-  const kind = (use: string | null) => (use ? titleCase(use) : 'Other');
-  const byUse = new Map<string, number[]>();
-  for (const r of rows) byUse.set(kind(r.use), [...(byUse.get(kind(r.use)) ?? []), r.price!]);
+  const listed = byPrice.slice(0, SALES_LISTED);
   const n = rows.length;
+  const groups = new Map<string, { words: [string, string]; prices: number[] }>();
+  for (const r of rows) {
+    const words = useWords(r.use);
+    const g = groups.get(words[0]) ?? { words, prices: [] };
+    g.prices.push(r.price!);
+    groups.set(words[0], g);
+  }
+  const mix = [...groups.values()]
+    .sort((a, b) => b.prices.length - a.prices.length || a.words[0].localeCompare(b.words[0]))
+    .map(
+      (g) =>
+        `${g.prices.length} ${g.prices.length === 1 ? g.words[0] : g.words[1]}${g.prices.length > 1 ? ` (median ${usd(medianOf(g.prices))})` : ''}`,
+    );
+  const top = byPrice[0];
   return {
     headline: `Property sales in ${town.name}, ${range}`,
-    dek: `${n} ${n === 1 ? 'sale' : 'sales'} recorded, with a median price of ${usd(median)}, according to county property records.`,
+    dek: top
+      ? `${top.address} sold for ${usd(top.price!)}, the highest of ${count(n, 'sale', 'sales')} recorded${withTrend(n, past)}.`
+      : `No sales were recorded${withTrend(0, past)}.`,
     bodyMd: [
-      `These are the sales of property in ${town.name} that closed from ${range}, as the county property appraiser recorded them. Deeds are recorded about two weeks after a sale, so a few may still be missing. Prices are the amounts on the deeds; sales for nominal amounts aren't counted.`,
+      `The median price was ${usd(medianOf(rows.map((r) => r.price!)))}: ${list(mix)}. Deeds take about two weeks to record, so late filings may be missing.`,
       `## ${listed.length < n ? `The ${listed.length} highest prices` : 'Every sale'}`,
       listed
         .map((r) => {
-          const parts = [usd(r.price!), r.use ? kind(r.use).toLowerCase() : null, r.day].filter(
-            Boolean,
-          );
+          const parts = [usd(r.price!), useWords(r.use)[0], r.day].filter(Boolean);
           const link = r.s.url ? ` [Record](${r.s.url})` : '';
           return `- **${md(r.address)}**: ${parts.join(', ')}.${link}`;
         })
         .join('\n'),
-      byUse.size > 1
-        ? [
-            '## By kind of property',
-            [...byUse.entries()]
-              .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
-              .map(([use, p]) => `- ${md(use)}: ${p.length}`)
-              .join('\n'),
-          ].join('\n\n')
-        : null,
-    ]
-      .filter(Boolean)
-      .join('\n\n'),
+    ].join('\n\n'),
     beat: 'development',
     sourceRecordIds: rows.map((r) => r.s.id),
   };
+}
+
+/**
+ * A roundup's count in its own units, for comparing a week with the town's past weeks: places
+ * (not licenses) for new places, establishments (not visits) for inspections, priced sales for
+ * property sales, records for the rest.
+ */
+export function roundupUnits(kind: RoundupKind, recs: TemplateRecord[]): number {
+  if (kind === 'new-places') return newPlaces(recs).length;
+  if (kind === 'inspections') return inspectedPlaces(recs).length;
+  if (kind === 'sales') return saleRows(recs, 'UTC').length;
+  return recs.length;
 }
 
 type Alert = {
