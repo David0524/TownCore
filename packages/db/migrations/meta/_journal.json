@@ -302,6 +302,13 @@
       "when": 1792200183683,
       "tag": "0042_town_search_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792202483879,
+      "tag": "0043_score_reports",
+      "breakpoints": true
     }
   ]
 }

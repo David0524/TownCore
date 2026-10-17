@@ -182,4 +182,12 @@ export {
 } from './illustrations';
 export { illustrationLibrary } from './illustrations-library';
 export { titleCase } from './names';
-export { GAME_RECORD, gameLine, type Game, type GameStatus } from './sports';
+export {
+  GAME_RECORD,
+  gameLine,
+  READER_SCORE_NOTE,
+  SCORE_LEVELS,
+  TEAM_SPORTS,
+  type Game,
+  type GameStatus,
+} from './sports';
