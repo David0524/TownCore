@@ -8,7 +8,8 @@ import { z } from 'zod';
 export const discoverSchema = z.strictObject({
   sources: z.array(
     z.strictObject({
-      kind: z.enum(sourceKinds),
+      // Federal awards come from USASpending for every town, never from discovery.
+      kind: z.enum(sourceKinds).exclude(['federal_awards']),
       url: z.string(),
       publisher: z.string(),
       why: z.string(),

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import * as cheerio from 'cheerio';
 import type { SourceKind } from '@towncore/config';
 import type { RawRecord, SourceAdapter, SourceConfig, SourceProposal } from '../types';
+import { extractText, getDocumentProxy } from 'unpdf';
 import { parseIcal } from '../lib/ical';
 
 // CivicPlus CivicEngage (CLAUDE.md §9: one adapter for every city on the platform).
@@ -10,17 +11,30 @@ import { parseIcal } from '../lib/ical';
 // - newsflash: the News Flash RSS feed (/RSSFeed.aspx?ModID=1&CID=…), plus each new release's
 //   page (/m/newsflash/home/detail/<id>) for its full text. /RSS.aspx (the feed index) is
 //   disallowed on some sites and is never requested.
-// Source config: { module: 'calendar' | 'newsflash', catId: string, timezone?: string }.
+// - newsflash-list: one News Flash category's list page (/m/newsflash?cat=…), for categories
+//   whose releases never reach the RSS feeds (Boca Raton's police and fire releases), plus each
+//   new release's page and the PDF it links (/DocumentCenter/View/<id>) for its text.
+// Source config: { module: 'calendar' | 'newsflash' | 'newsflash-list', catId: string,
+//   timezone?: string }.
 
-type Options = { module: 'calendar' | 'newsflash'; catId: string; timezone: string };
+type Module = 'calendar' | 'newsflash' | 'newsflash-list';
+type Options = { module: Module; catId: string; timezone: string };
+const MODULES: readonly Module[] = ['calendar', 'newsflash', 'newsflash-list'];
+
+/** A list page's first run reads releases this recent; later runs read what's new since. */
+const LIST_FIRST_DAYS = 30;
+/** Most releases read from a list page in one run (each costs a page and a PDF). */
+const LIST_MAX = 10;
 
 /** Calendar events within this window around now are kept (past events age out). */
 const PAST_EVENT_DAYS = 30;
 
 function options(source: SourceConfig): Options {
   const { module, catId, timezone } = source.config as Partial<Options>;
-  if (module !== 'calendar' && module !== 'newsflash') {
-    throw new Error(`CivicPlus source ${source.id} needs config.module "calendar" or "newsflash"`);
+  if (!module || !MODULES.includes(module)) {
+    throw new Error(
+      `CivicPlus source ${source.id} needs config.module "calendar", "newsflash" or "newsflash-list"`,
+    );
   }
   if (!catId) throw new Error(`CivicPlus source ${source.id} needs config.catId`);
   if (!source.url) throw new Error(`CivicPlus source ${source.id} needs url (the site's base URL)`);
@@ -149,6 +163,90 @@ async function fetchNewsFlash(
   return records;
 }
 
+export function newsListUrl(source: SourceConfig, catId: string) {
+  return `${base(source)}/m/newsflash?cat=${encodeURIComponent(catId)}`;
+}
+
+export type ListedRelease = { id: string; title: string; posted: Date | null; documents: string[] };
+
+/** "Posted on September 22, 2026" → that date at noon UTC (a date, not a time). */
+function postedDate(text: string): Date | null {
+  const m = /Posted on ([A-Za-z]+ \d{1,2}, \d{4})/.exec(text);
+  if (!m) return null;
+  const d = new Date(`${m[1]} 12:00:00 UTC`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** The releases on a News Flash category's list page, newest first. */
+export function newsListItems(html: string, catId: string): ListedRelease[] {
+  const $ = cheerio.load(html);
+  const out: ListedRelease[] = [];
+  $(`li[id^="list-articles-category-${catId}-"]`).each((_, li) => {
+    const link = $(li).find('a.article-title-link').first();
+    const id = newsItemId(link.attr('href') ?? '');
+    if (!id) return;
+    const documents = $(li)
+      .find('a[href*="/DocumentCenter/View/"]')
+      .map((_, a) => $(a).attr('href') ?? '')
+      .get()
+      .filter(Boolean);
+    out.push({
+      id,
+      title: link.text().replace(/\s+/g, ' ').trim(),
+      posted: postedDate($(li).text().replace(/\s+/g, ' ')),
+      documents,
+    });
+  });
+  return out;
+}
+
+/** A PDF's text, or null when it isn't one. */
+async function pdfText(url: string, ctx: Parameters<SourceAdapter['fetch']>[2]) {
+  const response = await ctx.fetcher.get(url);
+  if (!response.ok) return null;
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (String.fromCharCode(...bytes.slice(0, 5)) !== '%PDF-') return null;
+  const { text } = await extractText(await getDocumentProxy(bytes), { mergePages: true });
+  return (
+    String(text)
+      .replace(/[ \t]+\n/g, '\n')
+      .trim() || null
+  );
+}
+
+async function fetchNewsList(
+  source: SourceConfig,
+  opts: Options,
+  since: Date | null,
+  ctx: Parameters<SourceAdapter['fetch']>[2],
+) {
+  const from = since ?? new Date(ctx.now.getTime() - LIST_FIRST_DAYS * 86_400_000);
+  const html = await ctx.fetcher.getText(newsListUrl(source, opts.catId));
+  const fresh = newsListItems(html, opts.catId)
+    // A posted date is a day: keep the whole day of `from`.
+    .filter((r) => r.posted && r.posted.getTime() >= from.getTime() - 86_400_000)
+    .slice(0, LIST_MAX);
+  const records: RawRecord[] = [];
+  for (const item of fresh) {
+    const detailUrl = `${base(source)}/m/newsflash/home/detail/${item.id}`;
+    const page = newsBodyText(await ctx.fetcher.getText(detailUrl));
+    // The page is often only a "Read release" link; the release itself is the PDF.
+    const lines = (page ?? '').split('\n').filter((l) => !/^read (the )?(full )?release$/i.test(l));
+    const document = item.documents[0] ? new URL(item.documents[0], base(source)).href : null;
+    const pdf = document ? await pdfText(document, ctx) : null;
+    records.push({
+      externalId: `news:${item.id}`,
+      type: 'release',
+      title: item.title,
+      text: [...lines, pdf].filter(Boolean).join('\n') || null,
+      url: detailUrl,
+      occurredAt: item.posted,
+      raw: { id: item.id, documents: item.documents, category: opts.catId },
+    });
+  }
+  return records;
+}
+
 /** The site's calendars, from the category checkboxes on /Calendar.aspx. */
 export function calendarCategories(html: string): Array<{ id: string; name: string }> {
   const $ = cheerio.load(html);
@@ -216,9 +314,9 @@ export const civicplusAdapter: SourceAdapter = {
 
   async fetch(source, since, ctx) {
     const opts = options(source);
-    return opts.module === 'calendar'
-      ? fetchCalendar(source, opts, ctx)
-      : fetchNewsFlash(source, opts, since, ctx);
+    if (opts.module === 'calendar') return fetchCalendar(source, opts, ctx);
+    if (opts.module === 'newsflash-list') return fetchNewsList(source, opts, since, ctx);
+    return fetchNewsFlash(source, opts, since, ctx);
   },
 
   async propose(url, _html, kind, ctx) {
@@ -231,7 +329,9 @@ export const civicplusAdapter: SourceAdapter = {
       const url =
         opts.module === 'calendar'
           ? calendarUrl(source, opts.catId)
-          : newsFeedUrl(source, opts.catId);
+          : opts.module === 'newsflash-list'
+            ? newsListUrl(source, opts.catId)
+            : newsFeedUrl(source, opts.catId);
       await ctx.fetcher.getText(url);
       return { ok: true };
     } catch (error) {

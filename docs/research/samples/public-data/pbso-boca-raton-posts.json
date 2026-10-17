@@ -1,0 +1,45 @@
+[
+  {
+    "id": 33118,
+    "date": "2023-03-15T10:02:38",
+    "modified": "2023-03-15T10:03:10",
+    "link": "https:\/\/www.pbso.org\/arest-for-lewd-lascivious-batter-on-a-minor",
+    "title": { "rendered": "Arrest for Lewd &#038; Lascivious Battery on a Minor" },
+    "categories": [387, 240, 491, 528, 426]
+  },
+  {
+    "id": 32819,
+    "date": "2023-03-01T12:01:32",
+    "modified": "2023-03-01T12:01:32",
+    "link": "https:\/\/www.pbso.org\/license-suspended",
+    "title": { "rendered": "License Suspended?" },
+    "categories": [364, 387, 410, 247, 466, 474, 479, 467, 701, 468, 491, 681, 371, 381, 572, 177]
+  },
+  {
+    "id": 32404,
+    "date": "2022-12-02T16:55:00",
+    "modified": "2022-12-02T17:14:41",
+    "link": "https:\/\/www.pbso.org\/gunshot-wound-victim-on-glades-road",
+    "title": { "rendered": "Gunshot Wound Victim on Glades Road" },
+    "categories": [
+      387, 466, 474, 475, 476, 477, 513, 478, 479, 662, 699, 700, 467, 701, 468, 469, 470, 471, 472,
+      465, 473, 528, 716
+    ]
+  },
+  {
+    "id": 32091,
+    "date": "2022-10-13T13:29:39",
+    "modified": "2022-10-13T16:41:13",
+    "link": "https:\/\/www.pbso.org\/conversation-with-a-deputy-boca",
+    "title": { "rendered": "Conversation with a Deputy &#8211; Boca" },
+    "categories": [387, 247, 491, 177]
+  },
+  {
+    "id": 31132,
+    "date": "2022-07-12T19:48:22",
+    "modified": "2022-07-13T13:09:03",
+    "link": "https:\/\/www.pbso.org\/suspects-wanted-for-distraction-burglary",
+    "title": { "rendered": "Suspects wanted for Distraction Burglary" },
+    "categories": [387, 513, 700, 469, 471, 472, 528, 599]
+  }
+]

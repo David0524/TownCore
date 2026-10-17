@@ -46,6 +46,7 @@ const SPEC: Record<RoundupKind, { types: string[]; dateOnly: boolean }> = {
   sales: { types: ['sale'], dateOnly: true },
   inspections: { types: ['inspection'], dateOnly: true },
   roads: { types: ['road-work'], dateOnly: false },
+  federal: { types: ['federal-award'], dateOnly: true },
 };
 
 /** The records a roundup of this kind covers for the local week starting `weekStart`. */

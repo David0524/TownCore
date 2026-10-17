@@ -103,6 +103,8 @@ function fakeWeb() {
     }
     if (u.hostname === 'rdap.verisign.com') return new Response('', { status: 404 });
     if (u.hostname === 'web.archive.org') return json([]);
+    // USASpending: every town's federal awards source (no awards in this fake town).
+    if (u.hostname === 'api.usaspending.gov') return json({ results: [] });
     if (u.hostname === 'legistar.example.com')
       return ok('<html><body>Powered by Legistar</body></html>');
     // CivicPlus sites.
@@ -370,6 +372,8 @@ describe('steps 3–5 in a launch', () => {
     const discovery = step('sources').detail as DiscoverDetail;
     expect(discovery.mode).toBe('model');
     expect(discovery.findings.map((f) => [f.kind, f.status])).toEqual([
+      // Every town gets federal awards without discovery (USASpending).
+      ['federal_awards', 'matched'],
       ['city_news', 'matched'],
       ['agenda', 'matched'],
       ['agenda', 'unknown'],
@@ -385,6 +389,7 @@ describe('steps 3–5 in a launch', () => {
     const config = parseTownConfig(readFileSync(file, 'utf8'));
     expect(config.sources.map((s) => [s.kind, s.platform, s.options?.module ?? null])).toEqual([
       ['weather', 'nws', null],
+      ['federal_awards', 'usaspending', null],
       ['city_news', 'civicplus', 'newsflash'],
       ['agenda', 'civicplus', 'calendar'],
     ]);
@@ -412,6 +417,7 @@ describe('steps 3–5 in a launch', () => {
     expect(measured.bySource.map((s) => [s.kind, s.items]).sort()).toEqual([
       ['agenda', 3],
       ['city_news', 36],
+      ['federal_awards', 0],
     ]);
     const [scored] = await db.select().from(towns).where(eq(towns.slug, 'harbor-city'));
     expect(scored!.readinessScore).toBe(1.3);
@@ -478,7 +484,8 @@ describe('steps 3–5 in a launch', () => {
     expect(friction).toContain('- Buy harborcitytownsquare.com');
     const config = parseTownConfig(readFileSync(join(townsDir, 'ga', 'harbor-city.yaml'), 'utf8'));
     expect(config.sources.filter((s) => s.kind === 'police')).toHaveLength(1);
-    expect(await db.select().from(sources)).toHaveLength(4);
+    // Weather, city news, the agenda calendar, police, and federal awards.
+    expect(await db.select().from(sources)).toHaveLength(5);
     // Every model call was logged against the draft town as launch work, web searches priced.
     const usage = await db.select().from(aiUsage);
     expect(new Set(usage.map((u) => u.job))).toEqual(

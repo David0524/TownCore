@@ -262,6 +262,17 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       recordIds: sales.map((r) => r.id),
       now,
     });
+    // New federal contracts and grants to town recipients (USASpending, every town). One award
+    // is too thin for a story (Rule 7); the second makes a week worth telling.
+    const federal = await roundupWeekRecords(db, town, 'federal', lastWeek);
+    await roundup(db, town, report, {
+      key: `roundup:federal:${week}`,
+      title: `Federal awards, week of ${week}`,
+      beat: 'business',
+      recordIds: federal.map((r) => r.id),
+      min: 2,
+      now,
+    });
     // Restaurant inspections: a week that names a closure or complaint needs a person (§7).
     const inspections = await roundupWeekRecords(db, town, 'inspections', lastWeek);
     const failures = hasInspectionFailures(inspections.map((r) => r.raw));

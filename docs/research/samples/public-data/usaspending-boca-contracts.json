@@ -1,0 +1,85 @@
+{
+  "spending_level": "awards",
+  "limit": 5,
+  "results": [
+    {
+      "internal_id": 354698788,
+      "Award ID": "70CDCR26FR0000028",
+      "Recipient Name": "THE GEO GROUP, INC.",
+      "Award Amount": 107738200.0,
+      "Start Date": "2025-12-20",
+      "Awarding Agency": "Department of Homeland Security",
+      "Description": "DETENTION AND TRANSPORTATION SERVICES AT ADELANTO ICE PROCESSING CENTER FOR LOS ANGELES AREA OF RESPONSIBILITY",
+      "Place of Performance City Code": null,
+      "Place of Performance Zip5": "33431",
+      "awarding_agency_id": 766,
+      "agency_slug": "department-of-homeland-security",
+      "generated_internal_id": "CONT_AWD_70CDCR26FR0000028_7012_70CDCR20D00000009_7012"
+    },
+    {
+      "internal_id": 354628944,
+      "Award ID": "70CDCR26FR0000030",
+      "Recipient Name": "CORECIVIC, INC.",
+      "Award Amount": 84654774.95,
+      "Start Date": "2025-12-20",
+      "Awarding Agency": "Department of Homeland Security",
+      "Description": "DETENTION AND TRANSPORTATION SERVICES FOR CDF AT OTAY MESA IN SUPPORT SAN DIEGO AREA OF RESPONSIBILITY, CA",
+      "Place of Performance City Code": null,
+      "Place of Performance Zip5": "33431",
+      "awarding_agency_id": 766,
+      "agency_slug": "department-of-homeland-security",
+      "generated_internal_id": "CONT_AWD_70CDCR26FR0000030_7012_70CDCR20D00000007_7012"
+    },
+    {
+      "internal_id": 278344154,
+      "Award ID": "15M40023FA3500005",
+      "Recipient Name": "THE GEO GROUP, INC.",
+      "Award Amount": 66149460.33,
+      "Start Date": "2023-10-01",
+      "Awarding Agency": "Department of Justice",
+      "Description": "FY23 PRIVATE DETENTION SERVICES FOR CENTRAL VALLEY DETENTION FACILITY",
+      "Place of Performance City Code": null,
+      "Place of Performance Zip5": "33431",
+      "awarding_agency_id": 252,
+      "agency_slug": "department-of-justice",
+      "generated_internal_id": "CONT_AWD_15M40023FA3500005_1544_70CDCR20D00000008_7012"
+    },
+    {
+      "internal_id": 291191451,
+      "Award ID": "70CDCR25FR0000097",
+      "Recipient Name": "THE GEO GROUP, INC.",
+      "Award Amount": 60035628.0,
+      "Start Date": "2024-08-18",
+      "Awarding Agency": "Department of Homeland Security",
+      "Description": "THE PURPOSE OF THIS CONTRACT IS TO PROVIDE DETENTION AND TRANSPORTATION SERVICES AT MONTGOMERY PROCESSING CENTER (MPC) IN HOUSTON, TX. THE PURPOSE OF THIS NEW TASK ORDER IS TO ADD FUNDING FOR THE CONTINUANCE OF SERVICES.",
+      "Place of Performance City Code": null,
+      "Place of Performance Zip5": "33431",
+      "awarding_agency_id": 766,
+      "agency_slug": "department-of-homeland-security",
+      "generated_internal_id": "CONT_AWD_70CDCR25FR0000097_7012_HSCEDM17D00009_7012"
+    },
+    {
+      "internal_id": 278344208,
+      "Award ID": "15M40026FA3500002",
+      "Recipient Name": "THE GEO GROUP, INC.",
+      "Award Amount": 57413465.35,
+      "Start Date": "2025-11-01",
+      "Awarding Agency": "Department of Justice",
+      "Description": "CONTRACTOR SHALL PERFORM DETENTION SERVICES AS DESCRIBED IN THE STATEMENT OF WORK (ATTACHED) FOR WESTERN REGION DETENTION FACILITY",
+      "Place of Performance City Code": null,
+      "Place of Performance Zip5": "33431",
+      "awarding_agency_id": 252,
+      "agency_slug": "department-of-justice",
+      "generated_internal_id": "CONT_AWD_15M40026FA3500002_1544_15M40018DA3500001_1544"
+    }
+  ],
+  "page_metadata": {
+    "page": 1,
+    "hasNext": true,
+    "last_record_unique_id": 278344208,
+    "last_record_sort_value": "5741346535"
+  },
+  "messages": [
+    "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. "
+  ]
+}

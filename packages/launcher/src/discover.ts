@@ -160,42 +160,70 @@ export async function verifyUrl(
 }
 
 /**
- * State-level sources every town in the state gets (CLAUDE.md §9: written once, reused), each
- * health-checked live. Florida: DBPR licenses and new food service approvals, Sunbiz filings,
- * filtered to the town's mailing city.
+ * State-level and federal sources a town gets without discovery (CLAUDE.md §9: written once,
+ * reused), each health-checked live. Every town: new federal contracts and grants to recipients
+ * with a town address (USASpending). Florida: DBPR licenses and new food service approvals,
+ * Sunbiz filings, filtered to the town's mailing city.
  */
 export async function stateSources(
   fetcher: Fetcher,
   town: Pick<ResolvedTown, 'state' | 'name'>,
   now: Date = new Date(),
 ): Promise<Finding[]> {
-  if (town.state !== 'FL') return [];
   const city = town.name.toUpperCase();
   const planned: Array<{
+    kind: SourceKind;
     platform: string;
     url: string;
     options: Record<string, string | string[]>;
     label: string;
   }> = [
     {
+      kind: 'federal_awards',
+      platform: 'usaspending',
+      url: 'https://www.usaspending.gov/',
+      options: { city: town.name, state: town.state },
+      label: 'USASpending.gov federal contracts and grants',
+    },
+  ];
+  if (town.state !== 'FL') return checkPlanned(fetcher, planned, now);
+  planned.push(
+    {
+      kind: 'business_filings',
       platform: 'fl-dbpr',
       url: 'https://www.myfloridalicense.com/',
       options: { city },
       label: 'Florida DBPR contractor and trade licenses',
     },
     {
+      kind: 'business_filings',
       platform: 'fl-dbpr',
       url: 'https://www.myfloridalicense.com/',
       options: { city, files: ['newfood.csv'] },
       label: 'Florida DBPR new food service approvals',
     },
     {
+      kind: 'business_filings',
       platform: 'fl-sunbiz',
       url: 'https://sftp.floridados.gov/',
       options: { city },
       label: 'Florida Division of Corporations daily filings',
     },
-  ];
+  );
+  return checkPlanned(fetcher, planned, now);
+}
+
+async function checkPlanned(
+  fetcher: Fetcher,
+  planned: Array<{
+    kind: SourceKind;
+    platform: string;
+    url: string;
+    options: Record<string, string | string[]>;
+    label: string;
+  }>,
+  now: Date,
+): Promise<Finding[]> {
   const findings: Finding[] = [];
   for (const p of planned) {
     const adapter = getAdapter(p.platform)!;
@@ -203,7 +231,7 @@ export async function stateSources(
       {
         id: 'discovery',
         townId: 'discovery',
-        kind: 'business_filings',
+        kind: p.kind,
         platform: p.platform,
         url: null,
         config: p.options,
@@ -211,7 +239,7 @@ export async function stateSources(
       { fetcher, now },
     );
     findings.push({
-      kind: 'business_filings',
+      kind: p.kind,
       url: p.url,
       origin: 'state',
       status: health.ok ? 'matched' : 'unreadable',
@@ -219,7 +247,7 @@ export async function stateSources(
       hint: null,
       detail: health.ok ? p.label : `${p.label}: ${health.detail ?? 'health check failed'}`,
       sources: health.ok
-        ? [{ kind: 'business_filings', platform: p.platform, options: p.options, label: p.label }]
+        ? [{ kind: p.kind, platform: p.platform, options: p.options, label: p.label }]
         : [],
     });
   }

@@ -1,0 +1,83 @@
+{
+  "_note": "Research sample, 2026-10-17. Boca Raton News Flash category 17 'Police News Releases', list page https://www.myboca.us/m/newsflash?cat=17 (CivicAlerts.aspx?CID=17 redirects there). Each release body links a PDF under /DocumentCenter/View/<id>. 55 releases listed, oldest about December 10, 2021.",
+  "categories": {
+    "5": "Police Information",
+    "14": "Media Releases",
+    "17": "Police News Releases",
+    "37": "Fire Rescue News"
+  },
+  "items": [
+    {
+      "id": "2030",
+      "title": "Boca Raton Police seek additional victims following human trafficking arrest",
+      "posted": "September 22, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=2030"
+    },
+    {
+      "id": "2021",
+      "title": "Boca Raton Police to conduct administrative review of 2024 officer-involved shooting",
+      "posted": "September 08, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=2021"
+    },
+    {
+      "id": "2006",
+      "title": "Boca Raton Police investigate shooting near Glades Road and Federal Highway",
+      "posted": "August 09, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=2006"
+    },
+    {
+      "id": "2003",
+      "title": "Boca Raton Police identify woman found deceased in ocean",
+      "posted": "August 06, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=2003"
+    },
+    {
+      "id": "2002",
+      "title": "Boca Raton Police investigate after woman\u2019s body found offshore",
+      "posted": "August 04, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=2002"
+    },
+    {
+      "id": "1988",
+      "title": "Boca Raton Police seek witnesses in death investigation",
+      "posted": "July 29, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=1988"
+    },
+    {
+      "id": "1956",
+      "title": "Boca Raton Police arrest Camino Gardens homicide suspect",
+      "posted": "June 05, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=1956"
+    },
+    {
+      "id": "1949",
+      "title": "Boca Raton Police arrest suspect after two victims shot outside The Standard",
+      "posted": "June 04, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=1949"
+    },
+    {
+      "id": "1943",
+      "title": "Boca Raton Police investigate shooting along SE Mizner Boulevard",
+      "posted": "May 29, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=1943"
+    },
+    {
+      "id": "1925",
+      "title": "Boca Raton Police address recent swatting calls",
+      "posted": "May 12, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=1925"
+    },
+    {
+      "id": "1896",
+      "title": "Boca Raton Police investigate homicide along Camino Gardens Boulevard",
+      "posted": "April 08, 2026",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=1896"
+    },
+    {
+      "id": "1826",
+      "title": "Boca Raton Police investigate fatal train vs. vehicle accident",
+      "posted": "December 16, 2025",
+      "url": "https://www.myboca.us/CivicAlerts.aspx?AID=1826"
+    }
+  ]
+}

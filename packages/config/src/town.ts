@@ -32,6 +32,8 @@ export const sourceKinds = [
   'sports',
   // Road and lane closures and construction lists (county and state traffic offices).
   'roads',
+  // Federal contracts and grants to recipients with a town address (USASpending, every town).
+  'federal_awards',
   'other_outlet',
 ] as const;
 export type SourceKind = (typeof sourceKinds)[number];

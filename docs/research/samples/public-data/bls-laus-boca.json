@@ -1,0 +1,453 @@
+{
+  "_note": "Research sample, 2026-10-17. Rows from https://download.bls.gov/pub/time.series/la/la.data.16.Florida (robots.txt 404, no rules; no key). Series: LAUCT12073000000000{3,4,5,6} = Boca Raton city unemployment rate, unemployed, employed, labor force; LAUCN12099... = Palm Beach County. Not seasonally adjusted. Footnote P = preliminary. Same IDs work in the API (api.bls.gov/publicAPI/v2/timeseries/data/).",
+  "rows": [
+    {
+      "series_id": "LAUCN120990000000003",
+      "year": 2026,
+      "period": "M01",
+      "value": "4.9",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000003",
+      "year": 2026,
+      "period": "M02",
+      "value": "4.8",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000003",
+      "year": 2026,
+      "period": "M03",
+      "value": "4.4",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000003",
+      "year": 2026,
+      "period": "M04",
+      "value": "4.5",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000003",
+      "year": 2026,
+      "period": "M05",
+      "value": "4.4",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000003",
+      "year": 2026,
+      "period": "M06",
+      "value": "4.6",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000003",
+      "year": 2026,
+      "period": "M07",
+      "value": "4.7",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000003",
+      "year": 2026,
+      "period": "M08",
+      "value": "4.6",
+      "footnote": "P"
+    },
+    {
+      "series_id": "LAUCN120990000000004",
+      "year": 2026,
+      "period": "M01",
+      "value": "38131",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000004",
+      "year": 2026,
+      "period": "M02",
+      "value": "37149",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000004",
+      "year": 2026,
+      "period": "M03",
+      "value": "34081",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000004",
+      "year": 2026,
+      "period": "M04",
+      "value": "35100",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000004",
+      "year": 2026,
+      "period": "M05",
+      "value": "34380",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000004",
+      "year": 2026,
+      "period": "M06",
+      "value": "35578",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000004",
+      "year": 2026,
+      "period": "M07",
+      "value": "36515",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000004",
+      "year": 2026,
+      "period": "M08",
+      "value": "35862",
+      "footnote": "P"
+    },
+    {
+      "series_id": "LAUCN120990000000005",
+      "year": 2026,
+      "period": "M01",
+      "value": "733229",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000005",
+      "year": 2026,
+      "period": "M02",
+      "value": "737112",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000005",
+      "year": 2026,
+      "period": "M03",
+      "value": "739149",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000005",
+      "year": 2026,
+      "period": "M04",
+      "value": "739133",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000005",
+      "year": 2026,
+      "period": "M05",
+      "value": "740651",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000005",
+      "year": 2026,
+      "period": "M06",
+      "value": "739447",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000005",
+      "year": 2026,
+      "period": "M07",
+      "value": "732258",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000005",
+      "year": 2026,
+      "period": "M08",
+      "value": "737930",
+      "footnote": "P"
+    },
+    {
+      "series_id": "LAUCN120990000000006",
+      "year": 2026,
+      "period": "M01",
+      "value": "771360",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000006",
+      "year": 2026,
+      "period": "M02",
+      "value": "774261",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000006",
+      "year": 2026,
+      "period": "M03",
+      "value": "773230",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000006",
+      "year": 2026,
+      "period": "M04",
+      "value": "774233",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000006",
+      "year": 2026,
+      "period": "M05",
+      "value": "775031",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000006",
+      "year": 2026,
+      "period": "M06",
+      "value": "775025",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000006",
+      "year": 2026,
+      "period": "M07",
+      "value": "768773",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCN120990000000006",
+      "year": 2026,
+      "period": "M08",
+      "value": "773792",
+      "footnote": "P"
+    },
+    {
+      "series_id": "LAUCT120730000000003",
+      "year": 2026,
+      "period": "M01",
+      "value": "5.2",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000003",
+      "year": 2026,
+      "period": "M02",
+      "value": "5.1",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000003",
+      "year": 2026,
+      "period": "M03",
+      "value": "4.8",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000003",
+      "year": 2026,
+      "period": "M04",
+      "value": "4.8",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000003",
+      "year": 2026,
+      "period": "M05",
+      "value": "4.8",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000003",
+      "year": 2026,
+      "period": "M06",
+      "value": "4.9",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000003",
+      "year": 2026,
+      "period": "M07",
+      "value": "5.1",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000003",
+      "year": 2026,
+      "period": "M08",
+      "value": "4.8",
+      "footnote": "P"
+    },
+    {
+      "series_id": "LAUCT120730000000004",
+      "year": 2026,
+      "period": "M01",
+      "value": "2563",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000004",
+      "year": 2026,
+      "period": "M02",
+      "value": "2537",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000004",
+      "year": 2026,
+      "period": "M03",
+      "value": "2365",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000004",
+      "year": 2026,
+      "period": "M04",
+      "value": "2404",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000004",
+      "year": 2026,
+      "period": "M05",
+      "value": "2371",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000004",
+      "year": 2026,
+      "period": "M06",
+      "value": "2423",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000004",
+      "year": 2026,
+      "period": "M07",
+      "value": "2518",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000004",
+      "year": 2026,
+      "period": "M08",
+      "value": "2373",
+      "footnote": "P"
+    },
+    {
+      "series_id": "LAUCT120730000000005",
+      "year": 2026,
+      "period": "M01",
+      "value": "46846",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000005",
+      "year": 2026,
+      "period": "M02",
+      "value": "47094",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000005",
+      "year": 2026,
+      "period": "M03",
+      "value": "47224",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000005",
+      "year": 2026,
+      "period": "M04",
+      "value": "47223",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000005",
+      "year": 2026,
+      "period": "M05",
+      "value": "47320",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000005",
+      "year": 2026,
+      "period": "M06",
+      "value": "47243",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000005",
+      "year": 2026,
+      "period": "M07",
+      "value": "46784",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000005",
+      "year": 2026,
+      "period": "M08",
+      "value": "47146",
+      "footnote": "P"
+    },
+    {
+      "series_id": "LAUCT120730000000006",
+      "year": 2026,
+      "period": "M01",
+      "value": "49409",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000006",
+      "year": 2026,
+      "period": "M02",
+      "value": "49631",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000006",
+      "year": 2026,
+      "period": "M03",
+      "value": "49589",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000006",
+      "year": 2026,
+      "period": "M04",
+      "value": "49627",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000006",
+      "year": 2026,
+      "period": "M05",
+      "value": "49691",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000006",
+      "year": 2026,
+      "period": "M06",
+      "value": "49666",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000006",
+      "year": 2026,
+      "period": "M07",
+      "value": "49302",
+      "footnote": ""
+    },
+    {
+      "series_id": "LAUCT120730000000006",
+      "year": 2026,
+      "period": "M08",
+      "value": "49519",
+      "footnote": "P"
+    }
+  ]
+}

@@ -33,7 +33,7 @@ Readers reward **named, local, specific and fast**. Neither outlet does much rep
 
 Single property sales and single new licenses are **not** spotlighted. Built for two towns, they shared 55% and 47% of their text, over the 30% near-duplicate limit: one sale has too few facts to read differently from town to town. That is exactly Metric Media's home-sales template. They stay in their weekly roundups.
 
-**D-CD-2: Public safety stays capped, for now.** Boca News Now's 40% public safety is its engine; ours would come only from official releases (Tier 3). No safety source is live yet, so the 20% cap (§6a) doesn't bind. When the first official release feed is live (PBSO email alerts through the SES inbox; Boca police and fire releases if they reach the News Flash feed), revisit: Claude's recommendation is to keep the cap on the homepage and newsletter, and let official releases publish beyond it as their own stories. **Owner** (a §6a change).
+**D-CD-2: Public safety stays capped, for now.** Boca News Now's 40% public safety is its engine; ours would come only from official releases (Tier 3). No safety source is live yet, so the 20% cap (§6a) doesn't bind. Boca's police and fire releases are now read from their News Flash list pages (about one a month each), and PBSO's WordPress feed is readable for county-wide releases; at that volume the cap still doesn't bind. When safety releases become a bigger share, revisit: Claude's recommendation is to keep the cap on the homepage and newsletter, and let official releases publish beyond it as their own stories. **Owner** (a §6a change).
 
 **D-CD-3: Regional sources before more town sources.** Boca News Now covers five cities; only 31% of its posts name Boca. County and state sources serve every town in the county at once (the county registry, `counties/`). Next sources, in this order, all public and code-built, Tier 1 unless noted:
 
@@ -57,7 +57,7 @@ Each source gets a Rule 8 check first (`public-data-sources.md`), and documented
 ## Build order
 
 1. Spotlights (D-CD-1). **Done**, with tests and the near-duplicate check.
-2. Hurricane Center alerts, BLS LAUS, Census BPS, USASpending: adapters with recorded fixtures, monthly or event templates, near-duplicate checks.
+2. USASpending: **done** (`usaspending` adapter, weekly federal awards roundup, given to every town by the launcher). Boca police and fire releases: **done** (CivicPlus `newsflash-list`; those categories aren't in the city's RSS feed). Next: Hurricane Center alerts, BLS LAUS from the bulk files, Boca's development-projects layer (`arcgis`). Census BPS is deferred: its place files are numbers only, so a monthly story wouldn't pass the near-duplicate guard; the numbers go into guides and entity pages instead.
 3. EPA ECHO, OSHA, CMS: facility adapters, Tier 3 templates.
 4. FEC and state campaign totals, county agendas, schools.
 5. The breaking-alert email.
