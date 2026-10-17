@@ -73,6 +73,7 @@ test.describe('article page', () => {
       'href',
       /^mailto:news@bocatownsquare\.com\?subject=/,
     );
+    await expect(page.getByTestId('how-we-report')).toHaveAttribute('href', '/methods');
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
       'content',
       'noindex, nofollow',

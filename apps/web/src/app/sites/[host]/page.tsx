@@ -1,8 +1,11 @@
+import type { Metadata } from 'next';
 import { Fragment, type ReactNode } from 'react';
 import type { HomeModule } from '@towncore/config';
 import { bandNeedsCta, homeModules, homeOrder, SPANNING_MODULES } from '@/modules/registry';
 import { themeFor } from '@/lib/theme';
-import { requireTown } from '@/lib/town';
+import { thinUnless } from '@/lib/indexing';
+import { requireTown, resolveTown } from '@/lib/town';
+import { realStoryCounts } from '@/modules/data';
 import { ListBeacon } from '@/components/Beacon';
 import { HomeScreenCard } from '@/components/phone/HomeScreenCard';
 import { LargeTitle } from '@/components/phone/LargeTitle';
@@ -10,6 +13,17 @@ import { CategoryCapsules, greeting } from '@/modules/front';
 import { Slot } from '@/slots/Slot';
 import { TownGrid } from '@/layout/TownGrid';
 import styles from './home.module.css';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ host: string }>;
+}): Promise<Metadata> {
+  const town = await resolveTown((await params).host);
+  if (!town) return {};
+  // A front page with fewer than 3 real stories stays out of search until it has them.
+  return { robots: thinUnless(town, (await realStoryCounts(town.id)).total) };
+}
 
 // The homepage is the theme's module lists, not a fixed template (CLAUDE.md §11a-2): an optional
 // full-width band (homeTop), the main column (home), the rail (homeRail) and an optional

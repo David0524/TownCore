@@ -8,7 +8,10 @@ import { db } from '@/lib/db';
 import { StandardPage } from '@/lib/pages';
 import { formatTownDate, requireTown } from '@/lib/town';
 
-export const metadata: Metadata = { title: 'Corrections' };
+export const metadata: Metadata = {
+  title: 'Corrections',
+  alternates: { canonical: '/corrections' },
+};
 
 export default async function CorrectionsPage({ params }: { params: Promise<{ host: string }> }) {
   const town = await requireTown(params);

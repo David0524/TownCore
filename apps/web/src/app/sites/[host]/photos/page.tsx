@@ -5,10 +5,12 @@ import { StandardPage } from '@/lib/pages';
 import { PHOTO_MESSAGES, photosOpen } from '@/lib/photos';
 import { requireTown } from '@/lib/town';
 import styles from './photos.module.css';
+import { THIN_PAGE } from '@/lib/indexing';
 
 export const metadata: Metadata = {
   title: 'Send us a photo',
   alternates: { canonical: '/photos' },
+  robots: THIN_PAGE,
 };
 
 /**

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { db } from '@/lib/db';
 import { articlePath, rssAlternate } from '@/lib/discovery';
+import { thinUnless } from '@/lib/indexing';
 import { StandardPage } from '@/lib/pages';
 import { requireTown, resolveTown } from '@/lib/town';
 import styles from './guides.module.css';
@@ -18,6 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: 'Guides',
     description: `${town.siteName} guides to ${town.name} services: trash and recycling, permits, parking, hurricanes, voting and more.`,
     alternates: { canonical: '/guides', types: rssAlternate(town) },
+    robots: thinUnless(town, (await listPublishedGuides(db(), town.id)).length, 1),
   };
 }
 

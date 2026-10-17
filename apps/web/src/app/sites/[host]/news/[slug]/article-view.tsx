@@ -275,7 +275,10 @@ export async function ArticleView({
           <a href={reportHref} data-testid="report-error">
             Report an error
           </a>
-          .
+          . {/* Every article links to how stories are made and checked (owner, 2026-10-17). */}
+          <a href="/methods" data-testid="how-we-report">
+            How we report
+          </a>
         </p>
 
         {upNext ? <UpNext town={town} theme={theme} story={upNext} /> : null}

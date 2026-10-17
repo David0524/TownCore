@@ -1,10 +1,16 @@
+import { publisher as company } from '@towncore/config';
 import type { Article, Town } from '@towncore/db';
 import { articlePath, siteUrl } from './discovery';
 
 // JSON-LD for search engines (CLAUDE.md §11 "SEO"). The publisher is the site itself, so sites
 // read as independent local papers (D-M4-4, Rule 1); TownCore is named on About and Privacy.
+// The About page's organization names TownCore as its parent (owner, 2026-10-17: transparency
+// for search engines), and every article's publisher points to that organization by its @id.
 
 type Json = Record<string, unknown>;
+
+/** The site's organization node, shared by About and every article's publisher. */
+const organizationId = (town: Pick<Town, 'domain'>) => siteUrl(town, '/about#organization');
 
 export function organizationJsonLd(
   town: Pick<Town, 'siteName' | 'domain' | 'name' | 'state'>,
@@ -12,11 +18,13 @@ export function organizationJsonLd(
   return {
     '@context': 'https://schema.org',
     '@type': 'NewsMediaOrganization',
+    '@id': organizationId(town),
     name: town.siteName,
     url: siteUrl(town, '/'),
     areaServed: `${town.name}, ${town.state}`,
     publishingPrinciples: siteUrl(town, '/methods'),
     correctionsPolicy: siteUrl(town, '/corrections'),
+    parentOrganization: { '@type': 'Organization', name: company.name },
   };
 }
 
@@ -31,6 +39,7 @@ export function newsArticleJsonLd(
   const image = siteUrl(town, `/news/${article.slug}/og`);
   const publisher = {
     '@type': 'NewsMediaOrganization',
+    '@id': organizationId(town),
     name: town.siteName,
     url: siteUrl(town, '/'),
   };

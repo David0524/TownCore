@@ -62,7 +62,12 @@ test.describe('a live town', () => {
 
     const pages = await (await get(page, `${feed}/sitemaps/pages.xml`)).text();
     expect(pages).toContain('<loc>https://feedtown.test/about</loc>');
-    expect(pages).toContain('<loc>https://feedtown.test/beat/government</loc>');
+    // Feed Town has 2 real stories: its front and sections are thin, so they're left out
+    // (owner, 2026-10-17: noindex anything thin).
+    expect(pages).not.toContain('<loc>https://feedtown.test/beat/government</loc>');
+    expect(pages).not.toContain('<loc>https://feedtown.test/</loc>');
+    await page.goto(`${feed}/beat/government`);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow');
   });
 
   test('the news sitemap lists only the last 48 hours, with Google News fields', async ({

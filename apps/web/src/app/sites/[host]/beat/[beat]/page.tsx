@@ -9,9 +9,11 @@ import { StoryBlock } from '@/components/news/StoryBlock';
 import { ArticleVisual } from '@/components/visuals/ArticleVisual';
 import { beatCoverage, sourceLabel } from '@/content/beats';
 import { TownGrid } from '@/layout/TownGrid';
+import { rssAlternate } from '@/lib/discovery';
+import { thinUnless } from '@/lib/indexing';
 import { themeFor } from '@/lib/theme';
-import { requireTown } from '@/lib/town';
-import { rankedBeatArticles, roundupFigure, townSources } from '@/modules/data';
+import { requireTown, resolveTown } from '@/lib/town';
+import { rankedBeatArticles, realStoryCounts, roundupFigure, townSources } from '@/modules/data';
 import { ComingUp, DocumentsPosted } from '@/modules/front';
 import { Slot } from '@/slots/Slot';
 import styles from './beat.module.css';
@@ -28,8 +30,17 @@ function findBeat(slug: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const beat = findBeat((await params).beat);
-  return beat ? { title: beat.label } : {};
+  const { host, beat: slug } = await params;
+  const beat = findBeat(slug);
+  const town = await resolveTown(host);
+  if (!beat || !town) return {};
+  const counts = await realStoryCounts(town.id);
+  return {
+    title: beat.label,
+    alternates: { canonical: `/beat/${beat.slug}`, types: rssAlternate(town) },
+    // A section with fewer than 3 real stories stays out of search.
+    robots: thinUnless(town, counts.byBeat.get(beat.slug) ?? 0),
+  };
 }
 
 /**

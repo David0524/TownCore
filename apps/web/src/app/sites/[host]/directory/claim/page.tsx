@@ -8,10 +8,12 @@ import { directoryPath, listingDetail } from '@/lib/directory';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 import styles from '../directory.module.css';
+import { THIN_PAGE } from '@/lib/indexing';
 
 export const metadata: Metadata = {
   title: 'Claim your listing',
   alternates: { canonical: '/directory/claim' },
+  robots: THIN_PAGE,
 };
 
 /** Find your business to claim it (owner, 2026-10-16), or add it when it isn't listed. */

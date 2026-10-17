@@ -4,10 +4,28 @@ import { EventCard, type EventCardData } from '@/components/events/EventCard';
 import styles from '@/components/events/events.module.css';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { StandardPage } from '@/lib/pages';
-import { requireTown } from '@/lib/town';
+import { thinUnless } from '@/lib/indexing';
+import { requireTown, resolveTown } from '@/lib/town';
 import { upcomingEvents, upcomingMeetings } from '@/modules/data';
 
-export const metadata: Metadata = { title: 'Events', alternates: { canonical: '/events' } };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ host: string }>;
+}): Promise<Metadata> {
+  const town = await resolveTown((await params).host);
+  if (!town) return {};
+  const [events, meetings] = await Promise.all([
+    upcomingEvents(town.id, town.name, DAYS, 200),
+    upcomingMeetings(town.id, DAYS, 60),
+  ]);
+  // An empty calendar stays out of search.
+  return {
+    title: 'Events',
+    alternates: { canonical: '/events' },
+    robots: thinUnless(town, events.length + meetings.length, 1),
+  };
+}
 
 const DAYS = 30;
 

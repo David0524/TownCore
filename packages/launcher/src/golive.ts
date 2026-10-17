@@ -1,4 +1,4 @@
-import { findTbdFields, readinessMinimum } from '@towncore/config';
+import { findTbdFields } from '@towncore/config';
 import {
   and,
   desc,
@@ -105,10 +105,8 @@ export async function goLiveBlockers(db: Db, launchId: string): Promise<string[]
   if (town.status !== 'draft') blockers.push(`The town is already ${town.status}.`);
   const tbd = findTbdFields(town.config);
   if (tbd.length) blockers.push(`The town config still has TBD fields: ${tbd.join(', ')}.`);
-  if ((town.readinessScore ?? 0) < readinessMinimum[town.tier])
-    blockers.push(
-      `Readiness ${town.readinessScore ?? 0} a day is below ${readinessMinimum[town.tier]} (Rule 7).`,
-    );
+  // Rule 7 is a target (owner, 2026-10-17): readiness must have been measured, not met.
+  if (town.readinessScore === null) blockers.push('Readiness has not been measured.');
   const [mail] = await db.select().from(mailDomains).where(eq(mailDomains.name, town.domain));
   if (mail?.status !== 'live')
     blockers.push(
@@ -128,7 +126,8 @@ export async function approveLaunch(
   const [launch] = await db.select().from(launches).where(eq(launches.id, input.launchId));
   const [town] = await db
     .update(towns)
-    .set({ status: 'live', updatedAt: now })
+    // The cohort is the month it goes live (for cohort rollout and the search kill switch).
+    .set({ status: 'live', cohort: now.toISOString().slice(0, 7), updatedAt: now })
     .where(and(eq(towns.slug, launch!.slug), eq(towns.status, 'draft')))
     .returning();
   if (!town) throw new GoLiveRefused('The town changed while approving; reload and try again.');
@@ -173,4 +172,45 @@ export async function setTownPaused(
     detail: { slug: town.slug },
   });
   return town;
+}
+
+/**
+ * The search kill switch (owner, 2026-10-17): hide one town, or every town in a launch cohort,
+ * from search engines, or show it again. Readers still reach the sites; hidden towns are noindex
+ * on every page and list nothing in their sitemaps. Admin only; audited per town with the reason.
+ */
+export async function setSearchHidden(
+  db: Db,
+  input: { staff: Staff; hidden: boolean; reason: string } & (
+    { townId: string; cohort?: undefined } | { cohort: string; townId?: undefined }
+  ),
+  now = new Date(),
+) {
+  if (input.staff.role !== 'admin')
+    throw new GoLiveRefused('Only an admin can hide a town from search or show it again.');
+  if (!input.reason.trim()) throw new GoLiveRefused('Say why, for the audit log.');
+  const changed = await db
+    .update(towns)
+    .set({ searchHidden: input.hidden, updatedAt: now })
+    .where(
+      and(
+        input.townId ? eq(towns.id, input.townId) : eq(towns.cohort, input.cohort!),
+        eq(towns.searchHidden, !input.hidden),
+      ),
+    )
+    .returning();
+  if (!changed.length)
+    throw new GoLiveRefused(
+      input.townId
+        ? `That town is already ${input.hidden ? 'hidden from' : 'shown in'} search.`
+        : `No town in cohort ${input.cohort} is ${input.hidden ? 'shown in' : 'hidden from'} search.`,
+    );
+  for (const town of changed)
+    await logAdminAction(db, {
+      staffId: input.staff.id,
+      action: input.hidden ? 'town.search_hide' : 'town.search_show',
+      target: { type: 'town', id: town.id },
+      detail: { slug: town.slug, cohort: town.cohort, reason: input.reason.trim() },
+    });
+  return changed;
 }

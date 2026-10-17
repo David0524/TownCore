@@ -320,6 +320,8 @@ export type ThemeDetail = {
   themeFile: string;
   theme: Theme;
   notes: string[];
+  /** The readiness the theme was made for (the content-volume rule depends on it). */
+  itemsPerDay?: number;
   neighbors: Array<{ name: string; siteName: string; miles: number }>;
   checks: { contrast: 'pass'; volume: 'pass'; slots: 'pass'; neighbors: 'pass' };
   mastheads: string[];
@@ -406,11 +408,20 @@ export async function themeStep(input: {
   let theme: Theme;
   let mode: ThemeDetail['mode'] = 'fallback';
   const notes: string[] = [];
-  if (input.previous?.theme) {
-    // Re-run (screenshots, --redo): keep the theme already made; the rules are re-checked below.
-    theme = themeSchema.parse(input.previous.theme);
-    mode = input.previous.mode;
-    notes.push(...input.previous.notes);
+  const low = (n: number) => n < LOW_VOLUME_ITEMS;
+  const previous = input.previous;
+  // A theme made for a different side of the content-volume line (new sources raised or lowered
+  // readiness) is made again; otherwise a re-run keeps it.
+  if (previous?.theme && low(previous.itemsPerDay ?? itemsPerDay) === low(itemsPerDay)) {
+    // Re-run (screenshots, --redo, new sources): keep the theme already made; the rules are
+    // re-checked below, and the volume note shows today's readiness.
+    theme = themeSchema.parse(previous.theme);
+    mode = previous.mode;
+    notes.push(
+      ...previous.notes.map((n) =>
+        n.replace(/^[\d.]+ items a day is under/, `${itemsPerDay} items a day is under`),
+      ),
+    );
     if (neighborProblems(theme, neighbors).length) {
       const repaired = satisfyNeighbors(theme, neighbors);
       theme = repaired.theme;
@@ -547,6 +558,7 @@ export async function themeStep(input: {
       themeFile,
       theme,
       notes,
+      itemsPerDay,
       neighbors: neighbors.map(({ name, siteName, miles }) => ({ name, siteName, miles })),
       checks: { contrast: 'pass', volume: 'pass', slots: 'pass', neighbors: 'pass' },
       mastheads: mastheads(),

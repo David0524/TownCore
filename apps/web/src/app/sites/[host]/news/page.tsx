@@ -6,13 +6,26 @@ import { ListBeacon } from '@/components/Beacon';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { StoryBlock } from '@/components/news/StoryBlock';
 import { TownGrid } from '@/layout/TownGrid';
+import { thinUnless } from '@/lib/indexing';
 import { themeFor } from '@/lib/theme';
-import { requireTown } from '@/lib/town';
-import { beatCounts, recentArticles } from '@/modules/data';
+import { requireTown, resolveTown } from '@/lib/town';
+import { beatCounts, realStoryCounts, recentArticles } from '@/modules/data';
 import { Slot } from '@/slots/Slot';
 import styles from '../beat/[beat]/beat.module.css';
 
-export const metadata: Metadata = { title: 'News', alternates: { canonical: '/news' } };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ host: string }>;
+}): Promise<Metadata> {
+  const town = await resolveTown((await params).host);
+  if (!town) return {};
+  return {
+    title: 'News',
+    alternates: { canonical: '/news' },
+    robots: thinUnless(town, (await realStoryCounts(town.id)).total),
+  };
+}
 
 const INFEED_EVERY = 6;
 

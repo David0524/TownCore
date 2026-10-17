@@ -1,7 +1,5 @@
 // pnpm launch "Delray Beach, FL" [--short-name Delray] [--nickname "Atlantic"] [--outlet "Name"]...
 //   [--source kind=url]... [--site http://localhost:3000 [--chromium path]] [--resume] [--pick N] [--approve-spend]
-// --preview (dry runs): past a failed readiness check, keep going to show the theme and report;
-// the town still can't go live (Rule 7).
 // Launches a town from an approved candidate (CLAUDE.md §10). A dry run unless --approve-spend:
 // nothing is bought, sent or deployed. Step 2 proposes names and waits for --pick; a domain is
 // bought only with --approve-spend and the domain typed back at the price shown (Rule 10).
@@ -112,7 +110,6 @@ try {
       ...(sources.length ? { sources } : {}),
       ...(pick ? { pick: Number(pick) } : {}),
       approveSpend: args.includes('--approve-spend'),
-      ...(args.includes('--preview') ? { preview: true } : {}),
       ...(flag('redo') ? { redo: flag('redo') as LaunchStep } : {}),
       resume: args.includes('--resume'),
     },

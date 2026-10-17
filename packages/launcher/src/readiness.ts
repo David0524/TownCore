@@ -25,7 +25,8 @@ import { classifyV1 } from '@towncore/prompts';
 //   - meetings, events and each business-filing source make one weekly roundup per week they
 //     have items (the finder's templated roundups, D-M3-6);
 //   - weather and evergreen guides don't count.
-// A town below 3 a day (10 for `large`) stops the launch.
+// The target is 3 a day (10 for `large`): a town short of it still launches, and the report
+// shows the gap (Rule 7, owner 2026-10-17).
 
 /** Same bar as the story finder's thin-source check (pipeline/scoring.ts MIN_SOURCE_CHARS). */
 const MIN_STORY_CHARS = 400;
@@ -63,8 +64,6 @@ export type ReadinessDetail = {
   mode: 'classified' | 'estimate';
   bySource: SourceReadiness[];
 };
-
-export class ReadinessFailed extends Error {}
 
 const weekKey = (d: Date) => {
   const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));

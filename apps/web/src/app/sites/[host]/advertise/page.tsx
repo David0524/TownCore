@@ -13,10 +13,12 @@ import { directoryPath } from '@/lib/directory';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 import styles from './advertise.module.css';
+import { THIN_PAGE } from '@/lib/indexing';
 
 export const metadata: Metadata = {
   title: 'Get your business featured',
   alternates: { canonical: '/advertise' },
+  robots: THIN_PAGE,
 };
 
 const SPOTS: Record<FeaturedRank, { title: string; where: string }> = {

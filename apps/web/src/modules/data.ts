@@ -243,6 +243,31 @@ export const upcomingEvents = cache(
   },
 );
 
+/**
+ * Real published stories (not guides or test fixtures) per beat, all time: list pages with too
+ * few stay out of search (owner, 2026-10-17).
+ */
+export const realStoryCounts = cache(
+  async (townId: string): Promise<{ total: number; byBeat: Map<string, number> }> => {
+    const rows = await db()
+      .select({ beat: articles.beat, n: sql<number>`count(*)::int` })
+      .from(articles)
+      .where(
+        and(
+          eq(articles.townId, townId),
+          inArray(articles.status, ['published', 'corrected']),
+          sql`${articles.kind} <> 'guide'`,
+          not(like(articles.slug, 'test-%')),
+        ),
+      )
+      .groupBy(articles.beat);
+    return {
+      total: rows.reduce((n, r) => n + r.n, 0),
+      byBeat: new Map(rows.map((r) => [r.beat, r.n])),
+    };
+  },
+);
+
 /** Published stories per beat in the last `days` days, for the section buttons. */
 export async function beatCounts(townId: string, days = 7): Promise<Map<string, number>> {
   const since = Date.now() - days * 86_400_000;

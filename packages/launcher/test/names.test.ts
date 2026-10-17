@@ -361,8 +361,11 @@ describe('step 2 in a launch', () => {
       site_name: 'The Delray Ledger',
       domain: 'delrayledger.com',
     });
-    // The run goes on to steps 3–5 (sources.test.ts); with no sources Delray fails Rule 7 here.
-    expect(run.launch.stoppedReason).toMatch(/below the 3 a mid town needs \(Rule 7\)/);
+    // The run goes on to steps 3–5 (sources.test.ts); with no sources Delray is short of the Rule 7
+    // target, which is reported, not a stop.
+    const readiness = run.steps.find((s) => s.step === 'readiness')!;
+    expect(readiness.status).toBe('done');
+    expect(readiness.detail).toMatchObject({ minimum: 3, passed: false });
     expect(confirms).toHaveLength(0);
   });
 
