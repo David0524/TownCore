@@ -34,3 +34,26 @@ export function gameLine(g: Pick<Game, 'home' | 'away' | 'homeScore' | 'awayScor
   }
   return `${g.away} at ${g.home}`;
 }
+
+/** Team sports a reader can send a score for (team level only: no individual results). */
+export const TEAM_SPORTS = [
+  'Football',
+  'Flag Football',
+  'Boys Basketball',
+  'Girls Basketball',
+  'Baseball',
+  'Softball',
+  'Boys Soccer',
+  'Girls Soccer',
+  'Boys Volleyball',
+  'Girls Volleyball',
+  'Boys Lacrosse',
+  'Girls Lacrosse',
+  'Water Polo',
+  'Ice Hockey',
+] as const;
+
+export const SCORE_LEVELS = ['Varsity', 'JV', 'Middle school', 'Youth league'] as const;
+
+/** Shown with a reader's score once staff approved it. */
+export const READER_SCORE_NOTE = 'Score sent by a reader';

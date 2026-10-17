@@ -1,0 +1,47 @@
+.form {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  max-width: 40rem;
+}
+
+.form input:not([type='checkbox']),
+.form textarea,
+.form select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  color: var(--ink);
+  background: var(--background);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+}
+
+.form label {
+  font-weight: 600;
+}
+
+.pair {
+  display: grid;
+  gap: 0.5rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.pair > div {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.submit {
+  justify-self: start;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--secondary-text);
+  background: var(--secondary);
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+}

@@ -3,7 +3,13 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { Fetcher } from '../src/http/fetcher';
 import { replayFetch, type FixtureFile } from '../src/http/fixtures';
-import { fetchWeather, HOURLY_STEPS, parsePoint } from '../src/nws/weather';
+import {
+  fetchWeather,
+  fetchZoneAlerts,
+  HOURLY_STEPS,
+  parsePoint,
+  UPCOMING_HOURS,
+} from '../src/nws/weather';
 
 // Recorded live from api.weather.gov for Boca Raton (point 26.3587,-80.0831, zone FLZ168).
 const fixture: FixtureFile = JSON.parse(
@@ -23,9 +29,12 @@ const recordedNow = (() => {
   return new Date(new Date(first.startTime).getTime() + 10 * 60_000);
 })();
 
-const fetcherFor = (file: FixtureFile) =>
+const fetcherFor = (file: FixtureFile, urls: string[] = []) =>
   new Fetcher({
-    fetchImpl: replayFetch(file),
+    fetchImpl: async (url, init) => {
+      urls.push(String(url));
+      return replayFetch(file)(url, init);
+    },
     sleep: async () => {},
     now: () => 0,
     minIntervalMs: 0,
@@ -55,7 +64,7 @@ const alert = (props: Record<string, unknown>) => ({
 });
 
 describe('NWS weather snapshot', () => {
-  it('builds the tile from the hourly and 12-hour forecasts', async () => {
+  it('builds the tile from the hourly forecast alone', async () => {
     const w = await fetchWeather(fetcherFor(fixture), opts, recordedNow);
     expect(w.place).toBe('Boca Raton, FL');
     expect(w.grid).toEqual({ office: 'MFL', x: 111, y: 77 });
@@ -69,6 +78,9 @@ describe('NWS weather snapshot', () => {
       new Date(w.hours[1]!.startTime).getTime() - new Date(w.hours[0]!.startTime).getTime();
     expect(gap).toBe(2 * 3_600_000);
     expect(w.today.high ?? w.today.low).not.toBeNull();
+    // The next 36 hours are kept, so the site can pick the current hour when it shows the tile.
+    expect(w.upcoming).toHaveLength(UPCOMING_HOURS);
+    expect(w.upcoming![0]!.startTime).toBe(w.now.startTime);
     expect(w.sourceUrl).toBe('https://forecast.weather.gov/MapClick.php?lat=26.3587&lon=-80.0831');
   });
 
@@ -90,6 +102,56 @@ describe('NWS weather snapshot', () => {
     expect(w.alerts.map((a) => a.id)).toEqual(['active', 'no-end']);
     expect(w.alerts[0]).toMatchObject({ event: 'Rip Current Statement', severity: 'Moderate' });
     expect(w.alerts[0]!.url).toBe(w.sourceUrl);
+  });
+
+  it('reuses the grid point from the previous snapshot: one request with batched alerts', async () => {
+    const first = await fetchWeather(fetcherFor(fixture), opts, recordedNow);
+    const urls: string[] = [];
+    const again = await fetchWeather(fetcherFor(fixture, urls), opts, recordedNow, {
+      previous: first,
+      alerts: [],
+    });
+    expect(urls.filter((u) => u.startsWith('https://api.weather.gov/'))).toEqual([hourlyUrl]);
+    expect(again.place).toBe('Boca Raton, FL');
+    expect(again.grid).toEqual(first.grid);
+  });
+
+  it('fetches alerts for many zones in batches and files each under the zones it covers', async () => {
+    const zones = Array.from({ length: 60 }, (_, i) => `FLZ${String(100 + i)}`);
+    const urls: string[] = [];
+    const fetcher = new Fetcher({
+      fetchImpl: async (url) => {
+        urls.push(String(url));
+        if (String(url).endsWith('/robots.txt')) return new Response('', { status: 404 });
+        const asked = new URL(String(url)).searchParams.get('zone')!.split(',');
+        const features = asked.includes('FLZ101')
+          ? [
+              alert({ id: 'a', geocode: { UGC: ['FLZ101', 'FLZ102'] } }),
+              alert({
+                id: 'b',
+                affectedZones: ['https://api.weather.gov/zones/forecast/FLZ120'],
+              }),
+              alert({ id: 'gone', messageType: 'Cancel', geocode: { UGC: ['FLZ101'] } }),
+            ]
+          : [];
+        return new Response(JSON.stringify({ features }), {
+          headers: { 'content-type': 'application/geo+json' },
+        });
+      },
+      sleep: async () => {},
+      now: () => 0,
+      minIntervalMs: 0,
+    });
+    const byZone = await fetchZoneAlerts(fetcher, [...zones, 'FLZ101'], recordedNow);
+    const alertCalls = urls.filter((u) => u.includes('/alerts/active'));
+    expect(alertCalls).toHaveLength(2);
+    expect(new URL(alertCalls[0]!).searchParams.get('zone')!.split(',')).toHaveLength(50);
+    expect(byZone.get('FLZ101')!.map((a) => a.id)).toEqual(['a']);
+    expect(byZone.get('FLZ102')!.map((a) => a.id)).toEqual(['a']);
+    expect(byZone.get('FLZ120')!.map((a) => a.id)).toEqual(['b']);
+    expect(byZone.get('FLZ103')).toEqual([]);
+    // No link in the alert: the town's forecast page is used later (alertsForTown).
+    expect(byZone.get('FLZ101')![0]!.url).toBeNull();
   });
 
   it('parses and validates the point', () => {

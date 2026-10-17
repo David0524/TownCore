@@ -6,6 +6,7 @@ import styles from '@/components/events/events.module.css';
 import places from '@/components/directory/places.module.css';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { gameCard } from '@/components/sports/game';
+import { ScoreForm } from '@/components/sports/ScoreForm';
 import { StandardPage } from '@/lib/pages';
 import { thinUnless } from '@/lib/indexing';
 import { requireTown, resolveTown } from '@/lib/town';
@@ -45,10 +46,10 @@ export default async function SportsPage({
   searchParams,
 }: {
   params: Promise<{ host: string }>;
-  searchParams: Promise<{ sport?: string }>;
+  searchParams: Promise<{ sport?: string; s?: string }>;
 }) {
   const town = await requireTown(params);
-  const { sport } = await searchParams;
+  const { sport, s } = await searchParams;
   const now = new Date();
   const games = await townGames(
     town.id,
@@ -84,7 +85,7 @@ export default async function SportsPage({
       <LargeTitle title="Sports" as="h1" always />
       <p className="muted">
         {town.name} teams&apos; games for the next two weeks and recent results, from official
-        schedules. Each links to the official schedule or results page.
+        schedules and scores readers send in, which an editor checks first.
       </p>
       {sports.length > 1 ? (
         <nav aria-label="Sports">
@@ -130,6 +131,7 @@ export default async function SportsPage({
           {listOf(results)}
         </section>
       ) : null}
+      <ScoreForm town={town} {...(s ? { message: s } : {})} />
     </StandardPage>
   );
 }

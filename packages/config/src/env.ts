@@ -10,6 +10,8 @@ const optional = <T extends z.ZodType>(schema: T) =>
 
 export const envSchema = z.object({
   DATABASE_URL: optional(z.url({ protocol: /^postgres(ql)?$/ })),
+  // The Vercel demo's database (Neon), for pnpm demo:migrate and demo:sync only.
+  DEMO_DATABASE_URL: optional(z.url({ protocol: /^postgres(ql)?$/ })),
   ANTHROPIC_API_KEY: optional(z.string()),
   GEMINI_API_KEY: optional(z.string()),
   // Which model provider the pipeline uses. Unset: Anthropic if its key is set, else Gemini.

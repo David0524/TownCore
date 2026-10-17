@@ -80,7 +80,17 @@ export {
   type Theme,
   type TypePairing,
 } from './theme';
-export type { BeachConditions, WeatherAlert, WeatherHour, WeatherSnapshot } from './weather';
+export {
+  advanceSnapshot,
+  HOURLY_EVERY,
+  HOURLY_STEPS,
+  snapshotCovers,
+  type BeachConditions,
+  type WeatherAlert,
+  type WeatherHour,
+  type WeatherPeriod,
+  type WeatherSnapshot,
+} from './weather';
 export {
   beatCategory,
   categoryColors,
@@ -172,4 +182,12 @@ export {
 } from './illustrations';
 export { illustrationLibrary } from './illustrations-library';
 export { titleCase } from './names';
-export { GAME_RECORD, gameLine, type Game, type GameStatus } from './sports';
+export {
+  GAME_RECORD,
+  gameLine,
+  READER_SCORE_NOTE,
+  SCORE_LEVELS,
+  TEAM_SPORTS,
+  type Game,
+  type GameStatus,
+} from './sports';

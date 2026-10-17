@@ -13,6 +13,8 @@ export default tseslint.config(
       '**/coverage/',
       'packages/db/migrations/',
       '**/cdk.out/',
+      // Claude Code agent worktrees: separate checkouts with their own tsconfigs.
+      '.claude/',
     ],
   },
   js.configs.recommended,

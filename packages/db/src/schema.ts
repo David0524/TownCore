@@ -1909,3 +1909,50 @@ export const photoSubmissions = pgTable(
     ),
   ],
 );
+
+// Scores readers send in (owner, 2026-10-17: "use reader scores meanwhile", while an FHSAA data
+// license is asked for). Team level only: structured fields, no free text where a player could
+// be named (§7). Nothing shows until staff approve it; approval writes a `game` record.
+export const scoreReports = pgTable(
+  'score_reports',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    sport: text('sport').notNull(),
+    level: text('level').notNull(),
+    home: text('home').notNull(),
+    away: text('away').notNull(),
+    homeScore: integer('home_score').notNull(),
+    awayScore: integer('away_score').notNull(),
+    playedOn: date('played_on').notNull(),
+    venue: text('venue'),
+    /** Which teams are the town's: 'home', 'away' or 'both'. */
+    localSide: text('local_side').$type<'home' | 'away' | 'both'>().notNull(),
+    /** Never shown. */
+    reporterName: text('reporter_name').notNull(),
+    reporterEmail: text('reporter_email').notNull(),
+    consentIp: text('consent_ip'),
+    status: text('status')
+      .$type<'pending' | 'approved' | 'rejected'>()
+      .notNull()
+      .default('pending'),
+    reviewedBy: uuid('reviewed_by').references(() => staff.id),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    rejectReason: text('reject_reason'),
+    /** The game record an approval wrote. */
+    recordId: uuid('record_id').references(() => records.id),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('score_reports_town_status_idx').on(t.townId, t.status, t.createdAt.desc()),
+    check('score_reports_status', sql`${t.status} in ('pending', 'approved', 'rejected')`),
+    check('score_reports_side', sql`${t.localSide} in ('home', 'away', 'both')`),
+    check('score_reports_scores', sql`${t.homeScore} >= 0 and ${t.awayScore} >= 0`),
+    check(
+      'score_reports_approved',
+      sql`${t.status} <> 'approved' or (${t.reviewedBy} is not null and ${t.recordId} is not null)`,
+    ),
+  ],
+);

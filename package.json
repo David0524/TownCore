@@ -32,7 +32,9 @@
     "illustrations": "pnpm --filter @towncore/worker illustrations",
     "mail:import": "pnpm --silent --filter @towncore/mail import",
     "towns:rank": "pnpm --silent --filter @towncore/launcher towns:rank",
-    "launch": "pnpm --silent --filter @towncore/launcher launch"
+    "launch": "pnpm --silent --filter @towncore/launcher launch",
+    "demo:migrate": "pnpm --filter @towncore/db demo:migrate",
+    "demo:sync": "pnpm --silent --filter @towncore/db demo:sync"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

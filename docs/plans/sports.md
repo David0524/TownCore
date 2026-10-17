@@ -70,6 +70,7 @@ on a commercial news site.
 2. `sports` source kind (enum migration) and town config: the town's schools with the names the
    state association uses.
 3. `sidearm` adapter: on hold. FHSAA's terms bar reuse without written permission (above); the
+   Owner, 2026-10-17: ask FHSAA for a data license (letter drafted in `docs/sports/fhsaa-data-license-request.md`, for the owner to send); readers send final scores meanwhile, approved by staff in Admin → Scores.
    same adapter could still read a Sidearm site whose terms allow it.
 4. Weekly high school sports roundup built in code (Tier 1), the `schools-sports` module, and
    scores in the newsletter's Coming up.

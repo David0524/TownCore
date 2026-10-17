@@ -6,6 +6,8 @@ import type { RawRecord, SourceAdapter, SourceConfig } from '../types';
 // Source config: { city: "BOCA RATON" } — filings whose principal address is in that city.
 
 const FILES = 'https://sftp.floridados.gov/Public/doc/cor/';
+/** How long a fetched day file is shared before it's asked for again. */
+const SHARED_DAY_FILE_MS = 7 * 86_400_000;
 
 // The state publishes this login for the public download server (not a secret):
 // https://dos.fl.gov/sunbiz/other-services/data-downloads/daily-data/
@@ -144,12 +146,14 @@ export const flSunbizAdapter: SourceAdapter = {
     const records: RawRecord[] = [];
     for (const name of dailyFileNames(since, now)) {
       const url = `${FILES}${name}`;
-      const response = await fetcher.get(url, auth);
+      // A day's file never changes once published, so every Florida town shares one download of
+      // it for a week (shared-files.ts); a missing day is asked for again after 30 minutes.
+      const file = await fetcher.getShared(url, { headers: auth, maxAgeMs: SHARED_DAY_FILE_MS });
       // No file on weekends, holidays or before today's file is published.
-      if (response.status === 404) continue;
-      if (!response.ok) throw new Error(`GET ${url} failed: HTTP ${response.status}`);
+      if (file.status === 404) continue;
+      if (file.status !== 200) throw new Error(`GET ${url} failed: HTTP ${file.status}`);
       // Positions are bytes in a single-byte encoding; latin1 keeps one byte per character.
-      const text = new TextDecoder('latin1').decode(await response.arrayBuffer());
+      const text = new TextDecoder('latin1').decode(await file.bytes());
       for (const line of text.split(/\r?\n/)) {
         const filing = parseFiling(line);
         if (filing && filing.city.toUpperCase() === city) records.push(filingRecord(filing, url));

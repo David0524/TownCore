@@ -9,6 +9,7 @@ import { flSunbizAdapter } from './fl-sunbiz';
 import { legistarAdapter } from './legistar';
 import { nwsAdapter } from './nws';
 import { pageAdapter } from './page';
+import { readerAdapter } from './reader';
 import { registerAdapter, getAdapter } from './registry';
 import { socrataAdapter } from './socrata';
 import { youtubeAdapter } from './youtube';
@@ -25,6 +26,7 @@ for (const adapter of [
   socrataAdapter,
   escribeAdapter,
   arcgisAdapter,
+  readerAdapter,
   // Last: the generic fallback for any RSS, Atom or iCalendar feed.
   feedAdapter,
 ]) {

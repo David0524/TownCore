@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { NotModified } from '../http/fetcher';
-import { parseCsvLine, streamLines } from '../lib/csv';
+import { parseCsvLine } from '../lib/csv';
 import type { RawRecord, SourceAdapter, SourceConfig } from '../types';
 import { dbprOccupations, dbprPrimaryStatus, dbprSecondaryStatus } from './codes';
 import {
@@ -131,21 +131,18 @@ export const flDbprAdapter: SourceAdapter = {
     let unchanged = 0;
     for (const file of files) {
       const url = `${EXTRACTS}${file}`;
-      const response = await fetcher.get(
-        url,
-        since ? { 'if-modified-since': since.toUTCString() } : {},
-      );
-      if (response.status === 304) {
+      // One download per file for every Florida town (shared-files.ts); each town reads its city.
+      const shared = await fetcher.getShared(url);
+      if (shared.status !== 200) throw new Error(`GET ${url} failed: HTTP ${shared.status}`);
+      if (shared.seenBy(since)) {
         unchanged++;
         continue;
       }
-      if (!response.ok || !response.body)
-        throw new Error(`GET ${url} failed: HTTP ${response.status}`);
       const food = FOOD_FILE.test(file);
       const newFood = NEW_FOOD_FILE.test(file);
       const inspections = INSPECTION_FILE.test(file);
       const liquor = LIQUOR_FILE.test(file);
-      for await (const line of streamLines(response.body)) {
+      for await (const line of shared.lines()) {
         if (liquor) {
           const row = parseLiquorRow(line);
           if (row && row.city.toUpperCase() === city && isNewLiquorLicense(row)) {

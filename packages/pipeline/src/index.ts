@@ -111,6 +111,17 @@ export {
   type ExtractReport,
 } from './entities';
 export { COVERAGE_DAYS, STORY_SOURCE_ORDER, storyCoverage, type TownCoverage } from './coverage';
+export {
+  decideScore,
+  decidedScores,
+  pendingScores,
+  ScoreDecisionError,
+  ScoreRejected,
+  SCORE_MAX_AGE_DAYS,
+  SCORES_PER_HOUR,
+  submitScore,
+  type ScoreReport,
+} from './scores';
 export { createGuideCandidates, pagesHash, writeGuide, type GuideOutcome } from './guides';
 export {
   COST_MIN_STORIES,
@@ -124,8 +135,11 @@ export {
   type TownHealth,
 } from './ops';
 export {
+  forecastsDue,
   refreshTownWeather,
   refreshWeather,
+  WEATHER_FORECAST_EVERY_MS,
+  WEATHER_FORECASTS_PER_RUN,
   weatherTargets,
   type WeatherTarget,
 } from './weather-refresh';

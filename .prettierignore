@@ -7,3 +7,4 @@ coverage
 packages/db/migrations
 *.md
 next-env.d.ts
+.claude

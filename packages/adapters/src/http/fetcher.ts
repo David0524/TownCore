@@ -1,5 +1,6 @@
 import robotsParser from 'robots-parser';
 import { documentedApi, isBlockedUrl, MIN_INTERVAL_MS, USER_AGENT } from './policy';
+import { SharedFiles, type SharedFile, type SharedFileOptions } from './shared-files';
 
 // The only way adapters may make HTTP requests (a lint rule bans bare fetch in this package).
 // Every request: never-scrape list → robots.txt (including Crawl-delay and Visit-time) → at most 1 request a
@@ -122,6 +123,9 @@ export class Fetcher {
     { robots: Robots | 'allow-all' | 'disallow-all'; windows: VisitWindow[]; expires: number }
   >();
 
+  /** Statewide files shared by every town's source (see shared-files.ts). */
+  private readonly shared: SharedFiles;
+
   constructor(options: FetcherOptions = {}) {
     this.fetchImpl = options.fetchImpl ?? defaultFetch;
     this.userAgent = options.userAgent ?? USER_AGENT;
@@ -130,6 +134,15 @@ export class Fetcher {
     this.retries = options.retries ?? 3;
     this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.now = options.now ?? Date.now;
+    this.shared = new SharedFiles((url, headers) => this.get(url, headers), this.now);
+  }
+
+  /**
+   * GET a file many sources read (a state's license or filing file): downloaded once per
+   * freshness window and shared, with the same Rule 8 checks as get().
+   */
+  getShared(url: string, options?: SharedFileOptions): Promise<SharedFile> {
+    return this.shared.file(url, options);
   }
 
   /** GET a URL politely. Throws FetchPolicyError if the URL is blocked or disallowed. */
