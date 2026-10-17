@@ -341,8 +341,9 @@ test.describe('directory on the homepage and articles', () => {
       'href',
       '/directory/plumbers/anchor-plumbing-co-test0001',
     );
+    // At least the 12 fixture listings; other specs add their own while this one runs.
     await expect(
-      featured.getByRole('link', { name: 'Browse 12 licensed businesses' }),
+      featured.getByRole('link', { name: /^Browse (1[2-9]|[2-9]\d) licensed businesses$/ }),
     ).toBeVisible();
 
     const pro = page.locator('[data-module="find-a-pro"]');
