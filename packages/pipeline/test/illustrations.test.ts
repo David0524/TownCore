@@ -191,6 +191,32 @@ describe('the router with the library', () => {
     expect((await assignArticleImage(db, opening.id)).kind).toBe('typographic-card');
   });
 
+  it("never matches a picture on the site's own name", async () => {
+    // "Budget" is in the site's name, not the story: no budget picture for it.
+    const [gazette] = await db
+      .insert(towns)
+      .values({
+        slug: 'gazette',
+        name: 'Gazette',
+        state: 'FL',
+        county: 'P',
+        timezone: 'America/New_York',
+        domain: 'gazette.test',
+        siteName: 'The Budget Gazette',
+        tier: 'small',
+        config: {},
+      })
+      .returning();
+    const a = await story({
+      townId: gazette!.id,
+      headline: 'The Budget Gazette looks back at the week',
+      byline: 'The Budget Gazette Newsroom',
+    });
+    expect((await assignArticleImage(db, a.id)).spec).not.toMatchObject({
+      illustrationId: 'gov-05',
+    });
+  });
+
   it('keeps a picture a person pinned to the story', async () => {
     const a = await story({ headline: 'New businesses registered this week' });
     const pinned = {

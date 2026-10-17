@@ -678,9 +678,12 @@ async function pickSectionIllustration(
 ): Promise<ImageChoice | null> {
   if (illustrationLibrary.length === 0) return null;
   const [town] = await db
-    .select({ state: towns.state })
+    .select({ state: towns.state, siteName: towns.siteName })
     .from(towns)
     .where(eq(towns.id, article.townId));
+  // The site's own name never picks a picture ("Boca Town Square" is not a town square).
+  const withoutSiteName = (text: string) =>
+    town?.siteName ? text.split(town.siteName).join(' ') : text;
   const [current] = await db
     .select({ spec: images.spec, cover: images.coverIllustrationId })
     .from(images)
@@ -705,8 +708,8 @@ async function pickSectionIllustration(
   const pick = chooseLibraryIllustration({
     section: article.kind === 'guide' ? 'guide' : storyKind === 'alert' ? 'weather' : article.beat,
     state: town?.state ?? '',
-    text: `${article.headline} ${article.dek ?? ''}`,
-    title: article.headline,
+    text: withoutSiteName(`${article.headline} ${article.dek ?? ''}`),
+    title: withoutSiteName(article.headline),
     storyKind,
     articleId: article.id,
     current: current?.cover ?? idOf(current?.spec),
