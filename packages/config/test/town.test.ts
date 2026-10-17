@@ -48,6 +48,7 @@ describe('town config', () => {
       'inspections/fl-dbpr',
       'business_filings/fl-dbpr',
       'city_news/feed',
+      'roads/pdf-list',
       'business_filings/fl-sunbiz',
       'weather/nws',
       // From counties/fl/palm-beach.yaml (county_sources), appended last.

@@ -112,6 +112,16 @@ sources:
     platform: feed
     url: https://www.mybocaparks.org/rss.xml
     options: { pages: true }
+  # Verified 2026-10-17: Palm Beach County Engineering's weekly Road and Bridge Construction
+  # List (a PDF linked from discover.pbc.gov/Pages/Roads.aspx; robots.txt allows both). The
+  # county tags each project with its city, so only "(City of Boca Raton)" entries are kept.
+  # Weekly roundup of road work and lane closures (Tier 1).
+  - kind: roads
+    platform: pdf-list
+    url: https://discover.pbc.gov/Pages/Roads.aspx
+    schedule: 1d
+    options:
+      { link: Road and Bridge Construction List, match: (City of Boca Raton), type: road-work }
   # Verified 2026-10-15: Florida Division of Corporations daily filings (new businesses).
   - kind: business_filings
     platform: fl-sunbiz

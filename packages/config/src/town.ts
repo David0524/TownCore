@@ -30,6 +30,8 @@ export const sourceKinds = [
   'reference',
   // Team schedules and results (high school athletic associations, licensed score feeds).
   'sports',
+  // Road and lane closures and construction lists (county and state traffic offices).
+  'roads',
   'other_outlet',
 ] as const;
 export type SourceKind = (typeof sourceKinds)[number];

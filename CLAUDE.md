@@ -670,6 +670,7 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
   - CI fails any template two towns share more than `NEAR_DUP_MAX` (30%) of, measured in 8-word shingles with names and numbers masked.
   - Privacy, and Corrections while empty, are `noindex, follow`.
   - Methods opens with the town's own sources (`docs/plans/google-safety.md`).
+- 2026-10-17 — **Road work and lane closures (owner: road closures are shareable news).** A new `roads` source kind and a generic `pdf-list` adapter: it finds the newest PDF linked from an index page, extracts its text in JavaScript (`unpdf`), splits it into numbered entries and keeps those tagged for the town; one project named twice is one record. Boca reads Palm Beach County's weekly Road and Bridge Construction List (robots.txt allows it), filtered to "(City of Boca Raton)". A weekly roundup built in code (Tier 1, development beat) leads with the count against past weeks, the closures and detours, and the road with the most projects, and drops the county's permit numbers. It passes the near-duplicate check.
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.

@@ -9,6 +9,7 @@ import {
   newPlacesRoundup,
   permitsRoundup,
   propertySalesRoundup,
+  roadWorkRoundup,
   weatherAlert,
   type TemplatedDraft,
   type TemplateRecord,
@@ -343,6 +344,98 @@ describe('near-duplicate guard', () => {
       pick(side, [5, 4, 6], [3]),
     ),
   );
+
+  const road = (id: string, location: string, work: string, restriction: string) =>
+    rec({
+      id,
+      type: 'road-work',
+      title: location,
+      url: 'https://discover.example.gov/roads.pdf',
+      raw: {
+        LOCATION: location,
+        DESCRIPTION: work,
+        RESTRICTION: restriction,
+        from: 'October 19, 2026',
+        to: 'October 25, 2026',
+      },
+    });
+  check('roadWorkRoundup', (t, side) =>
+    roadWorkRoundup(
+      t,
+      week,
+      pick(
+        side,
+        [
+          road(
+            'r1',
+            'Ocean Blvd. at Harbor Walk',
+            'Seawall repair.',
+            'Southbound lane closed 9 a.m. to 3 p.m. RW1234',
+          ),
+          road(
+            'r2',
+            'Ocean Blvd. from 4th Street to Sea Grape Lane',
+            'Repaving.',
+            'Road closed with a detour via A1A.',
+          ),
+          road(
+            'r3',
+            'Dock Street approximately 200 feet east of Bay Drive',
+            'FPL pole removal.',
+            'Periodic right lane closure. UT55559-0626',
+          ),
+        ],
+        [
+          road(
+            'r4',
+            'Main Street at Mill Creek Road',
+            'Water main replacement.',
+            'Periodic eastbound lane closures at night.',
+          ),
+          road(
+            'r5',
+            'N. Pine Avenue from Oak Ridge Road to County Road 9',
+            'Sidewalk installation.',
+            'Periodic northbound right lane closure.',
+          ),
+        ],
+      ),
+      pick(side, [2, 4], [1, 1, 0]),
+    ),
+  );
+
+  it('roadWorkRoundup leads with closures and drops permit numbers', () => {
+    const d = roadWorkRoundup(harbor, week, [
+      road(
+        'r1',
+        'Dock Street at Bay Drive',
+        'Utility work.',
+        'Periodic right lane closure. UT55559-0626',
+      ),
+      road(
+        'r2',
+        'Ocean Blvd. at Harbor Walk',
+        'Seawall repair.',
+        'Road closed with a detour via A1A.',
+      ),
+      road(
+        'r3',
+        'Ocean Blvd. from 4th Street to Sea Grape Lane',
+        'Repaving.',
+        'Lane closures. RW72642',
+      ),
+    ]);
+    expect(d.headline).toBe('Road work and lane closures in Harbor Point, Oct. 19–Oct. 25');
+    expect(d.dek).toMatch(
+      /^3 road projects in Harbor Point, 1 with a road closed or detoured; Ocean Boulevard has the most, 2\.$/,
+    );
+    expect(d.bodyMd.split('\n').find((l) => l.startsWith('- '))).toContain(
+      'Ocean Blvd. at Harbor Walk',
+    );
+    expect(d.bodyMd).not.toMatch(/UT55559|RW72642/);
+    expect(d.beat).toBe('development');
+    expect(d.sourceRecordIds).toEqual(['r1', 'r2', 'r3']);
+  });
 
   check('weatherAlert', (t, side) =>
     weatherAlert(

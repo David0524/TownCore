@@ -35,6 +35,7 @@ import {
   newLicensesRoundup,
   permitsRoundup,
   propertySalesRoundup,
+  roadWorkRoundup,
   newPlacesRoundup,
   weatherAlert,
   type RoundupKind,
@@ -279,6 +280,7 @@ const ROUNDUPS: Record<RoundupKind, typeof meetingsRoundup> = {
   permits: permitsRoundup,
   sales: propertySalesRoundup,
   'new-places': newPlacesRoundup,
+  roads: roadWorkRoundup,
 };
 
 /** Builds a templated item; a roundup also gets the town's own past weeks to compare with. */

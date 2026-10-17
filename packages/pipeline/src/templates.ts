@@ -36,7 +36,8 @@ export type RoundupKind =
   | 'new-places'
   | 'permits'
   | 'sales'
-  | 'inspections';
+  | 'inspections'
+  | 'roads';
 
 type TownInfo = { name: string; timezone: string; agency: string };
 
@@ -699,6 +700,104 @@ export function roundupUnits(kind: RoundupKind, recs: TemplateRecord[]): number 
   if (kind === 'inspections') return inspectedPlaces(recs).length;
   if (kind === 'sales') return saleRows(recs, 'UTC').length;
   return recs.length;
+}
+
+type RoadWork = {
+  project?: string;
+  LOCATION?: string;
+  DESCRIPTION?: string;
+  RESTRICTION?: string;
+  from?: string;
+  to?: string;
+};
+
+/** "Military Trl." and "S. Military Trail" are one road. */
+const ROAD_WORDS: Record<string, string> = {
+  Trl: 'Trail',
+  Rd: 'Road',
+  Blvd: 'Boulevard',
+  Ave: 'Avenue',
+  St: 'Street',
+  Hwy: 'Highway',
+  Pkwy: 'Parkway',
+  Dr: 'Drive',
+};
+
+/** "October 19, 2026" → "Oct. 19". */
+const roadDay = (value: string | undefined, timeZone: string) => {
+  const d = value ? new Date(`${value} 12:00 UTC`) : null;
+  return d && !Number.isNaN(d.getTime()) ? apDate(d, timeZone) : null;
+};
+
+/**
+ * Road work and lane closures (owner, 2026-10-17: road closures are content people share), from
+ * a county's weekly construction list: one line per project in this town, closures first. Built
+ * in code, Tier 1. Leads with this town's own count, its full closures and its busiest road.
+ */
+export function roadWorkRoundup(
+  town: TownInfo,
+  weekStart: Date,
+  items: TemplateRecord[],
+  past?: number[],
+): TemplatedDraft {
+  const rows = items.map((r) => {
+    const raw = (r.raw ?? {}) as RoadWork;
+    // Without the county's permit numbers ("UT73178-1225", "RW72642"), which mean nothing to readers.
+    const restriction = (raw.RESTRICTION ?? '')
+      .replace(/\s*\b[A-Z]{2}\d{4,6}(?:-\d{4})?\b/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return {
+      r,
+      where: (r.title ?? raw.LOCATION ?? '').trim(),
+      work: (raw.DESCRIPTION ?? '').replace(/\s+/g, ' ').trim().replace(/\.$/, ''),
+      restriction,
+      closed: /\bclosed\b|\bclosure of\b|detour/i.test(restriction),
+    };
+  });
+  rows.sort((a, b) => Number(b.closed) - Number(a.closed) || a.where.localeCompare(b.where));
+  const first = (items[0]?.raw ?? {}) as RoadWork;
+  const from = roadDay(first.from, town.timezone);
+  const to = roadDay(first.to, town.timezone);
+  const range = from && to ? `${from}–${to}` : weekRange(town, weekStart);
+  const n = rows.length;
+  const closed = rows.filter((r) => r.closed);
+  // The road named most often across this town's projects ("Military Trail", 4 projects).
+  const roads = ranked(
+    tally(rows, (r) => {
+      const m =
+        /([NSEW]\.\s)?([A-Z][\w.]*(?:\s[A-Z][\w.]*){0,2}\s(?:Trail|Trl\.|Road|Rd\.|Boulevard|Blvd\.|Avenue|Ave\.|Street|St\.|Highway|Hwy\.|Parkway|Pkwy\.|Drive|Dr\.|Way))/.exec(
+          r.where,
+        );
+      return m
+        ? m[2]!
+            .replace(/^(N|S|E|W)\.\s/, '')
+            .replace(/\b(\w+)\.$/, (w, abbr: string) => ROAD_WORDS[abbr] ?? w)
+        : null;
+    }),
+  );
+  const busiest = roads[0] && roads[0][1] > 1 ? roads[0] : null;
+  const source = items.find((i) => i.url)?.url;
+  return {
+    headline: `Road work and lane closures in ${town.name}, ${range}`,
+    dek: `${count(n, 'road project', 'road projects')} in ${town.name}${withTrend(n, past)}${closed.length ? `, ${count(closed.length, 'with a road closed or detoured', 'with roads closed or detoured')}` : ''}${busiest ? `; ${busiest[0]} has the most, ${busiest[1]}` : ''}.`,
+    bodyMd: [
+      closed.length
+        ? `Plan around ${list(closed.slice(0, 3).map((c) => md(c.where)))} first.`
+        : null,
+      rows
+        .map(
+          (r) =>
+            `- **${md(r.where)}**${r.work ? `: ${md(r.work)}.` : '.'}${r.restriction ? ` ${md(r.restriction)}` : ''}`,
+        )
+        .join('\n'),
+      source ? `[The county's construction list](${source})` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    beat: 'development',
+    sourceRecordIds: items.map((i) => i.id),
+  };
 }
 
 type Alert = {

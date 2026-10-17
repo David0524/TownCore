@@ -233,6 +233,17 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       recordIds: permits.map((r) => r.id),
       now,
     });
+    // Road work (owner, 2026-10-17): a county's weekly list, issued for the coming days, so this
+    // rounds up the list issued this week as soon as it's ingested.
+    const roadsWeek = localWeekStart(now, tz);
+    const roads = await roundupWeekRecords(db, town, 'roads', roadsWeek);
+    await roundup(db, town, report, {
+      key: `roundup:roads:${isoLocalDate(roadsWeek, tz)}`,
+      title: `Road work, week of ${isoLocalDate(roadsWeek, tz)}`,
+      beat: 'development',
+      recordIds: roads.map((r) => r.id),
+      now,
+    });
     // Property sales (owner, 2026-10-17): deeds are recorded about two weeks after a sale, so
     // this rounds up the week before last. Sale dates are date-only, like the filings.
     const salesWeek = localWeekStart(now, tz, -2);
