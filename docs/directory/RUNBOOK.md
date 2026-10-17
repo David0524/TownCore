@@ -40,7 +40,8 @@ need the owner's explicit approval and a code change that lifts that guard, per 
 1. In the Stripe dashboard (test mode), create a restricted or secret **test** key and set
    `STRIPE_SECRET_KEY` in the web app's environment.
 2. Add a webhook endpoint at `https://<APP_BASE_URL host>/api/stripe/webhook` (the admin host;
-   town sites have no webhook) for these events:
+   town sites have no webhook) for these events (`HANDLED_EVENTS` in
+   `packages/directory/src/stripe/webhook.ts`; a test keeps this list in step with it):
    `checkout.session.completed`, `checkout.session.expired`,
    `customer.subscription.created`, `customer.subscription.updated`,
    `customer.subscription.deleted`. Set its signing secret as `STRIPE_WEBHOOK_SECRET`.
@@ -53,11 +54,38 @@ need the owner's explicit approval and a code change that lifts that guard, per 
    ```
    It is idempotent (each Price has a lookup key `towncore:<town>:<product>:<cents>`). A changed
    price creates a new Price; existing subscribers stay on the old one until they change plan.
+5. Check everything, read-only:
+   ```
+   pnpm directory:stripe check
+   ```
+   A checklist of the test-mode key, the account's name and id, the webhook endpoint (enabled,
+   with every event above), `STRIPE_WEBHOOK_SECRET` (set or not; never printed), the default
+   Customer Portal (cancel and card updates on) and the Products and Prices (nothing left for
+   `sync` to create, and every recorded Price found in this account). It exits non-zero while
+   anything is missing; a live key is refused as everywhere else.
 
 ### How a purchase works
-- An owner of an approved claim opens **Manage your listing** on the town site and presses
-  **Buy**. Inventory is checked (sponsored slots: 3 per category; a started Checkout holds a
-  place for an hour), then Stripe Checkout opens in subscription mode.
+- **The storefront, `/advertise`** on every town site: a category chooser (every category with
+  listings, its listing count, how many featured spots are open and the from-price), the
+  chosen category's spots #1–#3 with a **Get spot #n** button on each open one (Taken
+  otherwise; when all three are sold, the waitlist), the category sponsorship beside them, and
+  cards for the Enhanced listing, a morning-email week and a category month, each with
+  **Get started**. House ads lead here.
+- **`/advertise/start?product=…&category=…&rank=…`** checks the offer and shows what it is, where
+  it shows, its current price and the trial when one applies. A signed-in owner sees their
+  claimed listings that fit (for a category product, only those in the category), each with
+  **Continue to secure checkout** (and a week or month to pick for a dated booking); it posts to
+  the same `/owner/<slug>/checkout` as the owner page. A visitor gets a search for their
+  business, each result linking to its claim page (free, with an email confirmation and an
+  editor's check), **Add it** when it isn't listed, and **Sign in** when it's already claimed.
+  A sold spot offers the other open ones or the waitlist; a booked week or month, the next open
+  one. Not indexed.
+- An owner of an approved claim can also buy from **Manage your listing** on the town site.
+  Inventory is checked (featured spots: one business per spot and category; a started Checkout
+  holds a place for an hour), then Stripe Checkout opens: subscription mode for spots and
+  Enhanced, payment mode for a dated week or month at the current price.
+- Checkout returns to the owner page: `?s=paid` says the placement turns on once Stripe confirms
+  it, `?s=canceled` that nothing was charged.
 - Only the verified webhook turns a placement on. A Checkout that completes after its category
   filled up is **held**: paid, never shown.
 - Past-due subscriptions stay on while Stripe retries; when retries end (`unpaid`) or the
@@ -99,8 +127,13 @@ that town's prices, and which spots are open in a category.
 | --- | --- | --- |
 | Enhanced listing | town `pricing.enhanced_usd` (Boca $39) | on |
 | Featured spots #1, #2, #3 | town `pricing.featured_usd` (Boca $19, $12, $7), one business per spot and category; a business's first spot is free for `pricing.free_trial_days` (30) | on |
-| Category exclusive | not priced | built, off |
-| Newsletter sponsorship | not priced | built, off |
+| Category sponsorship (`exclusive`) | town `pricing.category_month_usd` (tier lists; Boca $75), one business per category and calendar month, paid once; the category's price moves monthly like the spots | on (2026-10-17) |
+| Newsletter sponsorship (`newsletter`) | town `pricing.newsletter_week_usd` (tier lists; Boca $45), one business per week, paid once | on (2026-10-17) |
+| Business spotlight | not priced | built, off (`DIRECTORY_PRODUCTS_PREVIEW=spotlight` previews it in development and tests) |
+
+Dated bookings (newsletter weeks, category months) have no Stripe Price: Checkout charges the
+current price once (`price_data`), so `sync` and `check` cover the monthly products only. Every
+sponsor card, dated or monthly, is still approved by staff before it runs (D-M6-7).
 
 ## Leads, slot counts and proof reports (M6 PR E)
 

@@ -415,8 +415,9 @@ export type FeaturedRank = (typeof featuredRanks)[number];
 
 /**
  * What businesses can buy (D-M6-6). Prices come from each town's `pricing`; a product without
- * a price there stays off. Category sponsorship and newsletter sponsorship are built but off
- * until the owner prices them and turns them on here. Paid placements are always labeled
+ * a price there stays off. Category sponsorship (a month) and newsletter sponsorship (a week)
+ * are on and sold self-serve from the advertise page (owner, 2026-10-17: "working in full");
+ * the business spotlight is built but off. Paid placements are always labeled
  * (Rule 6) and never change organic order. A ranked product sells one place per rank and
  * category. A product with a `period` is booked once for a dated week or month, paid up front
  * (no subscription), one business per period (and per category when `perCategory` is set).
@@ -441,7 +442,7 @@ export const directoryProducts = {
   exclusive: {
     name: 'Category sponsorship',
     priceKey: 'category_month_usd',
-    enabled: false,
+    enabled: true,
     perCategory: 1,
     ranked: false,
     period: 'month',
@@ -449,7 +450,7 @@ export const directoryProducts = {
   newsletter: {
     name: 'Newsletter sponsorship',
     priceKey: 'newsletter_week_usd',
-    enabled: false,
+    enabled: true,
     perCategory: null,
     ranked: false,
     period: 'week',

@@ -98,8 +98,6 @@ describe('traffic and self-serve revenue', () => {
   });
 
   beforeAll(async () => {
-    vi.stubEnv('DIRECTORY_PRODUCTS_PREVIEW', 'newsletter,exclusive');
-    resetEnvCache();
     ({ db, drop } = await createTestDb());
     const [town] = await db
       .insert(towns)
@@ -317,12 +315,17 @@ describe('traffic and self-serve revenue', () => {
     // Enhanced now has the first-month trial too.
     expect(offers.find((o) => o.product === 'enhanced')).toMatchObject({ trialDays: 30 });
 
-    // Switched off: no offer at all.
+    // On for every town (owner, 2026-10-17), with no preview switch; a product still off (the
+    // spotlight) has no offer.
     vi.stubEnv('DIRECTORY_PRODUCTS_PREVIEW', '');
     resetEnvCache();
-    const off = await listingOffers(db, townId, { id: ids.owner!, category: 'plumbers' }, now);
-    expect(off.map((o) => o.product)).not.toContain('newsletter');
-    vi.stubEnv('DIRECTORY_PRODUCTS_PREVIEW', 'newsletter,exclusive');
+    const products = (
+      await listingOffers(db, townId, { id: ids.owner!, category: 'plumbers' }, now)
+    ).map((o) => o.product);
+    expect(products).toContain('newsletter');
+    expect(products).toContain('exclusive');
+    expect(products).not.toContain('spotlight');
+    vi.unstubAllEnvs();
     resetEnvCache();
   });
 

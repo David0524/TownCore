@@ -198,8 +198,8 @@ export function houseAd(
     'article.inline': newsletter,
     'article.related-businesses': advertise,
     'article.realestate': advertise,
-    // The category-exclusive product is off (D-M6-6), and the owner panel just below invites
-    // claims, so its header slot offers the morning email.
+    // The owner panel just below invites claims and the advertise page sells the category
+    // sponsorship, so the unsold header slot offers the morning email.
     'directory.category.exclusive': newsletter,
     'directory.topspot': topspot,
     'directory.category.top': featured,
