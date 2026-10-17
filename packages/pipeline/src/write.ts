@@ -12,7 +12,7 @@ import {
   type Db,
 } from '@towncore/db';
 import {
-  classifyV1,
+  classifyPrompt,
   factcheckV1,
   updateV1,
   writerV1,
@@ -178,20 +178,17 @@ export async function writeCandidate(
         job: 'writer',
         town: tTown,
         prompt: writerV1,
-        input: [
-          ...townLines,
-          `Beat: ${candidate.beat}. Kind: story.`,
-          ...remove,
-          '',
-          ...sourcesText,
-        ].join('\n'),
+        // The second attempt, with the unsupported claims removed, is the one revise (§7).
+        task: attempt === 1 ? 'write' : 'revise',
+        inputPrefix: townLines.join('\n'),
+        input: [`Beat: ${candidate.beat}. Kind: story.`, ...remove, '', ...sourcesText].join('\n'),
       }));
       const { value: checked } = await callModel(llm, {
         job: 'fact-check',
         town: tTown,
         prompt: factcheckV1,
+        inputPrefix: townLines.join('\n'),
         input: [
-          ...townLines,
           '',
           '=== Draft',
           `Headline: ${draft.headline}`,
@@ -444,15 +441,16 @@ async function writeUpdate(
     ({ value: classification } = await callModel(a.llm, {
       job: 'update.classify',
       town: tTown,
-      prompt: classifyV1,
-      input: [...townLines, '', ...recordText(rows)].join('\n'),
+      prompt: classifyPrompt,
+      inputPrefix: townLines.join('\n'),
+      input: ['', ...recordText(rows)].join('\n'),
     }));
     ({ value: note } = await callModel(a.llm, {
       job: 'update.write',
       town: tTown,
       prompt: updateV1,
+      inputPrefix: townLines.join('\n'),
       input: [
-        ...townLines,
         '',
         '=== Published story',
         `Headline: ${target.headline}`,
@@ -466,8 +464,8 @@ async function writeUpdate(
       job: 'update.fact-check',
       town: tTown,
       prompt: factcheckV1,
+      inputPrefix: townLines.join('\n'),
       input: [
-        ...townLines,
         '',
         '=== Draft',
         'Headline: (update note)',

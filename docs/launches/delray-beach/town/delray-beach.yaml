@@ -41,4 +41,4 @@ sources:
   - kind: agenda
     platform: legistar
     url: https://delraybeach.legistar.com/
-pricing: { sponsored_slot_usd: 199, enhanced_usd: 39 } # Boca's prices until the owner sets this town's
+pricing: { featured_usd: [19, 12, 7], enhanced_usd: 39 } # Boca's prices until the owner sets this town's

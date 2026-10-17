@@ -35,9 +35,7 @@ export type ThemeChoice = z.infer<typeof themeChoiceSchema>;
 export const themeV1 = {
   id: 'theme',
   version: 'v1',
-  role: 'launcher',
-  effort: 'medium',
-  maxOutputTokens: 3000,
+  task: 'identity',
   schema: themeChoiceSchema,
   system: `You design the look of a new local news site for one town. It must feel like that town's own paper, and look clearly different from the nearby towns' sites listed in the input.
 

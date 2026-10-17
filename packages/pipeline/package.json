@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "evals": "tsx scripts/evals.ts",
+    "evals:compare": "tsx scripts/evals-compare.ts",
     "stories:once": "tsx scripts/stories-once.ts",
+    "ai:plan": "tsx scripts/ai-plan.ts",
     "images:backfill": "tsx scripts/images-backfill.ts"
   },
   "dependencies": {

@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { entityKey, loadTowns } from '@towncore/config';
 import {
+  aiRequests,
   articleEntities,
   articleLinks,
   articles,
@@ -37,6 +38,7 @@ beforeAll(async () => {
 });
 afterAll(async () => drop());
 beforeEach(async () => {
+  await db.delete(aiRequests);
   await db.delete(articleLinks);
   await db.delete(articles);
   await db.delete(entities);

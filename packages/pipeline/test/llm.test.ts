@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
 import { loadEnv, loadTowns, providerModels } from '@towncore/config';
-import { aiUsage, eq, getTownBySlug, syncTowns, type Db } from '@towncore/db';
+import { aiRequests, aiUsage, eq, getTownBySlug, syncTowns, type Db } from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
 import { classifyV1, factcheckV1, updateV1, writerV1 } from '@towncore/prompts';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -29,9 +29,7 @@ const townsDir = fileURLToPath(new URL('../../../towns', import.meta.url));
 const testPrompt: Prompt<{ answer: string; score: number }> = {
   id: 'test',
   version: 'v1',
-  role: 'writer',
-  effort: 'low',
-  maxOutputTokens: 100,
+  task: 'write',
   system: 'Answer in JSON.',
   schema: z.strictObject({ answer: z.string(), score: z.number().min(0).max(1) }),
 };
@@ -76,6 +74,8 @@ beforeAll(async () => {
 afterAll(async () => drop());
 beforeEach(async () => {
   await db.delete(aiUsage);
+  // Stored answers: an identical request is never sent twice (idempotency).
+  await db.delete(aiRequests);
 });
 
 const usageRows = () => db.select().from(aiUsage).where(eq(aiUsage.townId, town.id));
@@ -90,10 +90,12 @@ describe('callModel', () => {
     // Sonnet 5.5: $2/M in, $10/M out, $0.20/M cache read.
     expect(result.costUsd).toBeCloseTo((1000 * 2 + 500 * 10 + 2000 * 0.2) / 1e6, 8);
     expect(fake.state.last).toMatchObject({
-      model: providerModels.anthropic.writer,
+      model: providerModels.anthropic.mid,
       system: 'Answer in JSON.',
       input: 'Q',
-      effort: 'low',
+      effort: 'medium',
+      thinking: 'off',
+      maxOutputTokens: 6000,
     });
     const [row] = await usageRows();
     expect(row).toMatchObject({
@@ -115,7 +117,7 @@ describe('callModel', () => {
       { db, provider: fake.provider, providerName: 'gemini' },
       { job: 'test', town, prompt: testPrompt, input: 'Q' },
     );
-    expect(fake.state.last?.model).toBe(providerModels.gemini.writer);
+    expect(fake.state.last?.model).toBe(providerModels.gemini.mid);
     // The dated model has no price of its own, so it's priced as the configured alias ($0).
     const [row] = await usageRows();
     expect(row).toMatchObject({ model: 'gemini-3.6-flash', estCostUsd: '0.000000' });
@@ -130,7 +132,7 @@ describe('callModel', () => {
     ).rejects.toMatchObject({ kind: 'invalid' });
     fake.answer(ok('not json'));
     await expect(
-      callModel(llm, { job: 'test', town, prompt: testPrompt, input: 'Q' }),
+      callModel(llm, { job: 'test', town, prompt: testPrompt, input: 'Q2' }),
     ).rejects.toBeInstanceOf(LlmOutputError);
     expect((await usageRows()).map((r) => r.outcome)).toEqual(['invalid', 'invalid']);
   });
@@ -183,13 +185,14 @@ describe('callModel', () => {
       callModel(llm, { job: 'test', town, prompt: testPrompt, input: 'Q' }),
     ).resolves.toBeDefined();
 
-    // Earlier today in Boca: $4.99 + the call above, still under $5.
-    await db.insert(aiUsage).values(row('2026-10-15T12:00:00Z', '4.99'));
+    // Earlier today in Boca: $4.93 + the call above leaves room for this call's worst case
+    // (6,000 Sonnet output tokens, $0.06), but not for another after it.
+    await db.insert(aiUsage).values(row('2026-10-15T12:00:00Z', '4.93'));
     await expect(
-      callModel(llm, { job: 'test', town, prompt: testPrompt, input: 'Q' }),
+      callModel(llm, { job: 'test', town, prompt: testPrompt, input: 'Q2' }),
     ).resolves.toBeDefined();
     await expect(
-      callModel(llm, { job: 'test', town, prompt: testPrompt, input: 'Q' }),
+      callModel(llm, { job: 'test', town, prompt: testPrompt, input: 'Q3' }),
     ).rejects.toBeInstanceOf(SpendCapReached);
   });
 
@@ -197,10 +200,10 @@ describe('callModel', () => {
     const fake = fakeProvider();
     const llm: Llm = { db, provider: fake.provider, providerName: 'gemini' };
     const capped = { ...town, aiDailyCallCap: 2 };
-    await callModel(llm, { job: 'test', town: capped, prompt: testPrompt, input: 'Q' });
-    await callModel(llm, { job: 'test', town: capped, prompt: testPrompt, input: 'Q' });
+    await callModel(llm, { job: 'test', town: capped, prompt: testPrompt, input: 'Q1' });
+    await callModel(llm, { job: 'test', town: capped, prompt: testPrompt, input: 'Q2' });
     await expect(
-      callModel(llm, { job: 'test', town: capped, prompt: testPrompt, input: 'Q' }),
+      callModel(llm, { job: 'test', town: capped, prompt: testPrompt, input: 'Q3' }),
     ).rejects.toThrow(/2 of 2 calls/);
   });
 });
@@ -371,7 +374,8 @@ describe('providers', () => {
       text: '{"a":1}',
       stop: 'refusal',
       model: 'claude-sonnet-5-5',
-      usage: { inputTokens: 13, outputTokens: 5, cacheReadTokens: 20 },
+      // Cache writes are counted apart: they bill at 1.25x input.
+      usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 20, cacheWriteTokens: 3 },
       webSearches: 0,
     });
   });

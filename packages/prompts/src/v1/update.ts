@@ -14,9 +14,7 @@ export type UpdateNote = z.infer<typeof updateSchema>;
 export const updateV1 = {
   id: 'update',
   version: 'v1',
-  role: 'writer',
-  effort: 'medium',
-  maxOutputTokens: 4000,
+  task: 'update',
   schema: updateSchema,
   system: `You write a short update to a published local news story. You will get the town, the published story, and one or more new or changed records, each with an ID. Write one or two paragraphs saying what is new, using only the new records. Don't repeat the story, and don't restate anything the new records don't confirm. If a record says charges were dropped or a decision was reversed, say so plainly in the first sentence.
 

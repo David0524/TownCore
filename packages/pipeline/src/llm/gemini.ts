@@ -1,4 +1,4 @@
-import type { LlmProvider, LlmRequest, LlmResponse } from './types';
+import { fullInput, type LlmProvider, type LlmRequest, type LlmResponse } from './types';
 
 // Google Gemini via the Interactions REST API (beta), checked against ai.google.dev on
 // 2026-10-15: POST /v1beta/interactions with system_instruction, input, response_format
@@ -106,7 +106,7 @@ function geminiOnce(apiKey: string, fetchFn: FetchLike, timeoutMs: number) {
         model: request.model,
         store: false,
         system_instruction: request.system,
-        input: request.input,
+        input: fullInput(request),
         response_format: {
           type: 'text',
           mime_type: 'application/json',

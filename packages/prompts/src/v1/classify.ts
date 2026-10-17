@@ -37,9 +37,7 @@ export type Classification = z.infer<typeof classifySchema>;
 export const classifyV1 = {
   id: 'classify',
   version: 'v1',
-  role: 'routine',
-  effort: 'low',
-  maxOutputTokens: 2000,
+  task: 'classify',
   schema: classifySchema,
   system: `You triage public records for a local news site. You will get the town's name, its government agencies, and one or more related source records. Answer only from the records.
 

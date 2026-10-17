@@ -21,9 +21,7 @@ export type FactcheckResult = z.infer<typeof factcheckSchema>;
 export const factcheckV1 = {
   id: 'factcheck',
   version: 'v1',
-  role: 'factCheck',
-  effort: 'high',
-  maxOutputTokens: 12000,
+  task: 'factcheck',
   schema: factcheckSchema,
   system: `You fact-check a local news draft against the public records it cites. You will get the town, its agencies and ZIP codes when known, the draft, and the records, each with an ID. You have not seen how the draft was written; judge it only against the records.
 

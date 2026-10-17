@@ -344,6 +344,13 @@
       "when": 1792206368268,
       "tag": "0048_business_followups",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1792207491978,
+      "tag": "0049_model_protocol",
+      "breakpoints": true
     }
   ]
 }

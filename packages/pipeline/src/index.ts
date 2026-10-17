@@ -1,8 +1,15 @@
 // Story finder, writer, fact-check and tier router (CLAUDE.md §6–7).
+export { formatPlan, planDay, type DayPlan, type PlanLine } from './ai-plan';
 export { buildByline } from './byline';
 export {
+  BatchPending,
   callModel,
   LlmOutputError,
+  modelFor,
+  NotRecordedError,
+  routeFor,
+  runAiBatches,
+  TaskDisabled,
   portableSchema,
   providerFromEnv,
   recordingProvider,
@@ -13,6 +20,7 @@ export {
   networkSpendSince,
   todaysUsage,
   type CallResult,
+  type BatchApi,
   type Effort,
   type Llm,
   type LlmProvider,
@@ -127,6 +135,9 @@ export {
 } from './scores';
 export { createGuideCandidates, pagesHash, writeGuide, type GuideOutcome } from './guides';
 export {
+  aiSpend,
+  type AiSpend,
+  type AiSpendRow,
   COST_MIN_STORIES,
   COST_RISE,
   HEARTBEAT_STALE_MS,

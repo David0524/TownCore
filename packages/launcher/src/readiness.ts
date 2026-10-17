@@ -15,7 +15,7 @@ import {
   SpendCapReached,
   type Llm,
 } from '@towncore/pipeline';
-import { classifyV1 } from '@towncore/prompts';
+import { classifyPrompt } from '@towncore/prompts';
 
 // Launch step 5 (CLAUDE.md §10, Rule 7): ingest the last 30 days of every source into the draft
 // town, then count the real items a day the pipeline would make from them, without writing any:
@@ -129,7 +129,7 @@ export async function measureReadiness(input: {
           const { value } = await callModel(input.llm, {
             job: 'launch.readiness',
             town: llmTown(town, config),
-            prompt: classifyV1,
+            prompt: classifyPrompt,
             input: classifyInput(town, config, [{ record, sourceKind: kind }]),
           });
           const tier = decideTier({

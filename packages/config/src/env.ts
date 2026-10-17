@@ -16,6 +16,8 @@ export const envSchema = z.object({
   GEMINI_API_KEY: optional(z.string()),
   // Which model provider the pipeline uses. Unset: Anthropic if its key is set, else Gemini.
   LLM_PROVIDER: optional(z.enum(['anthropic', 'gemini'])),
+  // Network-wide AI spend a day in USD (default 50): lower it for a first live run.
+  AI_NETWORK_CAP_USD: optional(z.coerce.number().positive()),
   STRIPE_SECRET_KEY: optional(z.string()),
   STRIPE_WEBHOOK_SECRET: optional(z.string()),
   // Development and tests only: built-but-off directory products to show anyway

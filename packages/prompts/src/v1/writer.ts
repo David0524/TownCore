@@ -20,9 +20,7 @@ export type WriterDraft = z.infer<typeof writerSchema>;
 export const writerV1 = {
   id: 'writer',
   version: 'v1',
-  role: 'writer',
-  effort: 'medium',
-  maxOutputTokens: 8000,
+  task: 'write',
   schema: writerSchema,
   system: `You write news stories for a local news site from public records. You will get the town, its agencies, the story's beat and kind (story or roundup), and the source records, each with an ID. Some requests also list claims to remove from a previous draft; leave those out entirely.
 

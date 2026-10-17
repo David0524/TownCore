@@ -1135,14 +1135,57 @@ export const aiUsage = pgTable(
     inputTokens: integer('input_tokens').notNull(),
     outputTokens: integer('output_tokens').notNull(),
     cacheReadTokens: integer('cache_read_tokens').notNull().default(0),
+    // Prompt-cache writes, billed at 1.25x input (owner, 2026-10-17: log cache hits).
+    cacheWriteTokens: integer('cache_write_tokens').notNull().default(0),
     estCostUsd: numeric('est_cost_usd', { precision: 10, scale: 6 }).notNull(),
     provider: text('provider'),
     promptVersion: text('prompt_version'),
     // ok | refused | invalid (output failed its schema) | error (no usable response)
     outcome: text('outcome').notNull().default('ok'),
+    // The routing table's task (packages/config/src/models.ts); null on rows from before it.
+    task: text('task'),
+    // A retry on a bigger model after low confidence or invalid output.
+    escalated: boolean('escalated').notNull().default(false),
+    // Served through the Message Batches API (half price).
+    batch: boolean('batch').notNull().default(false),
     createdAt: createdAt(),
   },
-  (t) => [index('ai_usage_town_created_idx').on(t.townId, t.createdAt)],
+  (t) => [
+    index('ai_usage_town_created_idx').on(t.townId, t.createdAt),
+    index('ai_usage_task_created_idx').on(t.task, t.createdAt),
+  ],
+);
+
+// Model requests by idempotency key (owner, 2026-10-17: "never resend a call that already
+// succeeded"). A successful answer is kept, so the same request (same task, prompt and input)
+// returns it without a model call; batched requests wait here until the worker submits them
+// and collects their answers.
+export const aiRequests = pgTable(
+  'ai_requests',
+  {
+    id: id(),
+    key: text('key').notNull(),
+    townId: uuid('town_id').references(() => towns.id),
+    task: text('task').notNull(),
+    job: text('job').notNull(),
+    provider: text('provider').notNull(),
+    model: text('model').notNull(),
+    // queued (batch, not sent) | submitted (in a batch) | succeeded | failed
+    status: text('status').notNull(),
+    batchId: text('batch_id'),
+    /** The provider request, kept for batch submission. */
+    request: jsonb('request'),
+    /** The provider response once answered. */
+    response: jsonb('response'),
+    error: text('error'),
+    createdAt: createdAt(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('ai_requests_key_idx').on(t.key),
+    index('ai_requests_status_idx').on(t.status, t.createdAt),
+    check('ai_requests_status', sql`${t.status} in ('queued', 'submitted', 'succeeded', 'failed')`),
+  ],
 );
 
 // One row per ingest run of a source (CLAUDE.md §6 ingest; health and M8 dashboards).

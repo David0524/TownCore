@@ -17,7 +17,7 @@ import { buildByline } from './byline';
 import { checkDraft, type FactcheckReport } from './factcheck';
 import { llmTown } from './finder';
 import { assignArticleImage } from './images';
-import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
+import { BatchPending, callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { uniqueSlug } from './publish';
 import { decideTier } from './tiers';
 
@@ -36,7 +36,6 @@ type TownRow = typeof towns.$inferSelect;
  * or three times as many claims as a story, and the first live run cut 2 of 12 answers off at
  * the stories' 12,000-token limit.
  */
-const GUIDE_FACTCHECK = { ...factcheckV1, maxOutputTokens: 24_000 };
 type PageRecord = typeof records.$inferSelect;
 
 /** A short fingerprint of a topic's pages: changes whenever any page's text does. */
@@ -169,8 +168,9 @@ export async function writeGuide(
         job: 'guide',
         town: tTown,
         prompt: guideV1,
+        task: attempt === 1 ? 'guide' : 'guide-revise',
+        inputPrefix: townLines.join('\n'),
         input: [
-          ...townLines,
           `Guide topic: ${topic.title}. Readers need: ${topic.need}.`,
           ...remove,
           '',
@@ -180,9 +180,10 @@ export async function writeGuide(
       const { value: checked } = await callModel(llm, {
         job: 'guide.fact-check',
         town: tTown,
-        prompt: GUIDE_FACTCHECK,
+        prompt: factcheckV1,
+        task: 'guide-factcheck',
+        inputPrefix: townLines.join('\n'),
         input: [
-          ...townLines,
           '',
           '=== Draft',
           `Headline: ${draft.headline}`,
@@ -203,7 +204,9 @@ export async function writeGuide(
       if (report.decision !== 'revise') break;
     }
   } catch (error) {
-    if (error instanceof SpendCapReached) {
+    // Guides go through the Batch API: each step waits for its batch, and the next run picks the
+    // answer up by the same request (never sent twice) and goes on to the next step.
+    if (error instanceof SpendCapReached || error instanceof BatchPending) {
       await backTo('accepted');
       return { status: 'waiting', reason: error.message };
     }

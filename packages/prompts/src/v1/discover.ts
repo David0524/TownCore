@@ -27,10 +27,7 @@ export type DiscoverResult = z.infer<typeof discoverSchema>;
 export const discoverV1 = {
   id: 'discover',
   version: 'v1',
-  role: 'launcher',
-  effort: 'medium',
-  maxOutputTokens: 6000,
-  webSearch: { maxUses: 12 },
+  task: 'discover',
   schema: discoverSchema,
   system: `You find the official public sources a local news site would write from, for one town. You will get the town, state, county and government. Search the web, then list what you found.
 
