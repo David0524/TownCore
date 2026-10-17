@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
+import { countySourcesFor, loadCountyRegistry } from './county';
 import { guideTopicKeys } from './guides';
 import { checkThemeForTown, defaultTheme, parseTheme, type Theme } from './theme';
 
@@ -137,6 +138,10 @@ export const townConfigSchema = z.strictObject({
   same_name_elsewhere: z.array(z.string().min(1)).default([]),
   agencies: z.array(z.string().min(1)).min(1),
   sources: z.array(sourceSchema).default([]),
+  // County data this town takes from its county's verified entry in counties/<state>/<county>.yaml
+  // (owner, 2026-10-17): built per town with its own city-limits filter, appended to `sources`
+  // when towns load. One county entry serves every town in the county.
+  county_sources: z.array(z.enum(sourceKinds)).default([]),
   // Evergreen guides (CLAUDE.md §6a; D-M4-2): topics from the network list, each with the
   // official pages it's written from. Official pages only (Rule 3); added once verified live.
   guides: z
@@ -183,8 +188,16 @@ export function parseTownConfig(yamlText: string, label = 'town config'): TownCo
   return result.data;
 }
 
-/** Loads every towns/<state>/<slug>.yaml under `dir`. The file path must match state and slug. */
-export function loadTownConfigs(dir: string): TownConfig[] {
+/**
+ * Loads every towns/<state>/<slug>.yaml under `dir`. The file path must match state and slug.
+ * Each town's `county_sources` are built from the county registry (default: `counties/` beside
+ * `dir`) and appended to its sources.
+ */
+export function loadTownConfigs(
+  dir: string,
+  countiesDir = join(dir, '..', 'counties'),
+): TownConfig[] {
+  const registry = loadCountyRegistry(countiesDir);
   const files = readdirSync(dir, { recursive: true, encoding: 'utf8' })
     .filter((file) => file.endsWith('.yaml') || file.endsWith('.yml'))
     .map((file) => join(dir, file))
@@ -198,7 +211,7 @@ export function loadTownConfigs(dir: string): TownConfig[] {
     if (label.replace(/\.ya?ml$/, '') !== expected) {
       throw new Error(`${label}: file must be at towns/${expected}.yaml`);
     }
-    return config;
+    return withCountySources(config, registry);
   });
 
   for (const key of ['slug', 'domain'] as const) {
@@ -211,14 +224,23 @@ export function loadTownConfigs(dir: string): TownConfig[] {
   return configs;
 }
 
+/** The town with its `county_sources` built from the registry and appended to its sources. */
+export function withCountySources(
+  config: TownConfig,
+  registry: ReturnType<typeof loadCountyRegistry>,
+): TownConfig {
+  const county = countySourcesFor(registry, config);
+  return county.length ? { ...config, sources: [...config.sources, ...county] } : config;
+}
+
 export type LoadedTown = { config: TownConfig; theme: Theme; hasThemeFile: boolean };
 
 /**
  * Loads every town config plus its theme (`<slug>.theme.json` next to the YAML). Towns without
  * a theme file get the network default theme. Theme rules that depend on the town are checked.
  */
-export function loadTowns(dir: string): LoadedTown[] {
-  return loadTownConfigs(dir).map((config) => {
+export function loadTowns(dir: string, countiesDir?: string): LoadedTown[] {
+  return loadTownConfigs(dir, countiesDir).map((config) => {
     const themeFile = join(dir, config.state.toLowerCase(), `${config.slug}.theme.json`);
     const hasThemeFile = existsSync(themeFile);
     const theme = hasThemeFile

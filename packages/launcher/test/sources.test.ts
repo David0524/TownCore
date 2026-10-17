@@ -467,9 +467,13 @@ describe('steps 3–5 in a launch', () => {
       '3.1 items a day is under 5: the briefing-led community family is used',
     );
     expect(report).toContain('pnpm mail:onboard add harborcitytownsquare.com --execute --approved');
-    expect(readFileSync(frictionLog, 'utf8')).toMatch(
-      /## Harbor City, GA \(2026-10-16\)\n\n- Buy harborcitytownsquare\.com/,
+    // Chatham County isn't in the county registry and the test's catalogs answer nothing, so
+    // county data becomes the first to-do (owner, 2026-10-17).
+    const friction = readFileSync(frictionLog, 'utf8');
+    expect(friction).toMatch(
+      /## Harbor City, GA \(2026-10-16\)\n\n- Chatham County isn't in the county registry, and discovery found no parcel, sales or permit data set/,
     );
+    expect(friction).toContain('- Buy harborcitytownsquare.com');
     const config = parseTownConfig(readFileSync(join(townsDir, 'ga', 'harbor-city.yaml'), 'utf8'));
     expect(config.sources.filter((s) => s.kind === 'police')).toHaveLength(1);
     expect(await db.select().from(sources)).toHaveLength(4);

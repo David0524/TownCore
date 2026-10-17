@@ -45,6 +45,17 @@ long-range plan (`docs/finance/`), the launch limits (`docs/finance/launch-capac
 
    The gate below shows as pass or fail.
 6. **Kill switch for a whole cohort.** Built (Admin → Health).
+7. **County source registry.** Built for property sales; permits next.
+   - Each county's verified data sets live in `counties/<state>/<county>.yaml`. Each entry records:
+     - the platform, URL and column roles;
+     - the columns fetched (never owners' names or mailing addresses);
+     - a city-limits method (parcel municipality codes, or a true jurisdiction column; never a mailing city);
+     - the verification date and robots.txt verdict.
+   - Towns list `county_sources: [property_sales]` and get the county's source with their own city-limits filter. Boca moved onto Palm Beach County's entry with an unchanged source key.
+   - Launch step 3:
+     - **County in the registry:** health-checks each data set for the town. A town with no verified municipality code gets a to-do.
+     - **County not in the registry:** searches ArcGIS Online and the Socrata Discovery API, keeping only data sets that name the county, and scores them by column names. The best one becomes `county-draft.yaml`, with a launch to-do for a person to confirm it into `counties/`.
+   - Broward's catalogs have sale dates but no prices (deed stamps only), so nothing is drafted there yet. The to-do lists the near misses.
 
 ## Monthly ramp
 
