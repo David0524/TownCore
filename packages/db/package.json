@@ -15,7 +15,9 @@
     "db:check": "drizzle-kit check",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "towns:sync": "tsx src/scripts/sync-towns.ts",
-    "mail:routing:sync": "tsx src/scripts/sync-mail-routing.ts"
+    "mail:routing:sync": "tsx src/scripts/sync-mail-routing.ts",
+    "demo:migrate": "tsx src/scripts/demo.ts migrate",
+    "demo:sync": "tsx src/scripts/demo.ts sync"
   },
   "dependencies": {
     "@towncore/config": "workspace:*",
