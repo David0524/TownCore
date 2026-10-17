@@ -43,6 +43,8 @@ describe('logo art prompts', () => {
     expect(prompts[0]).toContain('flat, bright vector-style illustration');
     expect(prompts[0]).toContain('about 3:1');
     expect(prompts[0]).toContain('Tall foreground trees frame the scene');
+    // The art's left half becomes the Home Screen app icon.
+    expect(prompts[0]).toContain('becomes the phone app icon');
     expect(prompts[0]).toContain('pure white background');
     expect(prompts[0]).toContain('Harbor Point, ME');
     expect(prompts[0]).toContain('#0F4C5C');
@@ -70,7 +72,7 @@ describe('identity assets', () => {
     expect(Object.keys(assets).sort()).toEqual([...IDENTITY_FILES].sort());
     // Every file of Boca's set except the wordmark, which is set in code.
     const reference = readdirSync(bocaDir).filter((f) => f !== 'wordmark.webp');
-    expect(reference.length).toBe(5);
+    expect(reference.length).toBe(6);
     for (const file of reference) {
       const theirs = await sharp(readFileSync(join(bocaDir, file))).metadata();
       const ours = await sharp(assets[file as keyof typeof assets].bytes).metadata();

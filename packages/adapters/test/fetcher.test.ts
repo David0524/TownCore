@@ -4,6 +4,7 @@ import {
   FetchPolicyError,
   insideVisitTime,
   OutsideVisitTime,
+  preambleCrawlDelay,
   retryAfterMs,
   visitWindows,
   type FetchFn,
@@ -252,6 +253,20 @@ describe('Fetcher', () => {
     expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(5_000);
     await fetcher.getText('https://slower.example/a');
     expect(fetcher.intervalFor('slower.example')).toBe(60_000);
+  });
+
+  it('honors a Crawl-delay written before the first User-agent group', async () => {
+    // data.cms.gov's robots.txt, checked 2026-10-17.
+    const robots =
+      '# 10 second crawl delays\ncrawl-delay: 10\n\nUser-agent: *\nDisallow: /admin/\n';
+    expect(preambleCrawlDelay(robots)).toBe(10);
+    expect(preambleCrawlDelay('User-agent: *\nCrawl-delay: 5\n')).toBeUndefined();
+    const clock = fakeClock();
+    const fetchImpl: FetchFn = async (url) =>
+      new Response(url.endsWith('/robots.txt') ? robots : 'ok');
+    const fetcher = new Fetcher({ fetchImpl, ...clock });
+    await fetcher.getText('https://data.example/a');
+    expect(fetcher.intervalFor('data.example')).toBe(10_000);
   });
 
   it('reads robots.txt Visit-time for our agent, else everyone', () => {

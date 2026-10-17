@@ -57,6 +57,8 @@ export type LaunchOptions = {
   redo?: LaunchStep;
   /** The planned go-live month ("2026-12"): orders mail onboarding so the domain is warm by then. */
   cohort?: string;
+  /** Stop after this step (the cohort orchestrator runs a launch in stages). Not stored. */
+  until?: LaunchStep;
 };
 
 export type LaunchDeps = {
@@ -260,7 +262,7 @@ export async function runLaunch(deps: LaunchDeps, opts: LaunchOptions): Promise<
         name: candidate.name,
         state: candidate.state,
         dryRun: !opts.approveSpend,
-        options: opts,
+        options: stored(opts),
         startedBy: safeUser(),
       })
       .returning();
@@ -280,7 +282,7 @@ export async function runLaunch(deps: LaunchDeps, opts: LaunchOptions): Promise<
         stoppedReason: null,
         dryRun: !opts.approveSpend,
         // Flags given on resume (a pick, an outlet) join the ones the run started with.
-        options: { ...(launch.options as LaunchOptions), ...definedOnly(opts) },
+        options: { ...(launch.options as LaunchOptions), ...definedOnly(stored(opts)) },
         updatedAt: now(),
       })
       .where(eq(launches.id, launch.id))
@@ -334,6 +336,18 @@ export async function runLaunch(deps: LaunchDeps, opts: LaunchOptions): Promise<
     await again(after('sources'));
   for (const step of launchSteps) {
     if (step in done) continue;
+    if (opts.until && launchSteps.indexOf(step) > launchSteps.indexOf(opts.until)) {
+      [launch] = await db
+        .update(launches)
+        .set({
+          status: 'stopped',
+          stoppedReason: `Paused after ${launchStepLabels[opts.until]} (the cohort orchestrator continues it).`,
+          updatedAt: now(),
+        })
+        .where(eq(launches.id, launch!.id))
+        .returning();
+      break;
+    }
     const run = STEPS[step];
     if (!run) {
       [launch] = await db
@@ -446,6 +460,10 @@ async function stepRecords(db: Db, launchId: string) {
   return launchSteps.map((s) => rows.find((r) => r.step === s)!).filter(Boolean);
 }
 
+function stored({ until: _until, ...opts }: LaunchOptions): LaunchOptions {
+  return opts;
+}
+
 function definedOnly<T extends object>(o: T): Partial<T> {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
@@ -500,6 +518,6 @@ sources:
     platform: nws
     zone: ${town.nws.zone} # NWS ${town.nws.office}, from api.weather.gov/points
     point: '${town.nws.point}'
-pricing: { featured_usd: [19, 12, 7], enhanced_usd: 39 } # Boca's prices until the owner sets this town's
+pricing: {} # the town's tier price list (packages/config/src/pricing.ts); set a field here to override it
 `;
 }

@@ -177,6 +177,11 @@ export function variantMetric(key: ExperimentKey, c: FunnelCounts): number | nul
       return c.towns > 0 ? c.trialStarts / c.towns : null;
     case 'proof-report-wording':
       return funnelRates(c).trialToPaid;
+    case 'upgrade-prompt-timing':
+    case 'advertise-tiers':
+      return c.towns > 0 ? c.trialStarts / c.towns : null;
+    case 'monthly-pricing':
+      return funnelRates(c).revenuePerTown;
   }
 }
 

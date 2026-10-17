@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { FIRST_GUIDE_BATCH, loadTowns } from '@towncore/config';
 import {
+  aiRequests,
   and,
   articles,
   eq,
@@ -136,6 +137,7 @@ beforeAll(async () => {
 });
 afterAll(async () => drop());
 beforeEach(async () => {
+  await db.delete(aiRequests);
   await db.delete(images);
   await db.delete(articles);
   await db.delete(storyCandidates);
@@ -279,7 +281,9 @@ describe('writing guides', () => {
       status: 'in_review',
       reason: 'factcheck',
     });
-    expect(calls).toEqual(['guide', 'factcheck', 'guide', 'factcheck']);
+    // The revised draft came back word for word, so its fact-check is the stored answer: an
+    // identical request is never sent twice.
+    expect(calls).toEqual(['guide', 'factcheck', 'guide']);
   });
 
   it('never writes from stale pages: an older version is skipped', async () => {

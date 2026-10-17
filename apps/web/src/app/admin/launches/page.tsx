@@ -1,9 +1,12 @@
 import { candidateStates, listCandidates, type Candidate } from '@towncore/launcher/candidates';
+import { cohortCandidates, listCohorts } from '@towncore/launcher/cohorts';
 import { goLiveBlockers, listLaunches, type LaunchRow } from '@towncore/launcher/golive';
+import { latestGateDecision } from '@towncore/pipeline';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../admin.module.css';
 import { approveLaunchAction, decideCandidateAction, pauseTownAction } from './actions';
+import { CohortsSection } from './cohorts';
 
 export const metadata = { title: 'Launches' };
 
@@ -35,6 +38,11 @@ export default async function Launches({
   const status = STATUSES.find((s) => s === params.status);
   const rows = state ? await listCandidates(db(), { state, status, limit: 50 }) : [];
   const runs = await listLaunches(db());
+  const [cohorts, waiting, gate] = await Promise.all([
+    listCohorts(db()),
+    cohortCandidates(db()),
+    latestGateDecision(db()),
+  ]);
   const blockers = new Map(
     await Promise.all(
       runs
@@ -56,6 +64,13 @@ export default async function Launches({
           {params.error}
         </p>
       ) : null}
+
+      <CohortsSection
+        cohorts={cohorts}
+        candidates={waiting}
+        gate={gate}
+        admin={me.role === 'admin'}
+      />
 
       <h2>Launch runs</h2>
       <p className={styles.muted}>

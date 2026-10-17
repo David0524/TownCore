@@ -8,11 +8,13 @@ import {
   providerFromEnv,
   queueFacebookPosts,
   resolveProviderName,
+  runAiBatches,
   type Llm,
   type LlmProvider,
 } from '@towncore/pipeline';
 import { PgBoss } from 'pg-boss';
 import type { Logger } from 'pino';
+import { runAdapterFixes, runCohorts, runDigest, runDiscovery, runLearning } from './agents';
 import { recordHeartbeat } from './heartbeat';
 import {
   bulkFromEnv,
@@ -28,8 +30,14 @@ import {
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
 import { drawMaps, refreshBasemaps } from './maps';
 import { drawStockPhotos, unsplashFromEnv } from './photos';
-import { refreshWeather } from './weather';
-import { geocodeDirectory, refreshDirectory, runFollowups, sendProofReports } from './directory';
+import { refreshTropics, refreshWeather } from './weather';
+import {
+  geocodeDirectory,
+  recalculatePrices,
+  refreshDirectory,
+  runFollowups,
+  sendProofReports,
+} from './directory';
 import { queues, schedules } from './queues';
 import {
   enqueueStoryFinders,
@@ -118,6 +126,13 @@ export async function startWorker({
     for (const job of jobs) await runWriterJob(db, llm, logger, job.data);
   });
 
+  await boss.work(queues.aiBatches, async () => {
+    if (!llm) return;
+    const batches = await runAiBatches(llm);
+    if (batches.submitted || batches.collected || batches.failed)
+      logger.info(batches, 'ai batches');
+  });
+
   await boss.work(queues.mailTick, async () => {
     await runMailTick(db, ses, logger);
   });
@@ -129,6 +144,10 @@ export async function startWorker({
 
   await boss.work(queues.weather, async () => {
     await refreshWeather(db, fetcher, logger);
+  });
+
+  await boss.work(queues.tropics, async () => {
+    await refreshTropics(db, fetcher, logger);
   });
 
   await boss.work(queues.directorySeed, async () => {
@@ -145,6 +164,10 @@ export async function startWorker({
 
   await boss.work(queues.followups, async () => {
     await runFollowups(db, opsDeps.alertMail, logger);
+  });
+
+  await boss.work(queues.pricing, async () => {
+    await recalculatePrices(db, logger);
   });
 
   await boss.work(queues.basemaps, async () => {
@@ -176,6 +199,23 @@ export async function startWorker({
       if (result.outcome !== 'waiting' && result.outcome !== 'exists')
         logger.info(result, 'newsletter issue');
     }
+  });
+
+  // Agentic operations (docs/plans/agentic-ops.md): each prepares a decision for a person.
+  await boss.work(queues.cohorts, async () => {
+    await runCohorts(db, fetcher, llm, logger);
+  });
+  await boss.work(queues.sourceDiscovery, async () => {
+    await runDiscovery(db, fetcher, llm, logger);
+  });
+  await boss.work(queues.adapterFixes, async () => {
+    await runAdapterFixes(db, fetcher, logger);
+  });
+  await boss.work(queues.learning, async () => {
+    await runLearning(db, logger);
+  });
+  await boss.work(queues.digest, async () => {
+    await runDigest(db, opsDeps.alertMail, logger);
   });
 
   for (const { queue, cron } of schedules) {

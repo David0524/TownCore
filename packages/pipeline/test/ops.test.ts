@@ -191,9 +191,7 @@ describe('operations alerts', () => {
           prompt: {
             id: 'p',
             version: 'v1',
-            role: 'routine',
-            effort: 'low',
-            maxOutputTokens: 10,
+            task: 'classify',
             system: 's',
             schema: z.object({}),
           },

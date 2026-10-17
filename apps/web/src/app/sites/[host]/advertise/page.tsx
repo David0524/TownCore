@@ -3,12 +3,24 @@ import Link from 'next/link';
 import {
   directoryCategory,
   featuredRanks,
-  productPrice,
+  scarcityLine,
   townContactEmail,
+  townPricing,
   type FeaturedRank,
   type TownConfig,
 } from '@towncore/config';
-import { openFeaturedRanks, openWindows } from '@towncore/directory';
+import { townVariant } from '@towncore/db';
+import {
+  advertiserCount,
+  approvedTestimonials,
+  categoryPrice,
+  featuredPrices,
+  openFeaturedRanks,
+  openWindows,
+  readerReach,
+  socialProofLine,
+} from '@towncore/directory';
+import { WaitlistForm } from '@/components/directory/OwnerBar';
 import { db } from '@/lib/db';
 import { directoryPath } from '@/lib/directory';
 import { StandardPage } from '@/lib/pages';
@@ -31,30 +43,36 @@ const SPOTS: Record<FeaturedRank, { title: string; where: string }> = {
   3: { title: 'Third spot', where: 'Below #2, still above every other listing.' },
 };
 
+const usd = (cents: number) => `$${(cents / 100).toLocaleString('en-US')}`;
+
 /**
- * What the directory sells, at the town's real prices (owner, 2026-10-16, after
- * bocatownsquare.com): featured spots #1, #2 and #3 per category, the first month free, bought by
- * the business itself from its claimed listing through Stripe Checkout (D-M6-5). With
- * `?category=`, the page says which spots in that category are still open.
+ * What the directory sells, at the town's real current prices (owner, 2026-10-16, after
+ * bocatownsquare.com; 2026-10-17, "Grow ad and directory revenue"): featured spots #1, #2 and #3
+ * per category side by side, the category sponsorship beside them as the premium option, the
+ * first month free, bought by the business itself from its claimed listing through Stripe
+ * Checkout (D-M6-5). With `?category=`, it shows that category's own prices and which spots are
+ * open; when all are sold, the waitlist. Proof lines (readers, advertisers, testimonials) appear
+ * only when the real numbers clear their minimums.
  */
 export default async function AdvertisePage({
   params,
   searchParams,
 }: {
   params: Promise<{ host: string }>;
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; waitlist?: string }>;
 }) {
   const town = await requireTown(params);
   const config = town.config as TownConfig;
-  const { pricing } = config;
-  const category = directoryCategory((await searchParams).category ?? '');
+  const pricing = townPricing(town);
+  const { category: rawCategory, waitlist } = await searchParams;
+  const category = directoryCategory(rawCategory ?? '');
   const open = category ? await openFeaturedRanks(db(), town.id, category.slug) : null;
+  const prices = await featuredPrices(db(), town, category?.slug ?? null);
   const trial = pricing.free_trial_days;
   // Self-serve bookings, shown only when switched on and priced for this town (D-M6-6).
-  const prices = pricing as Record<string, unknown>;
-  const newsletterUsd = productPrice(prices, 'newsletter');
-  const categoryUsd = productPrice(prices, 'exclusive');
-  const newsletterWeeks = newsletterUsd
+  const newsletterCents = await categoryPrice(db(), town, 'newsletter', null);
+  const categoryCents = await categoryPrice(db(), town, 'exclusive', category?.slug ?? null);
+  const newsletterWeeks = newsletterCents
     ? await openWindows(db(), {
         townId: town.id,
         timezone: town.timezone,
@@ -63,7 +81,7 @@ export default async function AdvertisePage({
       })
     : [];
   const categoryMonths =
-    categoryUsd && category
+    categoryCents && category
       ? await openWindows(db(), {
           townId: town.id,
           timezone: town.timezone,
@@ -71,6 +89,58 @@ export default async function AdvertisePage({
           category: category.slug,
         })
       : [];
+  const [readers, advertisers, quotes, layout] = await Promise.all([
+    readerReach(db(), town.id),
+    advertiserCount(db(), town.id),
+    approvedTestimonials(db(), town.id),
+    townVariant(db(), 'advertise-tiers', town),
+  ]);
+  const proof = socialProofLine(advertisers, town.name);
+  const contact = townContactEmail(config);
+
+  const spotTiles = featuredRanks.map((rank) => {
+    const taken = open !== null && !open.includes(rank);
+    return (
+      <li
+        key={rank}
+        className={styles.spot}
+        data-top={rank === 1 || undefined}
+        data-taken={taken || undefined}
+        data-testid={`tier-${rank}`}
+      >
+        <span className={styles.rank}>#{rank}</span>
+        <strong className={styles.title}>{SPOTS[rank].title}</strong>
+        <span className={styles.price}>
+          {usd(prices[rank])}
+          <span className={styles.per}> a month</span>
+        </span>
+        <span className={styles.where}>{SPOTS[rank].where}</span>
+        {open !== null ? <span className={styles.status}>{taken ? 'Taken' : 'Open'}</span> : null}
+      </li>
+    );
+  });
+  const premiumTile = (
+    <li key="premium" className={styles.spot} data-premium data-testid="tier-premium">
+      <span className={styles.rank}>Premium</span>
+      <strong className={styles.title}>Category sponsor</strong>
+      {categoryCents ? (
+        <span className={styles.price}>
+          {usd(categoryCents)}
+          <span className={styles.per}> a month</span>
+        </span>
+      ) : (
+        <span className={styles.price}>
+          <a href={`mailto:${contact}?subject=${encodeURIComponent('Category sponsorship')}`}>
+            Ask us
+          </a>
+        </span>
+      )}
+      <span className={styles.where}>
+        Your card in the header of {category ? category.name.toLowerCase() : 'a category'}, one
+        business a month.
+      </span>
+    </li>
+  );
 
   return (
     <StandardPage town={town} shortOnPhones>
@@ -81,41 +151,61 @@ export default async function AdvertisePage({
         {category ? category.singular : 'restaurant, a plumber or a place to shop'}.
         {trial > 0 ? ` Your first ${trial} days are free.` : ''}
       </p>
+      {readers || proof ? (
+        <p className={styles.proof} data-testid="advertise-proof">
+          {readers
+            ? `${readers.toLocaleString('en-US')} ${town.name} readers get our morning email. `
+            : ''}
+          {proof ?? ''}
+        </p>
+      ) : null}
       {category ? (
         <p className="meta" data-testid="advertise-category">
           Spots in <Link href={directoryPath(category.slug)}>{category.name}</Link>:{' '}
           {open && open.length > 0
             ? `${open.map((r) => `#${r}`).join(', ')} open`
             : 'all taken right now'}
-          .
+          . {scarcityLine(open?.length ?? 0, featuredRanks.length, category.name)}
         </p>
       ) : null}
       <ul className={styles.spots} data-testid="featured-spots">
-        {featuredRanks.map((rank) => {
-          const taken = open !== null && !open.includes(rank);
-          return (
-            <li key={rank} className={styles.spot} data-taken={taken || undefined}>
-              <span className={styles.rank}>#{rank}</span>
-              <strong className={styles.title}>{SPOTS[rank].title}</strong>
-              <span className={styles.price}>
-                ${pricing.featured_usd[rank - 1]}
-                <span className={styles.per}> a month</span>
-              </span>
-              <span className={styles.where}>{SPOTS[rank].where}</span>
-              {open !== null ? (
-                <span className={styles.status}>{taken ? 'Taken' : 'Open'}</span>
-              ) : null}
-            </li>
-          );
-        })}
+        {layout === 'premium-first' ? [premiumTile, ...spotTiles] : [...spotTiles, premiumTile]}
       </ul>
+      {category && open?.length === 0 ? (
+        <section id="waitlist" aria-label="Waitlist">
+          <WaitlistForm category={category} source="advertise" status={waitlist} />
+        </section>
+      ) : null}
       <p className="meta">
         {trial > 0
           ? `The first ${trial} days of your first spot are free: cancel before then and you pay nothing. After that, `
           : ''}
-        Stripe bills you monthly, and you can cancel anytime from your owner page. One business per
-        spot in each category.
+        Stripe bills you monthly.{' '}
+        <Link href="/owner" data-testid="cancel-anytime">
+          Cancel anytime
+        </Link>{' '}
+        from your owner page, in one step on Stripe&rsquo;s billing page. One business per spot in
+        each category.
+        {category
+          ? ''
+          : ' Prices are per category and can change from month to month for new bookings; a category’s page shows its current price, and what you pay never changes while you keep your spot.'}
       </p>
+
+      {quotes.length ? (
+        <section aria-labelledby="quotes-h">
+          <h2 id="quotes-h">From businesses that advertise here</h2>
+          <ul className={styles.quotes} data-testid="testimonials">
+            {quotes.map((q) => (
+              <li key={q.id}>
+                <figure>
+                  <blockquote>{q.quote}</blockquote>
+                  <figcaption>{q.attribution}</figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <h2 id="claim">How to get one</h2>
       <ol className={styles.steps}>
@@ -144,14 +234,14 @@ export default async function AdvertisePage({
         and recent updates first. Our news coverage is never for sale.
       </p>
 
-      {newsletterUsd || categoryUsd ? (
+      {newsletterCents || categoryCents ? (
         <>
           <h2>Book a week or a month</h2>
           <ul className={styles.steps} data-testid="advertise-bookings">
-            {newsletterUsd ? (
+            {newsletterCents ? (
               <li>
-                <strong>Morning email sponsor</strong>, ${newsletterUsd} a week: your card at the
-                top of every issue for one week, labeled Sponsored.{' '}
+                <strong>Morning email sponsor</strong>, {usd(newsletterCents)} a week: your card at
+                the top of every issue for one week, labeled Sponsored.{' '}
                 {newsletterWeeks.length
                   ? `Open: ${newsletterWeeks
                       .slice(0, 4)
@@ -160,10 +250,10 @@ export default async function AdvertisePage({
                   : 'Every upcoming week is booked.'}
               </li>
             ) : null}
-            {categoryUsd ? (
+            {categoryCents ? (
               <li>
-                <strong>Category sponsor</strong>, ${categoryUsd} a month: your card in the header
-                of {category ? category.name.toLowerCase() : 'your category'} for one month.{' '}
+                <strong>Category sponsor</strong>, {usd(categoryCents)} a month: your card in the
+                header of {category ? category.name.toLowerCase() : 'your category'} for one month.{' '}
                 {category
                   ? categoryMonths.length
                     ? `Open: ${categoryMonths.map((w) => w.label).join(', ')}.`
@@ -184,10 +274,7 @@ export default async function AdvertisePage({
         An enhanced listing (${pricing.enhanced_usd} a month
         {trial > 0 ? `, the first ${trial} days free` : ''}) marks your listing in its category. For
         a sponsorship on the homepage or in the morning email, write to{' '}
-        <a href={`mailto:${townContactEmail(config)}?subject=${encodeURIComponent('Advertising')}`}>
-          {townContactEmail(config)}
-        </a>
-        .
+        <a href={`mailto:${contact}?subject=${encodeURIComponent('Advertising')}`}>{contact}</a>.
       </p>
     </StandardPage>
   );

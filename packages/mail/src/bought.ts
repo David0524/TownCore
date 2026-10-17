@@ -10,11 +10,10 @@ import {
   towns,
   type Db,
 } from '@towncore/db';
-import type { ExistingRecord } from './dns';
-import { onboardDomain, resetFailedSteps, type OnboardingReport } from './onboarding';
+import { onboardLaunchDomain } from './launch-onboard';
+import { resetFailedSteps, type OnboardingReport } from './onboarding';
 import { dryRunStore, pgOnboardingStore } from './pg-store';
-import { sesIdentities, type IdentityProvider } from './ses';
-import { vercelDns, type DnsProvider } from './vercel';
+import type { Providers } from './providers';
 
 // Mail warm-up starts the moment we own a domain (owner, 2026-10-17). A domain bought through a
 // launch (step 2, Rule 10: the operator typed it back at the quoted price) is onboarded right
@@ -28,8 +27,6 @@ import { vercelDns, type DnsProvider } from './vercel';
 export const MAIL_LEAD_DAYS = 21;
 /** A bought domain with no mail domain this long after purchase raises a Mail health alert. */
 export const ONBOARD_GRACE_MS = 60 * 60_000;
-
-export type Providers = { dns: DnsProvider; ses: IdentityProvider; offline: boolean };
 
 export type BoughtDomain = {
   domain: string;
@@ -161,66 +158,17 @@ export async function onboardBoughtDomain(
     .select({ id: towns.id })
     .from(towns)
     .where(or(eq(towns.domain, domain), sql`${domain} = any(${towns.extraDomains})`));
-  const store = ctx.execute ? pgOnboardingStore(db) : await dryRunStore(db, domain);
   // A failed earlier attempt (a conflict since fixed, a timeout) starts again from its failed
-  // step; a dry run plans the same retry in memory.
+  // step; a dry run plans the same retry in memory. Then the same onboarding the cohort
+  // orchestrator runs (one state machine, one lease, so the two never collide).
+  const store = ctx.execute ? pgOnboardingStore(db) : await dryRunStore(db, domain);
   await resetFailedSteps(store, domain);
-  return onboardDomain(
-    {
-      name: domain,
-      displayName: input.displayName,
-      townId: town?.id ?? null,
-      isTest: (ctx.env.MAIL_TEST_DOMAINS ?? []).includes(domain),
-    },
-    {
-      store,
-      dns: ctx.providers.dns,
-      ses: ctx.providers.ses,
-      region: ctx.env.AWS_REGION ?? 'us-east-1',
-      dmarcReportAddress: ctx.env.DMARC_REPORT_ADDRESS ?? '<DMARC_REPORT_ADDRESS>',
-      configSets: {
-        conversational: ctx.env.SES_CONFIG_SET_CONVERSATIONAL ?? '<SES_CONFIG_SET_CONVERSATIONAL>',
-        bulk: ctx.env.SES_CONFIG_SET_BULK ?? '<SES_CONFIG_SET_BULK>',
-      },
-    },
+  return onboardLaunchDomain(
+    db,
+    ctx.env,
+    { name: domain, displayName: input.displayName, townId: town?.id ?? null },
     { execute: ctx.execute },
+    ctx.providers,
+    ctx.execute ? undefined : store,
   );
-}
-
-/** Real Vercel DNS and SES clients, or offline stand-ins when the credentials aren't set. */
-export function providersFromEnv(env: Env): Providers {
-  if (!env.VERCEL_DNS_TOKEN || !env.AWS_ACCESS_KEY_ID) return offlineProviders();
-  return {
-    dns: vercelDns({ token: env.VERCEL_DNS_TOKEN, teamId: env.VERCEL_TEAM_ID }),
-    ses: sesIdentities({ region: env.AWS_REGION ?? 'us-east-1' }),
-    offline: false,
-  };
-}
-
-/** For a dry-run before any credentials exist: every zone empty, no SES identities. */
-export function offlineProviders(): Providers {
-  const none: ExistingRecord[] = [];
-  const offline = async () => {
-    throw new Error('offline');
-  };
-  return {
-    offline: true,
-    dns: {
-      getDomain: async (name) => ({
-        name,
-        serviceType: 'zeit.world',
-        nameservers: ['ns1.vercel-dns.com', 'ns2.vercel-dns.com'],
-        intendedNameservers: ['ns1.vercel-dns.com', 'ns2.vercel-dns.com'],
-      }),
-      listRecords: async () => none,
-      createRecord: offline,
-      deleteRecord: offline,
-    },
-    ses: {
-      getIdentity: async () => null,
-      createIdentity: offline,
-      setMailFrom: offline,
-      deleteIdentity: offline,
-    },
-  };
 }

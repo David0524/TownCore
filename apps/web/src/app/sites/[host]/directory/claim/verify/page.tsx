@@ -1,4 +1,7 @@
 import type { Metadata } from 'next';
+import { directoryCategory } from '@towncore/config';
+import { categoryQuoteRequests, localMonth, missedLine } from '@towncore/directory';
+import { db } from '@/lib/db';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
@@ -18,18 +21,42 @@ export default async function VerifyClaimPage({
   searchParams,
 }: {
   params: Promise<{ host: string }>;
-  searchParams: Promise<{ t?: string; s?: string }>;
+  searchParams: Promise<{ t?: string; s?: string; c?: string }>;
 }) {
   const town = await requireTown(params);
-  const { t, s } = await searchParams;
+  const { t, s, c } = await searchParams;
   const result = s ? RESULTS[s] : undefined;
+  // What happens next, from real counts (owner, 2026-10-17): the category's quote requests this
+  // month, a public aggregate, shown only when there were some.
+  const category = s === 'pending' ? directoryCategory(c ?? '') : null;
+  const missed = category
+    ? missedLine({
+        count: await categoryQuoteRequests(db(), {
+          townId: town.id,
+          category: category.slug,
+          timezone: town.timezone,
+          month: localMonth(new Date(), town.timezone),
+        }),
+        category: category.slug,
+        townName: town.name,
+        period: 'this month',
+      })
+    : null;
   return (
     <StandardPage town={town}>
       <LargeTitle title="Confirm your claim" as="h1" always />
       {result ? (
-        <p role="status" data-testid="claim-result">
-          {result}
-        </p>
+        <>
+          <p role="status" data-testid="claim-result">
+            {result}
+          </p>
+          {s === 'pending' ? (
+            <p data-testid="claim-next">
+              Once it&rsquo;s approved, your owner page shows how often readers see your listing and
+              how many call you.{missed ? ` ${missed}` : ''}
+            </p>
+          ) : null}
+        </>
       ) : t ? (
         <form method="post" action="/directory/claim/verify/confirm">
           <input type="hidden" name="t" value={t} />

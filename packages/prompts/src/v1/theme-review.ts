@@ -27,9 +27,7 @@ export type ThemeReview = z.infer<typeof themeReviewSchema>;
 export const themeReviewV1 = {
   id: 'theme-review',
   version: 'v1',
-  role: 'launcher',
-  effort: 'medium',
-  maxOutputTokens: 2000,
+  task: 'theme-review',
   schema: themeReviewSchema,
   system: `You review the design of a new local news site from screenshots of its home, article and directory pages on a phone and a desktop. You will also get its theme and its nearby sites' themes.
 

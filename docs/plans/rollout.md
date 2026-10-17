@@ -1,6 +1,8 @@
 # Rollout: 3,000 towns, November 2026 – December 2027 (owner, 2026-10-17)
 
-The goal is 3,000 live towns by the end of 2027, launched in monthly cohorts. Each cohort has to
+**Bootstrapped (owner, 2026-10-17):** the monthly ramp below is the most the team could launch, not the plan. Cash sets the pace: the LRP's Monthly sheet launches each month only what the cash allows, about 476 live towns by the end of FY2027 in the base case (`docs/finance/launch-capacity.md`). The gates, order and readiness work below still apply.
+
+The goal was 3,000 live towns by the end of 2027, launched in monthly cohorts. Each cohort has to
 show healthy results before the next one goes out. Google safety comes first. Related: the
 long-range plan (`docs/finance/`), the launch limits (`docs/finance/launch-capacity.md`) and
 `docs/plans/google-safety.md`.
@@ -32,11 +34,11 @@ long-range plan (`docs/finance/`), the launch limits (`docs/finance/launch-capac
    - Each town's source reads its own city's rows, with its own run record and health.
    - 295 Florida towns: each file goes from 295 downloads a run to about 4 checks a day.
    - The worker needs a few hundred MB of disk for the copies.
-3. **Batch launch.**
-   - `pnpm launch --batch towns.csv` runs the steps for a list of approved towns.
-   - The owner picks names from one combined report.
-   - The domains are bought in one Rule 10 approval at a stated total price, with each domain's price shown and a typed confirmation of the total.
-   - That approval also covers each domain's mail onboarding (launch step 2b), so warm-up starts the moment the domains are ours. Buy each cohort's domains at least 21 days before its go-live month (`pnpm launch --cohort YYYY-MM`); `pnpm mail:onboard bought --execute` catches up any left behind.
+3. **Batch launch. Built** (`docs/plans/agentic-ops.md`).
+   - Launch cohorts in Admin → Launches: approved towns run their steps as a chain (`pnpm cohort advance`, or the worker with `COHORT_ORCHESTRATOR=worker`).
+   - The admin picks names in one table per cohort.
+   - The domains are bought in one Rule 10 approval at a stated total price, with each domain's price shown and a typed confirmation of the total. Mail onboarding, DNS verification, provisioning and a batched draft review follow by themselves; go-live is one more click.
+   - A single-town `pnpm launch … --approve-spend` onboards its domain's mail right after the purchase too (launch step 2b), so warm-up starts the moment any domain is ours. Buy each cohort's domains at least 21 days before its go-live month (`pnpm launch --cohort YYYY-MM`); `pnpm mail:onboard bought --execute` catches up any left behind.
 4. **Search Console.** Verify and submit sitemaps through the Search Console API once a Google credential exists (owner). Until then it stays a manual launch to-do.
 5. **Cohort health on Admin.** Per cohort (go-live month):
    - towns, indexed vs. submitted pages, impressions, manual actions;
@@ -44,7 +46,7 @@ long-range plan (`docs/finance/`), the launch limits (`docs/finance/launch-capac
    - newsletter sign-ups;
    - items a day against the target (built: Admin → Health).
 
-   The gate below shows as pass or fail.
+   The gate below shows as pass, fail or unknown. **Built** for the data that exists: the daily learning loop proposes launching or pausing the next cohort in Admin → Proposals, and the daily digest summarizes each cohort. Indexing, impressions and manual actions stay unknown until Search Console is connected.
 6. **Kill switch for a whole cohort.** Built (Admin → Health).
 7. **County source registry.** Built for property sales; permits next.
    - Each county's verified data sets live in `counties/<state>/<county>.yaml`. Each entry records:
@@ -108,4 +110,4 @@ If a cohort is unhealthy: pause launches, use the kill switch if needed, fix the
 - **Domains:** ~$35–60k for 3,000.
 - **AI:** ~$25 a launch plus ~$0.15 a story.
 
-The LRP's base case launches 3,000 towns a year, which matches this ramp's 2027.
+The bootstrapped LRP launches about 476 towns in FY2027 and 895 in FY2028, as cash and paid support staff allow.

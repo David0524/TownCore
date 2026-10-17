@@ -76,12 +76,58 @@ export {
 export { isLiveKey, LiveModeRefused, stripeClient, type Stripe } from './stripe/client';
 export {
   applyPricePlan,
-  currentPrice,
   lookupKey,
   offerName,
   planPrices,
+  stripePriceFor,
   type PricePlanItem,
 } from './stripe/prices';
+export {
+  categoryPrice,
+  decidePriceProposal,
+  featuredPrices,
+  localMonth,
+  overridePrice,
+  priceHistory,
+  PricingError,
+  pricingSignals,
+  runMonthlyPricing,
+  townPriceBoard,
+  type CategoryPriceRow,
+  type PriceChangeRow,
+  type PricingRunResult,
+} from './pricing';
+export {
+  joinWaitlist,
+  onWaitlist,
+  waitlistCount,
+  waitlistSummary,
+  WAITLIST_PER_HOUR,
+  type WaitlistOutcome,
+} from './waitlist';
+export {
+  approvedTestimonials,
+  canWriteTestimonial,
+  decideTestimonial,
+  ownerTestimonial,
+  pendingTestimonials,
+  submitTestimonial,
+  TESTIMONIAL_LIMITS,
+  TestimonialNotPending,
+  type TestimonialOutcome,
+} from './testimonials';
+export {
+  advertiserCount,
+  categoryRevenue,
+  listingProof,
+  missedLine,
+  peerLine,
+  proofLine,
+  readerReach,
+  socialProofLine,
+  type CategoryRevenue,
+  type ListingProof,
+} from './proof';
 export {
   HANDLED_EVENTS,
   handleStripeEvent,

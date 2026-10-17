@@ -1,7 +1,7 @@
 export * as schema from './schema';
 export * from './schema';
 export { clientUrl, createDb, getDb, type Db } from './client';
-export { guideSourceKey, syncTowns, type SyncTownsResult } from './towns';
+export { guideSourceKey, sourceKey, syncTowns, type SyncTownsResult } from './towns';
 export {
   loadRoutingTable,
   syncMailRouting,
@@ -37,6 +37,7 @@ export {
   getPublishedArticle,
   listArticlesByIds,
   getSourceRecords,
+  getRecordSources,
   listArticleCorrections,
   listTownCorrections,
   getTownByHost,
@@ -49,6 +50,7 @@ export {
   type Campaign,
   type Correction,
   type SourceRecord,
+  type RecordSource,
   type Town,
 } from './queries';
 export {
@@ -77,6 +79,9 @@ export {
 export {
   claimWeatherRefresh,
   getTownWeather,
+  getTropics,
+  saveTropics,
+  TROPICS_MAX_AGE_MS,
   saveTownWeatherAlerts,
   saveTownWeather,
   WEATHER_MAX_AGE_MS,

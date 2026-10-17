@@ -1,8 +1,15 @@
 // Story finder, writer, fact-check and tier router (CLAUDE.md §6–7).
+export { formatPlan, planDay, type DayPlan, type PlanLine } from './ai-plan';
 export { buildByline } from './byline';
 export {
+  BatchPending,
   callModel,
   LlmOutputError,
+  modelFor,
+  NotRecordedError,
+  routeFor,
+  runAiBatches,
+  TaskDisabled,
   portableSchema,
   providerFromEnv,
   recordingProvider,
@@ -13,6 +20,7 @@ export {
   networkSpendSince,
   todaysUsage,
   type CallResult,
+  type BatchApi,
   type Effort,
   type Llm,
   type LlmProvider,
@@ -34,6 +42,7 @@ export {
   type ScoreComponents,
 } from './scoring';
 export {
+  dayRange,
   isIssuedLicense,
   isNewsworthyAlert,
   meetingsRoundup,
@@ -64,6 +73,7 @@ export {
   uniqueSlug,
   type Reviewer,
 } from './publish';
+export { rerenderRoundups, type RerenderChange } from './rerender';
 export { roadClosurePin, severeWeatherPin, writeCandidate, type WriteOutcome } from './write';
 export {
   applyUpdate,
@@ -127,6 +137,9 @@ export {
 } from './scores';
 export { createGuideCandidates, pagesHash, writeGuide, type GuideOutcome } from './guides';
 export {
+  aiSpend,
+  type AiSpend,
+  type AiSpendRow,
   COST_MIN_STORIES,
   COST_RISE,
   HEARTBEAT_STALE_MS,
@@ -143,6 +156,7 @@ export {
   refreshWeather,
   WEATHER_FORECAST_EVERY_MS,
   WEATHER_FORECASTS_PER_RUN,
+  refreshTropics,
   weatherTargets,
   type WeatherTarget,
 } from './weather-refresh';
@@ -201,3 +215,41 @@ export {
   type PollResults,
   type VoteOutcome,
 } from './polls';
+export {
+  cohortGates,
+  GATE_CORRECTIONS_PER_TOWN,
+  GATE_FACTCHECK_MIN,
+  GATE_SIGNUPS_PER_TOWN,
+  type CohortGate,
+  type GateResult,
+  type GateStatus,
+} from './cohort-gates';
+export {
+  decideProposal,
+  experimentProposals,
+  gateProposal,
+  latestGateDecision,
+  listProposals,
+  MIN_LIFT,
+  MIN_TOWNS_PER_VARIANT,
+  ProposalDecisionRefused,
+  readVariantReports,
+  routingDiff,
+  routingProposals,
+  runLearningLoops,
+  upsertProposal,
+  type LearningRun,
+  type Proposal,
+  type ProposalInput,
+} from './proposals';
+export {
+  buildDigest,
+  DIGEST_SECTIONS,
+  digestText,
+  listDigests,
+  markDigestEmailed,
+  storeDigest,
+  type Digest,
+  type DigestItem,
+} from './digest';
+export { EVAL_VARIANTS, type VariantReport } from './evals';

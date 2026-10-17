@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 import { beats, townContactEmail, type TownConfig } from '@towncore/config';
 import {
   getPublishedArticle,
+  getRecordSources,
   getSourceRecords,
   listArticleCorrections,
   listArticlesByIds,
@@ -38,6 +39,7 @@ import Link from 'next/link';
 import { NewsletterCta } from '@/modules/news';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { ShareButton } from '@/components/news/ShareButton';
+import { SourceList } from '@/components/news/SourceList';
 import { StoryBlock } from '@/components/news/StoryBlock';
 import { UpNext } from '@/components/news/StoryCards';
 import { JsonLd, newsArticleJsonLd } from '@/lib/structured-data';
@@ -118,6 +120,10 @@ export async function ArticleView({
       guide ? guideLastChecked(article) : null,
       guide ? listPublishedGuides(db(), town.id) : [],
     ]);
+  const recordSources = await getRecordSources(
+    db(),
+    sourceRecords.map((r) => r.sourceId),
+  );
   const otherGuides = guides.filter((g) => g.id !== article.id).slice(0, 6);
   // Up next (owner, 2026-10-16): the most related story, else the top-ranked one; for a guide,
   // another guide. Never this story or a test fixture.
@@ -154,7 +160,7 @@ export async function ArticleView({
   return (
     <TownGrid town={town} kind={grid} measure={wide ? 'wide' : 'normal'}>
       <article data-part={`article:${template}`}>
-        <JsonLd data={newsArticleJsonLd(town, article)} />
+        <JsonLd data={newsArticleJsonLd(town, article, sourceRecords)} />
         <ViewBeacon slug={article.slug} />
         <header className={styles.header}>
           {beat ? <BeatLabel beat={beat.slug} link /> : null}
@@ -252,27 +258,7 @@ export async function ArticleView({
           </nav>
         ) : null}
 
-        <section className={styles.sources} data-testid="sources">
-          <h2>Sources</h2>
-          {sourceRecords.length === 0 ? (
-            <p>Source records are being updated.</p>
-          ) : (
-            <ol>
-              {sourceRecords.map((record) => (
-                <li key={record.id}>
-                  {record.url ? (
-                    <a href={record.url} rel="nofollow noopener" target="_blank">
-                      {record.title ?? record.type}
-                    </a>
-                  ) : (
-                    (record.title ?? record.type)
-                  )}
-                  {record.occurredAt ? ` (${formatTownDate(record.occurredAt, town)})` : ''}
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
+        <SourceList town={town} records={sourceRecords} sources={recordSources} />
 
         <p className={styles.report}>
           See something wrong?{' '}

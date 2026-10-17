@@ -9,13 +9,8 @@ import {
 } from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  boughtDomains,
-  needsOnboarding,
-  onboardBoughtDomain,
-  onboardBy,
-  type Providers,
-} from '../src/bought';
+import { boughtDomains, needsOnboarding, onboardBoughtDomain, onboardBy } from '../src/bought';
+import type { Providers } from '../src/providers';
 import { runOnboardCommand } from '../src/cli/onboard';
 import { currentConditions } from '../src/ops/alerts';
 import { fakeDns, fakeSes } from './fakes';

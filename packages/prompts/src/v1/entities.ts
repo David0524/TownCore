@@ -17,9 +17,7 @@ export type EntitiesResult = z.infer<typeof entitiesSchema>;
 export const entitiesV1 = {
   id: 'entities',
   version: 'v1',
-  role: 'routine',
-  effort: 'low',
-  maxOutputTokens: 1500,
+  task: 'extract',
   schema: entitiesSchema,
   system: `You index a local news story for topic pages. You will get the town's name and the story. List the specific, named things in it that readers might want to follow.
 

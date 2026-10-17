@@ -58,6 +58,25 @@ export function visitWindows(text: string, userAgent: string): VisitWindow[] {
   return group?.windows ?? [];
 }
 
+/**
+ * A Crawl-delay written before the first User-agent line (data.cms.gov opens its robots.txt with
+ * "crawl-delay: 10", then the groups). RFC 9309 parsers ignore a line outside any group, but its
+ * intent is plain: everyone waits that long. Honored like a `*` group's own delay (Rule 8).
+ */
+export function preambleCrawlDelay(text: string): number | undefined {
+  for (const raw of text.split(/\r?\n/)) {
+    const m = /^([a-z-]+)\s*:\s*(.*)$/i.exec(raw.replace(/#.*/, '').trim());
+    if (!m) continue;
+    const key = m[1]!.toLowerCase();
+    if (key === 'user-agent') return undefined;
+    if (key === 'crawl-delay') {
+      const seconds = Number(m[2]);
+      return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+    }
+  }
+  return undefined;
+}
+
 /** Whether `at` falls inside any window (always, when there are none). */
 export function insideVisitTime(windows: VisitWindow[], at: Date): boolean {
   if (windows.length === 0) return true;
@@ -143,6 +162,17 @@ export class Fetcher {
    */
   getShared(url: string, options?: SharedFileOptions): Promise<SharedFile> {
     return this.shared.file(url, options);
+  }
+
+  /**
+   * A Fetcher that shares this one's politeness (per-host pacing, robots.txt, Crawl-delay and
+   * Visit-time) but sends through `wrap(fetch)`, e.g. to record a fixture of a failing fetch.
+   * Rule 8 is unchanged: the same checks run, and the host queue is the same one.
+   */
+  withFetch(wrap: (fetch: FetchFn) => FetchFn): Fetcher {
+    const child = Object.assign(Object.create(Fetcher.prototype) as Fetcher, this);
+    (child as unknown as { fetchImpl: FetchFn }).fetchImpl = wrap(this.fetchImpl);
+    return child;
   }
 
   /** GET a URL politely. Throws FetchPolicyError if the URL is blocked or disallowed. */
@@ -248,7 +278,7 @@ export class Fetcher {
           const text = await response.text();
           robots = robotsParser(robotsUrl, text) as Robots;
           windows = visitWindows(text, this.userAgent);
-          this.applyCrawlDelay(target.host, robots);
+          this.applyCrawlDelay(target.host, robots, text);
         } else
           robots = response.status >= 400 && response.status < 500 ? 'allow-all' : 'disallow-all';
       } catch {
@@ -312,8 +342,11 @@ export class Fetcher {
   }
 
   /** Rule 8: a robots.txt Crawl-delay for our agent (or *) spaces requests at least that far. */
-  private applyCrawlDelay(host: string, robots: Robots) {
-    const seconds = robots.getCrawlDelay(this.userAgent);
+  private applyCrawlDelay(host: string, robots: Robots, text: string) {
+    const seconds = Math.max(
+      robots.getCrawlDelay(this.userAgent) ?? 0,
+      preambleCrawlDelay(text) ?? 0,
+    );
     if (!seconds || !Number.isFinite(seconds) || seconds <= 0) return;
     const ms = Math.min(MAX_CRAWL_DELAY_MS, seconds * 1_000);
     if (ms > this.intervalFor(host)) this.hostInterval.set(host, ms);

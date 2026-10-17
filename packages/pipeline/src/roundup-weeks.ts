@@ -22,6 +22,7 @@ export async function townRecords(
   types: string | string[],
   from: Date,
   to: Date,
+  by: 'occurredAt' | 'createdAt' = 'occurredAt',
 ): Promise<(typeof records.$inferSelect)[]> {
   return db
     .select()
@@ -30,14 +31,21 @@ export async function townRecords(
       and(
         eq(records.townId, townId),
         Array.isArray(types) ? inArray(records.type, types) : eq(records.type, types),
-        gte(records.occurredAt, from),
-        lt(records.occurredAt, to),
+        gte(records[by], from),
+        lt(records[by], to),
       ),
     );
 }
 
-/** Record types each roundup reads, and whether their dates are date-only (UTC midnight). */
-const SPEC: Record<RoundupKind, { types: string[]; dateOnly: boolean }> = {
+/**
+ * Record types each roundup reads, and whether their dates are date-only (UTC midnight). `by:
+ * 'createdAt'` rounds up what was first read that week instead: for data published months after
+ * the fact (CMS's monthly nursing-home release), where last week's dates are never in yet.
+ */
+const SPEC: Record<
+  RoundupKind,
+  { types: string[]; dateOnly: boolean; by?: 'occurredAt' | 'createdAt' }
+> = {
   meetings: { types: ['meeting'], dateOnly: false },
   'new-businesses': { types: ['new-filing'], dateOnly: true },
   'new-licenses': { types: ['license'], dateOnly: true },
@@ -46,6 +54,12 @@ const SPEC: Record<RoundupKind, { types: string[]; dateOnly: boolean }> = {
   sales: { types: ['sale'], dateOnly: true },
   inspections: { types: ['inspection'], dateOnly: true },
   roads: { types: ['road-work'], dateOnly: false },
+  federal: { types: ['federal-award'], dateOnly: true },
+  'nursing-homes': {
+    types: ['nursing-home-inspection', 'nursing-home-penalty'],
+    dateOnly: false,
+    by: 'createdAt',
+  },
 };
 
 /** The records a roundup of this kind covers for the local week starting `weekStart`. */
@@ -63,7 +77,7 @@ export async function roundupWeekRecords(
         opts.from && opts.from > weekStart ? opts.from : weekStart,
         new Date(weekStart.getTime() + 7 * DAY),
       ];
-  const rows = await townRecords(db, town.id, spec.types, from, to);
+  const rows = await townRecords(db, town.id, spec.types, from, to, spec.by);
   return kind === 'new-licenses' ? rows.filter((r) => isIssuedLicense(r.raw)) : rows;
 }
 
@@ -83,7 +97,7 @@ export async function pastWeekCounts(
   weeks = PAST_WEEKS,
 ): Promise<number[]> {
   const [first] = await db
-    .select({ at: sql<Date | string | null>`min(${records.occurredAt})` })
+    .select({ at: sql<Date | string | null>`min(${records[SPEC[kind].by ?? 'occurredAt']})` })
     .from(records)
     .where(and(eq(records.townId, town.id), inArray(records.type, SPEC[kind].types)));
   const since = first?.at ? new Date(first.at) : null;

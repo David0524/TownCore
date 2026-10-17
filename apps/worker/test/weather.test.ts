@@ -7,6 +7,7 @@ import {
   eq,
   getTownBySlug,
   getTownWeather,
+  getTropics,
   syncTowns,
   townWeather,
   WEATHER_MAX_AGE_MS,
@@ -16,7 +17,7 @@ import { createTestDb } from '@towncore/db/testing';
 import { pino } from 'pino';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { forecastsDue, refreshTownWeather, WEATHER_FORECAST_EVERY_MS } from '@towncore/pipeline';
-import { refreshWeather, weatherTargets } from '../src/weather';
+import { refreshTropics, refreshWeather, weatherTargets } from '../src/weather';
 
 const townsDir = fileURLToPath(new URL('../../../towns', import.meta.url));
 const fixture: FixtureFile = JSON.parse(
@@ -159,5 +160,38 @@ describe('forecast turns', () => {
     ];
     expect(forecastsDue(towns, now, 3)).toEqual(['new', 'older', 'old']);
     expect(forecastsDue(towns, now)).toEqual(['new', 'older', 'old', 'due']);
+  });
+});
+
+describe('tropics refresh', () => {
+  const tropicsFixture = fileURLToPath(
+    new URL('../../../packages/adapters/fixtures/nhc/2026-10-17.json', import.meta.url),
+  );
+  const at = new Date('2026-10-17T15:30:00Z');
+
+  it('stores every basin from one run and keeps the last good one on failure', async () => {
+    const run = await refreshTropics(
+      db,
+      fetcher(JSON.parse(readFileSync(tropicsFixture, 'utf8'))),
+      logger,
+      at,
+    );
+    expect(run).toEqual({ ok: true, storms: 1 });
+    const east = await getTropics(db, 'east-pacific', at);
+    expect(east?.snapshot.storms.map((s) => s.name)).toEqual(['Trudy']);
+    expect((await getTropics(db, 'atlantic', at))?.snapshot.outlook?.areas).toEqual([]);
+
+    const failed = await refreshTropics(
+      db,
+      fetcher({ recordedAt: '', exchanges: [] }),
+      logger,
+      new Date(at.getTime() + 3_600_000),
+    );
+    expect(failed.ok).toBe(false);
+    expect(await getTropics(db, 'east-pacific', new Date(at.getTime() + 3_600_000))).not.toBeNull();
+    // Too old to show after 12 hours without a good run.
+    expect(
+      await getTropics(db, 'east-pacific', new Date(at.getTime() + 13 * 3_600_000)),
+    ).toBeNull();
   });
 });

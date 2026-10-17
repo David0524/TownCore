@@ -303,12 +303,15 @@ single('ai_story', 'AI cost per published story', 0.15, USD2,
        'Writer, separate fact-check and an AI review pass (owner: article review becomes an AI agent). '
        'Measured ~$0.10 for writer + fact-check on repo pricing; verify against current Anthropic pricing '
        '(CLAUDE.md §8). Scaled by unit cost multiplier.', key=True, unit='$/story')
-single('ai_overhead', 'AI overhead per town per day', 0.50, USD2,
-       'Classification, revisions, guides, entity extraction. Estimate.', unit='$/day')
+single('ai_overhead', 'AI overhead per town per day', 0.05, USD2,
+       'Classification on Haiku, revisions, guides, entity extraction. pnpm ai:plan puts Boca at about '
+       '$0.05 a day at today\'s volume (2026-10-17). Estimate.', unit='$/day')
 single('ai_cap', 'AI spend cap per town per day', 5.0, USD2,
        'CLAUDE.md D-M3-7: $5 daily cap per town, enforced in code.', unit='$/day')
-single('hosting', 'Hosting, database and data per town', 25, USD,
-       'Vercel, Railway Postgres share, storage, maps. Estimate.', unit='$/month')
+single('hosting', 'Hosting, database and data per town', 2, USD,
+       'Marginal cost of one more town: every town runs on one Vercel app, one worker and one '
+       'database, so a town adds only storage, bandwidth and database rows. The shared plans are '
+       'in fixed platform costs. Estimate: check against the bills as towns grow.', unit='$/month')
 single('ses', 'Email sending (Amazon SES)', 0.10, USD2,
        'AWS SES list price per 1,000 emails; verify at aws.amazon.com/ses/pricing.', unit='$/1,000')
 single('stripe_pct', 'Card processing, % of directory revenue', 0.029, PCT,
@@ -316,14 +319,17 @@ single('stripe_pct', 'Card processing, % of directory revenue', 0.029, PCT,
 single('stripe_fixed', 'Card processing, fixed per charge', 0.30, USD2, 'Stripe standard US.',
        unit='$/charge')
 single('domain', 'Domain renewal per town', 20, USD, 'Estimate.', unit='$/year')
-single('launch_ai', 'AI cost per launch', 25, USD, 'CLAUDE.md D-M7-11: $25 of AI per launch.',
-       unit='$/launch')
+single('launch_ai', 'AI cost per launch', 10, USD,
+       'M7 estimate $7-16 a launch (discovery, readiness, guides, theme review); $25 is only the cap '
+       '(D-M7-11). Boca was launched by hand with no API cost.', unit='$/launch')
 single('launch_domain', 'Domain purchase per launch', 15, USD, 'Estimate.', unit='$/launch')
-single('launch_mkt', 'Launch audience seeding (paid social)', 1500, USD,
-       'Estimate: first-month Meta ads to seed newsletter signups.', key=True, unit='$/launch')
+single('launch_mkt', 'Launch audience seeding (paid social)', 0, USD,
+       'Owner, 2026-10-17: bootstrapped, no paid launch seeding (was $1,500 a launch). Audience '
+       'comes from search, the town Facebook page and the newsletter.', key=True, unit='$/launch')
 single('sub_cac', 'Paid cost per new subscriber', 2.0, USD2, 'Estimate.', unit='$/subscriber')
-single('sub_paid', 'Share of new subscribers acquired with paid ads', 0.4, PCT,
-       'Rest arrive from search, Facebook shares and word of mouth. Estimate.')
+single('sub_paid', 'Share of new subscribers acquired with paid ads', 0.0, PCT,
+       'Bootstrapped: no paid acquisition. Subscribers arrive from search, Facebook shares, the '
+       'sites\' sign-up prompts and word of mouth.')
 blank()
 
 # People
@@ -341,32 +347,49 @@ single('per_ae', 'Towns per advertiser partnerships manager', 1000, NUM,
        'Owner, 2026-10-17: sales are self-serve on the site. A small team handles regional and '
        'multi-town advertisers.', key=True, unit='towns')
 single('per_support', 'Towns per support and success rep', 120, NUM, 'Estimate.', unit='towns')
+single('founder_fte', 'Founder time for operations', 2, NUM1,
+       'Owner, 2026-10-17: founders take no salary, at any point. Full-time equivalents of founder '
+       'time for support, review and launches; it covers the first needed FTEs at $0. Input: confirm.',
+       key=True, unit='FTE')
+single('people_share', 'Paid staff budget, share of last month\'s revenue', 0.40, PCT,
+       'Bootstrapped hiring rule: staff are hired only out of revenue. Needed work beyond founder '
+       'time is paid up to this share of the previous month\'s revenue, and never more than last '
+       'month\'s profit before staff; the rest shows as unfunded FTE, and no town launches while '
+       'any is unfunded.', key=True)
 blank()
 section(A, row, 'Base salaries (2027 $)')
 row += 1
-single('sal_lead', 'Leadership', 160000, USD, 'Estimate.', unit='$/year')
+single('sal_lead', 'Leadership (hires beyond the founders)', 160000, USD,
+       'Estimate. Founders are unpaid and not counted here.', unit='$/year')
 single('sal_eng', 'Engineering', 170000, USD, 'Estimate.', unit='$/year')
 single('sal_rev', 'Editorial standards and launch operations', 70000, USD, 'Estimate.', unit='$/year')
 single('sal_ae', 'Advertiser partnerships', 65000, USD, 'Estimate.', unit='$/year')
 single('sal_sup', 'Support and success', 55000, USD, 'Estimate.', unit='$/year')
 single('sal_ga', 'Finance, legal and operations', 110000, USD, 'Estimate.', unit='$/year')
 blank()
-section(A, row, 'Fixed headcount (by fiscal year)')
+section(A, row, 'Central hires wanted (by fiscal year; paid only when the staff budget allows)')
 row += 1
 header(A, row, 'Fiscal year', YEARS)
 row += 1
-series('hc_lead', 'Leadership', [2, 2, 3, 4, 5], NUM, 'Plan.', unit='people')
-series('hc_eng', 'Engineering and product', [3, 5, 8, 11, 14], NUM, 'Plan.', unit='people')
-series('hc_ga', 'Finance, legal and operations', [1, 1, 2, 3, 4], NUM, 'Plan.', unit='people')
+series('hc_lead', 'Leadership (not founders)', [0, 0, 0, 1, 2], NUM, 'Plan; founders lead unpaid.',
+       unit='people')
+series('hc_eng', 'Engineering and product', [0, 1, 2, 4, 6], NUM,
+       'Plan; founders and Claude Code build until revenue pays for engineers.', unit='people')
+series('hc_ga', 'Finance, legal and operations', [0, 0, 1, 1, 2], NUM, 'Plan.', unit='people')
 blank()
 section(A, row, 'Other operating costs (by fiscal year)')
 row += 1
 header(A, row, 'Fiscal year', YEARS)
 row += 1
-series('brand_mkt', 'Corporate marketing', [50000, 150000, 300000, 500000, 700000], USD,
-       'Advertiser marketing, events, brand. Plan.', unit='$')
-series('legal_fixed', 'Legal and media liability insurance (fixed)', [60000, 90000, 140000, 200000, 260000],
-       USD, 'Media liability matters for a publisher (§2). Estimate.', unit='$')
+series('legal_fixed', 'Legal and media liability insurance (fixed)', [1500, 3000, 6000, 12000, 20000],
+       USD, 'Media liability matters for a publisher (§2). Starts with a small policy and grows with the '
+       'network. Estimate: get a quote.', key=True, unit='$')
+single('brand_share', 'Corporate marketing, share of revenue', 0.02, PCT,
+       'Bootstrapped: advertiser marketing paid out of revenue, not ahead of it. Estimate.')
+single('platform_base', 'Fixed platform costs', 75, USD,
+       'Vercel Pro ($20), Railway (~$20), Amazon SES and AWS (~$10), other small subscriptions (~$25). '
+       'Claude is covered by the startup program (AI credit row). Estimate: replace with the bills.',
+       unit='$/month')
 single('legal_town', 'Legal and insurance per live town', 100, USD, 'Estimate.', unit='$/town/year')
 single('tools', 'Software and tools per employee', 3000, USD, 'Estimate.', unit='$/year')
 single('laptop', 'Equipment per new hire (capex)', 2500, USD, 'Estimate.', unit='$/hire')
@@ -377,56 +400,28 @@ row += 1
 single('tax', 'Income tax rate', 0.25, PCT, 'Federal 21% plus state, simplified; losses carried forward.')
 single('nwc', 'Net working capital, % of revenue', 0.03, PCT,
        'Stripe settles in days; mostly prepaid monthly plans. Estimate.')
-single('open_cash', 'Opening cash, start of FY2027', 250000, USD, 'Input: replace with actual.',
-       key=True, unit='$')
+single('open_cash', 'Opening cash, start of FY2027', 5000, USD,
+       'Owner, 2026-10-17: about $5k in cash; bootstrapped, no outside money.', key=True, unit='$')
+single('cash_floor', 'Minimum cash kept in the bank', 1000, USD,
+       'Launches stop before cash would fall below this. Input.', key=True, unit='$')
+single('buffer_months', 'Months of fixed costs and staff kept in the bank', 4, NUM,
+       'Launches stop unless cash covers the floor, this many months of fixed costs and paid staff, '
+       'and every young town\'s remaining burn until it pays its own way (Monthly sheet).',
+       unit='months')
 row += 1
 header(A, row, 'Fiscal year', YEARS)
 row += 1
-series('equity', 'Equity raised', [10000000, 0, 0, 0, 0], USD,
-       'Plan: $10M in FY2027, the ~$7.7M the every-town plan needs plus a buffer. Adjust to keep cash above zero.', key=True, unit='$')
+series('ai_credit', 'Share of AI cost covered by credits', [1, 0, 0, 0, 0], PCT,
+       'Owner, 2026-10-17: Claude is covered for a year under the Anthropic startup program; '
+       'assumed to cover API use in FY2027. Paid from FY2028.', key=True)
+series('equity', 'Equity raised', [0, 0, 0, 0, 0], USD,
+       'Owner, 2026-10-17: bootstrapped, no outside money. Added in the first month of its year.',
+       key=True, unit='$')
 LAST_A = row
 
 # ----------------------------------------------------------------------------------------------
 # Rollout
-R = wb.create_sheet('Rollout')
-title(R, 'Town rollout', 'Launches by year and live towns, from Assumptions.')
-setw(R, {'A': 46, 'B': 4, 'C': 13, 'D': 13, 'E': 13, 'F': 13, 'G': 13, 'H': 50})
-header(R, 4, 'Fiscal year', YEARS)
-R['A5'] = 'New towns launched'
-for i, c in enumerate(COLS):
-    left = '$C$10' if i == 0 else f'$C$10-{COLS[i-1]}6'
-    R[f'{c}5'] = f'=MAX(0,MIN(ROUND(Assumptions!{c}${REF["launch_cap"]}*{REF["m_launch"]},0),{left}))'
-    R[f'{c}5'].number_format = NUM
-R['H5'] = 'The smaller of the team\'s capacity and the towns left in the pool.'
-R['A10'] = 'Launchable towns (pool)'
-R['C10'] = (f'=ROUND(MIN({REF["addressable"]},{REF["addressable"]}*{REF["ready_share"]}'
-            f'*{REF["name_share"]}*{REF["m_launch"]}),0)')
-R['C10'].number_format = NUM
-R['C10'].font = F_BOLD
-R['H10'] = 'Places of 5,000+ x readiness pass rate x naming rule (x launch multiplier).'
-R['A11'] = 'Pool left at year end'
-for i, c in enumerate(COLS):
-    R[f'{c}11'] = f'=$C$10-{c}6'
-    R[f'{c}11'].number_format = NUM
-R['A6'] = 'Cumulative towns launched'
-R['C6'] = '=C5'
-for i in range(1, 5):
-    R[f'{COLS[i]}6'] = f'={COLS[i-1]}6+{COLS[i]}5'
-R['A7'] = 'Live towns at year end'
-for j in range(5):
-    terms = [f'{COLS[i]}$5*Assumptions!${COLS[j-i]}${REF["survival"]}' for i in range(j + 1)]
-    R[f'{COLS[j]}7'] = '=' + '+'.join(terms)
-R['A8'] = 'Average live towns in year'
-R['C8'] = '=C7/2'
-for i in range(1, 5):
-    R[f'{COLS[i]}8'] = f'=({COLS[i-1]}7+{COLS[i]}7)/2'
-for r in (6, 7, 8):
-    for c in COLS:
-        R[f'{c}{r}'].number_format = NUM
-R['H7'] = 'Launches x share still live at each age.'
-R['H8'] = 'Used for people ratios.'
-for r in range(5, 9):
-    R[f'A{r}'].font = F_BASE
+R = wb.create_sheet('Rollout')  # filled after the Monthly sheet, which drives it
 
 # ----------------------------------------------------------------------------------------------
 # Unit economics (one average town, by age)
@@ -562,15 +557,290 @@ U[f'A{urow+1}'] = ('Note: rows are expected values per launched town (survival-w
 U[f'A{urow+1}'].font = F_NOTE
 
 # ----------------------------------------------------------------------------------------------
-# Cohort helper: network total for year j = sum over launch cohorts i<=j of launches_i x UE[age j-i+1]
-def cohort(ue_row, j):
-    terms = [f"Rollout!${COLS[i]}$5*'Unit Economics'!${COLS[j-i]}${ue_row}" for i in range(j + 1)]
-    return '=' + '+'.join(terms)
+# Monthly cash engine (bootstrapped): each month launches only what last month's cash and people
+# allow, so the bank balance never drops below the floor. Every annual tab sums these months.
+M = wb.create_sheet('Monthly')
+title(M, 'Monthly cash engine (bootstrapped)',
+      'Launches each month are limited by last month\'s cash and by staff the revenue can pay for. '
+      'Founders are unpaid. Every annual tab sums these months.')
+setw(M, {'A': 40, 'B': 8})
+section(M, 4, 'Per launched town, per live month (from Unit Economics)')
+header(M, 5, 'Town age', AGES)
+MH = {}
+mrow = 6
+for key, label, kind in [
+    ('surv', 'Share still live', 'stock'),
+    ('r_feat', 'Featured directory spots', 'flow'), ('r_enh', 'Enhanced listings', 'flow'),
+    ('r_cat', 'Category sponsorships', 'flow'), ('r_nl', 'Newsletter sponsorships', 'flow'),
+    ('r_ban', 'Town sponsor banner', 'flow'), ('r_prog', 'Programmatic display', 'flow'),
+    ('rev', 'Total revenue', 'flow'),
+    ('c_ai', 'AI', 'flow'), ('c_host', 'Hosting, database and data', 'flow'), ('c_email', 'Email sending', 'flow'),
+    ('c_stripe', 'Card processing', 'flow'), ('c_domain', 'Domain renewal', 'flow'),
+    ('c_cac', 'Paid subscriber acquisition', 'flow'),
+    ('subs', 'Newsletter subscribers', 'stock'), ('pv', 'Pageviews', 'flow'),
+    ('paying', 'Paid directory products', 'stock'),
+]:
+    M[f'A{mrow}'] = label
+    for c in COLS:
+        src = f"'Unit Economics'!{c}{UREF[key]}"
+        M[f'{c}{mrow}'] = f'={src}' if kind == 'stock' else f"={src}/(12*'Unit Economics'!{c}{UREF['live_frac']})"
+        M[f'{c}{mrow}'].number_format = PCT if key == 'surv' else USD2
+    MH[key] = mrow
+    mrow += 1
+M[f'A{mrow}'] = 'Age 1 ramp: share of the Age 1 monthly value, by month of life (1-12)'
+for k in range(12):
+    cell = M.cell(row=mrow, column=3 + k, value=round(k / 5.5, 4))
+    cell.font = F_INPUT
+    cell.number_format = '0.00'
+M[f'O{mrow}'] = ('Estimate: revenue and audience start at zero (free trials, no readers yet) and grow '
+                 'evenly through the launch year, averaging the Age 1 value. Costs start in full.')
+M[f'O{mrow}'].font = F_NOTE
+MH['ramp'] = mrow
+mrow += 1
+M[f'A{mrow}'] = 'One-time launch cost'
+M[f'C{mrow}'] = f"='Unit Economics'!C{UREF['launch_cost']}"
+MH['launch_cost'] = mrow
+mrow += 1
+M[f'A{mrow}'] = 'New town cash burn, by month of life (1-12)'
+for k in range(12):
+    rc = get_column_letter(3 + k)
+    M[f'{rc}{mrow}'] = (f'=MAX(0,SUM($C${MH["c_ai"]}:$C${MH["c_host"]})+$C${MH["c_domain"]}+{REF["legal_town"]}/12'
+                        f'+{rc}{MH["ramp"]}*(SUM($C${MH["c_email"]}:$C${MH["c_stripe"]})+$C${MH["c_cac"]}-$C${MH["rev"]})'
+                        + ('' if k == 0 else
+                           f'+({rc}{MH["ramp"]}-{get_column_letter(2 + k)}{MH["ramp"]})*$C${MH["rev"]}*12*{REF["nwc"]}')
+                        + ')')
+    M[f'{rc}{mrow}'].number_format = USD2
+MH['burn'] = mrow
+mrow += 1
+M[f'A{mrow}'] = 'Burn still ahead after month of life (1-12)'
+for k in range(12):
+    rc = get_column_letter(3 + k)
+    M[f'{rc}{mrow}'] = '=0' if k == 11 else f'=SUM({get_column_letter(4 + k)}{MH["burn"]}:N{MH["burn"]})'
+    M[f'{rc}{mrow}'].number_format = USD2
+MH['ahead'] = mrow
+mrow += 1
+M[f'A{mrow}'] = 'Cash set aside per launch'
+M[f'C{mrow}'] = f'=C{MH["launch_cost"]}+SUM(C{MH["burn"]}:N{MH["burn"]})'
+M[f'D{mrow}'] = 'Launch cost plus every month of burn until the new town pays its own way.'
+M[f'D{mrow}'].font = F_NOTE
+MH['per_launch'] = mrow
+M[f'A{mrow + 1}'] = 'Fixed costs a month, FY2027 (platform and fixed insurance)'
+M[f'C{mrow + 1}'] = f'={REF["platform_base"]}+Assumptions!C${REF["legal_fixed"]}/12'
+MH['fixed'] = mrow + 1
+for r in (MH['launch_cost'], MH['per_launch'], MH['fixed']):
+    M[f'C{r}'].number_format = USD2
+    M[f'C{r}'].font = F_BOLD
+mrow += 3
 
+MKEYS = [
+    ('m', 'Month'), ('fy', 'Fiscal year'), ('yi', 'Year index'),
+    ('cap', 'Launch capacity'), ('pool', 'Towns left to launch'), ('reserve', 'Cash held for young towns'),
+    ('avail', 'Cash free for launches'),
+    ('launch', 'Towns launched'), ('cum', 'Cumulative launched'),
+    ('a1', 'Launched, Age 1'), ('r1', 'Age 1, ramp-weighted'), ('a2', 'Launched, Age 2'), ('a3', 'Launched, Age 3'), ('a4', 'Launched, Age 4'),
+    ('a5', 'Launched, Age 5'), ('live', 'Live towns'),
+    ('r_feat', 'Featured spots'), ('r_enh', 'Enhanced'), ('r_cat', 'Category sponsors'), ('r_nl', 'Newsletter'),
+    ('r_ban', 'Banners'), ('r_prog', 'Programmatic'), ('rev', 'Revenue'),
+    ('c_ai', 'AI'), ('c_host', 'Hosting'), ('c_email', 'Email'), ('c_stripe', 'Card fees'),
+    ('c_domain', 'Domain renewals'), ('c_newdom', 'New domains'), ('cogs', 'Cost of revenue'),
+    ('subs', 'Subscribers'), ('pv', 'Pageviews'), ('paying', 'Paid products'),
+    ('n_rev', 'FTE needed: editorial'), ('n_ae', 'FTE needed: partnerships'), ('n_sup', 'FTE needed: support'),
+    ('n_ops', 'FTE needed: launches'), ('n_lead', 'FTE wanted: leadership'), ('n_eng', 'FTE wanted: engineering'),
+    ('n_ga', 'FTE wanted: G&A'), ('n_fte', 'FTE needed, total'),
+    ('k_rev', 'Cost if paid: editorial'), ('k_ae', 'Cost if paid: partnerships'), ('k_sup', 'Cost if paid: support'),
+    ('k_ops', 'Cost if paid: launches'), ('k_lead', 'Cost if paid: leadership'), ('k_eng', 'Cost if paid: engineering'),
+    ('k_ga', 'Cost if paid: G&A'), ('k_cost', 'Cost if all paid'),
+    ('budget', 'Staff budget'), ('paid_ops', 'Paid: town work'), ('f', 'Share of town work paid'),
+    ('paid_c', 'Paid: central hires'), ('fc', 'Share of central hires paid'), ('paid', 'Paid staff cost'),
+    ('paid_fte', 'Paid FTE'), ('unfunded', 'Unfunded town work (FTE)'),
+    ('p_rev', 'Paid: editorial'), ('p_ae', 'Paid: partnerships'), ('p_sup', 'Paid: support'), ('p_ops', 'Paid: launches'),
+    ('p_lead', 'Paid: leadership'), ('p_eng', 'Paid: engineering'), ('p_ga', 'Paid: G&A'),
+    ('launch_mkt', 'Launch marketing and AI'), ('sub_cac', 'Paid subscribers'), ('brand', 'Corporate marketing'),
+    ('legal', 'Legal and insurance'), ('tools', 'Platform, software and tools'), ('opex', 'Operating expenses'),
+    ('ebitda', 'EBITDA'), ('capex', 'Equipment'), ('tax', 'Income tax paid'), ('nwc', 'Working capital'),
+    ('equity', 'Equity raised'), ('flow', 'Net cash flow'), ('close', 'Closing cash'),
+]
+MC = {k: get_column_letter(i + 1) for i, (k, _) in enumerate(MKEYS)}
+T0 = mrow  # header row of the monthly table
+M0 = T0 + 1  # month 1
+MONTHS = 60
+for k, label in MKEYS:
+    cell = M[f'{MC[k]}{T0}']
+    cell.value = label
+    cell.font = F_HEAD
+    cell.fill = FILL_HEAD
+    cell.alignment = Alignment(wrap_text=True, horizontal='right')
+    if k not in ('m', 'fy', 'yi'):
+        M.column_dimensions[MC[k]].width = 13
+M.column_dimensions['A'].width = 40
+ROLE_KEYS = ['rev', 'ae', 'sup', 'ops', 'lead', 'eng', 'ga']
+ROLE_SAL = {'rev': 'sal_rev', 'ae': 'sal_ae', 'sup': 'sal_sup', 'ops': 'sal_rev', 'lead': 'sal_lead',
+            'eng': 'sal_eng', 'ga': 'sal_ga'}
+
+
+def mref(k, r):
+    return f'{MC[k]}{r}'
+
+
+RAMPED = ('r_feat', 'r_enh', 'r_cat', 'r_nl', 'r_ban', 'r_prog', 'c_email', 'c_stripe', 'c_cac', 'subs', 'pv',
+          'paying')
+
+
+def by_age(key, r):
+    """Sum over ages of launched-town counts x the per-month value at that age. Revenue and audience
+    use the ramp-weighted Age 1 count; costs start in full."""
+    first = 'r1' if key in RAMPED else 'a1'
+    terms = [f'{mref(first, r)}*$C${MH[key]}']
+    terms += [f'{mref("a" + str(n + 1), r)}*${COLS[n]}${MH[key]}' for n in range(1, 5)]
+    return '+'.join(terms)
+
+
+def fy_rows(j):
+    return M0 + 12 * j, M0 + 12 * j + 11
+
+
+for i in range(MONTHS):
+    r = M0 + i
+    m = i + 1
+    yi = i // 12
+    p = r - 1
+    f = {}
+    f['m'] = m
+    f['fy'] = int(YEARS[yi])
+    f['yi'] = yi
+    f['cap'] = f'=ROUND(Assumptions!{COLS[yi]}${REF["launch_cap"]}*{REF["m_launch"]}/12,0)'
+    f['pool'] = '=Rollout!$C$10' + ('' if m == 1 else f'-{mref("cum", p)}')
+    prev_close = REF['open_cash'] if m == 1 else mref('close', p)
+    f['reserve'] = '=' + '+'.join(f'{mref("launch", r - k)}*${get_column_letter(3 + k)}${MH["ahead"]}'
+                                  for k in range(min(12, m)))
+    held = '' if m == 1 else f'-{mref("reserve", p)}'
+    fixed = (f'{REF["platform_base"]}+Assumptions!{COLS[yi]}${REF["legal_fixed"]}/12'
+             f'+{("0" if m == 1 else mref("paid", p))}')
+    f['avail'] = f'={prev_close}-{REF["cash_floor"]}{held}-{REF["buffer_months"]}*({fixed})'
+    fit = f'MAX(0,MIN({mref("cap", r)},{mref("pool", r)},INT({mref("avail", r)}/$C${MH["per_launch"]})))'
+    f['launch'] = f'={fit}' if m == 1 else f'=IF({mref("unfunded", p)}>0,0,{fit})'
+    f['cum'] = f'={mref("launch", r)}' if m == 1 else f'={mref("cum", p)}+{mref("launch", r)}'
+    for n in range(5):
+        lo, hi = max(1, m - 12 * (n + 1) + 1), m - 12 * n
+        f[f'a{n + 1}'] = f'=SUM({mref("launch", M0 + lo - 1)}:{mref("launch", M0 + hi - 1)})' if hi >= 1 else '=0'
+    f['r1'] = '=' + '+'.join(f'{mref("launch", r - k)}*${get_column_letter(3 + k)}${MH["ramp"]}'
+                             for k in range(min(12, m)))
+    f['live'] = '=' + by_age('surv', r)
+    for k in ('r_feat', 'r_enh', 'r_cat', 'r_nl', 'r_ban', 'r_prog', 'c_host', 'c_email', 'c_stripe',
+              'c_domain', 'subs', 'pv', 'paying'):
+        f[k] = '=' + by_age(k, r)
+    credit = f'(1-Assumptions!{COLS[yi]}${REF["ai_credit"]})'
+    f['c_ai'] = f'=({by_age("c_ai", r)})*{credit}'
+    f['rev'] = f'=SUM({mref("r_feat", r)}:{mref("r_prog", r)})'
+    f['c_newdom'] = f'={mref("launch", r)}*{REF["launch_domain"]}*{REF["m_cost"]}'
+    f['cogs'] = f'=SUM({mref("c_ai", r)}:{mref("c_newdom", r)})'
+    f['n_rev'] = f'={mref("live", r)}/{REF["per_reviewer"]}'
+    f['n_ae'] = f'={mref("live", r)}/{REF["per_ae"]}'
+    f['n_sup'] = f'={mref("live", r)}/{REF["per_support"]}'
+    f['n_ops'] = f'={mref("launch", r)}/({REF["per_launcher"]}/12)'
+    for k, s in (('lead', 'hc_lead'), ('eng', 'hc_eng'), ('ga', 'hc_ga')):
+        f['n_' + k] = f'=Assumptions!{COLS[yi]}${REF[s]}'
+    f['n_fte'] = f'=SUM({mref("n_rev", r)}:{mref("n_ga", r)})'
+    for k in ROLE_KEYS:
+        f['k_' + k] = f'={mref("n_" + k, r)}*{REF[ROLE_SAL[k]]}*(1+{REF["benefits"]})*(1+{REF["raise"]})^{yi}/12'
+    f['k_cost'] = f'=SUM({mref("k_rev", r)}:{mref("k_ga", r)})'
+    f['budget'] = ('=0' if m == 1 else
+                   f'=MIN({REF["people_share"]}*{mref("rev", p)},MAX(0,{mref("ebitda", p)}+{mref("paid", p)}))')
+    # Town work (editorial, partnerships, support, launches) is paid first, beyond founder time;
+    # central hires (leadership, engineering, G&A) only from what the budget has left.
+    n_town = f'SUM({mref("n_rev", r)}:{mref("n_ops", r)})'
+    k_town = f'SUM({mref("k_rev", r)}:{mref("k_ops", r)})'
+    k_central = f'SUM({mref("k_lead", r)}:{mref("k_ga", r)})'
+    f['paid_ops'] = (f'=IF({n_town}<=0,0,MIN({mref("budget", r)},'
+                     f'{k_town}*MAX(0,1-{REF["founder_fte"]}/{n_town})))')
+    f['f'] = f'=IF({k_town}=0,0,{mref("paid_ops", r)}/{k_town})'
+    f['paid_c'] = f'=MIN({mref("budget", r)}-{mref("paid_ops", r)},{k_central})'
+    f['fc'] = f'=IF({k_central}=0,0,{mref("paid_c", r)}/{k_central})'
+    f['paid'] = f'={mref("paid_ops", r)}+{mref("paid_c", r)}'
+    f['paid_fte'] = (f'={n_town}*{mref("f", r)}'
+                     f'+SUM({mref("n_lead", r)}:{mref("n_ga", r)})*{mref("fc", r)}')
+    f['unfunded'] = f'=MAX(0,{n_town}*(1-{mref("f", r)})-{REF["founder_fte"]})'
+    for k in ROLE_KEYS:
+        share = 'f' if k in ('rev', 'ae', 'sup', 'ops') else 'fc'
+        f['p_' + k] = f'={mref("k_" + k, r)}*{mref(share, r)}'
+    f['launch_mkt'] = (f'={mref("launch", r)}*({REF["launch_mkt"]}+{REF["launch_ai"]}*{credit})'
+                       f'*{REF["m_cost"]}')
+    f['sub_cac'] = '=' + by_age('c_cac', r)
+    f['brand'] = f'={REF["brand_share"]}*{mref("rev", r)}'
+    f['legal'] = f'=Assumptions!{COLS[yi]}${REF["legal_fixed"]}/12+{mref("live", r)}*{REF["legal_town"]}/12'
+    f['tools'] = f'={mref("paid_fte", r)}*{REF["tools"]}/12+{REF["platform_base"]}'
+    f['opex'] = f'=SUM({mref("p_rev", r)}:{mref("tools", r)})'
+    f['ebitda'] = f'={mref("rev", r)}-{mref("cogs", r)}-{mref("opex", r)}'
+    f['capex'] = (f'={mref("paid_fte", r)}*{REF["laptop"]}' if m == 1
+                  else f'=MAX(0,{mref("paid_fte", r)}-{mref("paid_fte", p)})*{REF["laptop"]}')
+    f['tax'] = f"=-'P&L'!{COLS[yi - 1]}@TAX@" if m % 12 == 1 and m > 1 else '=0'
+    f['nwc'] = (f'=-{mref("rev", r)}*12*{REF["nwc"]}' if m == 1
+                else f'=-({mref("rev", r)}-{mref("rev", p)})*12*{REF["nwc"]}')
+    f['equity'] = f'=Assumptions!{COLS[yi]}${REF["equity"]}' if m % 12 == 1 else '=0'
+    f['flow'] = f'={mref("ebitda", r)}-{mref("capex", r)}+{mref("tax", r)}+{mref("nwc", r)}+{mref("equity", r)}'
+    f['close'] = f'={prev_close}+{mref("flow", r)}'
+    for k, _ in MKEYS:
+        cell = M[f'{MC[k]}{r}']
+        cell.value = f[k]
+        if k in ('m', 'fy', 'yi'):
+            cell.number_format = '0'
+        elif k in ('f', 'fc'):
+            cell.number_format = PCT
+        elif k.startswith('n_') or k in ('paid_fte', 'unfunded'):
+            cell.number_format = '0.00'
+        elif k in ('cap', 'pool', 'launch', 'cum', 'live', 'subs', 'pv', 'paying', 'r1') or k[0] == 'a' and k[1:].isdigit():
+            cell.number_format = NUM
+        else:
+            cell.number_format = USD
+    M[f'{MC["close"]}{r}'].font = F_BOLD
+M.freeze_panes = f'D{M0}'
+
+
+def msum(k, j):
+    a_, b_ = fy_rows(j)
+    return f'SUM(Monthly!{MC[k]}{a_}:{MC[k]}{b_})'
+
+
+def mend(k, j):
+    return f'Monthly!{MC[k]}{fy_rows(j)[1]}'
+
+
+# Rollout (annual view of the monthly launches)
+title(R, 'Town rollout', 'Launches by year and live towns, from the Monthly sheet.')
+setw(R, {'A': 46, 'B': 4, 'C': 13, 'D': 13, 'E': 13, 'F': 13, 'G': 13, 'H': 60})
+header(R, 4, 'Fiscal year', YEARS)
+R['A5'] = 'New towns launched'
+R['A6'] = 'Cumulative towns launched'
+R['A7'] = 'Live towns at year end'
+R['A8'] = 'Average live towns in year'
+R['A9'] = 'Launch capacity not used (cash or people)'
+for j, c in enumerate(COLS):
+    R[f'{c}5'] = f'={msum("launch", j)}'
+    R[f'{c}6'] = f'={mend("cum", j)}'
+    R[f'{c}7'] = f'={mend("live", j)}'
+    a_, b_ = fy_rows(j)
+    R[f'{c}8'] = f'=AVERAGE(Monthly!{MC["live"]}{a_}:{MC["live"]}{b_})'
+    R[f'{c}9'] = f'=MAX(0,MIN({msum("cap", j)},$C$10-{c}6+{c}5)-{c}5)'
+    for r in (5, 6, 7, 8, 9):
+        R[f'{c}{r}'].number_format = NUM
+R['H5'] = 'Each month launches what last month\'s cash and people allow (Monthly sheet).'
+R['H9'] = 'Capacity the team has but cash or unpaid work holds back.'
+R['A10'] = 'Launchable towns (pool)'
+R['C10'] = (f'=ROUND(MIN({REF["addressable"]},{REF["addressable"]}*{REF["ready_share"]}'
+            f'*{REF["name_share"]}*{REF["m_launch"]}),0)')
+R['C10'].number_format = NUM
+R['C10'].font = F_BOLD
+R['H10'] = 'Towns over 2,000 people x readiness pass rate x naming rule (x launch multiplier).'
+R['A11'] = 'Pool left at year end'
+for c in COLS:
+    R[f'{c}11'] = f'=$C$10-{c}6'
+    R[f'{c}11'].number_format = NUM
+for r in range(5, 12):
+    R[f'A{r}'].font = F_BASE
 
 # Revenue
 V = wb.create_sheet('Revenue')
-title(V, 'Revenue build ($)', 'Network totals: each year\'s launch cohorts x the per-town values at their age.')
+title(V, 'Revenue build ($)', 'Network totals: the sum of each fiscal year\'s months on the Monthly sheet.')
 setw(V, {'A': 46, 'B': 4, 'C': 14, 'D': 14, 'E': 14, 'F': 14, 'G': 14, 'H': 40})
 header(V, 4, 'Fiscal year', YEARS)
 vrow = 5
@@ -580,7 +850,7 @@ for key, label in [('r_feat', 'Featured directory spots'), ('r_enh', 'Enhanced l
                    ('r_ban', 'Town sponsor banners'), ('r_prog', 'Programmatic display')]:
     V[f'A{vrow}'] = label
     for j, c in enumerate(COLS):
-        V[f'{c}{vrow}'] = cohort(UREF[key], j)
+        V[f'{c}{vrow}'] = f'={msum(key, j)}'
         V[f'{c}{vrow}'].number_format = USD
     VREF[key] = vrow
     vrow += 1
@@ -611,61 +881,55 @@ for key, label in [('r_feat', 'Featured spots'), ('r_enh', 'Enhanced listings'),
 
 # Headcount
 H = wb.create_sheet('Headcount')
-title(H, 'Headcount and people costs', 'Town-driven roles scale with average live towns; '
-      'fixed roles come from Assumptions.')
-setw(H, {'A': 46, 'B': 4, 'C': 14, 'D': 14, 'E': 14, 'F': 14, 'G': 14, 'H': 40})
+title(H, 'Headcount and people costs', 'Founders are unpaid. Work beyond founder time is paid only out of '
+      'revenue (Assumptions: staff budget); the rest is unfunded and holds launches.')
+setw(H, {'A': 46, 'B': 4, 'C': 14, 'D': 14, 'E': 14, 'F': 14, 'G': 14, 'H': 50})
 header(H, 4, 'Fiscal year', YEARS)
 roles = [
-    ('lead', 'Leadership', 'fixed', 'hc_lead', 'sal_lead'),
-    ('eng', 'Engineering and product', 'fixed', 'hc_eng', 'sal_eng'),
-    ('ga', 'Finance, legal and operations', 'fixed', 'hc_ga', 'sal_ga'),
-    ('rev', 'Editorial standards', 'ratio', 'per_reviewer', 'sal_rev'),
-    ('ae', 'Advertiser partnerships', 'ratio', 'per_ae', 'sal_ae'),
-    ('sup', 'Support and success', 'ratio', 'per_support', 'sal_sup'),
-    ('ops', 'Launch operations', 'launch', 'per_launcher', 'sal_rev'),
+    ('lead', 'Leadership (not founders)'),
+    ('eng', 'Engineering and product'),
+    ('ga', 'Finance, legal and operations'),
+    ('rev', 'Editorial standards'),
+    ('ae', 'Advertiser partnerships'),
+    ('sup', 'Support and success'),
+    ('ops', 'Launch operations'),
 ]
-H['A5'] = 'Heads (year end)'
+H['A5'] = 'FTE needed (year end)'
 H['A5'].font = F_BOLD
 hrow = 6
 HREF = {}
-for key, label, kind, drv, sal in roles:
+for key, label in roles:
     H[f'A{hrow}'] = label
-    for c in COLS:
-        if kind == 'fixed':
-            H[f'{c}{hrow}'] = f'=Assumptions!{c}${REF[drv]}'
-            H[f'{c}{hrow}'].font = F_LINK
-        elif kind == 'launch':
-            H[f'{c}{hrow}'] = f'=IF(Rollout!{c}$5=0,0,ROUNDUP(Rollout!{c}$5/{REF[drv]},0))'
-        else:
-            H[f'{c}{hrow}'] = f'=IF(Rollout!{c}$7=0,0,MAX(1,ROUNDUP(Rollout!{c}$7/{REF[drv]},0)))'
-        H[f'{c}{hrow}'].number_format = NUM
+    for j, c in enumerate(COLS):
+        H[f'{c}{hrow}'] = f'={mend("n_" + key, j)}'
+        H[f'{c}{hrow}'].number_format = NUM1
+    HREF['need_' + key] = hrow
+    hrow += 1
+for key, label, src in [('need', 'Total FTE needed', 'n_fte'), ('paid_fte', 'Paid staff (FTE)', 'paid_fte'),
+                        ('unfunded', 'Unfunded town work, FTE (holds launches)', 'unfunded')]:
+    H[f'A{hrow}'] = label
+    H[f'A{hrow}'].font = F_BOLD
+    for j, c in enumerate(COLS):
+        H[f'{c}{hrow}'] = f'={mend(src, j)}'
+        H[f'{c}{hrow}'].number_format = NUM1
+        H[f'{c}{hrow}'].font = F_BOLD
     HREF[key] = hrow
     hrow += 1
-H[f'A{hrow}'] = 'Total heads'
-H[f'A{hrow}'].font = F_BOLD
+H[f'A{hrow}'] = 'Founders\' time (unpaid FTE)'
 for c in COLS:
-    H[f'{c}{hrow}'] = f'=SUM({c}6:{c}{hrow-1})'
-    H[f'{c}{hrow}'].number_format = NUM
-    H[f'{c}{hrow}'].font = F_BOLD
-    H[f'{c}{hrow}'].border = TOP
-HREF['total'] = hrow
-hrow += 1
-H[f'A{hrow}'] = 'New hires'
-for i, c in enumerate(COLS):
-    H[f'{c}{hrow}'] = f'={c}{HREF["total"]}' if i == 0 else f'=MAX(0,{c}{HREF["total"]}-{COLS[i-1]}{HREF["total"]})'
-    H[f'{c}{hrow}'].number_format = NUM
-HREF['hires'] = hrow
+    H[f'{c}{hrow}'] = f'={REF["founder_fte"]}'
+    H[f'{c}{hrow}'].number_format = NUM1
+    H[f'{c}{hrow}'].font = F_LINK
+HREF['founders'] = hrow
+HREF['total'] = HREF['paid_fte']
 hrow += 2
-H[f'A{hrow}'] = 'Fully loaded cost ($, average heads in year)'
+H[f'A{hrow}'] = 'Paid people cost ($)'
 H[f'A{hrow}'].font = F_BOLD
 hrow += 1
-for key, label, kind, drv, sal in roles:
+for key, label in roles:
     H[f'A{hrow}'] = label
-    for i, c in enumerate(COLS):
-        avg = f'{c}{HREF[key]}' if i == 0 else f'({COLS[i-1]}{HREF[key]}+{c}{HREF[key]})/2'
-        if i == 0:
-            avg = f'{c}{HREF[key]}*0.75'  # first year: team builds through the year
-        H[f'{c}{hrow}'] = f'={avg}*{REF[sal]}*(1+{REF["benefits"]})*(1+{REF["raise"]})^{i}'
+    for j, c in enumerate(COLS):
+        H[f'{c}{hrow}'] = f'={msum("p_" + key, j)}'
         H[f'{c}{hrow}'].number_format = USD
     HREF['cost_' + key] = hrow
     hrow += 1
@@ -678,13 +942,13 @@ for c in COLS:
     H[f'{c}{hrow}'].font = F_BOLD
     H[f'{c}{hrow}'].border = TOP
 HREF['cost_total'] = hrow
-H[f'A{hrow+2}'] = ('FY2027 uses 75% of year-end heads (team builds through the year); later years '
-                   'use the average of opening and closing heads.')
+H[f'A{hrow+2}'] = ('Each month, needed work beyond founder time is paid up to the staff budget (a share of '
+                   'last month\'s revenue), split across roles in proportion to their cost.')
 H[f'A{hrow+2}'].font = F_NOTE
 
 # Costs
 C = wb.create_sheet('Costs')
-title(C, 'Costs ($)', 'Direct costs from cohorts; operating costs from Headcount and Assumptions.')
+title(C, 'Costs ($)', 'Sums of the Monthly sheet; people from Headcount.')
 setw(C, {'A': 46, 'B': 4, 'C': 14, 'D': 14, 'E': 14, 'F': 14, 'G': 14, 'H': 40})
 header(C, 4, 'Fiscal year', YEARS)
 crow = 5
@@ -710,12 +974,11 @@ def crow_add(name, label, fn, bold=False, top=False, fmt=USD, font=None):
 
 section(C, crow, 'Cost of revenue')
 crow += 1
-crow_add('ai', 'AI (writing and fact-checking)', lambda c, j: cohort(UREF['c_ai'], j))
-crow_add('host', 'Hosting, database and data', lambda c, j: cohort(UREF['c_host'], j))
-crow_add('email', 'Email sending', lambda c, j: cohort(UREF['c_email'], j))
-crow_add('stripe', 'Card processing', lambda c, j: cohort(UREF['c_stripe'], j))
-crow_add('domain', 'Domains (renewals and new)',
-         lambda c, j: cohort(UREF['c_domain'], j) + f'+Rollout!{c}5*{REF["launch_domain"]}*{REF["m_cost"]}')
+crow_add('ai', 'AI (writing and fact-checking)', lambda c, j: f'={msum("c_ai", j)}')
+crow_add('host', 'Hosting, database and data', lambda c, j: f'={msum("c_host", j)}')
+crow_add('email', 'Email sending', lambda c, j: f'={msum("c_email", j)}')
+crow_add('stripe', 'Card processing', lambda c, j: f'={msum("c_stripe", j)}')
+crow_add('domain', 'Domains (renewals and new)', lambda c, j: f'={msum("c_domain", j)}+{msum("c_newdom", j)}')
 crow_add('cogs', 'Total cost of revenue', lambda c, j: f'=SUM({c}{CREF["ai"]}:{c}{CREF["domain"]})', bold=True,
          top=True)
 crow += 1
@@ -724,20 +987,18 @@ crow += 1
 crow_add('p_editorial', 'Editorial standards (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_rev"]}', font=F_LINK)
 crow_add('p_sales', 'Advertiser partnerships (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_ae"]}', font=F_LINK)
 crow_add('commission', 'Sales commission',
-         lambda c, j: '=(' + cohort(UREF['rev_direct'], j)[1:] + f')*{REF["commission"]}')
+         lambda c, j: f'=(Revenue!{c}{VREF["r_cat"]}+Revenue!{c}{VREF["r_nl"]}+Revenue!{c}{VREF["r_ban"]})*{REF["commission"]}')
 crow_add('p_support', 'Support and success (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_sup"]}', font=F_LINK)
 crow_add('p_ops', 'Launch operations (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_ops"]}', font=F_LINK)
-crow_add('launch_mkt', 'Launch marketing and launch AI',
-         lambda c, j: f'=Rollout!{c}5*({REF["launch_mkt"]}+{REF["launch_ai"]})*{REF["m_cost"]}')
-crow_add('sub_cac', 'Paid subscriber acquisition', lambda c, j: cohort(UREF['c_cac'], j))
-crow_add('brand', 'Corporate marketing', lambda c, j: f'=Assumptions!{c}${REF["brand_mkt"]}', font=F_LINK)
+crow_add('launch_mkt', 'Launch marketing and launch AI', lambda c, j: f'={msum("launch_mkt", j)}')
+crow_add('sub_cac', 'Paid subscriber acquisition', lambda c, j: f'={msum("sub_cac", j)}')
+crow_add('brand', 'Corporate marketing', lambda c, j: f'={msum("brand", j)}')
 crow_add('p_eng', 'Engineering and product (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_eng"]}', font=F_LINK)
-crow_add('p_lead', 'Leadership (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_lead"]}', font=F_LINK)
+crow_add('p_lead', 'Leadership (people, not founders)', lambda c, j: f'=Headcount!{c}{HREF["cost_lead"]}', font=F_LINK)
 crow_add('p_ga', 'Finance, legal and operations (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_ga"]}',
          font=F_LINK)
-crow_add('legal', 'Legal and media liability insurance',
-         lambda c, j: f'=Assumptions!{c}${REF["legal_fixed"]}+Rollout!{c}8*{REF["legal_town"]}')
-crow_add('tools', 'Software and tools', lambda c, j: f'=Headcount!{c}{HREF["total"]}*{REF["tools"]}')
+crow_add('legal', 'Legal and media liability insurance', lambda c, j: f'={msum("legal", j)}')
+crow_add('tools', 'Platform, software and tools', lambda c, j: f'={msum("tools", j)}')
 crow_add('opex', 'Total operating expenses', lambda c, j: f'=SUM({c}{CREF["p_editorial"]}:{c}{CREF["tools"]})',
          bold=True, top=True)
 
@@ -786,7 +1047,7 @@ prow += 1
 prow_add('ebitda', 'EBITDA', lambda c, j: f'={c}{PREF["gp"]}-{c}{PREF["opex"]}', bold=True)
 prow_add('ebitda_m', 'EBITDA margin',
          lambda c, j: f'=IF({c}{PREF["rev"]}=0,0,{c}{PREF["ebitda"]}/{c}{PREF["rev"]})', fmt=PCT)
-prow_add('capex', 'Capital expenditure (memo)', lambda c, j: f'=Headcount!{c}{HREF["hires"]}*{REF["laptop"]}')
+prow_add('capex', 'Capital expenditure (memo)', lambda c, j: f'={msum("capex", j)}')
 prow_add('da', 'Depreciation',
          lambda c, j: '=(' + '+'.join(f'{COLS[k]}{prow-1}' for k in range(j + 1)) + f')/{REF["dep_years"]}'
          if j < 3 else '=(' + '+'.join(f'{COLS[k]}{prow-1}' for k in range(j - 2, j + 1)) + f')/{REF["dep_years"]}')
@@ -799,11 +1060,17 @@ prow_add('nol_close', 'Tax losses available, closing',
          lambda c, j: f'=MAX(0,{c}{PREF["nol_open"]}-MAX(0,{c}{PREF["ebit"]}))+MAX(0,-{c}{PREF["ebit"]})')
 prow_add('tax', 'Income tax', lambda c, j: f'={c}{PREF["taxable"]}*{REF["tax"]}')
 prow_add('ni', 'Net income', lambda c, j: f'={c}{PREF["ebit"]}-{c}{PREF["tax"]}', bold=True, top=True)
+P[f'A{prow+1}'] = 'Income tax is paid in the first month of the next fiscal year (Monthly sheet).'
+P[f'A{prow+1}'].font = F_NOTE
+for i in range(MONTHS):
+    cell = M[f'{MC["tax"]}{M0 + i}']
+    cell.value = cell.value.replace('@TAX@', str(PREF['tax']))
 
 # Cash flow
 CF = wb.create_sheet('Cash Flow')
-title(CF, 'Cash flow and funding ($)', 'Simplified: EBITDA less tax, capex and working capital, plus equity raised.')
-setw(CF, {'A': 46, 'B': 4, 'C': 14, 'D': 14, 'E': 14, 'F': 14, 'G': 14, 'H': 40})
+title(CF, 'Cash flow and funding ($)', 'Bootstrapped: sums of the Monthly sheet, no outside money unless '
+      'Assumptions adds equity.')
+setw(CF, {'A': 46, 'B': 4, 'C': 14, 'D': 14, 'E': 14, 'F': 14, 'G': 14, 'H': 50})
 header(CF, 4, 'Fiscal year', YEARS)
 CF['A5'] = 'EBITDA'
 CF['A6'] = 'Income tax paid'
@@ -814,39 +1081,41 @@ CF['A10'] = 'Equity raised'
 CF['A11'] = 'Net change in cash'
 CF['A12'] = 'Opening cash'
 CF['A13'] = 'Closing cash'
-CF['A14'] = 'Cash below zero? (1 = yes: raise more or cut)'
+CF['A14'] = 'Cash below zero in any month? (1 = yes: fix the plan)'
 for j, c in enumerate(COLS):
     prev = COLS[j - 1] if j else None
+    a_, b_ = fy_rows(j)
     CF[f'{c}5'] = f"='P&L'!{c}{PREF['ebitda']}"
-    CF[f'{c}6'] = f"=-'P&L'!{c}{PREF['tax']}"
+    CF[f'{c}6'] = f'={msum("tax", j)}'
     CF[f'{c}7'] = f"=-'P&L'!{c}{PREF['capex']}"
-    CF[f'{c}8'] = (f"=-'P&L'!{c}{PREF['rev']}*{REF['nwc']}" if j == 0
-                   else f"=-('P&L'!{c}{PREF['rev']}-'P&L'!{prev}{PREF['rev']})*{REF['nwc']}")
+    CF[f'{c}8'] = f'={msum("nwc", j)}'
     CF[f'{c}9'] = f'=SUM({c}5:{c}8)'
-    CF[f'{c}10'] = f'=Assumptions!{c}${REF["equity"]}'
+    CF[f'{c}10'] = f'={msum("equity", j)}'
     CF[f'{c}11'] = f'={c}9+{c}10'
     CF[f'{c}12'] = f'={REF["open_cash"]}' if j == 0 else f'={prev}13'
     CF[f'{c}13'] = f'={c}12+{c}11'
-    CF[f'{c}14'] = f'=IF({c}13<0,1,0)'
+    CF[f'{c}14'] = f'=IF(MIN(Monthly!{MC["close"]}{a_}:{MC["close"]}{b_})<0,1,0)'
     for r in range(5, 14):
         CF[f'{c}{r}'].number_format = USD
     CF[f'{c}14'].number_format = '0'
-    for r in (5, 6, 7, 10):
+    for r in (5, 7):
         CF[f'{c}{r}'].font = F_LINK
     for r in (9, 13):
         CF[f'{c}{r}'].font = F_BOLD
         CF[f'{c}{r}'].border = TOP
 for r in (9, 13):
     CF[f'A{r}'].font = F_BOLD
-CF['A16'] = 'Lowest closing cash, FY2027-FY2031'
-CF['C16'] = '=MIN(C13:G13)'
+CF['A16'] = 'Lowest month-end cash, FY2027-FY2031'
+CF['C16'] = f'=MIN(Monthly!{MC["close"]}{M0}:{MC["close"]}{M0 + MONTHS - 1})'
 CF['C16'].number_format = USD
 CF['C16'].font = F_BOLD
+CF['H16'] = 'Must stay at or above the cash floor in Assumptions.'
+CF['H16'].font = F_NOTE
 CF['A17'] = 'Cumulative free cash flow before turning positive (funding need)'
 CF['C17'] = '=-MIN(0,C9,C9+D9,C9+D9+E9,C9+D9+E9+F9,C9+D9+E9+F9+G9)'
 CF['C17'].number_format = USD
 CF['C17'].font = F_BOLD
-CF['H17'] = 'Deepest point of cumulative free cash flow: the equity the plan needs, before any buffer.'
+CF['H17'] = 'Deepest point of cumulative yearly free cash flow; bootstrapped, opening cash covers it.'
 CF['H17'].font = F_NOTE
 
 # KPIs
@@ -875,11 +1144,12 @@ section(K, krow, 'Footprint and audience')
 krow += 1
 krow_add('launch', 'Towns launched in year', lambda c, j: f'=Rollout!{c}5', NUM)
 krow_add('live', 'Live towns at year end', lambda c, j: f'=Rollout!{c}7', NUM)
-krow_add('subs', 'Newsletter subscribers (year end)', lambda c, j: cohort(UREF['subs'], j), NUM)
-krow_add('pv', 'Pageviews in year', lambda c, j: cohort(UREF['pv'], j), NUM)
+krow_add('subs', 'Newsletter subscribers (year end)', lambda c, j: f'={mend("subs", j)}', NUM)
+krow_add('pv', 'Pageviews in year', lambda c, j: f'={msum("pv", j)}', NUM)
 section(K, krow, 'Customers')
 krow += 1
-krow_add('paying', 'Paid directory products (average in year)', lambda c, j: cohort(UREF['paying'], j), NUM)
+krow_add('paying', 'Paid directory products (average in year)',
+         lambda c, j: f'={msum("paying", j)}/12', NUM)
 krow_add('arpb', 'Directory revenue per paid product per month ($)',
          lambda c, j: f'=IF({c}{KREF["paying"]}=0,0,(Revenue!{c}{VREF["r_feat"]}+Revenue!{c}{VREF["r_enh"]}+Revenue!{c}{VREF["r_cat"]})/{c}{KREF["paying"]}/12)',
          USD2)
@@ -892,12 +1162,16 @@ krow_add('gm', 'Gross margin', lambda c, j: f"='P&L'!{c}{PREF['gm']}", PCT)
 krow_add('ebitda', 'EBITDA ($)', lambda c, j: f"='P&L'!{c}{PREF['ebitda']}", USD)
 krow_add('ebitda_m', 'EBITDA margin', lambda c, j: f"='P&L'!{c}{PREF['ebitda_m']}", PCT)
 krow_add('cash', 'Closing cash ($)', lambda c, j: f"='Cash Flow'!{c}13", USD)
+krow_add('low_cash', 'Lowest month-end cash in year ($)',
+         lambda c, j: f'=MIN(Monthly!{MC["close"]}{fy_rows(j)[0]}:{MC["close"]}{fy_rows(j)[1]})', USD)
+krow_add('paid_fte', 'Paid staff at year end (FTE)', lambda c, j: f'=Headcount!{c}{HREF["paid_fte"]}', NUM1,
+         'Founders are unpaid and not counted.')
 krow_add('ai_rev', 'AI cost as % of revenue',
          lambda c, j: f"=IF('P&L'!{c}{PREF['rev']}=0,0,Costs!{c}{CREF['ai']}/'P&L'!{c}{PREF['rev']})", PCT,
          'CLAUDE.md §8 asks for an alert when AI cost per article jumps; this tracks the overall share.')
 krow_add('central', 'Central costs (engineering, leadership, G&A, brand, fixed legal, tools) ($)',
          lambda c, j: f"=Costs!{c}{CREF['p_eng']}+Costs!{c}{CREF['p_lead']}+Costs!{c}{CREF['p_ga']}+Costs!{c}{CREF['brand']}+Assumptions!{c}${REF['legal_fixed']}+Costs!{c}{CREF['tools']}",
-         USD)
+         USD, 'Bootstrapped: the people here are paid only once revenue covers them.')
 krow_add('runrate', 'Run-rate EBITDA if every live town were mature ($)',
          lambda c, j: f"=Rollout!{c}7/'Unit Economics'!$G${UREF['surv']}*'Unit Economics'!$G${UREF['contrib']}-{c}{KREF['central']}",
          USD, 'Live towns x Age 5 contribution per surviving town, less central costs: the profit the '
@@ -962,6 +1236,8 @@ summary = [
     ('EBITDA margin', f"'P&L'!{{c}}{PREF['ebitda_m']}", PCT),
     ('Net income ($)', f"'P&L'!{{c}}{PREF['ni']}", USD),
     ('Closing cash ($)', "'Cash Flow'!{c}13", USD),
+    ('Lowest month-end cash ($)', f'KPIs!{{c}}{KREF["low_cash"]}', USD),
+    ('Paid staff at year end (FTE; founders unpaid)', f'KPIs!{{c}}{KREF["paid_fte"]}', NUM1),
     ('Run-rate EBITDA at maturity ($)', f'KPIs!{{c}}{KREF["runrate"]}', USD),
 ]
 for k, (label, ref, fmt) in enumerate(summary):
@@ -978,8 +1254,11 @@ notes = [
     'Change inputs only on the Assumptions tab: blue text is an input, yellow fill a key assumption.',
     'Switch scenarios with Assumptions "Active scenario" (1 Downside, 2 Base, 3 Upside).',
     'Black text is a formula; green text links to another tab. Don\'t overwrite formulas.',
-    'Unit Economics shows one average town by age (Age 1 = launch year). Revenue and Costs add up each '
-    'year\'s launch cohorts at their age.',
+    'Bootstrapped (owner, 2026-10-17): about $5k of opening cash, no outside money, founders unpaid. The '
+    'Monthly sheet launches each month only what last month\'s cash allows (keeping the cash floor and a '
+    'buffer) and only while no needed work is unfunded; staff are paid out of revenue.',
+    'Unit Economics shows one average town by age (Age 1 = launch year). The Monthly sheet multiplies it '
+    'by the towns launched in each month; Revenue, Costs and Cash Flow sum the months.',
     'Prices, story budgets, AI caps and directory counts come from the TownCore repo (CLAUDE.md and town '
     'config); everything marked "Estimate" in Assumptions column H is a planning assumption to validate.',
     'Not modeled: programmatic consent costs, a licensed sports-data feed (not yet bought), office space, '

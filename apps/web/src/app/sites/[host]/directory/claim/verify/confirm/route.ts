@@ -11,6 +11,8 @@ export async function POST(request: Request, { params }: Ctx) {
   const result = await verifyClaim(db(), town.id, String(form?.get('t') ?? ''));
   return new Response(null, {
     status: 303,
-    headers: { Location: `/directory/claim/verify?s=${result.status}` },
+    headers: {
+      Location: `/directory/claim/verify?s=${result.status}${result.status === 'pending' && result.category ? `&c=${encodeURIComponent(result.category)}` : ''}`,
+    },
   });
 }

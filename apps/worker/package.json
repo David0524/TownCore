@@ -21,11 +21,14 @@
     "@towncore/db": "workspace:*",
     "@towncore/directory": "workspace:*",
     "@towncore/email": "workspace:*",
+    "@towncore/launcher": "workspace:*",
     "@towncore/mail": "workspace:*",
     "@towncore/photos": "workspace:*",
     "@towncore/pipeline": "workspace:*",
     "pg-boss": "^12.38.0",
-    "pino": "^10.4.0"
+    "pino": "^10.4.0",
+    "playwright-core": "1.64.1",
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "pino-pretty": "^13.2.0",

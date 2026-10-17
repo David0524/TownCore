@@ -43,22 +43,25 @@ By our tiers:
 
 ## The plan
 
-- **Pace:** about 250 launches a month (3,000 a year) until every town is live, in FY2029.
-- **Readiness:** the owner's view is that every town in America can make 3 real items a day and that Rule 7 is a target, not a gate, so the base case counts every town. The launcher code still stops a launch below the bar; turning that into a target is a Section 2 change waiting on the owner's explicit go-ahead.
-- **Sales:** advertisers sign up and pay on the site, with no commission. A small partnerships team (1 person per 1,000 towns) handles regional and multi-town advertisers.
+**Bootstrapped (owner, 2026-10-17):** about $5k of cash, no outside money, and founders take no salary at any point. Cash sets the pace, not launch capacity. The LRP's Monthly sheet launches each month only what last month's cash allows: it keeps a $1,000 floor and 4 months of fixed costs and paid staff, and it holds each young town's remaining burn until that town pays its own way (about $25 to launch: the domain, plus API discovery once it's paid; about $70 with the first months' costs). It also launches nothing while needed town work is unpaid. Staff are hired out of revenue: needed work beyond 2 FTE of founder time is paid up to 40% of last month's revenue, never more than last month's profit before staff. There is no paid launch seeding or paid subscriber acquisition.
+
+**Costs (owner, 2026-10-17):** Boca launched on the Claude plan, a domain, Amazon and minor expenses. Claude is covered for a year by the Anthropic startup program, so AI costs nothing in FY2027 (assumed to cover API use). Every town runs on one Vercel app, one worker and one database, so a town adds about $2 a month of hosting; the shared plans are a fixed ~$75 a month (Vercel Pro, Railway, SES and AWS, small subscriptions; estimates until replaced with the bills). AI from FY2028 is $0.15 a story plus $0.05 a day of overhead (`pnpm ai:plan` puts Boca at about $0.05 a day today).
+
+- **Readiness:** the owner's view is that every town in America can make 3 real items a day and that Rule 7 is a target, not a gate, so the base case counts every town.
+- **Sales:** advertisers sign up and pay on the site, with no commission. A small partnerships team (1 person per 1,000 towns) handles regional and multi-town advertisers once revenue pays for it.
 - **Review:** article review becomes an AI agent (about $0.03 a story, inside the $0.15 AI cost per story). A small editorial standards team (1 per 1,000 towns) audits the agent and handles corrections. Until the agent ships, Tier 3 stories still need a person (Rule 5).
-- **Town economics:** a mature average town makes about $18k a year and contributes about $16k after its own costs, paying back in year 2.
+- **Town economics:** a mature average town makes about $18k a year and contributes about $16k after its own costs. A new town's revenue starts at zero and ramps through its first year (free trials, no audience yet).
 
-| Towns reaching the target | Towns | FY2031 revenue | FY2031 EBITDA | Run-rate EBITDA | Equity needed |
+| Fiscal year | 2027 | 2028 | 2029 | 2030 | 2031 |
 | --- | --- | --- | --- | --- | --- |
-| 25% | 2,108 | $37.8M | $28.0M | $28.4M | $5.9M |
-| 50% | 4,217 | $72.0M | $58.0M | $62.6M | $7.7M |
-| 75% | 6,325 | $102.3M | $84.1M | $97.0M | $7.7M |
-| **100% (base: every town)** | **8,433** | **$125.6M** | **$103.1M** | **$131.7M** | **$7.7M** |
+| Live towns (year end) | 476 | 1,357 | 3,570 | 6,230 | 8,151 |
+| Revenue | $158k | $1.69M | $7.21M | $21.4M | $48.0M |
+| EBITDA | $71k | $696k | $3.38M | $12.5M | $34.0M |
+| Lowest month-end cash | $3.1k | $55k | $560k | $3.1M | $13.1M |
+| Paid staff (FTE, year end) | 2.0 | 13.0 | 45.4 | 75.9 | 92.2 |
 
-**Base case:**
-- EBITDA is positive from FY2028.
-- A $10M raise in FY2027 covers the $7.7M low point with a buffer.
-- People: about 107 at the peak, mostly support (1 per 120 towns), with 8 on launch operations.
+- Cash never goes below zero; the low point is about $3,100, in month 2 of FY2027.
+- **Downside scenario** (launches x0.6, audience x0.7, monetization x0.7, unit costs x1.2): about 306 live towns at the end of FY2027 and 4,898 in FY2031, with $16.0M of revenue that year.
+- The earlier plan (3,000 launches a year, $1,500 of paid seeding a launch, 45 hires in FY2027 and a $10M raise) is replaced.
 
-**What the model is light on:** advertiser acquisition. Self-serve sales rely on the house ads and the $50k–700k a year of corporate marketing. If businesses don't sign up on their own, the fill rates in Assumptions (featured spots, Enhanced, newsletter and banner sell-through) are the numbers that drop.
+**What the model is light on:** revenue per town. Boca has no paying customers yet (Stripe is in test mode), so the Age 1 fill and conversion rates in Assumptions are estimates, and the bootstrapped pace depends on them almost entirely: with costs this low, people (founder time and the support staff revenue pays for) and revenue per town now set the pace more than cash does. Measure them on the first cohorts and replace the estimates.

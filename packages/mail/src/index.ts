@@ -6,15 +6,13 @@ export {
   MAIL_LEAD_DAYS,
   missingForOnboarding,
   needsOnboarding,
-  offlineProviders,
   ONBOARD_GRACE_MS,
   onboardBoughtDomain,
   onboardBy,
-  providersFromEnv,
   type BoughtDomain,
   type MailStart,
-  type Providers,
 } from './bought';
+export { offlineProviders, providersFromEnv, type Providers } from './providers';
 export {
   desiredRecords,
   MAIL_FROM_LABEL,
@@ -53,6 +51,8 @@ export {
   type StepState,
 } from './onboarding';
 export { dryRunStore, pgOnboardingStore } from './pg-store';
+export { onboardLaunchDomain } from './launch-onboard';
+export { realProviders } from './cli/onboard';
 export { RetryableError, withRetry, type RetryOptions } from './retry';
 export { routeRecipient, type Route, type RoutingInput } from './routing';
 export {

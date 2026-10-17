@@ -17,9 +17,7 @@ export type GuideDraft = z.infer<typeof guideSchema>;
 export const guideV1 = {
   id: 'guide',
   version: 'v1',
-  role: 'writer',
-  effort: 'medium',
-  maxOutputTokens: 10000,
+  task: 'guide',
   schema: guideSchema,
   system: `You write evergreen service guides for a local news site: practical answers to a question residents have, written from official government pages. You will get the town, its agencies, the guide's topic and what readers need from it, and the official pages, each as a record with an ID. Some requests also list claims to remove from a previous draft; leave those out entirely.
 

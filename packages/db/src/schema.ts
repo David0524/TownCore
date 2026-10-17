@@ -6,6 +6,8 @@ import {
   type EntityKind,
   type ImageKind,
   type ImageSpec,
+  type TropicsBasin,
+  type TropicsSnapshot,
   type WeatherSnapshot,
 } from '@towncore/config';
 import { sql } from 'drizzle-orm';
@@ -628,6 +630,16 @@ export const townWeather = pgTable('town_weather', {
   lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }).notNull(),
 });
 
+// The tropics panel (packages/config/src/tropics.ts): the National Hurricane Center's latest
+// storms and outlook per basin, shared by every town and refreshed hourly by the worker.
+export const tropics = pgTable('tropics', {
+  basin: text('basin').$type<TropicsBasin>().primaryKey(),
+  snapshot: jsonb('snapshot').$type<TropicsSnapshot>(),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }).notNull(),
+});
+
 // First-party, cookieless engagement counters per article and day (D-M4-3). No cookies, no IP
 // addresses, no user identifiers: only counts.
 export const articleStatsDaily = pgTable(
@@ -1030,7 +1042,9 @@ export const businessFollowups = pgTable(
       .notNull()
       .references(() => businesses.id, { onDelete: 'cascade' }),
     kind: text('kind')
-      .$type<'trial_ending' | 'competitor_spot' | 'story_mention' | 'nearby_claim'>()
+      .$type<
+        'trial_ending' | 'competitor_spot' | 'story_mention' | 'nearby_claim' | 'waitlist_open'
+      >()
       .notNull(),
     dedupeKey: text('dedupe_key').notNull(),
     toEmail: text('to_email').notNull(),
@@ -1051,9 +1065,160 @@ export const businessFollowups = pgTable(
     index('business_followups_business_idx').on(t.businessId, t.decidedAt),
     check(
       'business_followups_kind',
-      sql`${t.kind} in ('trial_ending', 'competitor_spot', 'story_mention', 'nearby_claim')`,
+      sql`${t.kind} in ('trial_ending', 'competitor_spot', 'story_mention', 'nearby_claim', 'waitlist_open')`,
     ),
     check('business_followups_status', sql`${t.status} in ('draft', 'sent', 'skipped')`),
+  ],
+);
+
+// Directory prices (owner, 2026-10-17): the current price of a category product in a town, one
+// for everyone. No row means the town's list price (its tier's, or its YAML's). Changed only by
+// the monthly recalculation inside its guardrails, an approved proposal, or an admin override;
+// existing subscriptions keep the Stripe Price they were sold at (grandfathered).
+export const directoryPrices = pgTable(
+  'directory_prices',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    category: text('category').notNull(),
+    product: placementProduct('product').notNull(),
+    /** The featured spot (1–3), or null for an unranked product. */
+    rank: smallint('rank'),
+    amountCents: integer('amount_cents').notNull(),
+    setBy: text('set_by').$type<'monthly' | 'approved' | 'override'>().notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique('directory_prices_key_uq')
+      .on(t.townId, t.category, t.product, t.rank)
+      .nullsNotDistinct(),
+    check('directory_prices_amount', sql`${t.amountCents} >= 100`),
+    check('directory_prices_rank', sql`${t.rank} is null or ${t.rank} between 1 and 3`),
+  ],
+);
+
+// Every price change and proposal, with the aggregate inputs that produced it (fill rate,
+// waitlist, delivered value, interest). `monthly` rows are one per key and month; a `proposed`
+// one waits for an admin in Admin → Directory → Pricing. Overrides are logged here and audited.
+export const priceChanges = pgTable(
+  'price_changes',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    category: text('category').notNull(),
+    product: placementProduct('product').notNull(),
+    rank: smallint('rank'),
+    /** The month the recalculation ran for (YYYY-MM). */
+    month: text('month').notNull(),
+    kind: text('kind').$type<'monthly' | 'override'>().notNull(),
+    oldCents: integer('old_cents').notNull(),
+    newCents: integer('new_cents').notNull(),
+    status: text('status')
+      .$type<'applied' | 'proposed' | 'approved' | 'rejected' | 'expired'>()
+      .notNull(),
+    reason: text('reason').notNull(),
+    inputs: jsonb('inputs').notNull(),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('price_changes_monthly_uq')
+      .on(t.townId, t.category, t.product, sql`coalesce(${t.rank}, 0)`, t.month)
+      .where(sql`${t.kind} = 'monthly'`),
+    index('price_changes_town_created_idx').on(t.townId, t.createdAt),
+    index('price_changes_status_idx').on(t.status),
+    check('price_changes_kind', sql`${t.kind} in ('monthly', 'override')`),
+    check(
+      'price_changes_status',
+      sql`${t.status} in ('applied', 'proposed', 'approved', 'rejected', 'expired')`,
+    ),
+  ],
+);
+
+// One recalculation per town and month, so a re-run never moves a price twice.
+export const pricingRuns = pgTable(
+  'pricing_runs',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    month: text('month').notNull(),
+    variant: text('variant').notNull(),
+    evaluated: integer('evaluated').notNull().default(0),
+    changed: integer('changed').notNull().default(0),
+    proposed: integer('proposed').notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('pricing_runs_town_month_uq').on(t.townId, t.month)],
+);
+
+// Featured-spot waitlist (owner, 2026-10-17): when every spot in a category is sold, a business
+// can ask to hear when one opens. Joined with consent (the form's checkbox, or the owner's own
+// button). When a spot frees up, waiting entries tied to a claimed listing get a `waitlist_open`
+// follow-up through the usual drafts and standing approval (Rule 10); the count feeds pricing.
+export const directoryWaitlist = pgTable(
+  'directory_waitlist',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    category: text('category').notNull(),
+    businessId: uuid('business_id').references(() => businesses.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    consentAt: timestamp('consent_at', { withTimezone: true }).notNull(),
+    /** Where they joined: the category page, the advertise page or the owner page. */
+    source: text('source').$type<'category' | 'advertise' | 'owner'>().notNull(),
+    status: text('status').$type<'waiting' | 'notified' | 'removed'>().notNull().default('waiting'),
+    notifiedAt: timestamp('notified_at', { withTimezone: true }),
+    /** For the rate limit only. */
+    ip: text('ip'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('directory_waitlist_waiting_uq')
+      .on(t.townId, t.category, sql`lower(${t.email})`)
+      .where(sql`${t.status} = 'waiting'`),
+    index('directory_waitlist_ip_idx').on(t.ip, t.createdAt),
+    check('directory_waitlist_status', sql`${t.status} in ('waiting', 'notified', 'removed')`),
+    check('directory_waitlist_source', sql`${t.source} in ('category', 'advertise', 'owner')`),
+  ],
+);
+
+// Owner testimonials (owner, 2026-10-17): written by an owner who advertised, with explicit
+// permission to show it, and shown on /advertise only after staff approve it (audited).
+export const businessTestimonials = pgTable(
+  'business_testimonials',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    quote: text('quote').notNull(),
+    /** How it's credited on the page: the business name. */
+    attribution: text('attribution').notNull(),
+    permissionAt: timestamp('permission_at', { withTimezone: true }).notNull(),
+    status: text('status')
+      .$type<'pending' | 'approved' | 'rejected'>()
+      .notNull()
+      .default('pending'),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('business_testimonials_town_status_idx').on(t.townId, t.status),
+    check('business_testimonials_status', sql`${t.status} in ('pending', 'approved', 'rejected')`),
   ],
 );
 
@@ -1135,14 +1300,57 @@ export const aiUsage = pgTable(
     inputTokens: integer('input_tokens').notNull(),
     outputTokens: integer('output_tokens').notNull(),
     cacheReadTokens: integer('cache_read_tokens').notNull().default(0),
+    // Prompt-cache writes, billed at 1.25x input (owner, 2026-10-17: log cache hits).
+    cacheWriteTokens: integer('cache_write_tokens').notNull().default(0),
     estCostUsd: numeric('est_cost_usd', { precision: 10, scale: 6 }).notNull(),
     provider: text('provider'),
     promptVersion: text('prompt_version'),
     // ok | refused | invalid (output failed its schema) | error (no usable response)
     outcome: text('outcome').notNull().default('ok'),
+    // The routing table's task (packages/config/src/models.ts); null on rows from before it.
+    task: text('task'),
+    // A retry on a bigger model after low confidence or invalid output.
+    escalated: boolean('escalated').notNull().default(false),
+    // Served through the Message Batches API (half price).
+    batch: boolean('batch').notNull().default(false),
     createdAt: createdAt(),
   },
-  (t) => [index('ai_usage_town_created_idx').on(t.townId, t.createdAt)],
+  (t) => [
+    index('ai_usage_town_created_idx').on(t.townId, t.createdAt),
+    index('ai_usage_task_created_idx').on(t.task, t.createdAt),
+  ],
+);
+
+// Model requests by idempotency key (owner, 2026-10-17: "never resend a call that already
+// succeeded"). A successful answer is kept, so the same request (same task, prompt and input)
+// returns it without a model call; batched requests wait here until the worker submits them
+// and collects their answers.
+export const aiRequests = pgTable(
+  'ai_requests',
+  {
+    id: id(),
+    key: text('key').notNull(),
+    townId: uuid('town_id').references(() => towns.id),
+    task: text('task').notNull(),
+    job: text('job').notNull(),
+    provider: text('provider').notNull(),
+    model: text('model').notNull(),
+    // queued (batch, not sent) | submitted (in a batch) | succeeded | failed
+    status: text('status').notNull(),
+    batchId: text('batch_id'),
+    /** The provider request, kept for batch submission. */
+    request: jsonb('request'),
+    /** The provider response once answered. */
+    response: jsonb('response'),
+    error: text('error'),
+    createdAt: createdAt(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('ai_requests_key_idx').on(t.key),
+    index('ai_requests_status_idx').on(t.status, t.createdAt),
+    check('ai_requests_status', sql`${t.status} in ('queued', 'submitted', 'succeeded', 'failed')`),
+  ],
 );
 
 // One row per ingest run of a source (CLAUDE.md §6 ingest; health and M8 dashboards).
@@ -2191,4 +2399,263 @@ export const pollVotes = pgTable(
     uniqueIndex('poll_votes_poll_voter_uq').on(t.pollId, t.voterHash),
     check('poll_votes_option', sql`${t.option} between 0 and 3`),
   ],
+);
+
+// ---------------------------------------------------------------------------------------------
+// Agentic operations (owner, 2026-10-17, "Connected systems and agentic workflows";
+// docs/plans/agentic-ops.md). Agents do the work and prepare each decision; people approve with
+// one click. Every table here records state, so a crashed run resumes where it stopped.
+
+// A launch cohort: approved towns launched together (docs/plans/rollout.md). The domains are
+// bought in ONE admin approval of the cohort's stated total (Rule 10); the cohort goes live in
+// one more. Dry run unless the admin created it to spend.
+export const launchCohorts = pgTable(
+  'launch_cohorts',
+  {
+    id: id(),
+    name: text('name').notNull().unique(),
+    status: text('status')
+      .$type<
+        'preparing' | 'awaiting_purchase' | 'running' | 'awaiting_go_live' | 'live' | 'cancelled'
+      >()
+      .notNull()
+      .default('preparing'),
+    dryRun: boolean('dry_run').notNull().default(true),
+    /**
+     * The admin's batch approval: who, when, the total typed back, and each town's domain at its
+     * stated price. Purchases and the mail onboarding that follows run only under it.
+     */
+    purchaseApproval: jsonb('purchase_approval'),
+    goLiveApproval: jsonb('go_live_approval'),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => staff.id),
+    /** One orchestrator run at a time per cohort. */
+    leaseUntil: timestamp('lease_until', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check(
+      'launch_cohorts_status',
+      sql`${t.status} in ('preparing', 'awaiting_purchase', 'running', 'awaiting_go_live', 'live', 'cancelled')`,
+    ),
+  ],
+);
+
+// One town in a cohort and where it is in the chain: names → purchase → mail → dns → provision →
+// review → live. `todos` are the manual steps, batched across the cohort for one pass.
+export const launchCohortTowns = pgTable(
+  'launch_cohort_towns',
+  {
+    id: id(),
+    cohortId: uuid('cohort_id')
+      .notNull()
+      .references(() => launchCohorts.id, { onDelete: 'cascade' }),
+    candidateId: uuid('candidate_id')
+      .notNull()
+      .references(() => townCandidates.id),
+    launchId: uuid('launch_id').references(() => launches.id),
+    stage: text('stage')
+      .$type<'names' | 'purchase' | 'mail' | 'dns' | 'provision' | 'review' | 'live'>()
+      .notNull()
+      .default('names'),
+    state: text('state')
+      .$type<'pending' | 'running' | 'waiting' | 'done' | 'failed'>()
+      .notNull()
+      .default('pending'),
+    /** The clear name proposal (1–3) the admin picked; the first by default. */
+    pick: smallint('pick').notNull().default(1),
+    detail: jsonb('detail').$type<Record<string, unknown>>().notNull().default({}),
+    todos: jsonb('todos')
+      .$type<Array<{ key: string; text: string; done: boolean }>>()
+      .notNull()
+      .default([]),
+    error: text('error'),
+    attempts: integer('attempts').notNull().default(0),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('launch_cohort_towns_uq').on(t.cohortId, t.candidateId),
+    check(
+      'launch_cohort_towns_stage',
+      sql`${t.stage} in ('names', 'purchase', 'mail', 'dns', 'provision', 'review', 'live')`,
+    ),
+    check(
+      'launch_cohort_towns_state',
+      sql`${t.state} in ('pending', 'running', 'waiting', 'done', 'failed')`,
+    ),
+    check('launch_cohort_towns_pick', sql`${t.pick} between 1 and 3`),
+  ],
+);
+
+// The standing source-discovery agent's findings (weekly, towns furthest below the Rule 7 target
+// first). Every URL was verified in code; a proposal becomes a source only when staff approve it,
+// and `pnpm sources:export` then writes approved ones into the town YAML for a pull request.
+export const sourceProposals = pgTable(
+  'source_proposals',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    /** `source`: a known platform, ready to add. `adapter`: an unknown platform to build. */
+    type: text('type').$type<'source' | 'adapter'>().notNull(),
+    /** The town YAML's source key for `source`; `adapter:<kind>:<url>` otherwise. */
+    key: text('key').notNull(),
+    kind: sourceKind('kind').notNull(),
+    url: text('url').notNull(),
+    platform: text('platform'),
+    /** The source config to add (TownSourceConfig), for `source` proposals. */
+    config: jsonb('config'),
+    label: text('label').notNull(),
+    /** Who suggested it, and what code found when it fetched the URL. */
+    origin: text('origin').notNull(),
+    detail: text('detail').notNull(),
+    /** Estimated real items a day it would add, and how that was estimated. */
+    estimatePerDay: real('estimate_per_day'),
+    estimateBasis: text('estimate_basis').notNull(),
+    status: text('status')
+      .$type<'proposed' | 'approved' | 'rejected'>()
+      .notNull()
+      .default('proposed'),
+    sourceId: uuid('source_id').references(() => sources.id),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    /** When `pnpm sources:export` wrote it into the town YAML. */
+    exportedAt: timestamp('exported_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('source_proposals_town_key_uq').on(t.townId, t.key),
+    index('source_proposals_status_idx').on(t.status, t.createdAt),
+    check('source_proposals_type', sql`${t.type} in ('source', 'adapter')`),
+    check('source_proposals_status', sql`${t.status} in ('proposed', 'approved', 'rejected')`),
+  ],
+);
+
+export const fixFailures = [
+  'robots',
+  'blocked',
+  'http_auth',
+  'http_gone',
+  'http_server',
+  'rate_limited',
+  'timeout',
+  'network',
+  'parse',
+  'empty',
+  'unknown',
+] as const;
+export type FixFailure = (typeof fixFailures)[number];
+
+// Self-healing adapters: a broken source gets a fresh fixture of its failing fetch, a diagnosis
+// in code and a fix request. Fixes are written in a Claude Code session
+// (docs/ops/adapter-fix-routine.md), never by the pipeline. The same failure on one platform in
+// several towns becomes one platform request (`scope: platform`) the town requests point to.
+export const adapterFixRequests = pgTable(
+  'adapter_fix_requests',
+  {
+    id: id(),
+    scope: text('scope').$type<'source' | 'platform'>().notNull(),
+    sourceId: uuid('source_id').references(() => sources.id),
+    townId: uuid('town_id').references(() => towns.id),
+    platform: text('platform').notNull(),
+    failure: text('failure').$type<FixFailure>().notNull(),
+    httpStatus: integer('http_status'),
+    error: text('error').notNull(),
+    diagnosis: text('diagnosis').notNull(),
+    /** The recorded exchanges of the failing fetch (packages/adapters/src/http/fixtures.ts). */
+    fixture: jsonb('fixture'),
+    platformRequestId: uuid('platform_request_id'),
+    status: text('status')
+      .$type<'open' | 'in_progress' | 'fixed' | 'dismissed'>()
+      .notNull()
+      .default('open'),
+    prUrl: text('pr_url'),
+    note: text('note'),
+    resolvedBy: uuid('resolved_by').references(() => staff.id),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('adapter_fix_requests_open_source_uq')
+      .on(t.sourceId)
+      .where(sql`${t.scope} = 'source' and ${t.status} in ('open', 'in_progress')`),
+    uniqueIndex('adapter_fix_requests_open_platform_uq')
+      .on(t.platform, t.failure)
+      .where(sql`${t.scope} = 'platform' and ${t.status} in ('open', 'in_progress')`),
+    check('adapter_fix_requests_scope', sql`${t.scope} in ('source', 'platform')`),
+    check(
+      'adapter_fix_requests_status',
+      sql`${t.status} in ('open', 'in_progress', 'fixed', 'dismissed')`,
+    ),
+    check(
+      'adapter_fix_requests_source',
+      sql`(${t.scope} = 'source') = (${t.sourceId} is not null)`,
+    ),
+  ],
+);
+
+// The ops agent's daily digest, built in code (no model): one row per UTC date.
+export const opsDigests = pgTable('ops_digests', {
+  id: id(),
+  date: date('date').notNull().unique(),
+  /** Sections of items, each with a suggested action and an admin link. */
+  items: jsonb('items').notNull(),
+  text: text('text').notNull(),
+  emailedAt: timestamp('emailed_at', { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+// One inbox of decisions the learning loops prepare (Admin → Proposals): experiment winners,
+// model-routing changes from evals, cohort gates, and later pricing. Approve or reject in one
+// click, audited; approval runs the proposal's action, or records the decision when the change
+// is code (a routing change ships as a pull request).
+export const proposals = pgTable(
+  'proposals',
+  {
+    id: id(),
+    kind: text('kind').$type<'experiment' | 'routing' | 'cohort_gate' | 'pricing'>().notNull(),
+    /** Dedupe key: one open proposal per subject. */
+    key: text('key').notNull(),
+    title: text('title').notNull(),
+    summary: text('summary').notNull(),
+    detail: jsonb('detail').$type<Record<string, unknown>>().notNull().default({}),
+    status: text('status')
+      .$type<'open' | 'approved' | 'rejected' | 'superseded'>()
+      .notNull()
+      .default('open'),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    note: text('note'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('proposals_open_key_uq')
+      .on(t.key)
+      .where(sql`${t.status} = 'open'`),
+    index('proposals_status_idx').on(t.status, t.createdAt),
+    check('proposals_kind', sql`${t.kind} in ('experiment', 'routing', 'cohort_gate', 'pricing')`),
+    check('proposals_status', sql`${t.status} in ('open', 'approved', 'rejected', 'superseded')`),
+  ],
+);
+
+// Each agent run, for Admin and the digest: what ran, for which town, and what it found.
+export const agentRuns = pgTable(
+  'agent_runs',
+  {
+    id: id(),
+    agent: text('agent')
+      .$type<'source-discovery' | 'adapter-fixes' | 'digest' | 'learning' | 'cohorts'>()
+      .notNull(),
+    townId: uuid('town_id').references(() => towns.id),
+    status: text('status').$type<'ok' | 'failed' | 'skipped'>().notNull(),
+    summary: jsonb('summary').$type<Record<string, unknown>>().notNull().default({}),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [index('agent_runs_agent_idx').on(t.agent, t.townId, t.startedAt)],
 );

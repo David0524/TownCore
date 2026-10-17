@@ -26,16 +26,24 @@ export {
 export {
   estimateCostUsd,
   NETWORK_AI_DAILY_CAP_USD,
+  networkAiCapUsd,
   WEB_SEARCH_USD,
   llmProviders,
   modelPrices,
-  modelRoles,
+  aiTasks,
+  BATCH_DISCOUNT,
+  modelTiers,
   models,
   modelsVerifiedAt,
   providerModels,
   type LlmProviderName,
   type ModelPrice,
-  type ModelRole,
+  type AiTask,
+  type ModelTier,
+  type TaskRoute,
+  taskRoutes,
+  thinkingOff,
+  worstCaseCostUsd,
   type TokenUsage,
 } from './models';
 export { catchAllTeam, defaultRoleAddresses, defaultTeams, warmup, type DefaultTeam } from './mail';
@@ -95,6 +103,18 @@ export {
   type WeatherSnapshot,
 } from './weather';
 export {
+  NOTABLE_FORMATION_PERCENT,
+  stormMph,
+  stormName,
+  tropicsBasin,
+  tropicsBasins,
+  tropicsLine,
+  type TropicalArea,
+  type TropicalStorm,
+  type TropicsBasin,
+  type TropicsSnapshot,
+} from './tropics';
+export {
   beatCategory,
   categoryColors,
   darkFoodColors,
@@ -127,6 +147,22 @@ export {
   type FeaturedRank,
   type DirectoryCategory,
 } from './directory';
+export {
+  decidePrice,
+  DYNAMIC_PRODUCTS,
+  isDynamicProduct,
+  listPriceCents,
+  PRICING_RULES,
+  PROOF_MINIMUMS,
+  scarcityLine,
+  TIER_PRICES,
+  townPricing,
+  type DynamicProduct,
+  type PriceDecision,
+  type PriceList,
+  type PricingSignals,
+  type TownPricing,
+} from './pricing';
 export {
   AI_ILLUSTRATION_LABEL,
   AI_IMAGE_LABEL,
@@ -231,3 +267,4 @@ export {
   type ReferralSource,
   type SignupPlacement,
 } from './audience';
+export { describeSource, sourceHost, type SourceDescription } from './source-notes';

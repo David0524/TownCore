@@ -6,14 +6,18 @@
   "exports": {
     ".": "./src/index.ts",
     "./candidates": "./src/candidates.ts",
-    "./golive": "./src/golive.ts"
+    "./golive": "./src/golive.ts",
+    "./cohorts": "./src/cohorts.ts",
+    "./source-proposals": "./src/source-proposals.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "towns:rank": "tsx scripts/rank.ts",
     "launch": "tsx scripts/launch.ts",
-    "towns:households": "tsx scripts/households.ts"
+    "towns:households": "tsx scripts/households.ts",
+    "cohort": "tsx scripts/cohort.ts",
+    "sources:export": "tsx scripts/sources-export.ts"
   },
   "dependencies": {
     "@towncore/adapters": "workspace:*",

@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { civicplusAdapter, newsBodyText, newsItemId } from '../src/civicplus';
+import { civicplusAdapter, newsBodyText, newsItemId, newsListItems } from '../src/civicplus';
 import { Fetcher } from '../src/http/fetcher';
 import { replayFetch } from '../src/http/fixtures';
 import { parseIcal, zonedTimeToUtc } from '../src/lib/ical';
@@ -87,6 +87,47 @@ describe('civicplus News Flash (RSS + release pages)', () => {
       ctx('boca-newsflash'),
     );
     expect(records.map((r) => r.externalId)).toEqual(['news:2049']);
+  });
+});
+
+describe('civicplus News Flash list page (one category)', () => {
+  // Recorded live on 2026-10-17: Boca Raton's Police News Releases (category 17), whose releases
+  // never reach the RSS feeds; each release page links the release as a PDF.
+  const police: SourceConfig = {
+    ...calendar,
+    id: 'police',
+    kind: 'police',
+    config: { module: 'newsflash-list', catId: '17' },
+  };
+
+  it('reads new releases from the list page, with each release PDF’s text', async () => {
+    const records = await civicplusAdapter.fetch(
+      police,
+      new Date('2026-09-01T00:00:00Z'),
+      ctx('boca-police-list', new Date('2026-10-17T12:00:00Z')),
+    );
+    expect(records.map((r) => r.externalId)).toEqual(['news:2030', 'news:2021']);
+    const [first] = records;
+    expect(first).toMatchObject({
+      type: 'release',
+      title: 'Boca Raton Police seek additional victims following human trafficking arrest',
+      url: 'https://www.myboca.us/m/newsflash/home/detail/2030',
+    });
+    expect(first!.occurredAt!.toISOString()).toBe('2026-09-22T12:00:00.000Z');
+    expect(first!.text).toContain('Boca Raton Police Services Department');
+    expect(first!.text).not.toMatch(/^Read release$/m);
+  });
+
+  it('lists every release on the page with its date and documents', async () => {
+    const { readFileSync } = await import('node:fs');
+    const file = JSON.parse(readFileSync(fixture('boca-police-list'), 'utf8')) as {
+      exchanges: { url: string; body?: string }[];
+    };
+    const html = file.exchanges.find((e) => e.url.endsWith('/m/newsflash?cat=17'))!.body!;
+    const items = newsListItems(html, '17');
+    expect(items).toHaveLength(55);
+    expect(items[0]).toMatchObject({ id: '2030', documents: ['/DocumentCenter/View/44921'] });
+    expect(items.every((i) => i.posted instanceof Date)).toBe(true);
   });
 });
 

@@ -2,14 +2,9 @@ import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { requireEnv, type Env } from '@towncore/config';
 import { eq, mailDomains, onboardingSteps, or, sql, towns, type Db } from '@towncore/db';
-import {
-  boughtDomains,
-  needsOnboarding,
-  onboardBoughtDomain,
-  providersFromEnv,
-  type MailStart,
-  type Providers,
-} from '../bought';
+import { boughtDomains, needsOnboarding, onboardBoughtDomain, type MailStart } from '../bought';
+import { providersFromEnv, type Providers } from '../providers';
+import { offlineProviders } from '../providers';
 import {
   onboardDomain,
   resetFailedSteps,
@@ -407,3 +402,7 @@ async function runBought(ctx: CommandContext, execute: boolean): Promise<number>
   }
   return failedCount ? 1 : 0;
 }
+
+/** The real providers (Vercel DNS, SES) or offline stand-ins; kept under its old name. */
+export const realProviders = providersFromEnv;
+export { offlineProviders };

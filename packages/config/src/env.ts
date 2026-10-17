@@ -16,6 +16,8 @@ export const envSchema = z.object({
   GEMINI_API_KEY: optional(z.string()),
   // Which model provider the pipeline uses. Unset: Anthropic if its key is set, else Gemini.
   LLM_PROVIDER: optional(z.enum(['anthropic', 'gemini'])),
+  // Network-wide AI spend a day in USD (default 50): lower it for a first live run.
+  AI_NETWORK_CAP_USD: optional(z.coerce.number().positive()),
   STRIPE_SECRET_KEY: optional(z.string()),
   STRIPE_WEBHOOK_SECRET: optional(z.string()),
   // Development and tests only: built-but-off directory products to show anyway
@@ -89,6 +91,7 @@ export const envSchema = z.object({
   /** YouTube Data API v3 key: finds town meeting videos to embed (packages/adapters/src/youtube). */
   YOUTUBE_API_KEY: optional(z.string()),
   SOCRATA_APP_TOKEN: optional(z.string()),
+  CENSUS_API_KEY: optional(z.string()),
   // Facebook page access tokens as JSON, {"<page id>": "<token>"} (owner, 2026-10-17). Only
   // used when staff press Post in Admin → Facebook; never committed.
   META_PAGE_TOKENS: optional(
@@ -107,6 +110,10 @@ export const envSchema = z.object({
   // The standing approval for automatic Facebook posting. Off unless the owner grants it: until
   // then a person presses Post for every post (Rule 10's spirit for outward actions).
   FACEBOOK_AUTOPOST: optional(z.enum(['off', 'on'])),
+  // Where launch cohorts advance (docs/plans/agentic-ops.md): `worker` runs the chain every 5
+  // minutes in the worker; unset, it runs only by `pnpm cohort advance`, so the launch files land
+  // in a checkout for a pull request. Purchases still need the cohort's admin approval (Rule 10).
+  COHORT_ORCHESTRATOR: optional(z.enum(['off', 'worker'])),
   // Secret mixed into poll voters' address hashes, so the stored hashes can't be reversed.
   VOTE_HASH_SECRET: optional(z.string().min(16)),
   DEV_TOWN_SLUG: optional(z.string().regex(/^[a-z0-9-]+$/)),

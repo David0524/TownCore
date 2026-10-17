@@ -38,6 +38,17 @@ export { extractPage, pageAdapter } from './page';
 export { feedAdapter, feedLinks, htmlToText, pageText, parseFeed } from './feed';
 export { parseIcal, zonedTimeToUtc } from './lib/ical';
 export { flDbprAdapter } from './fl-dbpr';
+export { foodViolations } from './fl-dbpr/violations';
+export { usaspendingAdapter } from './usaspending';
+export { fetchTropics, outlookAreas, outlookParagraphs, parseTropics } from './nhc';
+export {
+  cmsAdapter,
+  severityLevel,
+  severityWords,
+  type Citation,
+  type NursingHomeInspection,
+  type NursingHomePenalty,
+} from './cms';
 export { flSunbizAdapter } from './fl-sunbiz';
 export {
   alertsForTown,
@@ -90,3 +101,16 @@ export {
 export { parseDatasetUrl, socrataAdapter, socrataDate } from './socrata';
 export { arcgisAdapter, arcgisQueryUrl, arcgisRecords } from './arcgis';
 export { escribeAdapter, escribeDate, escribeRecords } from './escribe';
+export {
+  classifyFailure,
+  diagnoseBrokenSources,
+  FixRequestRefused,
+  groupPlatformPatterns,
+  listFixRequests,
+  PLATFORM_PATTERN_TOWNS,
+  trimFixture,
+  updateFixRequest,
+  type Diagnosis,
+  type FixRequestRow,
+  type FixRun,
+} from './fixes';

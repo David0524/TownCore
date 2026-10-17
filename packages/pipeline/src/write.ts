@@ -1,18 +1,23 @@
 import { tier2ReviewSample, type SourceKind, type TownConfig } from '@towncore/config';
 import {
+  and,
   articles,
   articleUpdates,
+  desc,
   eq,
+  gte,
+  lt,
   pins,
   inArray,
   records,
   sources,
+  sql,
   storyCandidates,
   towns,
   type Db,
 } from '@towncore/db';
 import {
-  classifyV1,
+  classifyPrompt,
   factcheckV1,
   updateV1,
   writerV1,
@@ -29,7 +34,9 @@ import { llmTown } from './finder';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { uniqueSlug } from './publish';
 import {
+  federalAwardsRoundup,
   inspectionsRoundup,
+  nursingHomesRoundup,
   meetingsRoundup,
   newBusinessesRoundup,
   newLicensesRoundup,
@@ -41,7 +48,14 @@ import {
   type RoundupKind,
   type TemplatedDraft,
 } from './templates';
-import { pastWeekCounts } from './roundup-weeks';
+import { pastWeekCounts, roundupWeekRecords } from './roundup-weeks';
+import {
+  inspectionSpotlight,
+  nursingHomeSpotlight,
+  permitSpotlight,
+  SPOTLIGHT_ROUNDUP,
+  type SpotlightKind,
+} from './spotlights';
 import { decideTier, type Tier } from './tiers';
 import { localWeekStart } from './time';
 
@@ -110,11 +124,12 @@ export async function writeCandidate(
       baseTier: candidate.proposedTier as Tier,
     });
     const isAlert = candidate.key.startsWith('alert:');
+    const isSpotlight = candidate.key.startsWith('spotlight:');
     return saveArticle(db, {
       candidateId,
       town: town!,
       draft,
-      kind: isAlert ? 'alert' : 'roundup',
+      kind: isAlert ? 'alert' : isSpotlight ? 'story' : 'roundup',
       pin: isAlert ? severeWeatherPin(rows[0]?.record.raw, now) : null,
       tier: tier.tier,
       tierReasons: [...(candidate.tierReasons ?? []), ...tier.reasons],
@@ -178,20 +193,17 @@ export async function writeCandidate(
         job: 'writer',
         town: tTown,
         prompt: writerV1,
-        input: [
-          ...townLines,
-          `Beat: ${candidate.beat}. Kind: story.`,
-          ...remove,
-          '',
-          ...sourcesText,
-        ].join('\n'),
+        // The second attempt, with the unsupported claims removed, is the one revise (§7).
+        task: attempt === 1 ? 'write' : 'revise',
+        inputPrefix: townLines.join('\n'),
+        input: [`Beat: ${candidate.beat}. Kind: story.`, ...remove, '', ...sourcesText].join('\n'),
       }));
       const { value: checked } = await callModel(llm, {
         job: 'fact-check',
         town: tTown,
         prompt: factcheckV1,
+        inputPrefix: townLines.join('\n'),
         input: [
-          ...townLines,
           '',
           '=== Draft',
           `Headline: ${draft.headline}`,
@@ -281,10 +293,12 @@ const ROUNDUPS: Record<RoundupKind, typeof meetingsRoundup> = {
   sales: propertySalesRoundup,
   'new-places': newPlacesRoundup,
   roads: roadWorkRoundup,
+  federal: federalAwardsRoundup,
+  'nursing-homes': nursingHomesRoundup,
 };
 
 /** Builds a templated item; a roundup also gets the town's own past weeks to compare with. */
-async function buildTemplate(
+export async function buildTemplate(
   db: Db,
   key: string,
   town: typeof towns.$inferSelect,
@@ -301,7 +315,36 @@ async function buildTemplate(
     return ROUNDUPS[k](info, weekStart, recs, past);
   }
   if (prefix === 'alert' && recs[0]) return weatherAlert(info, recs[0]);
+  if (prefix === 'spotlight' && kind && week && kind in SPOTLIGHT_ROUNDUP && recs[0]) {
+    const k = kind as SpotlightKind;
+    const weekStart = localWeekStart(new Date(`${week}T12:00:00Z`), town.timezone);
+    const weekRecs = await roundupWeekRecords(db, town, SPOTLIGHT_ROUNDUP[k], weekStart);
+    if (k === 'inspection') {
+      const license = key.split(':').slice(3).join(':');
+      const history = await inspectionHistory(db, town.id, license, weekStart);
+      return inspectionSpotlight(info, recs, history);
+    }
+    if (k === 'nursing-home') return nursingHomeSpotlight(info, weekStart, recs);
+    return permitSpotlight(info, recs[0], weekRecs);
+  }
   return null;
+}
+
+/** An establishment's inspections in the year before the spotlight's week, newest first. */
+async function inspectionHistory(db: Db, townId: string, license: string, before: Date) {
+  return db
+    .select()
+    .from(records)
+    .where(
+      and(
+        eq(records.townId, townId),
+        eq(records.type, 'inspection'),
+        sql`${records.raw}->>'licenseNumber' = ${license}`,
+        gte(records.occurredAt, new Date(before.getTime() - 365 * 86_400_000)),
+        lt(records.occurredAt, before),
+      ),
+    )
+    .orderBy(desc(records.occurredAt));
 }
 
 async function saveArticle(
@@ -444,15 +487,16 @@ async function writeUpdate(
     ({ value: classification } = await callModel(a.llm, {
       job: 'update.classify',
       town: tTown,
-      prompt: classifyV1,
-      input: [...townLines, '', ...recordText(rows)].join('\n'),
+      prompt: classifyPrompt,
+      inputPrefix: townLines.join('\n'),
+      input: ['', ...recordText(rows)].join('\n'),
     }));
     ({ value: note } = await callModel(a.llm, {
       job: 'update.write',
       town: tTown,
       prompt: updateV1,
+      inputPrefix: townLines.join('\n'),
       input: [
-        ...townLines,
         '',
         '=== Published story',
         `Headline: ${target.headline}`,
@@ -466,8 +510,8 @@ async function writeUpdate(
       job: 'update.fact-check',
       town: tTown,
       prompt: factcheckV1,
+      inputPrefix: townLines.join('\n'),
       input: [
-        ...townLines,
         '',
         '=== Draft',
         'Headline: (update note)',

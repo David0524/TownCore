@@ -10,8 +10,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "evals": "tsx scripts/evals.ts",
+    "evals:compare": "tsx scripts/evals-compare.ts",
     "stories:once": "tsx scripts/stories-once.ts",
-    "images:backfill": "tsx scripts/images-backfill.ts"
+    "ai:plan": "tsx scripts/ai-plan.ts",
+    "images:backfill": "tsx scripts/images-backfill.ts",
+    "roundups:rerender": "tsx scripts/roundups-rerender.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.134.0",

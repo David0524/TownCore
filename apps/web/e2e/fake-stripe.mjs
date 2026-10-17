@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 
 const port = Number(process.argv[2] ?? 3199);
 const sessions = [];
+const prices = [];
 
 /** Stripe's form encoding ("line_items[0][price_data][unit_amount]=4900") back into objects. */
 function decode(body) {
@@ -33,6 +34,31 @@ createServer((req, res) => {
     if (req.method === 'GET' && req.url?.startsWith('/pay/')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       return res.end('<!doctype html><title>Test checkout</title><h1>Test checkout</h1>');
+    }
+    // Prices: a new price level (a category price changed) is looked up by key, then created.
+    if (req.url?.startsWith('/v1/prices')) {
+      if (req.method === 'GET') {
+        const keys = [...new URL(req.url, 'http://x').searchParams]
+          .filter(([k]) => k.startsWith('lookup_keys'))
+          .map(([, v]) => v);
+        return json(200, {
+          object: 'list',
+          url: '/v1/prices',
+          has_more: false,
+          data: prices.filter((p) => keys.includes(p.lookup_key)),
+        });
+      }
+      const params = decode(body);
+      const price = {
+        id: `price_fake_${prices.length + 1}`,
+        object: 'price',
+        product: `prod_fake_${prices.length + 1}`,
+        livemode: false,
+        unit_amount: Number(params.unit_amount),
+        lookup_key: params.lookup_key,
+      };
+      prices.push(price);
+      return json(200, price);
     }
     if (req.method === 'POST' && req.url === '/v1/checkout/sessions') {
       const id = `cs_fake_${sessions.length + 1}_${Date.now()}`;

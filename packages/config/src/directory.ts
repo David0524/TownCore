@@ -477,8 +477,10 @@ export function productEnabled(product: DirectoryProduct): boolean {
 }
 
 /**
- * Price in whole dollars for a town (a month, or the product's booking period), or null when
- * the product is off there. A ranked product has one price per rank (#1 first).
+ * List price in whole dollars for a town (a month, or the product's booking period), or null when
+ * the product is off there. Pass `townPricing(town)` (tier prices with the town's own on top). A
+ * ranked product has one price per rank (#1 first). The price a business pays for a category
+ * product is its current category price (@towncore/directory `categoryPrice`).
  */
 export function productPrice(
   pricing: Record<string, unknown> | undefined,

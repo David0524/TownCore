@@ -11,14 +11,22 @@ export const queues = {
   mailTick: 'mail.tick',
   bulkHealth: 'mail.bulk-health',
   weather: 'weather.refresh',
+  tropics: 'weather.tropics',
   directorySeed: 'directory.seed',
   directoryGeocode: 'directory.geocode',
   proofReports: 'directory.proof-reports',
   followups: 'directory.followups',
+  pricing: 'directory.pricing',
   basemaps: 'maps.basemaps',
   maps: 'maps.draw',
   photos: 'photos.stock',
   facebook: 'social.facebook',
+  aiBatches: 'ai.batches',
+  cohorts: 'launch.cohorts',
+  sourceDiscovery: 'sources.discover',
+  adapterFixes: 'adapters.fixes',
+  learning: 'learning.proposals',
+  digest: 'ops.digest',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -36,6 +44,9 @@ export const schedules = [
   { queue: queues.bulkHealth, cron: '*/15 * * * *' },
   // Every 15 minutes, refresh each town's Today weather tile from NWS (docs/plans/M4b.md).
   { queue: queues.weather, cron: '*/15 * * * *' },
+  // Hourly, the National Hurricane Center's storms and outlooks for every basin (two requests for
+  // the whole network; NHC asks feed readers to check "once an hour or so").
+  { queue: queues.tropics, cron: '11 * * * *' },
   // Every 5 minutes, build and send each town's daily issue once its local send time passes (M5).
   { queue: queues.newsletter, cron: '*/5 * * * *' },
   // Daily, rebuild each town's directory from its state license records (M6).
@@ -47,6 +58,9 @@ export const schedules = [
   { queue: queues.proofReports, cron: '7 * * * *' },
   // Hourly, draft owner follow-ups and send them where a town's standing approval is on.
   { queue: queues.followups, cron: '37 * * * *' },
+  // Daily; each town's category prices are recalculated once per local month, on the first run
+  // of the month (owner, 2026-10-17).
+  { queue: queues.pricing, cron: '43 6 * * *' },
   // Monthly (the 3rd, 07:40 UTC), rebuild town base maps from Geofabrik's state extracts (M4 E).
   { queue: queues.basemaps, cron: '40 7 3 * *' },
   // Every 30 minutes, give recent development and public-safety stories block-level maps.
@@ -55,4 +69,18 @@ export const schedules = [
   { queue: queues.photos, cron: '15,45 * * * *' },
   // Hourly, each live town's Facebook posts for the day; staff post them from Admin → Facebook.
   { queue: queues.facebook, cron: '25 * * * *' },
+  // Every 10 minutes, send queued batch requests (guides) and collect finished batches; the
+  // writers pick the answers up on their next run (owner, 2026-10-17, model protocol).
+  { queue: queues.aiBatches, cron: '*/10 * * * *' },
+  // Agentic operations (docs/plans/agentic-ops.md). Launch cohorts advance every 5 minutes where
+  // COHORT_ORCHESTRATOR=worker; every step records state, so the next tick resumes a crash.
+  { queue: queues.cohorts, cron: '*/5 * * * *' },
+  // Weekly (Monday 08:10 UTC), new sources for the towns furthest below the Rule 7 target.
+  { queue: queues.sourceDiscovery, cron: '10 8 * * 1' },
+  // Hourly, broken sources get a recorded fixture, a diagnosis and a fix request.
+  { queue: queues.adapterFixes, cron: '50 * * * *' },
+  // Daily, the learning loops' proposals, just before the digest counts them.
+  { queue: queues.learning, cron: '25 9 * * *' },
+  // Daily at 09:40 UTC (5:40 a.m. Eastern in summer, 4:40 in winter), the ops digest.
+  { queue: queues.digest, cron: '40 9 * * *' },
 ] as const;

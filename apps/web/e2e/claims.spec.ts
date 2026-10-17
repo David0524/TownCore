@@ -20,7 +20,9 @@ import {
 // tokens directly; only their hashes are ever stored.
 const harbor = 'http://harborpoint.test';
 const admin = 'http://admin.test';
-const db = createDb(loadEnv().DATABASE_URL!, { max: 1 });
+// Never closed: with fullyParallel a worker can run more of this file's tests after its
+// afterAll, so the client stays open; idle connections close by themselves.
+const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
 const hash = (t: string) => createHash('sha256').update(t).digest('hex');
 const newToken = () => randomBytes(24).toString('base64url');
 
@@ -46,10 +48,6 @@ test.beforeAll(async () => {
       status: 'live',
     })
     .onConflictDoNothing();
-});
-
-test.afterAll(async () => {
-  await db.$client.end();
 });
 
 async function resetListing(slug: string) {

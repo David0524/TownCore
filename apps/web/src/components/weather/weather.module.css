@@ -89,6 +89,12 @@
   margin: 0;
 }
 
+.tropics {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
 .zonePeriod {
   margin: 0;
   font-weight: 600;
@@ -348,4 +354,27 @@ a.lineText:hover {
   .beachTile .smallValue {
     font-size: 1.0625rem;
   }
+}
+
+/* The Weather page's tropics panel. */
+.tropicsPanel {
+  margin-top: 2.5rem;
+}
+
+.storms {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+}
+
+.storms li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0;
+  border-bottom: var(--hairline);
+}
+
+.outlook p {
+  white-space: pre-line;
 }
