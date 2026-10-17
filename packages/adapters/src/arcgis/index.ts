@@ -15,6 +15,12 @@ import type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from '../
 //   title: '{PERMITTYPE} at {FULLADDR}'
 //   fields: { COLUMN: 'Label', … } — what goes in the record text (default: every column)
 //   where: "PERMITSTAT = 'ISSUED'" — extra filter, ANDed
+//   outFields: ['PARCEL', …]       — only these columns are requested and stored (default: all).
+//                                    Use it to keep private people's names (property owners)
+//                                    out of our database entirely.
+//   lagDays: 21                    — re-read this many days before the last run, for layers whose
+//                                    records appear after their date (deeds are recorded ~10 days
+//                                    after a sale); records already stored are deduped
 //   linkField, type, days         — as for the Socrata adapter
 
 type Options = {
@@ -25,6 +31,8 @@ type Options = {
   fields: Record<string, string> | null;
   where: string | null;
   linkField: string | null;
+  outFields: string[] | null;
+  lagDays: number;
   type: unknown;
   days: number;
 };
@@ -55,6 +63,9 @@ function options(source: SourceConfig): Options {
   }
   const idField = str('idField');
   if (idField && !FIELD.test(idField)) throw new Error(`arcgis: bad idField ${idField}`);
+  const outFields = Array.isArray(c.outFields) ? c.outFields.map(String) : null;
+  const badField = outFields?.find((f) => !FIELD.test(f));
+  if (badField) throw new Error(`arcgis: bad outFields column ${badField}`);
   return {
     layer,
     dateField,
@@ -63,6 +74,11 @@ function options(source: SourceConfig): Options {
     fields: fieldMap(c.fields),
     where: str('where'),
     linkField: str('linkField'),
+    // The id and date columns are always requested, so records stay keyed and dated.
+    outFields: outFields
+      ? [...new Set([...outFields, dateField, ...(idField ? [idField] : [])])]
+      : null,
+    lagDays: Number(c.lagDays) > 0 ? Number(c.lagDays) : 0,
     type: c.type,
     days: Number(c.days) > 0 ? Number(c.days) : 30,
   };
@@ -78,7 +94,7 @@ export function arcgisQueryUrl(opts: Options, since: Date, limit = LIMIT): strin
     .join(' AND ');
   const params = new URLSearchParams({
     where,
-    outFields: '*',
+    outFields: opts.outFields?.join(',') ?? '*',
     orderByFields: `${opts.dateField} DESC`,
     resultRecordCount: String(limit),
     returnGeometry: 'false',
@@ -143,7 +159,9 @@ export const arcgisAdapter: SourceAdapter = {
 
   async fetch(source, since, ctx) {
     const opts = options(source);
-    const from = since ?? new Date(ctx.now.getTime() - opts.days * 86_400_000);
+    const from = since
+      ? new Date(since.getTime() - opts.lagDays * 86_400_000)
+      : new Date(ctx.now.getTime() - opts.days * 86_400_000);
     return arcgisRecords(await query(opts, from, ctx), opts, source.kind);
   },
 

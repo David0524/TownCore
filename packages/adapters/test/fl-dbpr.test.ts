@@ -5,6 +5,7 @@ import { parseFoodRow } from '../src/fl-dbpr/food';
 import { inspectionSeverity, parseInspectionRow } from '../src/fl-dbpr/inspections';
 import { Fetcher, NotModified, type FetchFn } from '../src/http/fetcher';
 import { replayFetch } from '../src/http/fixtures';
+import { isNewLiquorLicense, liquorRecord, parseLiquorRow } from '../src/fl-dbpr/liquor';
 import { parseCsvLine, streamLines } from '../src/lib/csv';
 import type { SourceConfig } from '../src/types';
 
@@ -211,5 +212,42 @@ describe('csv', () => {
     const lines: string[] = [];
     for await (const line of streamLines(body)) lines.push(line);
     expect(lines).toEqual(['"a","b"', '"c","d"', '"e","f"']);
+  });
+});
+
+describe('fl-dbpr alcoholic beverage daily activity', () => {
+  // Trimmed from the live daily.csv of 2026-10-17 (Oct. 15 activity): Palm Beach rows and others,
+  // license holders who aren't companies replaced by "SAMPLE HOLDER".
+  const liquor = fileURLToPath(new URL('../fixtures/fl-dbpr/boca-liquor.json', import.meta.url));
+
+  it('keeps only new liquor licenses in the city, named by trade name', async () => {
+    const records = await flDbprAdapter.fetch(
+      { ...source, config: { city: 'BOCA RATON', files: ['daily.csv'] } },
+      null,
+      ctx(replayFetch(liquor)),
+    );
+    // Three Boca rows that day: a license print, a vape permit and one approval.
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      type: 'liquor_license',
+      title: 'MAISON BRUNCH',
+      externalId: 'abt:6019425:1080:10/15/2026',
+    });
+    expect(records[0]!.text).toContain('License: 2COP (beer and wine served on site)');
+    expect(records[0]!.text).toContain('Action: Application Approval, 10/15/2026');
+    expect(records[0]!.occurredAt!.toISOString()).toBe('2026-10-15T00:00:00.000Z');
+    expect(JSON.stringify(records[0]!.raw)).not.toContain('licenseeName');
+  });
+
+  it('never names a person: no trade name and no company means no record', () => {
+    const row = parseLiquorRow(
+      '"4006","Palm Beach","1","2COP","","","JANE DOE","1 MAIN ST","","","BOCA RATON","FL","33432","10/15/2026","1080","Application Approval",""',
+    )!;
+    expect(isNewLiquorLicense(row)).toBe(true);
+    expect(liquorRecord(row, 'https://x')).toBeNull();
+    expect(liquorRecord({ ...row, licenseeName: 'MAIN ST BISTRO LLC' }, 'https://x')!.title).toBe(
+      'MAIN ST BISTRO LLC',
+    );
+    expect(isNewLiquorLicense({ ...row, activity: 'Approve Transfer Request' })).toBe(false);
   });
 });

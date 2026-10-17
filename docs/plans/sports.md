@@ -30,12 +30,23 @@ check on licensed sports data. Nothing paid is bought without a separate yes (§
 
 | Source | What it has | Access | Verdict |
 | --- | --- | --- | --- |
-| FHSAA (fhsaa.com, Sidearm Sports) | State association: composite calendar (RSS, Excel and text downloads), team schedules, brackets, results | robots.txt allows all but `/images/`, `/documents/`, `/services/` and a few others; **Crawl-delay 5 and Visit-time 0100–0645 (UTC)** | Build, fetched nightly inside the window. Terms to read in the window |
+| FHSAA (fhsaa.com, Sidearm Sports) | State association: composite calendar (RSS, Excel and text downloads), team schedules, brackets, results | robots.txt allows all but `/images/`, `/documents/`, `/services/` and a few others; **Crawl-delay 5 and Visit-time 0100–0645 (UTC)** | **Stopped (2026-10-17): its legal notice forbids reuse** (below). Not built |
 | Palm Beach County schools (palmbeachschools.org) | District athletics page | Allowed (Crawl-delay 5), but the page is drawn by JavaScript; a plain fetch gets nothing | Skip for now |
 | FAU Athletics (fausports.com, Sidearm) | College schedules and results | Bot protection (Incapsula) blocked our second request | Skip: we never work around a block |
 | Other Sidearm college sites (e.g. miamihurricanes.com) | Schedules, results, iCal | robots.txt allows `/` | Possible via the same adapter, for towns near a college |
 | Pro team sites (miamidolphins.com, nhl.com, intermiamicf.com, mlssoccer.com) | News, schedules | robots.txt allows most paths, but their terms bar commercial reuse of content | Skip as data sources; only official public-safety notices (road closures, stadium events) via city and county releases |
 | MaxPreps | High school stats | A commercial sports database | Never (Rule 8) |
+
+**FHSAA's terms (read 2026-10-17, inside the window).** Its legal notice
+(`/sports/2020/5/4/legaldisclaimer.aspx`) says the content is FHSAA's copyright and that visitors
+may not "'mirror' or include this information on your own server or documents without our
+permission" or "modify or re-use the text or graphics"; personal use and links only. Game dates
+and scores are facts, but the notice bars including its information on our server, so we don't
+build the adapter or fetch the calendar. Three requests were made (robots.txt, the home page, the
+notice), each at least 5 seconds apart inside the Visit-time window. Ways forward, the owner's
+call: ask FHSAA for written permission (or a data license); take scores from each school's own
+athletics pages where their terms allow; or reader-sent scores with the photo form's approval
+flow.
 
 Visit-time support landed in the Fetcher with this plan: outside a host's window a fetch counts as
 "nothing new" (the source stays healthy) and the next run inside the window fetches.
@@ -58,8 +69,8 @@ on a commercial news site.
 1. Fetcher: robots.txt Visit-time (done, with tests).
 2. `sports` source kind (enum migration) and town config: the town's schools with the names the
    state association uses.
-3. `sidearm` adapter: the composite calendar and team schedules, games as records (date, home,
-   away, score, status, place). Fixtures recorded inside FHSAA's window.
+3. `sidearm` adapter: on hold. FHSAA's terms bar reuse without written permission (above); the
+   same adapter could still read a Sidearm site whose terms allow it.
 4. Weekly high school sports roundup built in code (Tier 1), the `schools-sports` module, and
    scores in the newsletter's Coming up.
 5. Reader-sent scores (with the photo form's approval flow), after the roundup proves useful.

@@ -191,6 +191,9 @@ async function companionRecords(db: Db, record: typeof records.$inferSelect): Pr
   return rows.map((r) => r.id);
 }
 
+/** A new-places roundup needs this many licenses in the week. */
+export const NEW_PLACES_MIN = 3;
+
 async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderReport) {
   const tz = town.timezone;
   const weekday = localDate(now, tz).weekday; // 0 = Sunday
@@ -240,6 +243,21 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       recordIds: licenses.map((r) => r.id),
       now,
     });
+    // New places to eat and drink: new food service establishments and new liquor licenses.
+    const newPlaces = [
+      ...(await townRecords(db, town.id, 'new_food_license', from, to)),
+      ...(await townRecords(db, town.id, 'liquor_license', from, to)),
+    ];
+    await roundup(db, town, report, {
+      key: `roundup:new-places:${week}`,
+      title: `New places to eat and drink, week of ${week}`,
+      beat: 'business',
+      recordIds: newPlaces.map((r) => r.id),
+      // A week with one or two is too thin for a story (never pad, Rule 7); the homepage's new
+      // places module still shows them.
+      min: NEW_PLACES_MIN,
+      now,
+    });
     // Permits from a city or county open-data source (§7: permit roundups are Tier 1). Their
     // dates are real timestamps, so the local week is used rather than the date-only range.
     const weekEndLocal = new Date(lastWeek.getTime() + 7 * 86_400_000);
@@ -249,6 +267,18 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       title: `Building permits, week of ${week}`,
       beat: 'development',
       recordIds: permits.map((r) => r.id),
+      now,
+    });
+    // Property sales (owner, 2026-10-17): deeds are recorded about two weeks after a sale, so
+    // this rounds up the week before last. Sale dates are date-only, like the filings.
+    const salesWeek = localWeekStart(now, tz, -2);
+    const [salesFrom, salesTo] = dateOnlyWeek(salesWeek, tz);
+    const sales = await townRecords(db, town.id, 'sale', salesFrom, salesTo);
+    await roundup(db, town, report, {
+      key: `roundup:sales:${isoLocalDate(salesWeek, tz)}`,
+      title: `Property sales, week of ${isoLocalDate(salesWeek, tz)}`,
+      beat: 'development',
+      recordIds: sales.map((r) => r.id),
       now,
     });
     // Restaurant inspections: a week that names a closure or complaint needs a person (§7).
@@ -279,9 +309,11 @@ async function roundup(
     now: Date;
     tier?: 1 | 3;
     tierReason?: string;
+    /** Fewest records worth a story (default 1). */
+    min?: number;
   },
 ) {
-  if (item.recordIds.length === 0) return;
+  if (item.recordIds.length < (item.min ?? 1)) return;
   const id = await insertCandidate(db, {
     townId: town.id,
     kind: 'roundup',

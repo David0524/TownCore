@@ -99,6 +99,55 @@ sources:
   - kind: inspections
     platform: fl-dbpr
     options: { city: BOCA RATON, files: [2fdinspi.csv] }
+  # Verified 2026-10-17: Division of Alcoholic Beverages and Tobacco daily activity (statewide
+  # daily.csv in the same allowed extracts folder; one day per file, so it runs daily). Only new
+  # liquor licenses, by trade name: they join new food service licenses in a weekly roundup.
+  - kind: business_filings
+    platform: fl-dbpr
+    schedule: 1d
+    options: { city: BOCA RATON, files: [daily.csv] }
+  # Verified 2026-10-17: Palm Beach County Property Appraiser sales (ArcGIS Server table
+  # PAO.PROPINFO; robots.txt 404, no rules), at a real price, not confidential. City limits by
+  # parcel number: county parcel numbers start with the municipality code (06 = Boca Raton);
+  # MUNICIPALITY is the mailing city, and two-thirds of "BOCA RATON" sales are unincorporated.
+  # Only these columns are requested: never owners' names or mailing addresses. Deeds appear
+  # about two weeks after a sale, so each run re-reads three weeks. Weekly roundup (Tier 1).
+  - kind: property_sales
+    platform: arcgis
+    url: https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Tables/MapServer/1
+    options:
+      dateField: SALE_DATE
+      idField: SALEKEY
+      title: '{SITE_ADDR_STR}'
+      where: "PARCEL_NUMBER LIKE '06%' AND PRICE >= 1000 AND (CONFID_FLG IS NULL OR CONFID_FLG <> 'Y')"
+      outFields:
+        [
+          SALEKEY,
+          PARCEL_NUMBER,
+          SITE_ADDR_STR,
+          SUBDIV_NAME,
+          SALE_DATE,
+          PRICE,
+          INSTRUMENT,
+          PROPERTY_USE,
+          TOTAL_MARKET,
+        ]
+      fields:
+        SITE_ADDR_STR: Address
+        PRICE: Price
+        SALE_DATE: Sale date
+        INSTRUMENT: Deed
+        PROPERTY_USE: Use
+        SUBDIV_NAME: Subdivision
+        PARCEL_NUMBER: Parcel
+      lagDays: 21
+      type: sale
+  # Verified 2026-10-17: Greater Boca Raton Beach & Park District news (Drupal RSS; robots.txt
+  # allows /rss.xml). An elected special district: parks, beaches, Sugar Sand Park.
+  - kind: city_news
+    platform: feed
+    url: https://www.mybocaparks.org/rss.xml
+    options: { pages: true }
   # Verified 2026-10-15: Florida Division of Corporations daily filings (new businesses).
   - kind: business_filings
     platform: fl-sunbiz

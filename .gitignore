@@ -23,3 +23,6 @@ cdk.out/
 
 # Local photo storage (M9, without S3)
 .data/
+
+# Claude Code agent worktrees (temporary copies of the repo)
+.claude/worktrees/
