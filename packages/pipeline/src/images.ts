@@ -605,7 +605,8 @@ export function chooseLibraryIllustration(input: {
   );
   const files = (input.library ?? illustrationLibrary).flatMap((art) => {
     const shot = shots.get(shotIdOf(art.id, ids) ?? '');
-    return shot && (shot.region === 'any' || shot.region === input.state) ? [{ shot, art }] : [];
+    const region = art.region ?? shot?.region;
+    return shot && (region === 'any' || region === input.state) ? [{ shot, art }] : [];
   });
   const words = illustrationWords(input.text);
   // A guide explains one thing, so it only takes a scene its own words name ("garbage" → the

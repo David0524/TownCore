@@ -1547,4 +1547,6 @@ export type LibraryIllustration = {
   importedAt: string;
   /** Made from the photorealistic prompt (`<id>-p`). */
   photoreal?: boolean;
+  /** This picture's own region, when it narrows its shot's (an `any` scene drawn with palms). */
+  region?: 'FL';
 };

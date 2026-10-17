@@ -123,6 +123,21 @@ describe('the default image catalogue', () => {
     );
   });
 
+  it('keeps a picture drawn with palms to Florida, though its scene fits any town', () => {
+    const base = {
+      section: 'community',
+      text: 'Bulk pickup and yard waste schedule',
+      title: 'How bulk pickup works',
+      articleId: 'g',
+      current: null,
+      recent: new Set<string>(),
+    };
+    const palms = { ...fullLibrary.find((a) => a.id === 'gd-12')!, region: 'FL' as const };
+    const guide = { ...base, section: 'guide', library: [palms] };
+    expect(chooseLibraryIllustration({ ...guide, state: 'FL' })?.art.id).toBe('gd-12');
+    expect(chooseLibraryIllustration({ ...guide, state: 'ME' })).toBeNull();
+  });
+
   it('counts a second take and a photo version as the same scene', () => {
     const library = [
       ...fullLibrary.filter((a) => a.id.startsWith('insp')),

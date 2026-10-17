@@ -94,7 +94,8 @@ export type ImportResult = { imported: string[]; skipped: Array<{ file: string; 
  */
 export async function importIllustrations(opts: {
   dir: string;
-  alts: Record<string, string>;
+  /** Alt text by file id, or with the picture's own region (an `any` scene drawn with palms). */
+  alts: Record<string, string | { alt: string; region?: 'FL' }>;
   approvedBy: string;
   library: readonly LibraryIllustration[];
   webDir: string;
@@ -113,7 +114,9 @@ export async function importIllustrations(opts: {
       result.skipped.push({ file, why: 'not a shot ID' });
       continue;
     }
-    const alt = opts.alts[id]?.trim();
+    const entry = opts.alts[id];
+    const alt = (typeof entry === 'string' ? entry : entry?.alt)?.trim();
+    const region = typeof entry === 'object' ? entry.region : undefined;
     if (!alt) {
       result.skipped.push({ file, why: 'no alt text' });
       continue;
@@ -131,6 +134,7 @@ export async function importIllustrations(opts: {
         approvedBy: opts.approvedBy.toLowerCase(),
         importedAt: (opts.now ?? new Date()).toISOString().slice(0, 10),
         ...(isPhotoVariant(id) ? { photoreal: true } : {}),
+        ...(region ? { region } : {}),
       });
       result.imported.push(id);
     } catch (error) {

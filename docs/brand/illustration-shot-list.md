@@ -26,69 +26,8 @@ Flat editorial illustration in a clean vector style with a subtle paper grain, s
 Photorealistic photograph with natural daylight, true-to-life color and a shallow depth of field, like a good local newspaper photo. Landscape, 3:2. No text, letters, numbers, logos, brand names, flags or signs with writing; any signs are blank. Generic, not any real, recognizable building, landmark or street. People only small, seen from behind or far away, with no faces. Keep the main subject centered with room at the top and bottom, since pages crop it to 16:9.
 ```
 
-## Next batch: not made yet (61)
+## Next batch: not made yet (0)
 
-- **sch-10** (any): Empty bleachers beside a school football field with fresh white lines.
-- **wx-16** (any): A rainbow over wet rooftops after rain, the sky clearing.
-- **wx-17** (any, alert): A street with deep puddles after heavy rain, a storm drain and a car parked on higher ground.
-- **wx-18** (FL): High tide reaching the top of a seawall along a canal, water calm and glassy.
-- **wx-19** (any, fallback): A wide sky with fair-weather clouds over a town park and a pond.
-- **wx-20** (any, alert): A hazy sky softening the outline of trees and rooftops.
-- **gd-01** (any): A utility bill envelope, a water meter cover in grass and a smartphone on a table.
-- **gd-02** (any): A blank voter registration card, a pen and a mailing envelope on a desk.
-- **gd-03** (any): A library card (blank), a stack of borrowed books and a tote bag.
-- **gd-04** (any): A parking meter beside a curb with a car parked in the background.
-- **gd-05** (any): A dog sitting by a door with a leash and a blank tag on its collar.
-- **gd-06** (any): A covered picnic pavilion with tables in a park, no one there yet.
-- **gd-07** (FL): A boat ramp sloping into a calm waterway, a trailer and truck backing down.
-- **gd-08** (FL): A small beach parking lot under sea grape trees with a path to the sand.
-- **gd-09** (any): A smartphone showing a blank alert banner on a kitchen counter next to keys.
-- **gd-10** (any): Emergency supplies laid out: water jugs, flashlight, batteries, a first-aid kit and canned food.
-- **gd-11** (any, roundup:sales): House keys on a closing folder next to a small model house.
-- **gd-12** (any): Bundled yard trimmings and a piece of old furniture set out neatly at the curb.
-- **gd-13** (any): A pothole on a residential street with a phone held up to photograph it, hand only.
-- **gd-14** (any): An open laptop with a blank form on screen, a coffee and a notepad on a small business counter.
-- **gd-15** (any): A large shade tree in a front yard with an arborist's truck parked at the curb.
-- **sale-01** (any, roundup:sales): A tidy single-family house with a front porch, a potted plant and two moving boxes by the door.
-- **sale-02** (any, roundup:sales): A ring of house keys hanging from the lock of a painted front door.
-- **sale-03** (any, roundup:sales): A quiet residential street of varied houses and front lawns, seen from the sidewalk.
-- **sale-04** (any, roundup:sales): A post-and-arm yard sign with a blank panel on a front lawn, the house soft behind it.
-- **sale-05** (any, roundup:sales): Rooftops of a residential neighborhood from a gentle aerial angle, trees between them.
-- **sale-06** (FL, roundup:sales): A low white house on a canal with a small dock and one palm tree.
-- **perm-01** (any, roundup:permits, spotlight:permit): Rolled blueprints, a hard hat and a tape measure on a plywood work table.
-- **perm-02** (any, roundup:permits): A two-story house wrapped in scaffolding during renovation, tarps on the lawn.
-- **perm-03** (any, roundup:permits, spotlight:permit): A new wood-framed house against a blue sky, stacks of lumber in front.
-- **nb-01** (any, roundup:new-businesses): A small storefront at morning, a person seen from behind unlocking the glass door; the awning is blank.
-- **nb-02** (any, roundup:new-businesses): A row of small storefronts with blank awnings and planters along a sidewalk.
-- **nb-03** (any, roundup:new-businesses): A small home-office desk with an open laptop showing a blank form, a coffee and a folder.
-- **nb-04** (any, roundup:new-businesses): A bunch of balloons tied to a blank sandwich board outside a new shop.
-- **lic-01** (any, roundup:new-licenses): A contractor's white work van with ladders on its roof rack, parked at a curb; no lettering.
-- **lic-02** (any, roundup:new-licenses): A tool belt, gloves and a hard hat on the tailgate of a pickup.
-- **lic-03** (any, roundup:new-licenses): Paint cans, rollers and a folded drop cloth on a porch step.
-- **np-01** (any, roundup:new-places): A bar counter with empty stools, glasses on a shelf and warm pendant lights.
-- **np-02** (any, roundup:new-places): A small table set for two by a restaurant window, menus closed with blank covers.
-- **insp-01** (any, roundup:inspections): A spotless stainless-steel restaurant kitchen line, empty, under bright light.
-- **insp-02** (any, roundup:inspections): A probe thermometer resting on a steel prep counter beside a cutting board.
-- **insp-03** (any, roundup:inspections): A hand-washing sink with a soap dispenser and paper towels in a commercial kitchen.
-- **insp-04** (any, roundup:inspections): A clipboard with a blank checklist on a steel counter, a pen clipped to it.
-- **insp-05** (any, roundup:inspections): A walk-in cooler with shelves of lidded containers with blank labels, the door open.
-- **insp-06** (any, roundup:inspections): Boxes of disposable gloves and hairnets on a shelf by a kitchen door.
-- **road-01** (any, roundup:roads): A line of orange cones and barrels narrowing a lane on a suburban road.
-- **road-02** (any, roundup:roads): A paving machine and roller laying fresh asphalt, steam rising.
-- **road-03** (any, roundup:roads): Road work at night under work lights, a blank arrow board on a truck.
-- **mtg-01** (any, roundup:meetings): A stack of agenda folders on the end of an empty row of chairs in a meeting room.
-- **mtg-02** (any, roundup:meetings): A meeting room with a projector screen showing a blank slide and rows of chairs.
-- **alrt-01** (any, alert): Sandbags stacked across the doorway of a house, rain falling.
-- **alrt-02** (any, alert): Ice-coated branches and a frosted fence after a freezing night.
-- **alrt-03** (any, alert): A snowplow clearing a residential street at dusk.
-- **alrt-04** (any, alert): A large tree limb down on a lawn after wind, the house untouched.
-- **alrt-05** (any, alert, fallback): Dark storm clouds building over a town's rooftops, the street empty.
-- **fb-01** (any, fallback): A wide, quiet main street of small shops and trees in morning light.
-- **fb-02** (any, fallback): A town square with a fountain, benches and trees; no statue or monument.
-- **fb-03** (any, fallback): A residential street at dusk with porch lights on.
-- **fb-04** (any, fallback): A row of mailboxes along a country road with fields behind.
-- **fb-05** (any, fallback): A park bench under a large shade tree beside a path.
-- **fb-06** (FL, fallback): A quiet street lined with palms and low pastel buildings.
 
 ## Government and city services (33)
 

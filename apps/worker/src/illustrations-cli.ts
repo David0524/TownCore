@@ -2,7 +2,8 @@
 //   Writes docs/brand/illustration-shot-list.md from packages/config/src/illustrations.ts.
 // pnpm illustrations import <dir> --approved-by <email> --alt <alts.json>
 //   Imports images named by shot ID (gov-01.png …) into apps/web/public/illustrations/ and the
-//   library, with alt text from alts.json ({ "gov-01": "…" }), written from what each shows.
+//   library, with alt text from alts.json ({ "gov-01": "…" }), written from what each shows;
+//   { "gd-12": { "alt": "…", "region": "FL" } } keeps one picture of an any-town scene to Florida.
 // pnpm illustrations assign [town-slug] [--demo]
 //   Gives stories that only have a title card a library illustration, if one fits, and charts a
 //   cover picture. --demo runs it on the Vercel demo's database (DEMO_DATABASE_URL) over HTTPS;
@@ -50,7 +51,10 @@ if (command === 'shotlist') {
   await mkdir(webDir, { recursive: true });
   const { result, library } = await importIllustrations({
     dir,
-    alts: JSON.parse(await readFile(altFile, 'utf8')) as Record<string, string>,
+    alts: JSON.parse(await readFile(altFile, 'utf8')) as Record<
+      string,
+      string | { alt: string; region?: 'FL' }
+    >,
     approvedBy,
     library: illustrationLibrary,
     webDir,
