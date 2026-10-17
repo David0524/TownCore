@@ -34,6 +34,9 @@ export const sourceKinds = [
   'roads',
   // Federal contracts and grants to recipients with a town address (USASpending, every town).
   'federal_awards',
+  // Federal inspections and penalties of nursing homes with a town address (CMS Care Compare,
+  // every town). Always Tier 3: health findings at a named facility (§7).
+  'health_facilities',
   'other_outlet',
 ] as const;
 export type SourceKind = (typeof sourceKinds)[number];

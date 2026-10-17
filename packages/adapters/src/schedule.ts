@@ -24,6 +24,8 @@ const PLATFORM_DEFAULTS: Record<string, string> = {
   'fl-sunbiz': '6h',
   // Guide pages: checked daily, so a changed official page refreshes its guide within a day.
   page: '1d',
+  // CMS refreshes nursing-home data once a month and asks for 10 seconds between requests.
+  cms: '7d',
 };
 
 export function defaultSchedule(kind: SourceKind, platform: string): string {

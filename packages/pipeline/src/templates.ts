@@ -1,3 +1,8 @@
+import {
+  severityLevel,
+  type NursingHomeInspection,
+  type NursingHomePenalty,
+} from '@towncore/adapters';
 import { titleCase } from '@towncore/config';
 import { apDate } from './time';
 
@@ -45,7 +50,8 @@ export type RoundupKind =
   | 'sales'
   | 'inspections'
   | 'roads'
-  | 'federal';
+  | 'federal'
+  | 'nursing-homes';
 
 type TownInfo = { name: string; timezone: string; agency: string };
 
@@ -1186,6 +1192,7 @@ export function roundupUnits(kind: RoundupKind, recs: TemplateRecord[]): number 
   if (kind === 'new-places') return newPlaces(recs).length;
   if (kind === 'inspections') return inspectedPlaces(recs).length;
   if (kind === 'sales') return saleRows(recs, 'UTC').length;
+  if (kind === 'nursing-homes') return nursingHomeCount(recs);
   return recs.length;
 }
 
@@ -1460,5 +1467,226 @@ export function federalAwardsRoundup(
     }),
     beat: 'business',
     sourceRecordIds: rows.map((r) => r.a.id),
+  };
+}
+
+// --- Nursing homes ---------------------------------------------------------------------------
+
+/** The four rows of CMS's scope and severity grid, in a few words for tables. */
+const HARM_SHORT = ['', 'minimal harm', 'no actual harm', 'actual harm', 'immediate jeopardy'];
+
+export const CARE_COMPARE_HOMES = 'https://www.medicare.gov/care-compare/?providerType=NursingHome';
+
+/** "Quality of Life and Care Deficiencies" → "quality of life and care". */
+export const citationArea = (category: string) =>
+  category
+    .replace(/\s+deficiencies$/i, '')
+    .trim()
+    .toLowerCase();
+
+/** "July 10", or "Dec. 3, 2025" outside the year of `ref`. */
+export const isoDay = (iso: string, ref: Date) => {
+  const year = iso.slice(0, 4);
+  const d = apDate(new Date(`${iso}T12:00:00Z`), 'UTC');
+  return year === String(ref.getUTCFullYear()) ? d : `${d}, ${year}`;
+};
+
+export type NursingHomeVisit = {
+  r: TemplateRecord;
+  v: NursingHomeInspection;
+  name: string;
+  /** 1 (minimal harm) to 4 (immediate jeopardy), from the most serious citation. */
+  level: number;
+};
+
+/** Inspections, most serious first, and penalties, largest first, from the CMS records. */
+export function nursingHomeRows(recs: TemplateRecord[]) {
+  const visits: NursingHomeVisit[] = recs
+    .filter((r) => r.type === 'nursing-home-inspection')
+    .map((r) => {
+      const v = (r.raw ?? {}) as NursingHomeInspection;
+      return { r, v, name: titleCase(v.name ?? r.title ?? ''), level: severityLevel(v.worst) };
+    })
+    .filter((x) => x.v.ccn && x.v.date && Array.isArray(x.v.citations))
+    .sort(
+      (a, b) =>
+        (b.v.worst ?? '').localeCompare(a.v.worst ?? '') ||
+        b.v.citations.length - a.v.citations.length ||
+        a.name.localeCompare(b.name),
+    );
+  const penalties = recs
+    .filter((r) => r.type === 'nursing-home-penalty')
+    .map((r) => {
+      const p = (r.raw ?? {}) as NursingHomePenalty;
+      return { r, p, name: titleCase(p.name ?? r.title ?? '') };
+    })
+    .filter((x) => x.p.ccn && x.p.date)
+    .sort((a, b) => (b.p.amount ?? 0) - (a.p.amount ?? 0) || a.name.localeCompare(b.name));
+  return { visits, penalties };
+}
+
+/** Distinct homes in the records (the roundup's unit). */
+export const nursingHomeCount = (recs: TemplateRecord[]) => {
+  const { visits, penalties } = nursingHomeRows(recs);
+  return new Set([...visits.map((x) => x.v.ccn), ...penalties.map((x) => x.p.ccn)]).size;
+};
+
+/** "a $13,065 fine", "a 30-day payment denial". */
+export const penaltyWords = (p: NursingHomePenalty) =>
+  p.type === 'fine'
+    ? p.amount
+      ? `a ${usd(p.amount)} fine`
+      : 'a fine'
+    : p.denialDays
+      ? `a ${p.denialDays}-day payment denial`
+      : 'a payment denial';
+
+/** "Federal regulators imposed a $13,065 fine on X on March 13." */
+export const penaltyLine = (name: string, p: NursingHomePenalty, day: (iso: string) => string) =>
+  `Federal regulators imposed ${penaltyWords(p)} on ${md(name)} on ${day(p.date)}.`;
+
+/** The visit's most serious citation. */
+export const worstCitation = (v: NursingHomeInspection) =>
+  v.citations.find((c) => c.severity === v.worst) ?? v.citations[0];
+
+/** "rated actual harm (G) on CMS's scale". */
+export const ratedWords = (code: string) => {
+  const level = severityLevel(code);
+  return level ? `rated ${HARM_SHORT[level]} (${code}) on the federal scale` : `rated ${code}`;
+};
+
+/**
+ * Federal health inspections and penalties of nursing homes with a town address, as CMS
+ * publishes them (Care Compare, every town). Records arrive with CMS's monthly release, two to
+ * six months after the visit, so this rounds up what was first read last week, by when each
+ * record was stored, not the inspection date. Always Tier 3 (§7: health findings at a named
+ * facility). Leads with the most serious finding: immediate jeopardy, then actual harm, then the
+ * largest penalty, then the most citations. Only facilities are named; a citation quotes the
+ * federal requirement, never a resident, worker or inspector.
+ */
+export function nursingHomesRoundup(
+  town: TownInfo,
+  weekStart: Date,
+  recs: TemplateRecord[],
+): TemplatedDraft {
+  const { visits, penalties } = nursingHomeRows(recs);
+  const n = nursingHomeCount(recs);
+  const inspected = new Set(visits.map((x) => x.v.ccn)).size;
+  const where = `with a ${town.name} address`;
+  const day = (iso: string) => isoDay(iso, weekStart);
+  const cited = visits.reduce((sum, x) => sum + x.v.citations.length, 0);
+  const serious = visits.reduce(
+    (sum, x) => sum + x.v.citations.filter((c) => severityLevel(c.severity) >= 3).length,
+    0,
+  );
+  const fined = penalties.reduce((sum, x) => sum + (x.p.amount ?? 0), 0);
+  const top = visits[0];
+  const topPenalty = penalties[0];
+  const thin = n <= 2 && !serious && !penalties.length;
+  const areas = ranked(
+    tally(
+      visits.flatMap((x) => x.v.citations),
+      (c) => (c.category ? citationArea(c.category) : null),
+    ),
+  );
+  const listed = Math.max(
+    0,
+    ...visits.map((x) => x.v.homesInTown ?? 0),
+    ...penalties.map((x) => x.p.homesInTown ?? 0),
+  );
+  const dates = visits.map((x) => x.v.date).sort();
+  const span = !dates.length
+    ? null
+    : dates[0] === dates.at(-1)
+      ? `on ${day(dates[0]!)}`
+      : `between ${day(dates[0]!)} and ${day(dates.at(-1)!)}`;
+  const among = n > 1 ? `, one of ${n} nursing homes ${where} in the latest federal data` : '';
+
+  const headline =
+    top && top.level >= 3
+      ? `Federal inspectors cite ${top.level === 4 ? 'immediate jeopardy' : 'actual harm'} at ${top.name}${among || `, a nursing home ${where}`}`
+      : topPenalty
+        ? `Federal regulators give ${topPenalty.name} ${penaltyWords(topPenalty.p)}${among || `, a nursing home ${where}`}`
+        : top
+          ? `${top.name} gets ${count(top.v.citations.length, 'citation', 'citations')} in a federal inspection${among || `, a nursing home ${where}`}`
+          : `${count(n, 'nursing home', 'nursing homes')} ${where} in the latest federal data`;
+
+  const leadVisit = (x: NursingHomeVisit) => {
+    const c = worstCitation(x.v);
+    const addr = x.v.address ? titleCase(x.v.address) : null;
+    return [
+      `Federal health inspectors who visited ${md(x.name)}${addr ? `, at ${md(addr)},` : ''} on ${day(x.v.date)} issued ${count(x.v.citations.length, 'citation', 'citations')}.`,
+      c
+        ? `The most serious, ${ratedWords(c.severity)}, was under ${md(citationArea(c.category))}: "${md(c.description)}"`
+        : null,
+      x.v.previous
+        ? `At its previous inspection with citations, on ${day(x.v.previous.date)}, it received ${numWord(x.v.previous.citations)}.`
+        : null,
+    ];
+  };
+  const penaltySentence = (x: (typeof penalties)[number]) => penaltyLine(x.name, x.p, day);
+  const visitLine = (x: NursingHomeVisit) => {
+    const c = worstCitation(x.v);
+    return [
+      `**${linked(md(x.name), x.r.url)}**: inspected ${day(x.v.date)}${x.v.kinds?.length ? ` (${x.v.kinds.join(', ')})` : ''}`,
+      count(x.v.citations.length, 'citation', 'citations'),
+      c ? `most serious ${c.severity}, ${md(citationArea(c.category))}` : null,
+      x.v.previous ? `${x.v.previous.citations} at its previous inspection` : null,
+    ]
+      .filter(Boolean)
+      .join('; ');
+  };
+
+  return {
+    headline,
+    dek: [
+      visits.length
+        ? `${cap(count(cited, 'citation', 'citations'))} from federal health inspections of ${count(inspected, 'nursing home', 'nursing homes')} ${where}${span ? `, ${span}` : ''}`
+        : `Medicare penalties for ${count(n, 'nursing home', 'nursing homes')} ${where}`,
+      fined ? `${usd(fined)} in fines` : null,
+    ]
+      .filter(Boolean)
+      .join('; ')
+      .concat('.'),
+    bodyMd: roundupBody({
+      thin,
+      lede: [
+        ...(top ? leadVisit(top) : penalties.slice(0, 2).map(penaltySentence)),
+        inspected > 1
+          ? `Inspectors issued the ${numWord(inspected)} homes ${count(cited, 'citation', 'citations')} in all${serious ? `; ${numWord(serious)} ${serious === 1 ? 'was' : 'were'} rated actual harm or immediate jeopardy` : ', none rated as actual harm to a resident'}.`
+          : null,
+        areas.length > 1 && areas[0]![1] > 1
+          ? `The areas cited most were ${list(areas.slice(0, 3).map(([a, k]) => `${md(a)} (${k})`))}.`
+          : null,
+        top && penalties.length ? penalties.slice(0, 2).map(penaltySentence).join(' ') : null,
+        listed > n ? `CMS lists ${listed} nursing homes ${where}.` : null,
+      ],
+      highlights: [
+        ...visits.slice(0, 4).map(visitLine),
+        ...penalties
+          .slice(0, 2)
+          .map(
+            (x) =>
+              `**${linked(md(x.name), x.r.url)}**: ${penaltyWords(x.p)}, imposed ${day(x.p.date)}`,
+          ),
+      ],
+      dataTitle: `All ${count(visits.length, 'inspection', 'inspections')}, most serious first`,
+      data: visits.length
+        ? dataTable({
+            head: ['Nursing home', 'Inspected', 'Type', 'Citations', 'Most serious'],
+            rows: visits.map((x) => [
+              linked(md(x.name), x.r.url),
+              day(x.v.date),
+              (x.v.kinds ?? []).join(', '),
+              String(x.v.citations.length),
+              x.v.worst ? `${x.v.worst} (${HARM_SHORT[x.level] || 'not rated'})` : '',
+            ]),
+            noun: ['inspection', 'inspections'],
+          })
+        : undefined,
+      readers: `Each home's ratings and inspection reports are on [Medicare's Care Compare](${CARE_COMPARE_HOMES}).`,
+    }),
+    beat: 'business',
+    sourceRecordIds: recs.map((r) => r.id),
   };
 }

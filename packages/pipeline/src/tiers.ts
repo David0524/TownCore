@@ -58,6 +58,11 @@ export function decideTier(input: {
   if (sourceKinds.some((k) => k === 'police' || k === 'fire') || beat === 'public-safety') {
     atLeast(3, 'police, fire or public-safety story');
   }
+  // Nursing-home inspections and penalties name a facility with health findings, whatever they
+  // found (§7: health, inspection failures).
+  if (sourceKinds.includes('health_facilities')) {
+    atLeast(3, 'health inspection findings at a named facility');
+  }
   if (c) {
     for (const person of c.people) {
       if (person.role === 'private_person') atLeast(3, `names a private person (${person.name})`);

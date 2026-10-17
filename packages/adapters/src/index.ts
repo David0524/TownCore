@@ -41,6 +41,14 @@ export { flDbprAdapter } from './fl-dbpr';
 export { foodViolations } from './fl-dbpr/violations';
 export { usaspendingAdapter } from './usaspending';
 export { fetchTropics, outlookAreas, outlookParagraphs, parseTropics } from './nhc';
+export {
+  cmsAdapter,
+  severityLevel,
+  severityWords,
+  type Citation,
+  type NursingHomeInspection,
+  type NursingHomePenalty,
+} from './cms';
 export { flSunbizAdapter } from './fl-sunbiz';
 export {
   alertsForTown,
