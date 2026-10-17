@@ -5,6 +5,7 @@ import {
   categoryCuisines,
   categoryListings,
   enhancedListingIds,
+  featuredPrices,
   openFeaturedRanks,
   worthALook,
 } from '@towncore/directory';
@@ -35,12 +36,13 @@ export async function loadCategory(
   // Places to eat, shop or visit get ways in beyond A–Z (owner, 2026-10-16): cuisines to browse
   // and a few complete listings worth a look, on the unfiltered page.
   const browsing = category.group !== 'home' && !q && !cuisine;
-  const [{ listings, total }, enhanced, openRanks, cuisines, picks] = await Promise.all([
+  const [{ listings, total }, enhanced, openRanks, cuisines, picks, prices] = await Promise.all([
     categoryListings(db(), town.id, category.slug, { q, cuisine }),
     enhancedListingIds(db(), town.id),
     openFeaturedRanks(db(), town.id, category.slug),
     category.group !== 'home' ? categoryCuisines(db(), town.id, category.slug) : [],
     browsing ? worthALook(db(), town.id, category.slug) : [],
+    featuredPrices(db(), town, category.slug),
   ]);
   // A short list on a phone would be mostly ads: five units stack. Unsold house ads in the rail
   // box, the quote slot and the sponsored cards (which repeat the Top spot's offer) step aside
@@ -57,6 +59,7 @@ export async function loadCategory(
     cuisines,
     picks,
     shortOnPhones,
+    prices,
   };
 }
 
@@ -64,10 +67,12 @@ export function CategoryView({
   town,
   data,
   quoteStatus,
+  waitlistStatus,
 }: {
   town: Town;
   data: Awaited<ReturnType<typeof loadCategory>>;
   quoteStatus?: string | undefined;
+  waitlistStatus?: string | undefined;
 }) {
   const {
     category,
@@ -80,6 +85,7 @@ export function CategoryView({
     cuisines,
     picks,
     shortOnPhones,
+    prices,
   } = data;
   // House ads offer only the featured spots still open here.
   const context = { category, openRanks };
@@ -96,7 +102,15 @@ export function CategoryView({
                 : ', from OpenStreetMap'
             }. An area address can be outside city limits.`}
       </p>
-      <OwnerBar town={town} />
+      <OwnerBar
+        town={town}
+        spots={{
+          category,
+          openRanks,
+          fromCents: openRanks.length ? Math.min(...openRanks.map((r) => prices[r])) : null,
+          waitlistStatus,
+        }}
+      />
       {cuisines.length > 1 ? (
         <nav aria-label={`Browse ${category.name.toLowerCase()} by cuisine`}>
           <ul className={places.chips} data-testid="cuisines">

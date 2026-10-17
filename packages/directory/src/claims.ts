@@ -16,6 +16,7 @@ import {
 } from '@towncore/db';
 import { parseAddress } from '@towncore/mail';
 import { sendDirectoryMail, siteOrigin, townMailDomain, type DirectoryMailDeps } from './mail';
+import { listingProof, proofLine } from './proof';
 
 // Claiming a listing (M6 PR C, D-M6-4): the person enters their name, role and business email;
 // a one-time link goes to that address only; once they press the button on our site the claim
@@ -151,7 +152,8 @@ export async function startClaim(
 }
 
 export type VerifyOutcome =
-  { status: 'pending'; businessName: string } | { status: 'expired' | 'invalid' };
+  | { status: 'pending'; businessName: string; category: string | null }
+  | { status: 'expired' | 'invalid' };
 
 /** The button on our site posts the token; a GET alone verifies nothing. Single use. */
 export async function verifyClaim(
@@ -162,7 +164,11 @@ export async function verifyClaim(
 ): Promise<VerifyOutcome> {
   if (!token || token.length > 100) return { status: 'invalid' };
   const [claim] = await db
-    .select({ claim: businessClaims, businessName: businesses.name })
+    .select({
+      claim: businessClaims,
+      businessName: businesses.name,
+      category: businesses.category,
+    })
     .from(businessClaims)
     .innerJoin(businesses, eq(businesses.id, businessClaims.businessId))
     .where(
@@ -179,7 +185,7 @@ export async function verifyClaim(
     .update(businessClaims)
     .set({ status: 'pending', verifiedAt: now, verifyTokenHash: null, updatedAt: now })
     .where(eq(businessClaims.id, claim.claim.id));
-  return { status: 'pending', businessName: claim.businessName };
+  return { status: 'pending', businessName: claim.businessName, category: claim.category };
 }
 
 export type ClaimRow = {
@@ -305,13 +311,16 @@ export async function decideClaim(
   const mail = await townMailDomain(db, claim.townId);
   const [listing] = await db.select().from(businesses).where(eq(businesses.id, claim.businessId));
   if (!mail || !listing) return;
+  // Proof, not pitch (owner, 2026-10-17): the listing's own real numbers, when there are enough.
+  const proof = proofLine(await listingProof(db, listing.id, now));
   await sendDirectoryMail(deps, mail, {
     to: claim.email,
     kind: 'claim_approved',
     subject: `Your claim on ${listing.name} is approved`,
     lines: [
       `You now manage the listing for ${listing.name} on ${mail.siteName}.`,
-      'Sign in with this email address to add your phone number, website, hours and a short description. We send a sign-in link each time; there is no password.',
+      ...(proof ? [proof] : []),
+      'Sign in with this email address to add your phone number, website, hours and a short description. We send a sign-in link each time; there is no password. Your owner page shows how often readers see your listing.',
     ],
     link: { href: `${siteOrigin(deps, mail.domain)}/owner`, label: 'Sign in to edit your listing' },
   });

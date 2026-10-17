@@ -1030,7 +1030,9 @@ export const businessFollowups = pgTable(
       .notNull()
       .references(() => businesses.id, { onDelete: 'cascade' }),
     kind: text('kind')
-      .$type<'trial_ending' | 'competitor_spot' | 'story_mention' | 'nearby_claim'>()
+      .$type<
+        'trial_ending' | 'competitor_spot' | 'story_mention' | 'nearby_claim' | 'waitlist_open'
+      >()
       .notNull(),
     dedupeKey: text('dedupe_key').notNull(),
     toEmail: text('to_email').notNull(),
@@ -1051,9 +1053,160 @@ export const businessFollowups = pgTable(
     index('business_followups_business_idx').on(t.businessId, t.decidedAt),
     check(
       'business_followups_kind',
-      sql`${t.kind} in ('trial_ending', 'competitor_spot', 'story_mention', 'nearby_claim')`,
+      sql`${t.kind} in ('trial_ending', 'competitor_spot', 'story_mention', 'nearby_claim', 'waitlist_open')`,
     ),
     check('business_followups_status', sql`${t.status} in ('draft', 'sent', 'skipped')`),
+  ],
+);
+
+// Directory prices (owner, 2026-10-17): the current price of a category product in a town, one
+// for everyone. No row means the town's list price (its tier's, or its YAML's). Changed only by
+// the monthly recalculation inside its guardrails, an approved proposal, or an admin override;
+// existing subscriptions keep the Stripe Price they were sold at (grandfathered).
+export const directoryPrices = pgTable(
+  'directory_prices',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    category: text('category').notNull(),
+    product: placementProduct('product').notNull(),
+    /** The featured spot (1–3), or null for an unranked product. */
+    rank: smallint('rank'),
+    amountCents: integer('amount_cents').notNull(),
+    setBy: text('set_by').$type<'monthly' | 'approved' | 'override'>().notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique('directory_prices_key_uq')
+      .on(t.townId, t.category, t.product, t.rank)
+      .nullsNotDistinct(),
+    check('directory_prices_amount', sql`${t.amountCents} >= 100`),
+    check('directory_prices_rank', sql`${t.rank} is null or ${t.rank} between 1 and 3`),
+  ],
+);
+
+// Every price change and proposal, with the aggregate inputs that produced it (fill rate,
+// waitlist, delivered value, interest). `monthly` rows are one per key and month; a `proposed`
+// one waits for an admin in Admin → Directory → Pricing. Overrides are logged here and audited.
+export const priceChanges = pgTable(
+  'price_changes',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    category: text('category').notNull(),
+    product: placementProduct('product').notNull(),
+    rank: smallint('rank'),
+    /** The month the recalculation ran for (YYYY-MM). */
+    month: text('month').notNull(),
+    kind: text('kind').$type<'monthly' | 'override'>().notNull(),
+    oldCents: integer('old_cents').notNull(),
+    newCents: integer('new_cents').notNull(),
+    status: text('status')
+      .$type<'applied' | 'proposed' | 'approved' | 'rejected' | 'expired'>()
+      .notNull(),
+    reason: text('reason').notNull(),
+    inputs: jsonb('inputs').notNull(),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('price_changes_monthly_uq')
+      .on(t.townId, t.category, t.product, sql`coalesce(${t.rank}, 0)`, t.month)
+      .where(sql`${t.kind} = 'monthly'`),
+    index('price_changes_town_created_idx').on(t.townId, t.createdAt),
+    index('price_changes_status_idx').on(t.status),
+    check('price_changes_kind', sql`${t.kind} in ('monthly', 'override')`),
+    check(
+      'price_changes_status',
+      sql`${t.status} in ('applied', 'proposed', 'approved', 'rejected', 'expired')`,
+    ),
+  ],
+);
+
+// One recalculation per town and month, so a re-run never moves a price twice.
+export const pricingRuns = pgTable(
+  'pricing_runs',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    month: text('month').notNull(),
+    variant: text('variant').notNull(),
+    evaluated: integer('evaluated').notNull().default(0),
+    changed: integer('changed').notNull().default(0),
+    proposed: integer('proposed').notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('pricing_runs_town_month_uq').on(t.townId, t.month)],
+);
+
+// Featured-spot waitlist (owner, 2026-10-17): when every spot in a category is sold, a business
+// can ask to hear when one opens. Joined with consent (the form's checkbox, or the owner's own
+// button). When a spot frees up, waiting entries tied to a claimed listing get a `waitlist_open`
+// follow-up through the usual drafts and standing approval (Rule 10); the count feeds pricing.
+export const directoryWaitlist = pgTable(
+  'directory_waitlist',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    category: text('category').notNull(),
+    businessId: uuid('business_id').references(() => businesses.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    consentAt: timestamp('consent_at', { withTimezone: true }).notNull(),
+    /** Where they joined: the category page, the advertise page or the owner page. */
+    source: text('source').$type<'category' | 'advertise' | 'owner'>().notNull(),
+    status: text('status').$type<'waiting' | 'notified' | 'removed'>().notNull().default('waiting'),
+    notifiedAt: timestamp('notified_at', { withTimezone: true }),
+    /** For the rate limit only. */
+    ip: text('ip'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('directory_waitlist_waiting_uq')
+      .on(t.townId, t.category, sql`lower(${t.email})`)
+      .where(sql`${t.status} = 'waiting'`),
+    index('directory_waitlist_ip_idx').on(t.ip, t.createdAt),
+    check('directory_waitlist_status', sql`${t.status} in ('waiting', 'notified', 'removed')`),
+    check('directory_waitlist_source', sql`${t.source} in ('category', 'advertise', 'owner')`),
+  ],
+);
+
+// Owner testimonials (owner, 2026-10-17): written by an owner who advertised, with explicit
+// permission to show it, and shown on /advertise only after staff approve it (audited).
+export const businessTestimonials = pgTable(
+  'business_testimonials',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    quote: text('quote').notNull(),
+    /** How it's credited on the page: the business name. */
+    attribution: text('attribution').notNull(),
+    permissionAt: timestamp('permission_at', { withTimezone: true }).notNull(),
+    status: text('status')
+      .$type<'pending' | 'approved' | 'rejected'>()
+      .notNull()
+      .default('pending'),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('business_testimonials_town_status_idx').on(t.townId, t.status),
+    check('business_testimonials_status', sql`${t.status} in ('pending', 'approved', 'rejected')`),
   ],
 );
 

@@ -1,13 +1,23 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { CARD_LIMITS, listingOffers, ownerListings, sponsorCards } from '@towncore/directory';
+import {
+  canWriteTestimonial,
+  CARD_LIMITS,
+  listingOffers,
+  onWaitlist,
+  ownerListings,
+  ownerTestimonial,
+  sponsorCards,
+  TESTIMONIAL_LIMITS,
+} from '@towncore/directory';
 import {
   businessLicense,
   ownerPhotos,
   PHOTO_REJECTIONS,
   PHOTOS_PER_LISTING,
 } from '@towncore/photos';
+import { OwnerProof } from '@/components/directory/OwnerProof';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
 import { listingPath } from '@/lib/directory';
@@ -35,6 +45,15 @@ const PAYMENT_MESSAGES: Record<string, string> = {
   photo_closed: 'Photo uploads aren’t open yet. Please try again soon.',
   photo_error: 'Something went wrong with that photo. Please try again later.',
   ...Object.fromEntries(Object.entries(PHOTO_REJECTIONS).map(([k, v]) => [`photo_${k}`, v])),
+  waitlist_joined: 'You’re on the waitlist. We’ll email you once when a spot opens.',
+  waitlist_already: 'You’re already on the waitlist for your category.',
+  waitlist_open: 'A spot is open now: pick it below.',
+  waitlist_invalid: 'Your listing needs a category before it can join the waitlist.',
+  waitlist_rate_limited: 'Please try again in an hour.',
+  quote_sent: 'Thanks. Our staff check it before it shows on the advertise page.',
+  quote_invalid: `Write ${TESTIMONIAL_LIMITS.min} to ${TESTIMONIAL_LIMITS.max} characters and tick the permission box.`,
+  quote_not_eligible: 'Testimonials are for businesses that have advertised with us.',
+  quote_waiting: 'Your last one is still waiting for review.',
 };
 
 const OFFER_NOTES: Record<string, string> = {
@@ -81,6 +100,16 @@ export default async function EditListing({ params, searchParams }: Props) {
     ),
   );
   const errors = (Array.isArray(e) ? e : e ? [e] : []).slice(0, 5);
+  const spotOffers = offers.filter((o) => o.product === 'sponsored_slot');
+  // Every spot in the category is sold: offer the waitlist instead (owner, 2026-10-17).
+  const soldOut = spotOffers.length > 0 && spotOffers.every((o) => !o.placement && o.left === 0);
+  const waiting =
+    soldOut && listing.category
+      ? await onWaitlist(db(), { townId: town.id, category: listing.category, email })
+      : false;
+  const testimonial = (await canWriteTestimonial(db(), listing.id))
+    ? await ownerTestimonial(db(), listing.id)
+    : undefined;
   const photos = await ownerPhotos(db(), listing.id);
   const kept = photos.filter((p) => p.status !== 'rejected');
   return (
@@ -109,6 +138,7 @@ export default async function EditListing({ params, searchParams }: Props) {
           ))}
         </ul>
       ) : null}
+      <OwnerProof town={town} listing={listing} offers={offers} />
       <form method="post" action={`/owner/${listing.slug}/save`} className={styles.claim}>
         <label>
           Business name
@@ -207,7 +237,7 @@ export default async function EditListing({ params, searchParams }: Props) {
         ) : null}
       </section>
       {offers.length > 0 ? (
-        <section aria-labelledby="promote-h" data-testid="promote">
+        <section id="promote" aria-labelledby="promote-h" data-testid="promote">
           <h2 id="promote-h">Promote this listing</h2>
           <p className={styles.note}>
             Paid placements are always labeled &quot;Sponsored&quot; and never change the order of
@@ -324,6 +354,21 @@ export default async function EditListing({ params, searchParams }: Props) {
               ),
             )}
           </ul>
+          {soldOut ? (
+            <div data-testid="owner-waitlist">
+              <p className="meta">
+                All 3 featured spots in your category are taken right now.
+                {waiting ? ' You’re on the waitlist: we’ll email you once when one opens.' : ''}
+              </p>
+              {waiting ? null : (
+                <form method="post" action={`/owner/${listing.slug}/waitlist`}>
+                  <button type="submit" className="button">
+                    Email me when a spot opens
+                  </button>
+                </form>
+              )}
+            </div>
+          ) : null}
           {cards ? (
             <section id="card" aria-labelledby="card-h" data-testid="sponsor-card">
               <h3 id="card-h">Your sponsored card</h3>
@@ -374,10 +419,56 @@ export default async function EditListing({ params, searchParams }: Props) {
           ) : null}
           <form method="post" action="/owner/billing">
             <input type="hidden" name="slug" value={listing.slug} />
+            <p className="meta" data-testid="owner-cancel">
+              Cancel anytime: Manage billing opens Stripe&rsquo;s billing page, where you can cancel
+              in one step.
+            </p>
             <button type="submit" className={`button ${styles.secondary}`}>
               Manage billing
             </button>
           </form>
+        </section>
+      ) : null}
+      {testimonial !== undefined ? (
+        <section id="testimonial" aria-labelledby="quote-h" data-testid="owner-testimonial">
+          <h2 id="quote-h">Tell other businesses how it went</h2>
+          {testimonial ? (
+            <p className="meta">
+              {testimonial.status === 'approved'
+                ? `Showing on the advertise page: “${testimonial.quote}”`
+                : testimonial.status === 'pending'
+                  ? `Waiting for review: “${testimonial.quote}”`
+                  : 'Your last one wasn’t used. You can write another.'}
+            </p>
+          ) : null}
+          {testimonial?.status === 'pending' ? null : (
+            <form
+              method="post"
+              action={`/owner/${listing.slug}/testimonial`}
+              className={styles.claim}
+            >
+              <label>
+                A sentence or two about advertising with {town.siteName}
+                <textarea
+                  name="quote"
+                  rows={3}
+                  required
+                  minLength={TESTIMONIAL_LIMITS.min}
+                  maxLength={TESTIMONIAL_LIMITS.max}
+                />
+              </label>
+              <label className={styles.check}>
+                <input type="checkbox" name="permission" value="yes" required />
+                <span>
+                  {town.siteName} may show this on its advertise page, credited to {listing.name}.
+                  Staff check it first; we never change your words.
+                </span>
+              </label>
+              <button type="submit" className="button">
+                Send for review
+              </button>
+            </form>
+          )}
         </section>
       ) : null}
     </StandardPage>

@@ -4,6 +4,7 @@ import {
   asc,
   businessFollowups,
   businesses,
+  directoryWaitlist,
   eq,
   gt,
   gte,
@@ -12,7 +13,6 @@ import {
   isNull,
   logAdminAction,
   lte,
-  ne,
   placements,
   sql,
   stripePrices,
@@ -40,7 +40,11 @@ import { storyListingMatches } from './outreach';
 // goes only to the owner's claim email, carries one-click List-Unsubscribe, and is never sent to
 // a suppressed or unsubscribed address.
 
-export type FollowupKind = 'trial_ending' | 'competitor_spot' | 'story_mention' | 'nearby_claim';
+export type FollowupKind =
+  'trial_ending' | 'competitor_spot' | 'story_mention' | 'nearby_claim' | 'waitlist_open';
+
+/** Kinds the owner asked for or must hear about: they skip the one-a-week limit. */
+const ALWAYS: readonly FollowupKind[] = ['trial_ending', 'waitlist_open'];
 
 const dayMs = 86_400_000;
 /** The trial reminder goes this long before the first charge. */
@@ -290,7 +294,44 @@ export async function draftFollowups(
     }
   }
 
-  // One follow-up a week per business, besides the trial reminder.
+  // 5. A featured spot opened in a category they joined the waitlist for (owner, 2026-10-17).
+  // Only for an entry tied to a claimed listing, to that listing's own claim email.
+  const waiting = await db
+    .select()
+    .from(directoryWaitlist)
+    .where(and(eq(directoryWaitlist.townId, townId), eq(directoryWaitlist.status, 'waiting')));
+  const openIn = new Map<string, FeaturedRank[]>();
+  const waitlistEntries = new Map<string, string>();
+  for (const entry of waiting) {
+    const category = directoryCategory(entry.category);
+    if (!category) continue;
+    if (!openIn.has(category.slug))
+      openIn.set(category.slug, await openFeaturedRanks(db, townId, category.slug, now));
+    const open = openIn.get(category.slug)!;
+    if (open.length === 0) continue;
+    const owner =
+      (entry.businessId ? byId.get(entry.businessId) : undefined) ??
+      all.find((o) => o.category === category.slug && o.email.toLowerCase() === entry.email);
+    if (!owner || owner.email.toLowerCase() !== entry.email || featured.has(owner.id)) continue;
+    const dedupeKey = `waitlist:${entry.id}`;
+    waitlistEntries.set(dedupeKey, entry.id);
+    drafts.push({
+      townId,
+      businessId: owner.id,
+      kind: 'waitlist_open',
+      dedupeKey,
+      toEmail: owner.email,
+      subject: `A featured spot opened in ${category.name.toLowerCase()} on ${town.siteName}`,
+      lines: [
+        `You asked us to tell you when a featured spot opened in ${category.name.toLowerCase()} on ${town.siteName}. ${open.length === 1 ? `Spot #${open[0]} is` : `Spots ${open.map((r) => `#${r}`).join(', ')} are`} open now.`,
+        'Spots go to the first business that books one. Your owner page has the current prices; you can cancel anytime.',
+      ],
+      linkHref: ownerPage(owner),
+      linkLabel: 'See the open spots',
+    });
+  }
+
+  // One follow-up a week per business, besides the trial reminder and a waitlist notice.
   const quietSince = new Date(now.getTime() - FOLLOWUP_QUIET_DAYS * dayMs);
   const recentRows = drafts.length
     ? await db
@@ -302,7 +343,7 @@ export async function draftFollowups(
               businessFollowups.businessId,
               drafts.map((d) => d.businessId),
             ),
-            ne(businessFollowups.kind, 'trial_ending'),
+            inArray(businessFollowups.kind, ['competitor_spot', 'story_mention', 'nearby_claim']),
             gte(businessFollowups.createdAt, quietSince),
           ),
         )
@@ -310,15 +351,23 @@ export async function draftFollowups(
   const quiet = new Set(recentRows.map((r) => r.businessId));
   let created = 0;
   for (const draft of drafts) {
-    if (draft.kind !== 'trial_ending' && quiet.has(draft.businessId)) continue;
+    const always = ALWAYS.includes(draft.kind);
+    if (!always && quiet.has(draft.businessId)) continue;
     const [row] = await db
       .insert(businessFollowups)
       .values({ ...draft, createdAt: now })
       .onConflictDoNothing()
       .returning({ id: businessFollowups.id });
+    // A waitlist entry is notified once: its draft now exists (made now or before).
+    const entryId = waitlistEntries.get(draft.dedupeKey);
+    if (entryId)
+      await db
+        .update(directoryWaitlist)
+        .set({ status: 'notified', notifiedAt: now })
+        .where(eq(directoryWaitlist.id, entryId));
     if (!row) continue;
     created++;
-    if (draft.kind !== 'trial_ending') quiet.add(draft.businessId);
+    if (!always) quiet.add(draft.businessId);
   }
   return { created };
 }

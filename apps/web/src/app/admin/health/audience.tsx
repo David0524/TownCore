@@ -80,6 +80,17 @@ function FunnelCells({ counts, rates }: { counts: FunnelCounts; rates: FunnelRat
         </div>
       </td>
       <td>{usd(rates.revenuePerTown)}</td>
+      <td>{rates.revenuePer1kVisits === null ? '–' : `$${rates.revenuePer1kVisits.toFixed(2)}`}</td>
+      <td>
+        {pct(rates.fillRate)}
+        <div className={styles.muted}>{counts.waitlist} waiting</div>
+      </td>
+      <td>
+        {pct(rates.churn)}
+        <div className={styles.muted}>
+          {counts.churned} of {counts.activeAtStart}
+        </div>
+      </td>
       <td>
         <Advice rates={rates} />
       </td>
@@ -97,6 +108,9 @@ const HEAD = (
     <th>Trials started</th>
     <th>Trial to paid</th>
     <th>Revenue a month per town</th>
+    <th>Revenue per 1,000 story views</th>
+    <th>Featured spots sold</th>
+    <th>Churn</th>
     <th>Where to look</th>
   </>
 );

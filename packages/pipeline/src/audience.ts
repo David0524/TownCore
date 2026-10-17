@@ -2,6 +2,7 @@ import {
   FUNNEL_ADVICE,
   FUNNEL_FLOORS,
   placementOf,
+  PRICING_RULES,
   REFERRAL_SOURCES,
   SIGNUP_PLACEMENTS,
   type ReferralSource,
@@ -12,10 +13,12 @@ import {
   and,
   articleStatsDaily,
   businesses,
+  directoryWaitlist,
   eq,
   gte,
   inArray,
   isNotNull,
+  isNull,
   ne,
   placements,
   referralStatsDaily,
@@ -57,6 +60,14 @@ export type FunnelCounts = {
   trialsConverted: number;
   /** Monthly recurring revenue from paid (not trialing) placements, in cents. */
   mrrCents: number;
+  /** Featured spot-days sold and available over the pricing window (60 days). */
+  spotDaysSold: number;
+  spotDaysAvailable: number;
+  /** Businesses waiting for a featured spot. */
+  waitlist: number;
+  /** Monthly placements that ended in the window, and those running at its start. */
+  churned: number;
+  activeAtStart: number;
 };
 
 export type FunnelRates = {
@@ -67,6 +78,12 @@ export type FunnelRates = {
   newsletterShare: number | null;
   /** Revenue per town per month, in dollars. */
   revenuePerTown: number | null;
+  /** Monthly revenue per 1,000 story views in the window, in dollars. */
+  revenuePer1kVisits: number | null;
+  /** Featured spots sold, as a share of the time available. */
+  fillRate: number | null;
+  /** Monthly placements lost in the window, as a share of those running at its start. */
+  churn: number | null;
   advice: Array<keyof typeof FUNNEL_ADVICE>;
 };
 
@@ -105,6 +122,11 @@ export function emptyCounts(): FunnelCounts {
     trialsEnded: 0,
     trialsConverted: 0,
     mrrCents: 0,
+    spotDaysSold: 0,
+    spotDaysAvailable: 0,
+    waitlist: 0,
+    churned: 0,
+    activeAtStart: 0,
   };
 }
 
@@ -137,6 +159,9 @@ export function funnelRates(c: FunnelCounts): FunnelRates {
     trialToPaid,
     newsletterShare: c.views > 0 ? c.referrals.newsletter / c.views : null,
     revenuePerTown: c.towns > 0 ? c.mrrCents / 100 / c.towns : null,
+    revenuePer1kVisits: c.views > 0 ? c.mrrCents / 100 / (c.views / 1000) : null,
+    fillRate: c.spotDaysAvailable > 0 ? c.spotDaysSold / c.spotDaysAvailable : null,
+    churn: c.activeAtStart > 0 ? c.churned / c.activeAtStart : null,
     advice,
   };
 }
@@ -204,6 +229,7 @@ export async function townAudience(db: Db, now = new Date()): Promise<TownAudien
     counts.listings = listings?.n ?? 0;
     counts.claimed = listings?.claimed ?? 0;
     Object.assign(counts, await trialCounts(db, town, since, now));
+    Object.assign(counts, await inventoryCounts(db, town.id, since, now));
     const src = await db
       .select({ kind: sources.kind, platform: sources.platform })
       .from(sources)
@@ -267,6 +293,71 @@ async function trialCounts(
     trialsEnded: ended.length,
     trialsConverted: converted.length,
     mrrCents,
+  };
+}
+
+/**
+ * Featured-spot inventory and churn: spot-days sold against 3 spots in every category the town
+ * lists over the pricing window, the waitlist, and monthly placements that ended in the window.
+ */
+async function inventoryCounts(
+  db: Db,
+  townId: string,
+  since: Date,
+  now: Date,
+): Promise<
+  Pick<
+    FunnelCounts,
+    'spotDaysSold' | 'spotDaysAvailable' | 'waitlist' | 'churned' | 'activeAtStart'
+  >
+> {
+  const windowStart = new Date(now.getTime() - PRICING_RULES.windowDays * DAY);
+  const [cats] = await db
+    .select({ n: sql<number>`count(distinct ${businesses.category})::int` })
+    .from(businesses)
+    .where(and(eq(businesses.townId, townId), eq(businesses.active, true)));
+  const spots = await db
+    .select({ startsAt: placements.startsAt, endsAt: placements.endsAt })
+    .from(placements)
+    .where(
+      and(
+        eq(placements.townId, townId),
+        eq(placements.product, 'sponsored_slot'),
+        inArray(placements.status, ['active', 'canceled', 'expired']),
+        isNotNull(placements.startsAt),
+      ),
+    );
+  let sold = 0;
+  for (const s of spots) {
+    const from = Math.max(s.startsAt!.getTime(), windowStart.getTime());
+    const to = Math.min(s.endsAt?.getTime() ?? now.getTime(), now.getTime());
+    if (to > from) sold += (to - from) / DAY;
+  }
+  const [waiting] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(directoryWaitlist)
+    .where(and(eq(directoryWaitlist.townId, townId), eq(directoryWaitlist.status, 'waiting')));
+  const monthly = await db
+    .select({ status: placements.status, startsAt: placements.startsAt, endsAt: placements.endsAt })
+    .from(placements)
+    .where(
+      and(
+        eq(placements.townId, townId),
+        isNull(placements.period),
+        inArray(placements.status, ['active', 'canceled', 'expired']),
+        isNotNull(placements.startsAt),
+      ),
+    );
+  const runningAt = (r: (typeof monthly)[number], at: Date) =>
+    r.startsAt! < at && (r.endsAt === null || r.endsAt >= at);
+  return {
+    spotDaysSold: Math.round(sold),
+    spotDaysAvailable: (cats?.n ?? 0) * 3 * PRICING_RULES.windowDays,
+    waitlist: waiting?.n ?? 0,
+    churned: monthly.filter(
+      (r) => r.status !== 'active' && r.endsAt !== null && r.endsAt >= since && r.endsAt <= now,
+    ).length,
+    activeAtStart: monthly.filter((r) => runningAt(r, since)).length,
   };
 }
 

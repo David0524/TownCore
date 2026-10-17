@@ -6,16 +6,22 @@ import {
   decideBusinessRequest,
   decideClaim,
   decideNameChange,
+  decidePriceProposal,
   decideSponsorCard,
+  decideTestimonial,
   dismissOutreach,
   FollowupError,
   OutreachError,
+  overridePrice,
+  PricingError,
   RequestNotPending,
   sendFollowup,
   sendOutreach,
   setFollowupApproval,
   skipFollowup,
+  TestimonialNotPending,
 } from '@towncore/directory';
+import type { DirectoryProduct, FeaturedRank } from '@towncore/config';
 import { SendError, SuppressedRecipientsError } from '@towncore/mail';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -185,4 +191,65 @@ export async function followupAction(form: FormData): Promise<void> {
   }
   revalidatePath('/admin/directory');
   done({ done: message });
+}
+
+/** Staff approve or reject an owner's testimonial (audited). */
+export async function decideTestimonialAction(form: FormData): Promise<void> {
+  const me = await requireStaff();
+  const decision = str(form, 'decision');
+  if (decision !== 'approve' && decision !== 'reject') throw new Error('bad decision');
+  try {
+    await decideTestimonial(db(), {
+      testimonialId: str(form, 'testimonialId'),
+      staffId: me.id,
+      decision,
+    });
+  } catch (error) {
+    if (error instanceof TestimonialNotPending) done({ error: error.message });
+    throw error;
+  }
+  revalidatePath('/admin/directory');
+  done({ done: decision === 'approve' ? 'Testimonial approved' : 'Testimonial rejected' });
+}
+
+const pricingDone = (params: Record<string, string>) =>
+  redirect(`/admin/directory/pricing?${new URLSearchParams(params).toString()}`);
+
+/** An admin approves or rejects a proposed price change (audited). */
+export async function decidePriceAction(form: FormData): Promise<void> {
+  const me = await requireStaff();
+  if (me.role !== 'admin') pricingDone({ error: 'Only an admin can decide price changes.' });
+  const decision = str(form, 'decision');
+  if (decision !== 'approve' && decision !== 'reject') throw new Error('bad decision');
+  try {
+    await decidePriceProposal(db(), { changeId: str(form, 'changeId'), staffId: me.id, decision });
+  } catch (error) {
+    if (error instanceof PricingError) pricingDone({ error: error.message });
+    throw error;
+  }
+  revalidatePath('/admin/directory/pricing');
+  pricingDone({ done: decision === 'approve' ? 'New price set' : 'Proposal rejected' });
+}
+
+/** An admin sets one category's price by hand, with a reason (audited). */
+export async function overridePriceAction(form: FormData): Promise<void> {
+  const me = await requireStaff();
+  if (me.role !== 'admin') pricingDone({ error: 'Only an admin can override a price.' });
+  const [product, rank] = str(form, 'offer').split(':') as [DirectoryProduct, string | undefined];
+  try {
+    await overridePrice(db(), {
+      townId: str(form, 'townId'),
+      category: str(form, 'category'),
+      product,
+      rank: rank ? (Number(rank) as FeaturedRank) : null,
+      dollars: Number(str(form, 'dollars')),
+      staffId: me.id,
+      reason: str(form, 'reason'),
+    });
+  } catch (error) {
+    if (error instanceof PricingError) pricingDone({ error: error.message });
+    throw error;
+  }
+  revalidatePath('/admin/directory/pricing');
+  pricingDone({ done: 'Price set for new bookings' });
 }

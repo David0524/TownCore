@@ -150,6 +150,7 @@ describe('claims and the owner portal', () => {
     expect(await verifyClaim(db, townId, token, clock)).toEqual({
       status: 'pending',
       businessName: 'Anchor Plumbing',
+      category: 'plumbers',
     });
     expect(await verifyClaim(db, townId, token, clock)).toEqual({ status: 'invalid' });
     expect(await verifyClaim(db, townId, 'made-up', clock)).toEqual({ status: 'invalid' });

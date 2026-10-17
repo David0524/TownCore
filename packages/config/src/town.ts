@@ -176,21 +176,26 @@ export const townConfigSchema = z.strictObject({
   // Daily AI spend cap (CLAUDE.md §8) and a call cap that also protects free-tier quotas.
   ai_daily_cap_usd: z.number().positive().default(5),
   ai_daily_call_cap: z.number().int().positive().default(400),
-  // Monthly prices in whole dollars. Featured spots #1, #2 and #3 each have their own price,
-  // and a business's first spot is free for `free_trial_days` (owner, 2026-10-16).
-  pricing: z.strictObject({
-    featured_usd: z.tuple([
-      z.number().int().positive(),
-      z.number().int().positive(),
-      z.number().int().positive(),
-    ]),
-    enhanced_usd: z.number().int().positive(),
-    // Self-serve bookings, built but off (D-M6-6): one week of the newsletter's top sponsor
-    // slot, and one month of a directory category's sponsorship. No price, no product.
-    newsletter_week_usd: z.number().int().positive().optional(),
-    category_month_usd: z.number().int().positive().optional(),
-    free_trial_days: z.number().int().min(0).max(90).default(30),
-  }),
+  // Monthly prices in whole dollars, each optional: a town starts from its tier's price list
+  // (pricing.ts, owner 2026-10-17) and any field here overrides it. Featured spots #1, #2 and #3
+  // each have their own price, and a business's first spot is free for `free_trial_days`.
+  pricing: z
+    .strictObject({
+      featured_usd: z
+        .tuple([
+          z.number().int().positive(),
+          z.number().int().positive(),
+          z.number().int().positive(),
+        ])
+        .optional(),
+      enhanced_usd: z.number().int().positive().optional(),
+      // Self-serve bookings, built but off (D-M6-6): one week of the newsletter's top sponsor
+      // slot, and one month of a directory category's sponsorship.
+      newsletter_week_usd: z.number().int().positive().optional(),
+      category_month_usd: z.number().int().positive().optional(),
+      free_trial_days: z.number().int().min(0).max(90).default(30),
+    })
+    .default({ free_trial_days: 30 }),
 });
 
 export type TownConfig = z.infer<typeof townConfigSchema>;
