@@ -1956,3 +1956,35 @@ export const scoreReports = pgTable(
     ),
   ],
 );
+
+// A town's logo art (owner, 2026-10-17): made in ChatGPT from the prompt the launcher writes,
+// imported by a person, and cut in code into the hero, icons and share images. Recorded like
+// `images` (§11c): AI-generated, its source and license, and the person who approved it. It
+// belongs to a town, not an article (`images` rows are one per article), so it has its own table;
+// the latest row is the town's current art.
+export const identityArt = pgTable(
+  'identity_art',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    /** Who made it ("ChatGPT, by the owner"). */
+    source: text('source').notNull(),
+    license: text('license').notNull(),
+    /** The imported file's name and SHA-256, so the exact original can be identified. */
+    fileName: text('file_name').notNull(),
+    sha256: text('sha256').notNull(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    /** Where the derived files are served from (the town's `app_icon`). */
+    assetDir: text('asset_dir').notNull(),
+    aiGenerated: boolean('ai_generated').notNull().default(true),
+    approvedBy: uuid('approved_by')
+      .notNull()
+      .references(() => staff.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index('identity_art_town_idx').on(t.townId, t.createdAt)],
+);
+export type IdentityArt = typeof identityArt.$inferSelect;

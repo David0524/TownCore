@@ -151,3 +151,4 @@ export {
   setTownPaused,
   type LaunchRow,
 } from './golive';
+export { logoPromptStep, type ArtDetail } from './identity-step';

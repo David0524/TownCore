@@ -12,3 +12,8 @@ tier: small
 newsletter_send_time: '06:30'
 agencies: [Town of Pine Hollow]
 pricing: { featured_usd: [19, 12, 7], enhanced_usd: 15 }
+hero_art:
+  src: /brand/pine-hollow/hero.webp
+  width: 1221
+  height: 407
+app_icon: /brand/pine-hollow

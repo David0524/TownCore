@@ -21,6 +21,7 @@ import { themeReviewV1, themeV1, type ThemeChoice, type ThemeReview } from '@tow
 import { capturePages, captureIdentity, type Shot, type ShotTarget } from './screenshots';
 import type { Place } from './census';
 import { adjustContrast, colorDistance, hexToOklch, oklchToHex, paletteFromAccent } from './color';
+import { logoPromptStep, type ArtDetail } from './identity-step';
 import type { NamesDetail } from './names-step';
 import { NEIGHBOR_MILES } from './names';
 import { milesBetween } from './rank';
@@ -329,6 +330,8 @@ export type ThemeDetail = {
   shots: Shot[];
   /** The screenshot review passes (Anthropic only; at most two). */
   reviews: Array<{ verdict: ThemeReview['verdict']; problems: string[]; applied: string[] }>;
+  /** Logo art: the ChatGPT prompts, and whether art was imported (identity-step.ts). */
+  art?: ArtDetail;
 };
 
 /** At most this many review-and-fix rounds (docs/plans/M7.md §5). */
@@ -552,6 +555,13 @@ export async function themeStep(input: {
       shots = await capture();
     }
   }
+  // Logo art: ChatGPT prompts from the final theme for the owner, cut in code once imported.
+  const art = logoPromptStep({
+    config,
+    theme,
+    place: { name: town.name, state: town.state },
+    dir,
+  });
   return {
     detail: {
       mode,
@@ -564,7 +574,8 @@ export async function themeStep(input: {
       mastheads: mastheads(),
       shots,
       reviews,
+      art,
     },
-    files: [themeFile, ...shots.map((s) => s.path)],
+    files: [themeFile, art.promptFile, ...shots.map((s) => s.path)],
   };
 }

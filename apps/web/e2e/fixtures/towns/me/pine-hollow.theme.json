@@ -16,7 +16,13 @@
     "header": "tinted-bar",
     "nav": "beat-tabs",
     "grid": "main-right-rail",
-    "homeTop": ["category-buttons", "briefing-column", "newsletter-cta", "today-bento"],
+    "homeTop": [
+      "good-morning",
+      "category-buttons",
+      "briefing-column",
+      "newsletter-cta",
+      "today-bento"
+    ],
     "home": ["beat-sections", "documents-posted"],
     "homeRail": ["coming-up"],
     "article": "classic-rail",
