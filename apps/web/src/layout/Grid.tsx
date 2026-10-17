@@ -21,7 +21,8 @@ export function Grid({
   top?: ReactNode;
   /** Full-width area below the columns (the homepage's bottom band). */
   bottom?: ReactNode;
-  measure?: 'normal' | 'wide';
+  /** `wide` is the wide-reading article measure; `full` the whole page width (directory). */
+  measure?: 'normal' | 'wide' | 'full';
   /** A fixed 300px rail, whatever the family (the directory's three-wide listings). */
   narrowRail?: boolean | undefined;
 }) {
@@ -46,7 +47,7 @@ export function Grid({
     <main className={styles.frame}>
       {top ? <div className={styles.top}>{top}</div> : null}
       <div
-        className={`${styles.grid} ${measure === 'wide' ? styles.wide : styles.single}`}
+        className={`${styles.grid} ${measure === 'wide' ? styles.wide : measure === 'full' ? styles.full : styles.single}`}
         data-part="grid:single-column"
       >
         {children}

@@ -76,7 +76,7 @@ for (const { slug, host } of sites) {
         // Desktop: within the first screen. Phones: right after the header, bar and strip.
         expect(box.y, path).toBeLessThan(isMobile ? viewport.height * 1.1 : viewport.height);
         // Nothing but the strip sits between the kinds bar and the listings: the owner panel,
-        // quote form, newsletter and other house ads come after them (or sit in the rail).
+        // quote form and other house ads come after them; the newsletter sits beside the heading.
         for (const sel of [
           '[data-testid="owner-bar"]',
           '[data-slot="directory.quote-request"]',
@@ -93,7 +93,7 @@ for (const { slug, host } of sites) {
       }
     });
 
-    test('the newsletter is in the rail on desktop and after the listings on phones', async ({
+    test('the newsletter is beside the heading on desktop and after the listings on phones', async ({
       page,
       isMobile,
     }) => {
@@ -109,11 +109,14 @@ for (const { slug, host } of sites) {
         expect(box.y).toBeGreaterThan(last.y + last.height);
         expect(await signup.evaluate((el) => getComputedStyle(el).position)).toBe('static');
       } else {
-        await expect(
-          page.locator('aside[aria-label="More"]').getByTestId('directory-newsletter'),
-        ).toHaveCount(1);
+        // Beside the heading, above the listings; the listings then run under it, across the
+        // whole page (owner, 2026-10-17: use the right side of the screen).
+        const heading = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
+        expect(box.x).toBeGreaterThan(heading.x + heading.width);
         const first = (await cards.first().boundingBox())!;
-        expect(box.x).toBeGreaterThan(first.x + first.width);
+        expect(box.y + box.height).toBeLessThanOrEqual(first.y);
+        const third = (await cards.nth(2).boundingBox())!;
+        expect(third.x + third.width).toBeGreaterThan(box.x + box.width - 4);
       }
       // Never sticky or fixed (§11b: no large sticky units): it scrolls with the page.
       const positions = await signup.evaluate((el) => {
@@ -139,8 +142,12 @@ for (const { slug, host } of sites) {
       for (const path of ['/directory', '/directory/plumbers']) {
         await page.setViewportSize({ width: 1440, height: 900 });
         await page.goto(`${host}${path}`);
-        await expect(page.locator('aside[aria-label="More"]')).toBeVisible();
         expect(await columns(), path).toBe(3);
+        // Full-size cards: the three share the page width, no rail beside them.
+        const widths = await page
+          .locator('section[aria-labelledby="organic"] [data-testid="place-card"]')
+          .evaluateAll((els) => els.slice(0, 3).map((el) => el.getBoundingClientRect().width));
+        for (const w of widths) expect(w, path).toBeGreaterThan(330);
         const tops = await page
           .locator('section[aria-labelledby="organic"] [data-testid="place-card"]')
           .evaluateAll((els) => els.slice(0, 3).map((el) => el.getBoundingClientRect().top));
