@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { categoryColors, type FoodColor } from '@towncore/config';
-import { categoryCounts } from '@towncore/directory';
 import { listPublishedGuides } from '@towncore/db';
 import { CategoryIcon, type IconKey } from '@/components/directory/CategoryIcon';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { db } from '@/lib/db';
-import { categoryFlavor, directoryPath } from '@/lib/directory';
+import { categoryFlavor, directoryPath, townCategories } from '@/lib/directory';
 import { articlePath } from '@/lib/discovery';
 import type { HomeModuleComponent } from './types';
 import styles from './explore.module.css';
@@ -32,7 +31,7 @@ const Svg = ({ d }: { d: string }) => (
 /** The quick-links bar: Businesses, Events, Dining, Things to do, Weather. */
 export const QuickLinks: HomeModuleComponent = async ({ town }) => {
   const [counts, guides] = await Promise.all([
-    categoryCounts(db(), town.id),
+    townCategories(town),
     listPublishedGuides(db(), town.id),
   ]);
   const food =
@@ -112,35 +111,33 @@ const FLAVORS: FoodColor[] = ['ocean', 'saffron', 'basil', 'tomato', 'berry', 'c
 
 /**
  * The directory on the homepage: every category with listings as a colored tile with its
- * count, home-service trades rolled into one tile, then the free-listing invitation.
+ * count, in the directory's ranked order (never A–Z), home-service trades rolled into one tile
+ * where the best-ranked trade would be, then the free-listing invitation.
  */
 export const DirectoryGrid: HomeModuleComponent = async ({ town }) => {
-  const counts = await categoryCounts(db(), town.id);
+  const counts = await townCategories(town);
   if (counts.length === 0) return null;
   const home = counts.filter((c) => c.category.group === 'home');
   const homeTotal = home.reduce((n, c) => n + c.count, 0);
   type Tile = { key: string; name: string; count: number; href: string; icon?: IconKey };
   const tiles: Array<Tile & { category?: (typeof counts)[number]['category'] }> = [];
-  for (const group of ['food', 'shops', 'home', 'health', 'services', 'fun'] as const) {
-    if (group === 'home') {
-      if (homeTotal > 0)
-        tiles.push({
-          key: 'home',
-          name: 'Home services',
-          count: homeTotal,
-          // The biggest trade; the directory's bar lists the rest beside it.
-          href: directoryPath([...home].sort((a, b) => b.count - a.count)[0]!.category.slug),
-          icon: 'tools',
-        });
-      continue;
-    }
-    for (const { category, count } of counts.filter((c) => c.category.group === group))
+  for (const { category, count } of counts) {
+    if (category.group !== 'home')
       tiles.push({
         key: category.slug,
         name: category.name,
         count,
         href: directoryPath(category.slug),
         category,
+      });
+    else if (category === home[0]!.category)
+      tiles.push({
+        key: 'home',
+        name: 'Home services',
+        count: homeTotal,
+        // The best-ranked trade; the directory's bar lists the rest beside it.
+        href: directoryPath(category.slug),
+        icon: 'tools',
       });
   }
   // Twenty tiles at most (four rows of five): past that, the smallest categories step aside

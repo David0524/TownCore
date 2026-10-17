@@ -1,11 +1,35 @@
-/* Place cards (owner's request, after bocatownsquare.com): hairlines, theme tokens only. */
+/* Place cards (owner's request, after bocatownsquare.com): hairlines, theme tokens only. Three
+   across on desktop, two on tablets, a list of rows on phones (owner, 2026-10-17: "The
+   businesses can fit three wide on desktop"). */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
   margin: 0 0 1rem;
   padding: 0;
   list-style: none;
+}
+
+.grid > li {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+@media (min-width: 600px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Cards in a row share its height. */
+  .grid .card {
+    height: 100%;
+  }
+}
+
+@media (min-width: 64rem) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .card {
@@ -69,6 +93,18 @@
 @media (min-width: 600px) {
   .deskPhone {
     display: flex;
+  }
+}
+
+/* A narrow card (three across) puts its Call and Website icons under the name. */
+@container (max-width: 20rem) {
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+  }
+
+  .actions {
+    padding-left: 3.125rem;
   }
 }
 
@@ -154,6 +190,21 @@
   gap: 0.5rem;
   margin: 0 0 1.25rem;
   padding: 0;
+}
+
+/* Phones: one row that scrolls sideways, so the chips never push the listings down. */
+@media (max-width: 599.98px) {
+  .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: calc(-1 * var(--gutter));
+    padding-inline: var(--gutter);
+    scrollbar-width: none;
+  }
+
+  .chips li {
+    flex: none;
+  }
 }
 
 .chip {

@@ -1,11 +1,5 @@
 import Link from 'next/link';
-import {
-  categoryCounts,
-  claimedListings,
-  contactShown,
-  listingPlace,
-  newFoodPlaces,
-} from '@towncore/directory';
+import { claimedListings, contactShown, listingPlace, newFoodPlaces } from '@towncore/directory';
 import { businessPhotoFor, photoPath } from '@towncore/photos/queries';
 import { apDate } from '@towncore/pipeline';
 import { capitalized, foodKind, foodLook, friendlyName } from '@/components/directory/food';
@@ -13,7 +7,7 @@ import food from '@/components/directory/food.module.css';
 import { FoodTile } from '@/components/directory/FoodTile';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { db } from '@/lib/db';
-import { directoryPath, listingPath } from '@/lib/directory';
+import { directoryPath, listingPath, townCategories } from '@/lib/directory';
 import { Slot } from '@/slots/Slot';
 import type { HomeModuleComponent } from './types';
 import styles from './front.module.css';
@@ -24,7 +18,7 @@ import styles from './front.module.css';
 
 /** `home.directory`: up to 3 sponsored businesses in the slot, then recently claimed listings. */
 export const DirectoryFeatured: HomeModuleComponent = async ({ town }) => {
-  const counts = await categoryCounts(db(), town.id);
+  const counts = await townCategories(town);
   if (counts.length === 0) return null;
   const total = counts.reduce((n, c) => n + c.count, 0);
   const claimed = await claimedListings(db(), town.id);
@@ -57,9 +51,9 @@ export const DirectoryFeatured: HomeModuleComponent = async ({ town }) => {
   );
 };
 
-/** Every category with its count, as buttons. */
+/** Every category with its count, as buttons, in ranked order. */
 export const DirectoryCategories: HomeModuleComponent = async ({ town }) => {
-  const counts = await categoryCounts(db(), town.id);
+  const counts = await townCategories(town);
   if (counts.length === 0) return null;
   return (
     <nav aria-label="Local directory" data-module="directory-categories">
@@ -83,7 +77,7 @@ export const DirectoryCategories: HomeModuleComponent = async ({ town }) => {
  * the Top spot slot (an "open Top spot" tile when unsold).
  */
 export const FindAPro: HomeModuleComponent = async ({ town }) => {
-  const counts = (await categoryCounts(db(), town.id)).filter((c) => c.category.group === 'home');
+  const counts = (await townCategories(town)).filter((c) => c.category.group === 'home');
   if (counts.length === 0) return null;
   return (
     <section className={styles.coming} aria-labelledby="find-pro-h" data-module="find-a-pro">

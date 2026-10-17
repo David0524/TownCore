@@ -46,6 +46,12 @@
   :global([data-family='coastal-modern']) .rail {
     grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
   }
+
+  /* Directory pages: a 300px rail on every family, so listings fit three across. */
+  .rail.narrowRail,
+  :global([data-family='coastal-modern']) .rail.narrowRail {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
 }
 
 /* Full-width band below the columns. Its modules sit in the page width, except a full-bleed

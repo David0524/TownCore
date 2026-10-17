@@ -13,6 +13,7 @@ export function Grid({
   top,
   bottom,
   measure = 'normal',
+  narrowRail,
 }: {
   kind: Theme['layout']['grid'];
   children: ReactNode;
@@ -21,12 +22,17 @@ export function Grid({
   /** Full-width area below the columns (the homepage's bottom band). */
   bottom?: ReactNode;
   measure?: 'normal' | 'wide';
+  /** A fixed 300px rail, whatever the family (the directory's three-wide listings). */
+  narrowRail?: boolean | undefined;
 }) {
   if (kind === 'main-right-rail') {
     return (
       <main className={styles.frame}>
         {top ? <div className={styles.top}>{top}</div> : null}
-        <div className={`${styles.grid} ${styles.rail}`} data-part="grid:main-right-rail">
+        <div
+          className={`${styles.grid} ${styles.rail}${narrowRail ? ` ${styles.narrowRail}` : ''}`}
+          data-part="grid:main-right-rail"
+        >
           <div className={styles.main}>{children}</div>
           <aside className={styles.aside} aria-label="More">
             {rail}

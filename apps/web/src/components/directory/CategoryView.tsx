@@ -9,24 +9,26 @@ import {
   openFeaturedRanks,
   worthALook,
 } from '@towncore/directory';
+import { CategoryExclusive } from '@/components/directory/DirectoryFrame';
 import { OwnerBar } from '@/components/directory/OwnerBar';
 import { PlaceCard } from '@/components/directory/PlaceCard';
 import places from '@/components/directory/places.module.css';
 import { QuoteRequest } from '@/components/directory/QuoteRequest';
 import styles from '@/app/sites/[host]/directory/directory.module.css';
 import { db } from '@/lib/db';
-import { directoryPath, listingDetail } from '@/lib/directory';
-import { Slot } from '@/slots/Slot';
-import { SponsoredCards } from '@/slots/SponsoredCards';
+import { directoryPath, listingDetail, townDay } from '@/lib/directory';
+import { FeaturedSpots } from '@/slots/FeaturedSpots';
 
 /** Fewer listings than this on the page is a short list (see shortOnPhones below). */
 const SHORT_LIST = 20;
 
 /**
  * One kind of business, the same on its own page and where the directory opens on it
- * (CLAUDE.md §11b "Directory pages"): the category-exclusive sponsor in the header, the Top
- * spot, sponsored listings, then every organic listing in the same order for everyone (verified
- * license, completeness, recently claimed, name), and the quote request.
+ * (CLAUDE.md §11b "Directory pages"): a sold category sponsorship in the header, paid featured
+ * spots in rank order, the unsold ones as one compact strip, then every organic listing in the
+ * same order for everyone (verified license, completeness, recently claimed; ties rotate daily),
+ * and below them the owner panel and the quote request (owner, 2026-10-17: real businesses
+ * within the first screen).
  */
 export async function loadCategory(
   town: Town,
@@ -36,17 +38,18 @@ export async function loadCategory(
   // Places to eat, shop or visit get ways in beyond A–Z (owner, 2026-10-16): cuisines to browse
   // and a few complete listings worth a look, on the unfiltered page.
   const browsing = category.group !== 'home' && !q && !cuisine;
+  const day = townDay(town);
   const [{ listings, total }, enhanced, openRanks, cuisines, picks, prices] = await Promise.all([
-    categoryListings(db(), town.id, category.slug, { q, cuisine }),
+    categoryListings(db(), town.id, category.slug, { q, cuisine, day }),
     enhancedListingIds(db(), town.id),
     openFeaturedRanks(db(), town.id, category.slug),
     category.group !== 'home' ? categoryCuisines(db(), town.id, category.slug) : [],
-    browsing ? worthALook(db(), town.id, category.slug) : [],
+    // Three: one row of the desktop grid.
+    browsing ? worthALook(db(), town.id, category.slug, { limit: 3, day }) : [],
     featuredPrices(db(), town, category.slug),
   ]);
-  // A short list on a phone would be mostly ads: five units stack. Unsold house ads in the rail
-  // box, the quote slot and the sponsored cards (which repeat the Top spot's offer) step aside
-  // there (owner decision, 2026-10-16); paid units always show.
+  // A short list on a phone would be mostly ads. Unsold house ads in the rail box and the quote
+  // slot step aside there (owner decision, 2026-10-16); paid units always show.
   const shortOnPhones = listings.length < SHORT_LIST;
   return {
     category,
@@ -87,12 +90,10 @@ export function CategoryView({
     shortOnPhones,
     prices,
   } = data;
-  // House ads offer only the featured spots still open here.
-  const context = { category, openRanks };
   return (
     <>
-      {/* Unsold, it's left out on phones, where the page is long enough (owner, 2026-10-16). */}
-      <Slot town={town} name="directory.category.exclusive" context={context} houseOffOnPhones />
+      {/* A sold category sponsorship; unsold, the slot waits in the rail (DirectoryFrame). */}
+      <CategoryExclusive town={town} category={category} where="header" />
       <p className={`muted ${styles.intro}`}>
         {category.group === 'home'
           ? `${total} ${total === 1 ? 'business holds' : 'businesses hold'} an active Florida license as ${category.name.toLowerCase()} with a ${town.name} mailing address, which can be outside city limits. Check any license with the state before you hire.`
@@ -102,15 +103,6 @@ export function CategoryView({
                 : ', from OpenStreetMap'
             }. An area address can be outside city limits.`}
       </p>
-      <OwnerBar
-        town={town}
-        spots={{
-          category,
-          openRanks,
-          fromCents: openRanks.length ? Math.min(...openRanks.map((r) => prices[r])) : null,
-          waitlistStatus,
-        }}
-      />
       {cuisines.length > 1 ? (
         <nav aria-label={`Browse ${category.name.toLowerCase()} by cuisine`}>
           <ul className={places.chips} data-testid="cuisines">
@@ -137,13 +129,7 @@ export function CategoryView({
           </ul>
         </nav>
       ) : null}
-      <Slot town={town} name="directory.topspot" context={context} />
-      <SponsoredCards
-        town={town}
-        category={category}
-        openRanks={openRanks}
-        houseOffOnPhones={shortOnPhones}
-      />
+      <FeaturedSpots town={town} category={category} openRanks={openRanks} prices={prices} />
       {picks.length >= 2 ? (
         <section aria-labelledby="worth-h" data-testid="worth-a-look">
           <h2 id="worth-h" className={places.heading}>
@@ -224,6 +210,15 @@ export function CategoryView({
           Search
         </button>
       </form>
+      <OwnerBar
+        town={town}
+        spots={{
+          category,
+          openRanks,
+          fromCents: openRanks.length ? Math.min(...openRanks.map((r) => prices[r])) : null,
+          waitlistStatus,
+        }}
+      />
       <QuoteRequest
         town={town}
         category={category}

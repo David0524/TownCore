@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { categoryCounts, MIN_INDEXABLE, searchListings } from '@towncore/directory';
+import { MIN_INDEXABLE, searchListings } from '@towncore/directory';
 import { CategoryBar } from '@/components/directory/CategoryBar';
 import { CategoryView, loadCategory } from '@/components/directory/CategoryView';
+import { DirectoryFrame } from '@/components/directory/DirectoryFrame';
 import { Grouped } from '@/components/phone/Grouped';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
@@ -12,9 +13,10 @@ import {
   directoryPath,
   listingDetail,
   listingPath,
+  townCategories,
+  townDay,
 } from '@/lib/directory';
 import { rssAlternate } from '@/lib/discovery';
-import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 import styles from './directory.module.css';
 
@@ -26,7 +28,7 @@ type Props = {
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const town = await requireTown(params);
   const { q } = await searchParams;
-  const counts = await categoryCounts(db(), town.id);
+  const counts = await townCategories(town);
   const total = counts.reduce((n, c) => n + c.count, 0);
   return {
     title: 'Local directory',
@@ -38,24 +40,24 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 }
 
 /**
- * The Places tab (M6): every kind of business as a bar of colored icons, opening on one kind
- * (restaurants, or the biggest) with its listings below, so the page is never just a menu
- * (owner, 2026-10-16); picking another kind goes to its page, with the same bar. No search box
- * here (owner: "Don't think there's a need"); `?q=` still searches every listing by name.
+ * The Places tab (M6): every kind of business as a bar of colored icons in ranked order, opening
+ * on the top-ranked kind with its listings below, so the page is never just a menu (owner,
+ * 2026-10-16 and 2026-10-17); picking another kind goes to its page, with the same bar. No
+ * search box here (owner: "Don't think there's a need"); `?q=` still searches every listing.
  */
 export default async function DirectoryPage({ params, searchParams }: Props) {
   const town = await requireTown(params);
   const raw = (await searchParams).q;
   const q = (Array.isArray(raw) ? raw[0] : raw)?.trim().slice(0, 80) ?? '';
   const [counts, results] = await Promise.all([
-    categoryCounts(db(), town.id),
-    q ? searchListings(db(), town.id, q) : Promise.resolve([]),
+    townCategories(town),
+    q ? searchListings(db(), town.id, q, 25, null, { day: townDay(town) }) : Promise.resolve([]),
   ]);
   const opening = q ? null : defaultCategory(counts);
   const data = opening ? await loadCategory(town, opening.category) : null;
 
   return (
-    <StandardPage town={town} shortOnPhones={data?.shortOnPhones}>
+    <DirectoryFrame town={town} category={data?.category} shortOnPhones={data?.shortOnPhones}>
       <LargeTitle title="Places" as="h1" always />
       <p className={`muted ${styles.intro}`}>
         Restaurants, shops and services in the {town.name} area. Sponsored listings are labeled, and
@@ -93,6 +95,6 @@ export default async function DirectoryPage({ params, searchParams }: Props) {
           <CategoryView town={town} data={data} />
         </section>
       ) : null}
-    </StandardPage>
+    </DirectoryFrame>
   );
 }

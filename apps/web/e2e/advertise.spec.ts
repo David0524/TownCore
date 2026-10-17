@@ -41,7 +41,7 @@ const CATEGORIES: Record<'desktop' | 'mobile', Record<TownSlug, string>> = {
   },
   mobile: {
     'boca-raton': 'real-estate',
-    'harbor-point': 'beauty-and-wellness',
+    'harbor-point': 'caterers',
     'pine-hollow': 'grocery-and-markets',
   },
 };

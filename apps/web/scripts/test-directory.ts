@@ -13,9 +13,11 @@ import {
   type Town,
 } from '@towncore/db';
 
-// Fictional directory listings for the fixture towns (never Boca), so e2e covers the directory
-// pages: one category with enough listings to be indexed, one thin one, and a claimed listing.
-// Every name is invented and every license number starts with "TEST".
+// Fictional directory listings for the fixture towns, so e2e covers the directory pages: one
+// category with enough listings to be indexed, one thin one, and a claimed listing. Every name is
+// invented and every license number starts with "TEST". The design-system towns (Harbor Point,
+// Pine Hollow and, in a local test database only, Boca) also get two more kinds, so the ranked
+// category order differs from A–Z and every family's directory is checked (§14).
 
 export const TEST_DIRECTORY_SOURCE = 'test-fixture';
 /** Source platform for the fixture's new-food records, apart from test-content's own source. */
@@ -64,7 +66,24 @@ const fixtures: Fixture[] = [
   },
 ];
 
-export async function seedTestDirectory(db: Db, town: Town): Promise<number> {
+/** Two more kinds: ranked, beauty comes after restaurants and pets last, unlike A–Z. */
+const extras: Fixture[] = [
+  {
+    name: 'Kelp and Comb Salon',
+    category: 'beauty-and-wellness',
+    licenseType: 'Cosmetology Salon',
+  },
+  { name: 'Lantern Day Spa', category: 'beauty-and-wellness', licenseType: 'Cosmetology Salon' },
+  { name: 'Mooring Nail Studio', category: 'beauty-and-wellness', licenseType: 'Nail Salon' },
+  { name: 'Netmender Pet Grooming', category: 'pets', licenseType: 'Pet Grooming' },
+];
+
+export async function seedTestDirectory(
+  db: Db,
+  town: Town,
+  { more = false }: { more?: boolean } = {},
+): Promise<number> {
+  const listed = more ? [...fixtures, ...extras] : fixtures;
   const old = await db
     .select({ id: businesses.id })
     .from(businesses)
@@ -88,7 +107,7 @@ export async function seedTestDirectory(db: Db, town: Town): Promise<number> {
     .where(and(eq(businesses.townId, town.id), eq(businesses.dataSource, TEST_DIRECTORY_SOURCE)));
   const zip = '04000';
   await db.insert(businesses).values(
-    fixtures.map((f, i) => {
+    listed.map((f, i) => {
       const license = `TEST${String(i + 1).padStart(4, '0')}`;
       return {
         townId: town.id,
@@ -159,5 +178,5 @@ export async function seedTestDirectory(db: Db, town: Town): Promise<number> {
       contentHash: `test-newfood-${i}`,
     })),
   );
-  return fixtures.length;
+  return listed.length;
 }

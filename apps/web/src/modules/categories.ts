@@ -1,9 +1,7 @@
 import { cache } from 'react';
 import { beatCategory, categoryColors, type Category } from '@towncore/config';
-import { categoryCounts } from '@towncore/directory';
 import type { Town } from '@towncore/db';
-import { db } from '@/lib/db';
-import { directoryPath } from '@/lib/directory';
+import { directoryPath, townCategories } from '@/lib/directory';
 import { beatCounts, townGames, upcomingEvents, upcomingMeetings } from './data';
 
 // Reader categories (docs/plans/M4b.md, D-M4b-4): News, Events, Dining, Things to do,
@@ -27,7 +25,7 @@ export const readerCategories = cache(async (town: Town): Promise<ReaderCategory
     beatCounts(town.id),
     upcomingMeetings(town.id, 7, 50),
     upcomingEvents(town.id, town.name, 7, 200),
-    categoryCounts(db(), town.id),
+    townCategories(town),
     townGames(town.id, new Date(now - 14 * 86_400_000), new Date(now + 14 * 86_400_000)),
   ]);
   const newsCount = [...beats]

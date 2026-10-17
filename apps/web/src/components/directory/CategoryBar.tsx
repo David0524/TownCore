@@ -1,32 +1,29 @@
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import type { Town } from '@towncore/db';
-import { categoryCounts } from '@towncore/directory';
-import { db } from '@/lib/db';
-import { categoryFlavor, DIRECTORY_GROUPS, directoryPath } from '@/lib/directory';
+import { categoryFlavor, directoryPath, townCategories } from '@/lib/directory';
 import { CategoryIcon } from './CategoryIcon';
 import { CategoryBarScroll } from './CategoryBarScroll';
 import styles from './CategoryBar.module.css';
 
 /**
  * Every kind of business as a row of colored icons (owner, 2026-10-16: the directory should keep
- * the homepage's icons, open on one kind and let readers switch). The current kind is marked and
- * scrolled into view; the arrows page through the row on wide screens, phones swipe.
+ * the homepage's icons, open on one kind and let readers switch), in ranked order, never A–Z
+ * (owner, 2026-10-17). The current kind is marked and scrolled into view; the arrows page
+ * through the row on wide screens, phones swipe.
  */
 export async function CategoryBar({ town, active }: { town: Town; active: string }) {
-  const counts = await categoryCounts(db(), town.id);
-  const ordered = DIRECTORY_GROUPS.flatMap((g) => counts.filter((c) => c.category.group === g.key));
+  const ordered = await townCategories(town);
   if (ordered.length < 2) return null;
   return (
     <nav aria-label="Kinds of business" className={styles.bar} data-testid="category-bar">
       <CategoryBarScroll>
         <ul className={styles.row}>
-          {ordered.map(({ category, count }, i) => {
+          {ordered.map(({ category, count }) => {
             const flavor = categoryFlavor(category.slug);
             const current = category.slug === active;
-            const groupStart = i > 0 && ordered[i - 1]!.category.group !== category.group;
             return (
-              <li key={category.slug} className={groupStart ? styles.groupStart : undefined}>
+              <li key={category.slug}>
                 <Link
                   href={directoryPath(category.slug)}
                   className={styles.item}

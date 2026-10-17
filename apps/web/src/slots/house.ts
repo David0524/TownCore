@@ -198,9 +198,9 @@ export function houseAd(
     'article.inline': newsletter,
     'article.related-businesses': advertise,
     'article.realestate': advertise,
-    // The owner panel just below invites claims and the advertise page sells the category
-    // sponsorship, so the unsold header slot offers the morning email.
-    'directory.category.exclusive': newsletter,
+    // Unsold, the category-exclusive slot waits in the directory's rail, under the morning-email
+    // signup (owner, 2026-10-17), so it invites a free claim instead of repeating the signup.
+    'directory.category.exclusive': claim,
     'directory.topspot': topspot,
     'directory.category.top': featured,
     'directory.quote-request': leads,

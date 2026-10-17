@@ -22,6 +22,7 @@ const PLACEMENT_LABEL: Record<string, string> = {
   article: 'end of story',
   'second-article': 'second story',
   'newsletter-page': 'newsletter page',
+  directory: 'directory',
   other: 'other',
 };
 
