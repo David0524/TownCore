@@ -108,6 +108,31 @@ describe('ingestSource', () => {
     expect(await ingestSource(db, source, fake.adapter, fetcher)).toMatchObject({ newItems: 1 });
   });
 
+  it('dates undated items when first seen, but not on the first run, and keeps that date', async () => {
+    const source = await newSource();
+    const sighted = (id: string, text: string): RawRecord => ({
+      ...item(id),
+      text,
+      datedOnSight: true,
+    });
+    const first = new Date('2026-10-05T12:00:00Z');
+    const second = new Date('2026-10-12T12:00:00Z');
+    fake.returns([sighted('old', 'Stage: Proposed')]);
+    await ingestSource(db, source, fake.adapter, fetcher, first);
+    fake.returns([sighted('old', 'Stage: Proposed (edited)'), sighted('new', 'Stage: Approved')]);
+    await ingestSource(db, await reload(source.id), fake.adapter, fetcher, second);
+    fake.returns([sighted('new', 'Stage: Approved (edited)')]);
+    await ingestSource(db, await reload(source.id), fake.adapter, fetcher, new Date());
+
+    const rows = await db.select().from(records).where(eq(records.sourceId, source.id));
+    // What was there on the first run is the baseline, not news; an edit doesn't date it.
+    expect(rows.find((r) => r.externalId === 'old')).toMatchObject({ occurredAt: null });
+    expect(rows.find((r) => r.externalId === 'new')).toMatchObject({
+      occurredAt: second,
+      text: 'Stage: Approved (edited)',
+    });
+  });
+
   it('goes degraded on a failure and broken after 3 in a row, then recovers', async () => {
     const source = await newSource();
     fake.throws(new Error('HTTP 500'));

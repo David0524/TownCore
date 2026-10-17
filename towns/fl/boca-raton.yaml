@@ -144,6 +144,31 @@ sources:
     schedule: 1d
     options:
       { link: Road and Bridge Construction List, match: (City of Boca Raton), type: road-work }
+  # Verified 2026-10-17: the city's development projects map (its own ArcGIS Server; robots.txt
+  # answers 404, no rules), one layer per stage: 0 Proposed (30 projects), 1 Approved_Not_Built
+  # (62), 2 Under Construction (39), 3 Completed (12). The map has no dates, so a project counts
+  # when it first shows at a stage; the first run is the baseline. Only the listed columns are
+  # requested (never the staff columns ASSIGNEDTO, SUPERVISOR or LASTEDITOR). Weekly roundup of
+  # projects new or moved (Tier 2).
+  - kind: permits
+    platform: arcgis
+    url: https://bocagis.ci.boca-raton.fl.us/gisweb/rest/services/Development/InfrastructureAlerts/MapServer
+    schedule: 1d
+    options:
+      stages: { '0': proposed, '1': approved, '2': under_construction, '3': completed }
+      caseField: CASE_FILE_NUM
+      title: '{PROJECT}'
+      fields:
+        PROJECT: Project
+        FULLADDR: Address
+        DESCRIPTION: Description
+        TYPE: Use
+        UNITS: Size
+        BUILD_HEIGHT: Height
+        ZONING: Zoning
+        CASE_FILE_NUM: Case
+      outFields:
+        [GlobalID, PROJECT, FULLADDR, DESCRIPTION, TYPE, UNITS, BUILD_HEIGHT, ZONING, CASE_FILE_NUM]
   # Verified 2026-10-15: Florida Division of Corporations daily filings (new businesses).
   - kind: business_filings
     platform: fl-sunbiz

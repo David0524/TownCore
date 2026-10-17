@@ -81,6 +81,11 @@ const DESCRIPTIONS: Record<string, SourceDescription> = {
     about:
       'Fines and payment denials Medicare imposed, posted months later. A home may appeal; amounts are as CMS lists them.',
   },
+  'development-project': {
+    dataset: 'development projects map',
+    about:
+      "Projects on the local government's development map and the stage it lists each one in. The map has no dates: a project counts as moved the week the map first shows it at a new stage, which can be weeks after a vote or permit. Single homes are left out.",
+  },
   'road-work': {
     dataset: 'road and bridge construction list',
     about: "The county's list of planned work. Dates and lane closures can change.",

@@ -54,6 +54,8 @@ describe('town config', () => {
       'business_filings/fl-dbpr',
       'city_news/feed',
       'roads/pdf-list',
+      // The city's development projects map, one ArcGIS layer per stage.
+      'permits/arcgis',
       'business_filings/fl-sunbiz',
       'weather/nws',
       // From counties/fl/palm-beach.yaml (county_sources), appended last.

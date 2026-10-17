@@ -121,6 +121,8 @@ async function upsertRecords(db: Db, source: SourceRow, fetched: RawRecord[], no
 
   let newItems = 0;
   let changedItems = 0;
+  // An undated item is dated when first seen, except on the source's first run (the baseline).
+  const firstSeen = source.lastOkAt ? now : null;
   await db.transaction(async (tx) => {
     for (const item of items) {
       const hash = contentHash(item);
@@ -131,7 +133,6 @@ async function upsertRecords(db: Db, source: SourceRow, fetched: RawRecord[], no
         title: item.title ?? null,
         text: item.text ?? null,
         url: item.url ?? null,
-        occurredAt: item.occurredAt ?? null,
         raw: item.raw as object,
         contentHash: hash,
       };
@@ -141,12 +142,17 @@ async function upsertRecords(db: Db, source: SourceRow, fetched: RawRecord[], no
           townId: source.townId,
           externalId: item.externalId,
           ...values,
+          occurredAt: item.datedOnSight ? firstSeen : (item.occurredAt ?? null),
         });
         newItems++;
       } else {
         await tx
           .update(records)
-          .set({ ...values, changedAt: now })
+          .set({
+            ...values,
+            ...(item.datedOnSight ? {} : { occurredAt: item.occurredAt ?? null }),
+            changedAt: now,
+          })
           .where(and(eq(records.sourceId, source.id), eq(records.externalId, item.externalId)));
         changedItems++;
       }
