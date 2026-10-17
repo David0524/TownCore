@@ -16,6 +16,7 @@ export function TownGrid({
   bottom,
   railModules,
   railHouseOffOnPhones,
+  narrowRail,
   children,
 }: {
   town: Town;
@@ -28,12 +29,15 @@ export function TownGrid({
   /** Modules shown in the rail (homepage). rail.box goes after the first (canvas "Homepage"). */
   railModules?: ReactNode[] | ReactNode;
   /** Leave an unsold rail.box out on phones, where the rail stacks under a short page. */
-  railHouseOffOnPhones?: boolean;
+  railHouseOffOnPhones?: boolean | undefined;
+  /** A fixed 300px rail on every family, so the main column is as wide as it can be. */
+  narrowRail?: boolean;
   children: ReactNode;
 }) {
   return (
     <Grid
       kind={kind}
+      narrowRail={narrowRail}
       measure={measure}
       top={top}
       bottom={bottom}

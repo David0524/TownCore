@@ -56,6 +56,23 @@
     grid-row: span 2;
     margin: 0;
   }
+
+  /* In a rail (the directory's) the box is one column at any width. */
+  :global([data-in-rail]) .cta {
+    display: block;
+    margin: 0;
+  }
+
+  :global([data-in-rail]) .cta h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 600px) {
+  :global([data-family='coastal-modern'] [data-in-rail]) .cta {
+    padding: 1.5rem;
+  }
 }
 
 .today {

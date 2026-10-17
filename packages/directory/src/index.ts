@@ -15,6 +15,8 @@ export {
   relatedListings,
   type NewPlace,
   getListing,
+  localDay,
+  rankingViews,
   listingCategory,
   listingInTheNews,
   contactShown,
@@ -24,6 +26,13 @@ export {
   searchListings,
   type Listing,
 } from './queries';
+export {
+  CATEGORY_DEMAND,
+  dailyHash,
+  demandOf,
+  rankCategories,
+  RANK_WEIGHTS,
+} from './rank-categories';
 export {
   CLAIM_LIMITS,
   ClaimNotPending,

@@ -31,9 +31,14 @@ try {
     if (!town) throw new Error(`Town ${slug} not found; run towns:sync first.`);
     await seedTestContent(db, town);
     console.log(`Seeded test articles for ${slug}`);
-    // Fictional listings for the fictional towns only; Boca's come from state records.
-    if (slug === 'harbor-point' || slug === 'feed-town') {
-      console.log(`Seeded ${await seedTestDirectory(db, town)} test listings for ${slug}`);
+    // Fictional listings, like the [TEST] articles: for the fictional towns, and for Boca in a
+    // local test database (refused above for any other), so the directory's design shows on
+    // all three families (CLAUDE.md §14).
+    if (['boca-raton', 'harbor-point', 'pine-hollow', 'feed-town'].includes(slug)) {
+      const more = slug !== 'feed-town';
+      console.log(
+        `Seeded ${await seedTestDirectory(db, town, { more })} test listings for ${slug}`,
+      );
     }
   }
 } finally {

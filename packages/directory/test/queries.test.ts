@@ -1,4 +1,13 @@
-import { businesses, records, sources, towns, type Db } from '@towncore/db';
+import {
+  businesses,
+  eq,
+  placements,
+  records,
+  slotStatsDaily,
+  sources,
+  towns,
+  type Db,
+} from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -56,18 +65,93 @@ describe('directory queries', () => {
   });
   afterAll(async () => drop());
 
-  it('orders by verified license, then completeness, then name; inactive listings never appear', async () => {
+  it('orders by verified license, then completeness; inactive listings never appear', async () => {
     const { listings, total } = await categoryListings(db, townId, 'plumbers');
-    expect(listings.map((l) => l.slug)).toEqual(['z', 'a', 'b', 'u']);
+    const slugs = listings.map((l) => l.slug);
+    // The claimed, complete one first and the unverified one last; the two equal ones rotate.
+    expect(slugs[0]).toBe('z');
+    expect(slugs[3]).toBe('u');
+    expect(slugs.slice(1, 3).sort()).toEqual(['a', 'b']);
     expect(total).toBe(4);
     expect(await getListing(db, townId, 'gone')).toBeNull();
   });
 
-  it('counts per category in config order', async () => {
-    expect((await categoryCounts(db, townId)).map((c) => [c.category.slug, c.count])).toEqual([
-      ['roofers', 1],
-      ['plumbers', 4],
+  it('rotates equal listings daily: stable within a day, never above a better listing', async () => {
+    const base = { townId, category: 'pets', dataSource: 'fl-dbpr', licenseVerified: true };
+    await db.insert(businesses).values([
+      ...Array.from({ length: 8 }, (_, i) => ({
+        ...base,
+        slug: `pet-${i}`,
+        name: `Pet Place ${i}`,
+        licenseNumber: `P${i}`,
+      })),
+      { ...base, slug: 'pet-best', name: 'Zzz Pets', licenseNumber: 'PB', phone: '555' },
+      {
+        ...base,
+        slug: 'pet-unverified',
+        name: 'Aaa Pets',
+        licenseNumber: 'PU',
+        licenseVerified: false,
+      },
     ]);
+    const order = async (day: string) =>
+      (await categoryListings(db, townId, 'pets', { day })).listings.map((l) => l.slug);
+    const days = ['2026-10-17', '2026-10-18', '2026-10-19', '2026-10-20', '2026-10-21'];
+    const orders = await Promise.all(days.map(order));
+    for (const o of orders) {
+      // A better-scored listing always leads and an unverified one always trails, whatever the day.
+      expect(o[0]).toBe('pet-best');
+      expect(o.at(-1)).toBe('pet-unverified');
+    }
+    // The same all day, for everyone.
+    expect(await order(days[0]!)).toEqual(orders[0]);
+    // Different days give different orders of the equal ones (never stuck, never A–Z).
+    expect(new Set(orders.map((o) => o.join())).size).toBeGreaterThan(1);
+    expect(orders.every((o) => o.slice(1, -1).join() === [...o.slice(1, -1)].sort().join())).toBe(
+      false,
+    );
+  });
+
+  it('ranks categories by demand, size and interest, not by name or config order', async () => {
+    expect((await categoryCounts(db, townId)).map((c) => [c.category.slug, c.count])).toEqual([
+      // Plumbers are in more demand than pet businesses, though there are more of the latter.
+      ['plumbers', 4],
+      ['pets', 10],
+      ['roofers', 1],
+    ]);
+  });
+
+  it('lets real reader interest move a kind, smoothed, never counting paid listings', async () => {
+    const day = '2026-10-17';
+    const ranked = async () =>
+      (await categoryCounts(db, townId, { day })).map((c) => c.category.slug);
+    const [roof] = await db.select().from(businesses).where(eq(businesses.slug, 'r'));
+    const view = (on: string, impressions: number) =>
+      db.insert(slotStatsDaily).values({
+        townId,
+        day: on,
+        slot: 'directory.business.cta',
+        businessId: roof!.id,
+        impressions,
+      });
+    // A few views can't reorder the bar, and today's views wait for tomorrow.
+    await view('2026-10-10', 20);
+    await view(day, 50_000);
+    expect(await ranked()).toEqual(['plumbers', 'pets', 'roofers']);
+    // Many readers looking at roofers moves the kind up.
+    await view('2026-10-11', 5_000);
+    expect(await ranked()).toEqual(['roofers', 'plumbers', 'pets']);
+    // Views older than the window don't count.
+    expect((await categoryCounts(db, townId, { day: '2026-12-31' }))[0]!.category.slug).toBe(
+      'plumbers',
+    );
+    // A paid listing's views never count (Rule 6).
+    await db
+      .insert(placements)
+      .values({ townId, businessId: roof!.id, product: 'enhanced', status: 'active' });
+    expect(await ranked()).toEqual(['plumbers', 'pets', 'roofers']);
+    await db.delete(placements).where(eq(placements.businessId, roof!.id));
+    await db.delete(slotStatsDaily).where(eq(slotStatsDaily.businessId, roof!.id));
   });
 
   it('searches by name with LIKE wildcards taken literally', async () => {

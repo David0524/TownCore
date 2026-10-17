@@ -1,5 +1,7 @@
 import { directoryCategories, directoryCategory, type DirectoryCategory } from '@towncore/config';
 import { displayName } from './names';
+import { INTEREST_DAYS, rankCategories } from './rank-categories';
+import { CTA_SLOT } from './leads';
 import {
   and,
   articles,
@@ -11,16 +13,20 @@ import {
   ilike,
   inArray,
   isNotNull,
+  isNull,
+  lt,
   or,
   placements,
   records,
+  slotStatsDaily,
   sql,
   type Db,
 } from '@towncore/db';
 
 // Read side of the directory (M6 PR B): what town sites show. Only active listings appear.
-// Organic order is verified license, then completeness, then the most recently claimed, then
-// name. Payment never enters it (Rule 6): sponsored listings are shown separately, labeled.
+// Organic order is verified license, then completeness, then the most recently claimed; ties
+// rotate daily (owner, 2026-10-17: never A–Z). Payment never enters it (Rule 6): sponsored
+// listings are shown separately, labeled.
 
 export type Listing = typeof businesses.$inferSelect;
 
@@ -32,30 +38,88 @@ export const MIN_INDEXABLE = 5;
 const active = (townId: string) => and(eq(businesses.townId, townId), eq(businesses.active, true));
 
 // How complete a listing is for a reader: a way to reach it, where it is, what it serves, when
-// it's open. Places with real details come before bare license rows, then A–Z only to break ties.
+// it's open. Places with real details come before bare license rows.
 const completeness = sql<number>`((${businesses.phone} is not null)::int + (${businesses.website} is not null)::int + (${businesses.claimedAt} is not null)::int + (${businesses.addressPublic})::int + (${businesses.cuisine} is not null)::int + (${businesses.hours} is not null)::int)`;
 
-const organicOrder = [
+/** The town's local date (YYYY-MM-DD): rotations and rankings change once a day, there. */
+export const localDay = (timeZone = 'UTC', now = new Date()) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
+
+/**
+ * Organic order (CLAUDE.md §11 "Organic sort"): verified license, completeness, recently
+ * claimed; listings equal on all three rotate by a hash of the listing and `seed` (town, kind and
+ * local day), so the order is the same for everyone all day, changes the next, and is never A–Z.
+ * Payment never enters it (Rule 6).
+ */
+const organicOrder = (seed: string) => [
   desc(businesses.licenseVerified),
   desc(completeness),
   sql`${businesses.claimedAt} desc nulls last`,
-  asc(businesses.name),
+  sql`md5(${businesses.id}::text || ${seed})`,
 ];
 
-/** Active listings per category, in config order; categories with none are left out. */
+type DayOpts = { day?: string | undefined; timeZone?: string | undefined };
+const dayOf = ({ day, timeZone }: DayOpts) => day ?? localDay(timeZone);
+
+/**
+ * Listing page views per kind over the last INTEREST_DAYS whole days, before `day` (so the
+ * ranking holds all day): reader interest for rankCategories. Views of listings that hold a paid
+ * placement are left out, so payment can't move a kind up the bar (Rule 6).
+ */
+export async function rankingViews(
+  db: Db,
+  townId: string,
+  day: string,
+): Promise<Map<string, number>> {
+  const since = new Date(`${day}T00:00:00Z`);
+  since.setUTCDate(since.getUTCDate() - INTEREST_DAYS);
+  const rows = await db
+    .select({
+      category: businesses.category,
+      views: sql<number>`coalesce(sum(${slotStatsDaily.impressions}), 0)::int`,
+    })
+    .from(slotStatsDaily)
+    .innerJoin(businesses, eq(businesses.id, slotStatsDaily.businessId))
+    .where(
+      and(
+        eq(slotStatsDaily.townId, townId),
+        eq(slotStatsDaily.slot, CTA_SLOT),
+        isNull(slotStatsDaily.campaignId),
+        gte(slotStatsDaily.day, since.toISOString().slice(0, 10)),
+        lt(slotStatsDaily.day, day),
+        eq(businesses.active, true),
+        sql`not exists (select 1 from ${placements} where ${placements.businessId} = ${businesses.id} and ${placements.status} in ('active', 'held'))`,
+      ),
+    )
+    .groupBy(businesses.category);
+  return new Map(rows.flatMap((r) => (r.category ? [[r.category, r.views] as const] : [])));
+}
+
+/**
+ * Active listings per category, ranked (rank-categories.ts: reader demand, the kind's size here
+ * and real reader interest; never A–Z, never payment); categories with none are left out.
+ */
 export async function categoryCounts(
   db: Db,
   townId: string,
+  opts: DayOpts = {},
 ): Promise<Array<{ category: DirectoryCategory; count: number }>> {
-  const rows = await db
-    .select({ category: businesses.category, count: sql<number>`count(*)::int` })
-    .from(businesses)
-    .where(active(townId))
-    .groupBy(businesses.category);
+  const day = dayOf(opts);
+  const [rows, views] = await Promise.all([
+    db
+      .select({ category: businesses.category, count: sql<number>`count(*)::int` })
+      .from(businesses)
+      .where(active(townId))
+      .groupBy(businesses.category),
+    rankingViews(db, townId, day),
+  ]);
   const counts = new Map(rows.map((r) => [r.category, r.count]));
-  return directoryCategories
-    .filter((c) => (counts.get(c.slug) ?? 0) > 0)
-    .map((c) => ({ category: c, count: counts.get(c.slug)! }));
+  return rankCategories(
+    directoryCategories
+      .filter((c) => (counts.get(c.slug) ?? 0) > 0)
+      .map((c) => ({ category: c, count: counts.get(c.slug)! })),
+    { views, day },
+  );
 }
 
 /** Escapes LIKE wildcards in reader input. */
@@ -71,7 +135,12 @@ export async function categoryListings(
     q,
     cuisine,
     limit = PAGE_SIZE,
-  }: { q?: string | undefined; cuisine?: string | undefined; limit?: number } = {},
+    ...day
+  }: {
+    q?: string | undefined;
+    cuisine?: string | undefined;
+    limit?: number;
+  } & DayOpts = {},
 ): Promise<{ listings: Listing[]; total: number }> {
   const where = and(
     active(townId),
@@ -84,7 +153,7 @@ export async function categoryListings(
       .select()
       .from(businesses)
       .where(where)
-      .orderBy(...organicOrder)
+      .orderBy(...organicOrder(`${townId}|${category}|${dayOf(day)}`))
       .limit(limit),
     db
       .select({ n: sql<number>`count(*)::int` })
@@ -163,6 +232,7 @@ export async function searchListings(
   limit = 25,
   /** Only listings of this kind (the advertise page's search for a category product). */
   category?: string | null,
+  opts: DayOpts = {},
 ): Promise<Listing[]> {
   const term = q.trim();
   if (term.length < 2) return [];
@@ -176,7 +246,7 @@ export async function searchListings(
         category ? eq(businesses.category, category) : undefined,
       ),
     )
-    .orderBy(...organicOrder)
+    .orderBy(...organicOrder(`${townId}|search|${dayOf(opts)}`))
     .limit(limit);
 }
 
@@ -341,8 +411,14 @@ export async function newFoodPlaces(
 export async function relatedListings(
   db: Db,
   townId: string,
-  { text, beat, limit = 3 }: { text: string; beat: string | null; limit?: number },
+  {
+    text,
+    beat,
+    limit = 3,
+    ...day
+  }: { text: string; beat: string | null; limit?: number } & DayOpts,
 ): Promise<{ named: Listing[]; category: DirectoryCategory | null; listings: Listing[] }> {
+  const seed = `${townId}|related|${dayOf(day)}`;
   // Names distinctive enough to match safely (two words, 8+ characters), found in the story.
   const named = await db
     .select()
@@ -355,7 +431,7 @@ export async function relatedListings(
         sql`position(lower(${businesses.name}) in lower(${text})) > 0`,
       ),
     )
-    .orderBy(...organicOrder)
+    .orderBy(...organicOrder(seed))
     .limit(limit);
   const rest = limit - named.length;
   const exclude = named.length
@@ -371,7 +447,7 @@ export async function relatedListings(
       .select()
       .from(businesses)
       .where(and(active(townId), eq(businesses.category, category.slug), exclude))
-      .orderBy(...organicOrder)
+      .orderBy(...organicOrder(seed))
       .limit(rest);
     if (listings.length) return { named, category, listings };
   }
