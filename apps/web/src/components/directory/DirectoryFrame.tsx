@@ -2,11 +2,12 @@ import type { ReactNode } from 'react';
 import { cache } from 'react';
 import type { DirectoryCategory } from '@towncore/config';
 import type { Town } from '@towncore/db';
-import { StandardPage } from '@/lib/pages';
+import { TownGrid } from '@/layout/TownGrid';
 import { themeFor } from '@/lib/theme';
 import { NewsletterCta } from '@/modules/news';
 import { resolveSlotFill } from '@/slots/fill';
-import { SlotUnit } from '@/slots/Slot';
+import { Slot, SlotUnit } from '@/slots/Slot';
+import styles from './DirectoryFrame.module.css';
 
 const EXCLUSIVE = 'directory.category.exclusive';
 
@@ -17,8 +18,8 @@ const exclusiveFill = cache((town: Town, category: DirectoryCategory) =>
 
 /**
  * `directory.category.exclusive` (CLAUDE.md §11b). A sold category sponsorship sits in the
- * category header, in full and labeled; unsold, its house ad waits in the desktop rail instead of
- * above the listings, and is left out on phones (owner, 2026-10-16 and 2026-10-17).
+ * category header, in full and labeled; unsold, its house ad waits below the listings, and is
+ * left out on phones (owner, 2026-10-16 and 2026-10-17).
  */
 export async function CategoryExclusive({
   town,
@@ -36,39 +37,47 @@ export async function CategoryExclusive({
 
 /**
  * Every directory page's frame (owner, 2026-10-17: "Move the newsletter to either the right side
- * or as a bottom bar"): listings in the main column, and a rail on every town, whatever its
- * grid, holding the morning-email signup, the rail box and the category's unsold header slot.
- * On phones the rail stacks after the listings, so the signup is a plain block at the bottom of
- * the page, never a bar over it (§11b: no sticky ads). The rail is a fixed 300px so the
- * listings fill three columns on desktop.
+ * or as a bottom bar"; "I meant to utilize the right side of the screen that is sitting empty").
+ * The whole page width, on every town: the heading and kinds bar with the morning-email signup
+ * beside them, then the listings across the full width, three cards a row at full size, then
+ * the category's unsold header slot and rail.box below them (§11b: rail.box stacks inline where
+ * there is no rail). On phones the signup moves after the listings, a plain block, never a bar
+ * over the page (§11b: no sticky ads).
  */
 export function DirectoryFrame({
   town,
   category,
   shortOnPhones,
+  head,
   children,
 }: {
   town: Town;
   /** The kind the page lists. */
   category?: DirectoryCategory | null | undefined;
   shortOnPhones?: boolean | undefined;
+  /** The page heading and kinds bar, beside the signup on desktop. */
+  head: ReactNode;
   children: ReactNode;
 }) {
   const theme = themeFor(town);
   return (
-    <StandardPage
-      town={town}
-      shortOnPhones={shortOnPhones}
-      rail={[
-        <div key="newsletter" data-in-rail="" data-testid="directory-newsletter">
+    <TownGrid town={town} kind="single-column" measure="full">
+      <div className={styles.frame}>
+        <div className={styles.head}>{head}</div>
+        <aside
+          className={styles.signup}
+          data-in-rail=""
+          aria-label="Morning email"
+          data-testid="directory-newsletter"
+        >
           <NewsletterCta town={town} theme={theme} modules={[]} placement="directory" />
-        </div>,
-        category ? (
-          <CategoryExclusive key="exclusive" town={town} category={category} where="rail" />
-        ) : null,
-      ]}
-    >
-      {children}
-    </StandardPage>
+        </aside>
+        <div className={styles.body}>{children}</div>
+        <div className={styles.after}>
+          {category ? <CategoryExclusive town={town} category={category} where="rail" /> : null}
+          <Slot town={town} name="rail.box" houseOffOnPhones={shortOnPhones} />
+        </div>
+      </div>
+    </TownGrid>
   );
 }

@@ -50,12 +50,20 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     cuisine: queryOf(rawCuisine),
   });
   return (
-    <DirectoryFrame town={town} category={category} shortOnPhones={data.shortOnPhones}>
-      <p className="meta">
-        <Link href={directoryPath()}>Places</Link> › {category.name}
-      </p>
-      <LargeTitle title={categoryTitle(town, category)} as="h1" always />
-      <CategoryBar town={town} active={category.slug} />
+    <DirectoryFrame
+      town={town}
+      category={category}
+      shortOnPhones={data.shortOnPhones}
+      head={
+        <>
+          <p className="meta">
+            <Link href={directoryPath()}>Places</Link> › {category.name}
+          </p>
+          <LargeTitle title={categoryTitle(town, category)} as="h1" always />
+          <CategoryBar town={town} active={category.slug} />
+        </>
+      }
+    >
       <CategoryView town={town} data={data} quoteStatus={quoteStatus} waitlistStatus={waitlist} />
     </DirectoryFrame>
   );

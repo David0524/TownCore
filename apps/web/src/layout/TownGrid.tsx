@@ -21,7 +21,7 @@ export function TownGrid({
 }: {
   town: Town;
   kind: Theme['layout']['grid'];
-  measure?: 'normal' | 'wide';
+  measure?: 'normal' | 'wide' | 'full';
   /** Full-width area above the columns. */
   top?: ReactNode;
   /** Full-width area below the columns. */

@@ -57,19 +57,27 @@ export default async function DirectoryPage({ params, searchParams }: Props) {
   const data = opening ? await loadCategory(town, opening.category) : null;
 
   return (
-    <DirectoryFrame town={town} category={data?.category} shortOnPhones={data?.shortOnPhones}>
-      <LargeTitle title="Places" as="h1" always />
-      <p className={`muted ${styles.intro}`}>
-        Restaurants, shops and services in the {town.name} area. Sponsored listings are labeled, and
-        payment never changes the order of the rest.
-      </p>
-      {counts.length === 0 ? (
-        <p data-testid="directory-empty">
-          The {town.siteName} directory is being built. Check back soon.
-        </p>
-      ) : (
-        <CategoryBar town={town} active={opening?.category.slug ?? ''} />
-      )}
+    <DirectoryFrame
+      town={town}
+      category={data?.category}
+      shortOnPhones={data?.shortOnPhones}
+      head={
+        <>
+          <LargeTitle title="Places" as="h1" always />
+          <p className={`muted ${styles.intro}`}>
+            Restaurants, shops and services in the {town.name} area. Sponsored listings are labeled,
+            and payment never changes the order of the rest.
+          </p>
+          {counts.length === 0 ? (
+            <p data-testid="directory-empty">
+              The {town.siteName} directory is being built. Check back soon.
+            </p>
+          ) : (
+            <CategoryBar town={town} active={opening?.category.slug ?? ''} />
+          )}
+        </>
+      }
+    >
       {q ? (
         results.length > 0 ? (
           <Grouped
