@@ -18,7 +18,7 @@ import { townWeather } from '@/modules/data';
 import { isIndexable, rssAlternate } from '@/lib/discovery';
 import { themeCssVariables, themeFor } from '@/lib/theme';
 import { requireTown, resolveTown } from '@/lib/town';
-import { townIconDir } from '@/lib/app-icon';
+import { homeScreenName, townIconDir } from '@/lib/app-icon';
 
 type Props = { children: ReactNode; params: Promise<{ host: string }> };
 
@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Pick<Props, 'params'>): Promi
           apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
         },
     // Opens standalone from the Home Screen, under the town's short name.
-    appleWebApp: { capable: true, title: town.siteName, statusBarStyle: 'default' },
+    appleWebApp: { capable: true, title: homeScreenName(town), statusBarStyle: 'default' },
   };
 }
 

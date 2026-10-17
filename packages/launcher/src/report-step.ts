@@ -214,7 +214,7 @@ ${assets.map((s) => `- ${s.name}: ![${s.name}](${md(s.path, dir)})`).join('\n') 
 function artSection(art: ArtDetail, dir: string): string {
   if (art.imported)
     return 'Imported: the homepage art, icons, favicon, avatar, share, cover and email header are cut from it (`apps/web/public/brand/`). The masthead wordmark stays set in code.';
-  return `Not imported yet, so the site shows the motif and code-drawn icons. Make the art in ChatGPT from one of the prompts in [logo-prompt.md](${md(art.promptFile, dir)}), then run \`pnpm identity import <slug> <image> --approved-by you@towncore.net\`. The first prompt:
+  return `Not imported yet, so the site shows the motif and code-drawn icons, and readers who add it to their Home Screen get the drawn motif as the app icon. Make the art in ChatGPT from one of the prompts in [logo-prompt.md](${md(art.promptFile, dir)}), then run \`pnpm identity import <slug> <image> --approved-by you@towncore.net\`. The first prompt:
 
 \`\`\`text
 ${art.prompts[0]}
@@ -332,7 +332,7 @@ export function manualTodos(done: Done, domain: string): string[] {
     todos.push('Pick the masthead option above (the theme uses the first unless changed).');
   if (done.theme?.art && !done.theme.art.imported)
     todos.push(
-      `Logo art: make it in ChatGPT from ${relative(process.cwd(), done.theme.art.promptFile)} and run \`pnpm identity import ${done.resolve.slug} <image> --approved-by <your email>\`.`,
+      `Logo art (also the phone's Home Screen app icon): make it in ChatGPT from ${relative(process.cwd(), done.theme.art.promptFile)} and run \`pnpm identity import ${done.resolve.slug} <image> --approved-by <your email>\`.`,
     );
   if (!done.seed || done.seed.guides.topics === 0)
     todos.push(

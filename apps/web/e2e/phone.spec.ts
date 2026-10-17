@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 // Apple-native phone chrome below 600px on every town (docs/plans/M4b.md revision 5).
 const boca = 'http://bocatownsquare.com';
 const harbor = 'http://harborpoint.test';
+const pine = 'http://pinehollow.test';
 
 test.describe('phone chrome', () => {
   test('phones get the tab bar and a large title; the town header is hidden', async ({
@@ -147,19 +148,44 @@ test.describe('Your town, app icons and the Home Screen card', () => {
       'href',
       '/brand/boca-raton/icon-32.png',
     );
+    // The Home Screen label fits a phone: Boca Town Square shows as Boca Raton.
+    await expect(page.locator('meta[name="apple-mobile-web-app-title"]')).toHaveAttribute(
+      'content',
+      'Boca Raton',
+    );
+    await expect(
+      page
+        .locator('meta[name="apple-mobile-web-app-capable"], meta[name="mobile-web-app-capable"]')
+        .first(),
+    ).toHaveAttribute('content', 'yes');
     await page.goto(`${harbor}/`);
     await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
       'href',
       '/apple-touch-icon.png',
     );
-    for (const url of [boca, harbor]) {
+    for (const url of [boca, harbor, pine]) {
       // Through the browser, which resolves our test hosts to the local server.
       const manifest = (await page.goto(`${url}/manifest.webmanifest`))!;
       expect(manifest.status()).toBe(200);
       const json = await manifest.json();
-      expect(json).toMatchObject({ start_url: '/', display: 'standalone' });
+      expect(json).toMatchObject({ id: '/', start_url: '/', display: 'standalone' });
       expect(JSON.stringify(json)).not.toMatch(/towncore/i);
-      for (const icon of ['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png']) {
+      // Installable on Android: 192 and 512 icons, and a maskable one inside the circle crop.
+      expect(json.short_name.length).toBeLessThanOrEqual(12);
+      expect(
+        json.icons.map((i: { sizes: string; purpose: string }) => `${i.sizes} ${i.purpose}`),
+      ).toEqual(['192x192 any', '512x512 any', '512x512 maskable']);
+      for (const icon of json.icons as { src: string }[]) {
+        const res = (await page.goto(`${url}${icon.src}`))!;
+        expect(res.status(), icon.src).toBe(200);
+        expect(res.headers()['content-type']).toBe('image/png');
+      }
+      for (const icon of [
+        '/apple-touch-icon.png',
+        '/icon-192.png',
+        '/icon-512.png',
+        '/icon-maskable-512.png',
+      ]) {
         const res = (await page.goto(`${url}${icon}`))!;
         expect(res.status(), icon).toBe(200);
         expect(res.headers()['content-type']).toBe('image/png');

@@ -318,7 +318,7 @@ score = 0.25 business_value + 0.20 households_x_income + 0.20 source_readiness
 
 ## 11. Sites, newsletter, directory
 
-**Site pages:** home (latest + top stories), article, beat pages, events calendar, directory (category + business pages), newsletter signup, About, Methods, Corrections, Privacy, Report-an-error form on every article. Fast pages, mobile first.
+**Site pages:** home (latest + top stories), article, beat pages, events calendar, directory (category + business pages), newsletter signup, About, Methods, Corrections, Privacy, Report-an-error form on every article. Fast pages, mobile first. Every town's site can be added to a phone's Home Screen as an app (web app manifest, standalone display, a short label that fits under the icon); its app icon is cut from the town's ChatGPT logo art, with a maskable version inside Android's circle crop, and the drawn motif until that art is imported.
 
 **SEO:** NewsArticle + Organization structured data on articles, LocalBusiness on directory pages, XML sitemap + Google News sitemap per domain, canonical URLs, RSS, Open Graph images, accurate published/updated dates.
 
@@ -699,6 +699,7 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
   - **Visibility:** Admin → Health shows spend by task and model, cost per story and the cache hit rate. `pnpm ai:plan <town>` prints a day's estimated calls and cost with no key.
   - **Evals:** route variants with `pnpm evals --live --variant` and `pnpm evals:compare`, and new cases from Delray, Harbor Point and Pine Hollow.
   - **Offline proof:** the Claude path runs offline from a synthetic Claude-format recording until the key exists.
+- 2026-10-17 — **Home Screen app on every town (owner: "every town's mobile website should be capable of being added to the home screen… the town's ChatGPT image… acts as the app icon").** The manifest, Apple tags and icons already served every town; added: a maskable 512 icon with the art at a 15% margin so Android's circle crop never clips it (cut by `pnpm identity import`, made for Boca and Pine Hollow), an `id`, one Home Screen label for iOS and Android that fits (site name up to 12 characters, else the town's name: Boca shows "Boca Raton"), a ChatGPT prompt line that puts the most recognizable element on the image's left half (the part cut for the icon), and launch to-dos that say the logo art is also the app icon.
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.

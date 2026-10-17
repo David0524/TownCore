@@ -5,7 +5,8 @@ import sharp from 'sharp';
 // Every identity asset, cut in code from a town's logo art (owner, 2026-10-17). This automates
 // what was done by hand for Boca (apps/web/public/brand/boca-raton): the art's white background
 // made transparent for the homepage hero (3:1, like Boca's 1221×407), its left part (Boca's left
-// palm and tower) for the icons (the browser tab's on transparent, the Home Screen's on white),
+// palm and tower) for the icons (the browser tab's on transparent, the Home Screen's on white,
+// with a maskable version inside Android's safe zone),
 // and the share, avatar, cover and email header images on white. Boca's set is the reference the
 // tests compare against.
 
@@ -16,6 +17,7 @@ export const IDENTITY_FILES = [
   'icon-180.png',
   'icon-192.png',
   'icon-512.png',
+  'icon-maskable-512.png',
   'social-avatar.png',
   'share-default.png',
   'newsletter-header.png',
@@ -27,6 +29,12 @@ export type IdentityFile = (typeof IDENTITY_FILES)[number];
 export const HERO_SIZE = { width: 1221, height: 407 } as const;
 /** How wide the icons' left part is, as a multiple of the art's height (Boca's icon art). */
 const ICON_ASPECT = 1.85;
+/**
+ * Margin around the art in the maskable Home Screen icon. Android crops maskable icons to a
+ * circle 80% of the icon's width; at this margin even the corners of the wide icon art stay
+ * inside it, so the town's art is never clipped on an Android Home Screen.
+ */
+export const MASKABLE_MARGIN = 0.15;
 /** Pixels this far from white (0–255) and joined to the edge are background. */
 const BACKGROUND = 24;
 
@@ -148,6 +156,7 @@ export async function deriveIdentityAssets(
     'icon-180.png': await onWhite(icon, 180, 180),
     'icon-192.png': await onWhite(icon, 192, 192),
     'icon-512.png': await onWhite(icon, 512, 512),
+    'icon-maskable-512.png': await onWhite(icon, 512, 512, MASKABLE_MARGIN),
     'social-avatar.png': await onWhite(icon, 512, 512),
     'share-default.png': await onWhite(cut.png, 1200, 630, 0.1),
     'newsletter-header.png': await onWhite(cut.png, 600, 120, 0.08),

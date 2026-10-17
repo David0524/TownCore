@@ -29,7 +29,7 @@ export const config = {
   matcher: [
     '/((?!_next/|favicon.ico|.*\\.[a-zA-Z0-9]+$).*)',
     '/((?!_next/).*\\.(?:xml|txt))',
-    '/(apple-touch-icon\\.png|icon-192\\.png|icon-512\\.png|manifest\\.webmanifest)',
+    '/(apple-touch-icon\\.png|icon-192\\.png|icon-512\\.png|icon-maskable-512\\.png|manifest\\.webmanifest)',
     '/photos/(.*\\.jpg)',
   ],
 };

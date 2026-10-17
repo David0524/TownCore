@@ -26,6 +26,7 @@ const STYLE =
   'A wide panoramic vignette, about 3:1 (three times as wide as tall), of the town’s character: ' +
   'its waterfront or landscape, its architectural style, its trees and vegetation, and one tower or skyline element. ' +
   'Tall foreground trees frame the scene on the left and on the right. ' +
+  'The left half of the scene becomes the phone app icon readers put on their Home Screen, so the most recognizable element (a tall tree, a tower or a lighthouse) stands on the left, bold and simple enough to read at app-icon size. ' +
   'The scene fades out at its edges into a pure white background, with no border, frame, box or hard edge.';
 
 /** The owner's limits, in every prompt; code also checks the inputs (logoInputProblems). */
