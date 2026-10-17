@@ -5,7 +5,7 @@ import { methodsCopy } from '@/content/methods';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 
-export const metadata: Metadata = { title: 'How we report' };
+export const metadata: Metadata = { title: 'How we report', alternates: { canonical: '/methods' } };
 
 export default async function MethodsPage({ params }: { params: Promise<{ host: string }> }) {
   const town = await requireTown(params);

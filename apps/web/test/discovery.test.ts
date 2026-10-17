@@ -31,11 +31,16 @@ describe('discovery builders', () => {
     );
   });
 
-  it('robots.txt: draft towns disallow everything', () => {
-    expect(robotsTxt({ ...town, status: 'draft' })).toBe('User-agent: *\nDisallow: /\n');
-    expect(robotsTxt({ ...town, status: 'paused' })).toBe('User-agent: *\nDisallow: /\n');
-    expect(robotsTxt({ ...town, status: 'live' })).toContain(
+  it('robots.txt: draft, paused and search-hidden towns disallow everything', () => {
+    const t = { ...town, searchHidden: false };
+    expect(robotsTxt({ ...t, status: 'draft' })).toBe('User-agent: *\nDisallow: /\n');
+    expect(robotsTxt({ ...t, status: 'paused' })).toBe('User-agent: *\nDisallow: /\n');
+    expect(robotsTxt({ ...t, status: 'live' })).toContain(
       'Sitemap: https://example.test/sitemap.xml',
+    );
+    // The kill switch: a live town hidden from search is disallowed too.
+    expect(robotsTxt({ ...t, status: 'live', searchHidden: true })).toBe(
+      'User-agent: *\nDisallow: /\n',
     );
   });
 

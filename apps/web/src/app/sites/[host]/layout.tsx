@@ -14,7 +14,7 @@ import { beats } from '@towncore/config';
 import { WeatherLine } from '@/components/weather/WeatherLine';
 import { footers, headers, headersWithWeather, navs } from '@/layout/registry';
 import { townWeather } from '@/modules/data';
-import { rssAlternate } from '@/lib/discovery';
+import { isIndexable, rssAlternate } from '@/lib/discovery';
 import { themeCssVariables, themeFor } from '@/lib/theme';
 import { requireTown, resolveTown } from '@/lib/town';
 import { townIconDir } from '@/lib/app-icon';
@@ -29,8 +29,9 @@ export async function generateMetadata({ params }: Pick<Props, 'params'>): Promi
     title: { default: town.siteName, template: `%s · ${town.siteName}` },
     description: `Local news for ${town.name}, ${town.state}, written from public records.`,
     alternates: { types: rssAlternate(town) },
-    // Nothing is indexed until a human sets the town live (rules 7 and 10).
-    robots: town.status === 'live' ? undefined : { index: false, follow: false },
+    // Nothing is indexed until a human sets the town live (Rule 10), or while staff hide it from
+    // search (the kill switch).
+    robots: isIndexable(town) ? undefined : { index: false, follow: false },
     manifest: '/manifest.webmanifest',
     icons: townIconDir(town)
       ? {

@@ -172,6 +172,9 @@ export type TownHealth = {
   id: string;
   siteName: string;
   status: string;
+  /** Hidden from search by the kill switch, and the launch cohort it belongs to. */
+  searchHidden: boolean;
+  cohort: string | null;
   itemsPerDay: number;
   factcheckPassRate: number | null;
   review: { waiting: number; oldestHours: number | null };
@@ -253,6 +256,8 @@ export async function townHealth(db: Db, now = new Date()): Promise<TownHealth[]
       id: town.id,
       siteName: town.siteName,
       status: town.status,
+      searchHidden: town.searchHidden,
+      cohort: town.cohort,
       itemsPerDay: Math.round((stories.length / 7) * 10) / 10,
       factcheckPassRate: checked.length ? passed.length / checked.length : null,
       review: {

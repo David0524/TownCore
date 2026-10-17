@@ -295,6 +295,13 @@
       "when": 1792189727012,
       "tag": "0041_sports_source_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1792200183683,
+      "tag": "0042_town_search_switch",
+      "breakpoints": true
     }
   ]
 }

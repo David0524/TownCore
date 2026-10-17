@@ -6,10 +6,12 @@ import { directoryPath } from '@/lib/directory';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 import styles from '../directory.module.css';
+import { THIN_PAGE } from '@/lib/indexing';
 
 export const metadata: Metadata = {
   title: 'Add your business',
   alternates: { canonical: '/directory/add' },
+  robots: THIN_PAGE,
 };
 
 const MESSAGES: Record<string, { tone: 'ok' | 'error'; text: string }> = {

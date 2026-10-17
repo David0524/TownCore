@@ -4,8 +4,13 @@ import styles from '@/components/NewsletterForm.module.css';
 import { StandardPage } from '@/lib/pages';
 import { newsletterOpen, SIGNUP_MESSAGES } from '@/lib/newsletter';
 import { requireTown } from '@/lib/town';
+import { THIN_PAGE } from '@/lib/indexing';
 
-export const metadata: Metadata = { title: 'Newsletter', alternates: { canonical: '/newsletter' } };
+export const metadata: Metadata = {
+  title: 'Newsletter',
+  alternates: { canonical: '/newsletter' },
+  robots: THIN_PAGE,
+};
 
 export default async function NewsletterPage({
   params,

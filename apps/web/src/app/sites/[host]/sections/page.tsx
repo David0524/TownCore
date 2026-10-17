@@ -10,8 +10,13 @@ import { beatColorVar } from '@/lib/theme';
 import { requireTown } from '@/lib/town';
 import { readerCategories } from '@/modules/categories';
 import { beatCounts } from '@/modules/data';
+import { THIN_PAGE } from '@/lib/indexing';
 
-export const metadata: Metadata = { title: 'Sections', alternates: { canonical: '/sections' } };
+export const metadata: Metadata = {
+  title: 'Sections',
+  alternates: { canonical: '/sections' },
+  robots: THIN_PAGE,
+};
 
 /** Every section with this week's new stories, then the pages about the paper (the Sections tab). */
 export default async function SectionsPage({ params }: { params: Promise<{ host: string }> }) {

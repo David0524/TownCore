@@ -7,10 +7,30 @@ import places from '@/components/directory/places.module.css';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { gameCard } from '@/components/sports/game';
 import { StandardPage } from '@/lib/pages';
-import { requireTown } from '@/lib/town';
+import { thinUnless } from '@/lib/indexing';
+import { requireTown, resolveTown } from '@/lib/town';
 import { townGames, type GameItem } from '@/modules/data';
 
-export const metadata: Metadata = { title: 'Sports', alternates: { canonical: '/sports' } };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ host: string }>;
+}): Promise<Metadata> {
+  const town = await resolveTown((await params).host);
+  if (!town) return {};
+  const now = Date.now();
+  const games = await townGames(
+    town.id,
+    new Date(now - BACK * 86_400_000),
+    new Date(now + AHEAD * 86_400_000),
+  );
+  // No games in the window: the page stays out of search.
+  return {
+    title: 'Sports',
+    alternates: { canonical: '/sports' },
+    robots: thinUnless(town, games.length, 1),
+  };
+}
 
 const AHEAD = 14;
 const BACK = 14;

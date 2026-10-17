@@ -5,8 +5,13 @@ import { requireTown } from '@/lib/town';
 import { BeachSources, BeachTiles } from '@/components/weather/BeachTiles';
 import { townForecast, townWeather } from '@/modules/data';
 import styles from './weather.module.css';
+import { THIN_PAGE } from '@/lib/indexing';
 
-export const metadata: Metadata = { title: 'Weather', alternates: { canonical: '/weather' } };
+export const metadata: Metadata = {
+  title: 'Weather',
+  alternates: { canonical: '/weather' },
+  robots: THIN_PAGE,
+};
 
 /**
  * The 7-day forecast (the quick-links bar's Weather), as the National Weather Service wrote it

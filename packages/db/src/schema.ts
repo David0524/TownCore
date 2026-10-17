@@ -120,6 +120,12 @@ export const towns = pgTable('towns', {
   // Town theme (CLAUDE.md §11a); null means the network default theme.
   theme: jsonb('theme'),
   readinessScore: real('readiness_score'),
+  // The search kill switch (owner, 2026-10-17): a live town hidden from search keeps serving
+  // readers but is noindex everywhere and lists nothing in its sitemaps, until staff show it again.
+  searchHidden: boolean('search_hidden').notNull().default(false),
+  // Launch cohort, the month a town went live ("2027-01"): towns roll out, and can be hidden from
+  // search, a cohort at a time.
+  cohort: text('cohort'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

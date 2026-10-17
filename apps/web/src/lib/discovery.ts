@@ -10,8 +10,9 @@ export const NEWS_SITEMAP_HOURS = 48;
 export const NEWS_SITEMAP_MAX = 1000;
 export const FEED_ITEMS = 30;
 
-export function isIndexable(town: Pick<Town, 'status'>): boolean {
-  return town.status === 'live';
+/** A live town not hidden from search by staff (the kill switch, owner 2026-10-17). */
+export function isIndexable(town: Pick<Town, 'status' | 'searchHidden'>): boolean {
+  return town.status === 'live' && !town.searchHidden;
 }
 
 /** Absolute URL on the town's canonical domain. */
@@ -60,7 +61,7 @@ const listed = {
 
 /** Public articles for sitemaps and feeds; empty for a town that isn't live. */
 export async function listListedArticles(
-  town: Pick<Town, 'id' | 'status'>,
+  town: Pick<Town, 'id' | 'status' | 'searchHidden'>,
   opts: {
     since?: Date;
     before?: Date;
@@ -89,7 +90,9 @@ export async function listListedArticles(
 }
 
 /** Months ("2026-10") that have public articles, newest first. */
-export async function listArticleMonths(town: Pick<Town, 'id' | 'status'>): Promise<string[]> {
+export async function listArticleMonths(
+  town: Pick<Town, 'id' | 'status' | 'searchHidden'>,
+): Promise<string[]> {
   const rows = await listListedArticles(town);
   return [...new Set(rows.map((r) => r.publishedAt.toISOString().slice(0, 7)))];
 }
@@ -108,7 +111,7 @@ export function xmlEscape(text: string): string {
 
 const XML_HEAD = '<?xml version="1.0" encoding="UTF-8"?>\n';
 
-export function robotsTxt(town: Pick<Town, 'domain' | 'status'>): string {
+export function robotsTxt(town: Pick<Town, 'domain' | 'status' | 'searchHidden'>): string {
   if (!isIndexable(town)) {
     // Not live yet: nothing may be crawled or indexed.
     return 'User-agent: *\nDisallow: /\n';
@@ -210,7 +213,11 @@ export function rssFeed(
   );
 }
 
-export function xmlResponse(body: string, town: Pick<Town, 'status'>, type: string): Response {
+export function xmlResponse(
+  body: string,
+  town: Pick<Town, 'status' | 'searchHidden'>,
+  type: string,
+): Response {
   return new Response(body, {
     headers: {
       'content-type': `${type}; charset=utf-8`,

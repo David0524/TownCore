@@ -7,8 +7,11 @@ import {
   urlset,
   xmlResponse,
 } from '@/lib/discovery';
+import { listPublishedGuides } from '@towncore/db';
+import { db } from '@/lib/db';
+import { MIN_INDEXABLE_STORIES } from '@/lib/indexing';
 import { resolveTown } from '@/lib/town';
-import { indexableTopics } from '@/modules/data';
+import { indexableTopics, realStoryCounts } from '@/modules/data';
 
 // Built per request from the database (never pre-rendered at build time).
 export const dynamic = 'force-dynamic';
@@ -22,15 +25,19 @@ export async function GET(_req: Request, { params }: Ctx) {
   if (!town) return new Response('Not found', { status: 404 });
 
   if (file === 'pages.xml') {
+    const counts = await realStoryCounts(town.id);
     // Topic pages only once they're indexable (3+ real stories, D-M4-5).
     const paths = isIndexable(town)
       ? [
-          '/',
+          ...(counts.total >= MIN_INDEXABLE_STORIES ? ['/'] : []),
           '/about',
           '/methods',
           '/corrections',
-          '/guides',
-          ...beats.map((b) => `/beat/${b.slug}`),
+          ...((await listPublishedGuides(db(), town.id)).length ? ['/guides'] : []),
+          // Sections with 3+ real stories only; thinner ones are noindex.
+          ...beats
+            .filter((b) => (counts.byBeat.get(b.slug) ?? 0) >= MIN_INDEXABLE_STORIES)
+            .map((b) => `/beat/${b.slug}`),
           ...(await indexableTopics(town.id)).map((slug) => `/topics/${slug}`),
         ]
       : [];
