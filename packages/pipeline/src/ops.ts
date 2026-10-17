@@ -1,4 +1,4 @@
-import { NETWORK_AI_DAILY_CAP_USD, type TownConfig } from '@towncore/config';
+import { aiTasks, networkAiCapUsd, taskRoutes, type TownConfig } from '@towncore/config';
 import {
   aiUsage,
   and,
@@ -71,6 +71,94 @@ async function costPerStory(db: Db, townId: string, from: Date, to: Date) {
   };
 }
 
+export type AiSpendRow = {
+  task: string;
+  model: string;
+  calls: number;
+  usd: number;
+  /** Cost of this task and model per story published in the period (all towns). */
+  perStoryUsd: number | null;
+  /** Share of input tokens read from the prompt cache. */
+  cacheHitRate: number | null;
+  escalations: number;
+  batchShare: number;
+  failures: number;
+};
+
+export type AiSpend = {
+  days: number;
+  stories: number;
+  usd: number;
+  perStoryUsd: number | null;
+  cacheHitRate: number | null;
+  rows: AiSpendRow[];
+};
+
+/**
+ * AI spend by task and model over the last `days` (owner, 2026-10-17, model protocol §4): cost
+ * per published story, the cache hit rate (cache reads against all input), escalations and the
+ * share sent through the Batch API. Rows from before the routing table show as "untagged".
+ */
+export async function aiSpend(db: Db, now = new Date(), days = 7): Promise<AiSpend> {
+  const from = new Date(now.getTime() - days * DAY);
+  const rows = await db
+    .select({
+      task: sql<string>`coalesce(${aiUsage.task}, 'untagged')`,
+      model: aiUsage.model,
+      calls: sql<number>`count(*)::int`,
+      usd: sql<string>`coalesce(sum(${aiUsage.estCostUsd}), 0)`,
+      input: sql<number>`coalesce(sum(${aiUsage.inputTokens}), 0)::int`,
+      read: sql<number>`coalesce(sum(${aiUsage.cacheReadTokens}), 0)::int`,
+      write: sql<number>`coalesce(sum(${aiUsage.cacheWriteTokens}), 0)::int`,
+      escalations: sql<number>`count(*) filter (where ${aiUsage.escalated})::int`,
+      batched: sql<number>`count(*) filter (where ${aiUsage.batch})::int`,
+      failures: sql<number>`count(*) filter (where ${aiUsage.outcome} <> 'ok')::int`,
+    })
+    .from(aiUsage)
+    .where(and(gte(aiUsage.createdAt, from), lt(aiUsage.createdAt, now)))
+    .groupBy(sql`1`, aiUsage.model);
+  const [count] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(articles)
+    .where(
+      and(
+        inArray(articles.status, ['published', 'corrected']),
+        ne(articles.kind, 'guide'),
+        gte(articles.publishedAt, from),
+        lt(articles.publishedAt, now),
+      ),
+    );
+  const stories = count?.n ?? 0;
+  const hit = (read: number, input: number, write: number) =>
+    read + input + write ? read / (read + input + write) : null;
+  const out = rows
+    .map((r) => ({
+      task: r.task,
+      model: r.model,
+      calls: r.calls,
+      usd: Number(r.usd),
+      perStoryUsd: stories ? Number(r.usd) / stories : null,
+      cacheHitRate: hit(r.read, r.input, r.write),
+      escalations: r.escalations,
+      batchShare: r.calls ? r.batched / r.calls : 0,
+      failures: r.failures,
+    }))
+    .sort((a, b) => b.usd - a.usd);
+  const usd = out.reduce((n, r) => n + r.usd, 0);
+  const sum = (k: 'read' | 'input' | 'write') => rows.reduce((n, r) => n + r[k], 0);
+  return {
+    days,
+    stories,
+    usd,
+    perStoryUsd: stories ? usd / stories : null,
+    cacheHitRate: hit(sum('read'), sum('input'), sum('write')),
+    rows: out,
+  };
+}
+
+/** A cap counts as reached at this share: the next call's worst case may not fit. */
+export const CAP_WARN_SHARE = 0.95;
+
 export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondition[]> {
   const out: OpsCondition[] = [];
   const active = await db.select().from(towns).where(ne(towns.status, 'paused'));
@@ -95,13 +183,29 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
     });
   }
 
+  // Task caps (owner, 2026-10-17, model protocol §4): a task at its network-wide daily cap
+  // stops everywhere until midnight UTC; it never moves to a bigger model.
+  const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  for (const task of aiTasks) {
+    const cap = taskRoutes[task].dailyCapUsd;
+    if (taskRoutes[task].disabled || cap <= 0) continue;
+    const spent = await networkSpendSince(db, dayStart, task);
+    if (spent >= cap * CAP_WARN_SHARE)
+      out.push({
+        key: `task_cap:${task}`,
+        severity: 'warning',
+        message: `The ${task} task reached its daily AI cap (${usd(spent)} of ${usd(cap)}, every town): it stops until midnight UTC.`,
+      });
+  }
+
   for (const town of active) {
     const config = town.config as Partial<TownConfig>;
     // Spend caps (§8): a town that hit its daily cap writes nothing more today.
     const today = await todaysUsage(db, { id: town.id, timezone: town.timezone }, now);
     const capUsd = config.ai_daily_cap_usd ?? 5;
     const capCalls = config.ai_daily_call_cap ?? 400;
-    if (today.costUsd >= capUsd || today.calls >= capCalls)
+    // Calls are refused once a call's worst case no longer fits, so warn from 95% of the cap.
+    if (today.costUsd >= capUsd * CAP_WARN_SHARE || today.calls >= capCalls)
       out.push({
         key: `town_cap:${town.id}`,
         severity: 'warning',
@@ -146,11 +250,11 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
     });
 
   const spent = await networkSpendToday(db, now);
-  if (spent >= NETWORK_AI_DAILY_CAP_USD)
+  if (spent >= networkAiCapUsd())
     out.push({
       key: 'network_cap',
       severity: 'critical',
-      message: `The network-wide AI cap is reached for today (${usd(spent)} of ${usd(NETWORK_AI_DAILY_CAP_USD)}): no model calls until midnight UTC.`,
+      message: `The network-wide AI cap is reached for today (${usd(spent)} of ${usd(networkAiCapUsd())}): no model calls until midnight UTC.`,
     });
 
   const [beat] = await db

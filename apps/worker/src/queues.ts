@@ -19,6 +19,7 @@ export const queues = {
   maps: 'maps.draw',
   photos: 'photos.stock',
   facebook: 'social.facebook',
+  aiBatches: 'ai.batches',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -55,4 +56,7 @@ export const schedules = [
   { queue: queues.photos, cron: '15,45 * * * *' },
   // Hourly, each live town's Facebook posts for the day; staff post them from Admin → Facebook.
   { queue: queues.facebook, cron: '25 * * * *' },
+  // Every 10 minutes, send queued batch requests (guides) and collect finished batches; the
+  // writers pick the answers up on their next run (owner, 2026-10-17, model protocol).
+  { queue: queues.aiBatches, cron: '*/10 * * * *' },
 ] as const;

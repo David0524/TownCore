@@ -1,0 +1,78 @@
+{
+  "recordedAt": "2026-10-17T03:34:59.026Z",
+  "provider": "anthropic",
+  "entries": {
+    "5b80fdd2fb27f050b431a443": {
+      "text": "{\"beat\":\"government\",\"about_this_town\":true,\"town_evidence\":\"City of Boca Raton\",\"people\":[],\"sensitive\":{\"crime_or_public_safety\":false,\"health\":false,\"inspection_failure\":false,\"accusatory\":false,\"arrest_without_official_release\":false,\"victim_of_sexual_assault\":false,\"rumor_or_social_post\":false},\"impact\":0.5,\"novelty\":0.5,\"proximity\":0.5,\"proposed_tier\":2,\"reason\":\"test\",\"confidence\":0.92}",
+      "stop": "end",
+      "model": "claude-haiku-5-5",
+      "usage": {
+        "inputTokens": 400,
+        "outputTokens": 600,
+        "cacheReadTokens": 1200,
+        "cacheWriteTokens": 0
+      },
+      "webSearches": 0
+    },
+    "5f5be6069eeca344863dd557": {
+      "text": "{\"headline\":\"Council approves paving contract for Palmetto Park Road\",\"dek\":\"The work begins Nov. 2 and is expected to take six weeks.\",\"body_md\":\"The Boca Raton City Council voted 4-1 on Tuesday to approve a $2,500,000 contract with Acme Paving to resurface Palmetto Park Road.\\n\\nWork begins Nov. 2 and is expected to take six weeks, the city said.\",\"beat\":\"government\",\"source_record_ids\":[\"ad14998e-1555-42d1-8f9a-b8a673e5b4cb\"],\"claims\":[{\"text\":\"The council voted 4-1.\",\"record_id\":\"ad14998e-1555-42d1-8f9a-b8a673e5b4cb\"}]}",
+      "stop": "end",
+      "model": "claude-sonnet-5-5",
+      "usage": {
+        "inputTokens": 400,
+        "outputTokens": 600,
+        "cacheReadTokens": 1800,
+        "cacheWriteTokens": 0
+      },
+      "webSearches": 0
+    },
+    "a0246db075f1949a598158f1": {
+      "text": "{\"claims\":[{\"claim\":\"vote\",\"record_id\":\"ad14998e-1555-42d1-8f9a-b8a673e5b4cb\",\"quote\":\"voted 4-1 on Tuesday\",\"supported\":true},{\"claim\":\"contract\",\"record_id\":\"ad14998e-1555-42d1-8f9a-b8a673e5b4cb\",\"quote\":\"a $2,500,000 contract with Acme Paving\",\"supported\":true},{\"claim\":\"start\",\"record_id\":\"ad14998e-1555-42d1-8f9a-b8a673e5b4cb\",\"quote\":\"Work begins Nov. 2\",\"supported\":true}],\"wrong_town_risk\":false,\"wrong_town_reason\":null}",
+      "stop": "end",
+      "model": "claude-sonnet-5-5",
+      "usage": {
+        "inputTokens": 400,
+        "outputTokens": 600,
+        "cacheReadTokens": 2000,
+        "cacheWriteTokens": 0
+      },
+      "webSearches": 0
+    },
+    "20dff22db8afa92e1755a5e1": {
+      "text": "{\"headline\":\"How bulk trash pickup works in Boca Raton\",\"dek\":\"What the city collects, and what a paid pickup costs.\",\"body_md\":\"## Collection\\nBulk items are collected from single-family residences once a week.\\n\\n## Paid pickups\\nA minimum fee of $161.71 will be charged for items measuring up to 2 cubic yards. Call the Sanitation Department at 561-416-3367.\",\"source_record_ids\":[\"ce27c525-6fff-4362-8570-4b4b2abf784e\"],\"claims\":[]}",
+      "stop": "end",
+      "model": "claude-sonnet-5-5",
+      "usage": {
+        "inputTokens": 400,
+        "outputTokens": 600,
+        "cacheReadTokens": 1800,
+        "cacheWriteTokens": 0
+      },
+      "webSearches": 0
+    },
+    "870a6bf323cb6aa6562990ea": {
+      "text": "{\"claims\":[{\"claim\":\"weekly\",\"record_id\":\"ce27c525-6fff-4362-8570-4b4b2abf784e\",\"quote\":\"collected from single-family residences once a week\",\"supported\":true},{\"claim\":\"fee\",\"record_id\":\"ce27c525-6fff-4362-8570-4b4b2abf784e\",\"quote\":\"A minimum fee of $161.71\",\"supported\":true}],\"wrong_town_risk\":false,\"wrong_town_reason\":null}",
+      "stop": "end",
+      "model": "claude-sonnet-5-5",
+      "usage": {
+        "inputTokens": 400,
+        "outputTokens": 600,
+        "cacheReadTokens": 2000,
+        "cacheWriteTokens": 0
+      },
+      "webSearches": 0
+    },
+    "20a403215e1f0301a8af8ead": {
+      "text": "{\"sources\":[{\"kind\":\"agenda\",\"url\":\"https://www.example-city.gov/agendas\",\"publisher\":\"City of Example\",\"why\":\"The city clerk posts council agendas here.\"}],\"outlets\":[{\"name\":\"Example Weekly\",\"url\":null,\"status\":\"defunct\"}]}",
+      "stop": "end",
+      "model": "claude-opus-5-5",
+      "usage": {
+        "inputTokens": 400,
+        "outputTokens": 600,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "webSearches": 4
+    }
+  }
+}

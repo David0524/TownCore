@@ -224,6 +224,8 @@ function fakeModel(): LlmProvider & { calls: LlmRequest[] } {
           proximity: 0.5,
           proposed_tier: 2,
           reason: 'civic notice',
+          // Claude's classify (v2) also reports its confidence.
+          ...(request.system.includes('confidence (0–1)') ? { confidence: 0.9 } : {}),
         }),
         stop: 'end',
         model: 'claude-haiku-5-5',
@@ -488,8 +490,10 @@ describe('steps 3–5 in a launch', () => {
         'launch.theme',
       ]),
     );
+    // The re-run asked the same question (a --source flag isn't model input), so discovery's
+    // stored answer came back: one paid search, never two (model protocol: idempotency).
     const discover = usage.filter((u) => u.job === 'launch.discover');
-    expect(discover).toHaveLength(2);
+    expect(discover).toHaveLength(1);
     expect(Number(discover[0]!.estCostUsd)).toBeCloseTo(0.004 + 0.004 + 0.04, 6);
   });
 });

@@ -20,7 +20,7 @@ import {
   towns,
   type Db,
 } from '@towncore/db';
-import { classifyV1, type Classification } from '@towncore/prompts';
+import { classifyPrompt, type Classification } from '@towncore/prompts';
 import {
   createChangedRecordUpdates,
   matchPublished,
@@ -54,6 +54,8 @@ const LINK_TYPES = ['release-link'];
 const LOOKBACK_DAYS = 7;
 /** Headlines this similar to recent coverage count as duplicates. */
 const DUPLICATE_SIMILARITY = 0.6;
+/** A title this close to a story already covered is skipped before any model call. */
+const COVERED_SIMILARITY = 0.85;
 
 type SkipReason = (typeof skippedCandidates.$inferInsert)['reason'];
 
@@ -444,13 +446,29 @@ async function createStoryCandidates(
     ).filter((r) => !COMPANION_TYPES.includes(r.record.type));
     const text = rows.map((r) => `${r.record.title ?? ''}\n${r.record.text ?? ''}`).join('\n\n');
 
+    // Code before models (owner, 2026-10-17): what code can reject costs no model call.
+    const covered = recent.find(
+      (h) =>
+        h.candidateId !== candidate.id &&
+        titleSimilarity(h.title, candidate.title ?? '') >= COVERED_SIMILARITY,
+    );
+    if (covered) {
+      await skip(db, report, candidate.id, 'duplicate', `Already covered: ${covered.title}`);
+      continue;
+    }
+    const elsewhere = otherPlaceOnly(text, town.name, config.same_name_elsewhere);
+    if (elsewhere) {
+      await skip(db, report, candidate.id, 'wrong_town', `Names ${elsewhere}, never ${town.name}.`);
+      continue;
+    }
+
     let classification: Classification;
     try {
       ({ value: classification } = await callModel(llm, {
         job: 'story-finder.classify',
         town: llmTown(town, config),
-        prompt: classifyV1,
-        input: classifyInput(town, config, rows),
+        prompt: classifyPrompt,
+        ...classifyParts(town, config, rows),
       }));
     } catch (error) {
       if (error instanceof SpendCapReached) {
@@ -537,12 +555,26 @@ export function classifyInput(
   config: TownConfig,
   rows: { record: typeof records.$inferSelect; sourceKind: string }[],
 ): string {
-  return [
+  const parts = classifyParts(town, config, rows);
+  return `${parts.inputPrefix}\n${parts.input}`;
+}
+
+/** The classify input in two parts: the town (cached across calls) and the records. */
+export function classifyParts(
+  town: TownRow,
+  config: TownConfig,
+  rows: { record: typeof records.$inferSelect; sourceKind: string }[],
+): { inputPrefix: string; input: string } {
+  const inputPrefix = [
     `Town: ${town.name}, ${town.state} (${town.county} County)`,
     `Agencies: ${config.agencies.join('; ')}`,
     config.same_name_elsewhere.length
       ? `Other places with a similar name: ${config.same_name_elsewhere.join('; ')}`
       : null,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+  const input = [
     '',
     ...rows.map(({ record, sourceKind }) =>
       [
@@ -551,9 +583,19 @@ export function classifyInput(
         record.text ?? '',
       ].join('\n'),
     ),
-  ]
-    .filter((line) => line !== null)
-    .join('\n');
+  ].join('\n');
+  return { inputPrefix, input };
+}
+
+/**
+ * A same-name place the records name while never naming this town ("Lake Worth Beach, FL" in
+ * Lake Worth's feed): out of town without asking a model. Null when the town is named.
+ */
+export function otherPlaceOnly(text: string, townName: string, elsewhere: string[]): string | null {
+  const lower = text.toLowerCase();
+  const named = (place: string) => lower.includes(place.toLowerCase());
+  if (named(townName)) return null;
+  return elsewhere.find((place) => named(place.split(',')[0]!.trim())) ?? null;
 }
 
 /** Headlines and candidate titles from the last 14 days, for duplicate checks. */

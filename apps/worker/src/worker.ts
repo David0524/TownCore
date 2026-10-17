@@ -8,6 +8,7 @@ import {
   providerFromEnv,
   queueFacebookPosts,
   resolveProviderName,
+  runAiBatches,
   type Llm,
   type LlmProvider,
 } from '@towncore/pipeline';
@@ -116,6 +117,13 @@ export async function startWorker({
   // inside the same job, so a retry never re-publishes half a story).
   await boss.work<WriterJob>(queues.writer, async (jobs) => {
     for (const job of jobs) await runWriterJob(db, llm, logger, job.data);
+  });
+
+  await boss.work(queues.aiBatches, async () => {
+    if (!llm) return;
+    const batches = await runAiBatches(llm);
+    if (batches.submitted || batches.collected || batches.failed)
+      logger.info(batches, 'ai batches');
   });
 
   await boss.work(queues.mailTick, async () => {

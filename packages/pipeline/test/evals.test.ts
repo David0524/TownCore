@@ -63,9 +63,12 @@ function naiveModel(): Llm {
 }
 
 describe('eval harness', () => {
-  it('loads all 20 seed cases', () => {
+  it('loads all 25 cases: 20 Boca seeds, Delray, Harbor Point and Pine Hollow', () => {
     const cases = loadEvalCases(casesPath, (_f, id) => ({ title: `Release ${id}`, text: 'x' }));
-    expect(cases).toHaveLength(20);
+    expect(cases).toHaveLength(25);
+    expect(new Set(cases.map((c) => c.town ?? 'boca-raton'))).toEqual(
+      new Set(['boca-raton', 'delray-beach', 'harbor-point', 'pine-hollow']),
+    );
     expect(stableUuid('a')).toBe(stableUuid('a'));
     expect(stableUuid('a')).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/,
