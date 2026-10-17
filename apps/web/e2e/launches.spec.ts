@@ -4,6 +4,7 @@ import { loadEnv } from '@towncore/config';
 import { launchSteps } from '@towncore/config';
 import {
   adminActions,
+  asc,
   createDb,
   eq,
   hashToken,
@@ -204,6 +205,11 @@ test('a ready launch goes live only when every check passes; an admin can pause 
   await expect(page.getByRole('status')).toHaveText('Testcove Square paused');
   const [paused] = await db.select().from(towns).where(eq(towns.slug, 'testcove-zz'));
   expect(paused!.status).toBe('paused');
-  const audit = await db.select().from(adminActions).where(eq(adminActions.staffId, me.id));
+  // In the order they happened: a select without ORDER BY can return them either way.
+  const audit = await db
+    .select()
+    .from(adminActions)
+    .where(eq(adminActions.staffId, me.id))
+    .orderBy(asc(adminActions.createdAt));
   expect(audit.map((a) => a.action)).toEqual(['launch.approve', 'town.pause']);
 });
