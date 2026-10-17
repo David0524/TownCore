@@ -2,13 +2,14 @@ import {
   alertsForTown,
   beachConfig,
   fetchBeach,
+  fetchTropics,
   fetchWeather,
   fetchZoneAlerts,
   type BeachConfig,
   type Fetcher,
   type ZoneAlert,
 } from '@towncore/adapters';
-import type { WeatherSnapshot } from '@towncore/config';
+import { tropicsBasins, type WeatherSnapshot } from '@towncore/config';
 import {
   and,
   eq,
@@ -16,6 +17,7 @@ import {
   ne,
   saveTownWeather,
   saveTownWeatherAlerts,
+  saveTropics,
   sources,
   towns,
   townWeather,
@@ -200,4 +202,28 @@ export async function refreshWeather(
   }
   logger.info({ ok, failed, alertsOnly, deferred }, 'weather refresh');
   return { ok, failed, deferred, alertsOnly };
+}
+
+/**
+ * The tropics panel's hourly run: NHC's two shared files give every basin, once for the whole
+ * network. A failure is recorded per basin and keeps the last good snapshot until it ages out.
+ */
+export async function refreshTropics(
+  db: Db,
+  fetcher: Fetcher,
+  logger: Log,
+  now = new Date(),
+): Promise<{ ok: boolean; storms: number }> {
+  try {
+    const basins = await fetchTropics(fetcher);
+    for (const snapshot of basins) await saveTropics(db, snapshot.basin, { snapshot }, now);
+    const storms = basins.reduce((n, b) => n + b.storms.length, 0);
+    logger.info({ storms }, 'tropics refresh');
+    return { ok: true, storms };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    for (const basin of tropicsBasins) await saveTropics(db, basin, { error: message }, now);
+    logger.warn({ err: message }, 'tropics refresh failed');
+    return { ok: false, storms: 0 };
+  }
 }

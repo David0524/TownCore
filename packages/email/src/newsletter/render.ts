@@ -80,6 +80,10 @@ export function renderIssue(c: IssueContent): RenderedIssue {
       );
     for (const w of c.weather.periods)
       html.push(`<p style="margin:0 0 8px"><strong>${esc(w.name)}:</strong> ${esc(w.text)}</p>`);
+    if (c.weather.tropics)
+      html.push(
+        `<p style="margin:0 0 8px"><strong>Tropics:</strong> <a href="${esc(c.weather.tropics.url)}" style="color:${p.ink}">${esc(c.weather.tropics.line)}</a></p>`,
+      );
   }
   if (c.items.length) {
     html.push(h2('Top stories'));
@@ -130,6 +134,7 @@ export function renderIssue(c: IssueContent): RenderedIssue {
     text.push('WEATHER');
     for (const a of c.weather.alerts) text.push(`ALERT: ${a.headline} ${a.url}`);
     for (const w of c.weather.periods) text.push(`${w.name}: ${w.text}`);
+    if (c.weather.tropics) text.push(`Tropics: ${c.weather.tropics.line} ${c.weather.tropics.url}`);
     text.push('');
   }
   if (c.items.length) {

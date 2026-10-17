@@ -80,6 +80,16 @@ describe('weather', () => {
     expect(w?.alerts).toEqual([{ headline: 'Rip Current Statement', url: 'https://alerts/1' }]);
     expect(issueWeather(null, [], at(12))).toBeNull();
   });
+
+  it("adds the Hurricane Center's line, even on a day with no forecast", () => {
+    const tropics = { line: 'Hurricane Ana, 90 mph winds', url: 'https://x.test/weather#tropics' };
+    expect(issueWeather(null, [], at(12), tropics)).toEqual({
+      periods: [],
+      alerts: [],
+      url: '',
+      tropics,
+    });
+  });
 });
 
 const content = (over: Partial<IssueContent> = {}): IssueContent => ({
@@ -170,6 +180,13 @@ describe('rendering', () => {
       'Newsroom from public records',
     ])
       expect(r.text).toContain(part);
+  });
+
+  it('shows the tropics line under the forecast, linked to the site', () => {
+    const tropics = { line: 'Hurricane Ana, 90 mph winds', url: 'https://x.test/weather#tropics' };
+    const r = renderIssue(content({ weather: { periods: [], alerts: [], url: '', tropics } }));
+    expect(r.html).toContain('<strong>Tropics:</strong> <a href="https://x.test/weather#tropics"');
+    expect(r.text).toContain('Tropics: Hurricane Ana, 90 mph winds https://x.test/weather#tropics');
   });
 
   it('labels paid units "Sponsored" (Rule 6)', () => {

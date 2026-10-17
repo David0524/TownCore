@@ -30,7 +30,7 @@ import {
 import { enqueueDueSources, runIngestJob, type IngestJob } from './ingest';
 import { drawMaps, refreshBasemaps } from './maps';
 import { drawStockPhotos, unsplashFromEnv } from './photos';
-import { refreshWeather } from './weather';
+import { refreshTropics, refreshWeather } from './weather';
 import {
   geocodeDirectory,
   recalculatePrices,
@@ -144,6 +144,10 @@ export async function startWorker({
 
   await boss.work(queues.weather, async () => {
     await refreshWeather(db, fetcher, logger);
+  });
+
+  await boss.work(queues.tropics, async () => {
+    await refreshTropics(db, fetcher, logger);
   });
 
   await boss.work(queues.directorySeed, async () => {

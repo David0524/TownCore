@@ -103,6 +103,18 @@ export {
   type WeatherSnapshot,
 } from './weather';
 export {
+  NOTABLE_FORMATION_PERCENT,
+  stormMph,
+  stormName,
+  tropicsBasin,
+  tropicsBasins,
+  tropicsLine,
+  type TropicalArea,
+  type TropicalStorm,
+  type TropicsBasin,
+  type TropicsSnapshot,
+} from './tropics';
+export {
   beatCategory,
   categoryColors,
   darkFoodColors,

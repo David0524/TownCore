@@ -57,7 +57,7 @@ Each source gets a Rule 8 check first (`public-data-sources.md`), and documented
 ## Build order
 
 1. Spotlights (D-CD-1). **Done**, with tests and the near-duplicate check.
-2. USASpending: **done** (`usaspending` adapter, weekly federal awards roundup, given to every town by the launcher). Boca police and fire releases: **done** (CivicPlus `newsflash-list`; those categories aren't in the city's RSS feed). Next: Hurricane Center alerts, BLS LAUS from the bulk files, Boca's development-projects layer (`arcgis`). Census BPS is deferred: its place files are numbers only, so a monthly story wouldn't pass the near-duplicate guard; the numbers go into guides and entity pages instead.
+2. USASpending: **done** (`usaspending` adapter, weekly federal awards roundup, given to every town by the launcher). Boca police and fire releases: **done** (CivicPlus `newsflash-list`; those categories aren't in the city's RSS feed). Hurricane Center: **done**, as a tropics panel on the Weather page, the Today tile and the newsletter, not a story (the same storm would be the same story on every coastal site). Next: Boca's development-projects layer (`arcgis`) and CMS nursing-home inspections. BLS LAUS is deferred like Census BPS: a monthly unemployment rate reads the same from town to town, so it belongs in guides and entity pages, not stories. Census BPS is deferred: its place files are numbers only, so a monthly story wouldn't pass the near-duplicate guard; the numbers go into guides and entity pages instead.
 3. EPA ECHO, OSHA, CMS: facility adapters, Tier 3 templates.
 4. FEC and state campaign totals, county agendas, schools.
 5. The breaking-alert email.
