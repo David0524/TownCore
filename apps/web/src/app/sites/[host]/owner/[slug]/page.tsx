@@ -31,8 +31,9 @@ import styles from '../../directory/directory.module.css';
 export const metadata: Metadata = { title: 'Edit your listing', robots: { index: false } };
 
 const PAYMENT_MESSAGES: Record<string, string> = {
-  paid: 'Thanks. Your placement turns on as soon as Stripe confirms the payment, usually within a minute.',
-  canceled: 'Checkout was canceled; nothing was charged.',
+  paid: 'Thanks, Stripe has your details. Your placement turns on in a moment, once Stripe confirms it (usually within a minute). Then write your card below; an editor checks it before it runs.',
+  canceled:
+    'Checkout was canceled, so nothing was charged. The offers below are still open whenever you’re ready.',
   sold_out: 'Someone just took that spot in your category. Pick another open one.',
   already_active: 'You already have that placement.',
   unavailable: 'Paid placements aren’t open on this site yet.',

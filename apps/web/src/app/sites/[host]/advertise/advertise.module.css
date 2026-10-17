@@ -107,3 +107,234 @@
   font-size: var(--fs-meta);
   color: var(--muted);
 }
+
+/* Each spot's button, at the foot of its tile. */
+.action {
+  margin-top: 0.5rem;
+}
+
+.action :global(.button) {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* A secondary button: the brand's tint, so the featured spots keep the strongest buttons. */
+.quiet {
+  background: var(--tint);
+  color: var(--ink);
+}
+
+.pick {
+  font-size: 0.9375rem;
+}
+
+/* The category chooser (owner, 2026-10-17): every kind of business with listings, its open
+   spots and from-price, as rows on phones and tiles on wider screens. */
+.categories {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 0.5rem;
+}
+
+.categoryLink {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
+  border: var(--hairline);
+  border-radius: var(--radius-tile);
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--background);
+}
+
+.categoryLink:hover strong {
+  text-decoration: underline;
+}
+
+.categoryLink[aria-current] {
+  border-color: var(--accent);
+  background: var(--tint);
+}
+
+.round {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-capsule);
+  background: var(--tint-bg);
+  color: var(--tint-ink);
+}
+
+.categoryText {
+  display: grid;
+  min-width: 0;
+}
+
+.categoryText strong {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.categoryMeta {
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.categoryMeta[data-open] {
+  color: var(--ink);
+}
+
+.from {
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.from .per {
+  display: block;
+}
+
+.chooser {
+  margin: 0 0 1.5rem;
+}
+
+.chooser summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.chooser[open] summary {
+  margin-bottom: 0.5rem;
+}
+
+/* The other offers: Enhanced, the morning email's week and a category's month. */
+.cards {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+
+.card {
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  padding: 1rem 1.1rem 1.1rem;
+  border: var(--hairline);
+  border-radius: var(--radius-tile);
+  background: var(--surface);
+}
+
+.card :global(.button) {
+  justify-self: start;
+  margin-top: 0.5rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Phones: the chooser is a list of rows, one per category. */
+@media (max-width: 599.98px) {
+  .categories {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* /advertise/start: what the offer is, then the listing to buy it for. */
+.summary {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-tile);
+  background: var(--surface);
+  max-width: var(--measure);
+}
+
+.summary div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.summary dt {
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.summary dd {
+  margin: 0;
+}
+
+.buyList {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: var(--hairline);
+  border-radius: var(--radius);
+  max-width: var(--measure);
+}
+
+.buyList li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.buyList li + li {
+  border-top: var(--hairline);
+}
+
+.buyList li > div {
+  min-width: 0;
+}
+
+.buyForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.buyForm label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.buyForm select {
+  min-height: 44px;
+  padding: 0 0.5rem;
+  border: var(--hairline);
+  border-radius: var(--radius-field, var(--radius));
+  font: inherit;
+  color: var(--ink);
+  background: var(--background);
+}
+
+.buyForm button {
+  min-height: 44px;
+  border: 0;
+  cursor: pointer;
+}

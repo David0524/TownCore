@@ -61,8 +61,6 @@ export default defineConfig({
         STRIPE_WEBHOOK_SECRET: E2E_STRIPE_WEBHOOK_SECRET,
         // Checkout sessions go to the local fake Stripe below.
         STRIPE_API_BASE: `http://127.0.0.1:${FAKE_STRIPE_PORT}`,
-        // Built-but-off products, shown in tests only (D-M6-6).
-        DIRECTORY_PRODUCTS_PREVIEW: 'newsletter,exclusive',
       },
       timeout: 60_000,
     },
