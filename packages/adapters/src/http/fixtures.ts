@@ -42,7 +42,12 @@ export function replayFetch(fixture: FixtureFile | string): FetchFn {
 }
 
 /** Wraps a real fetch and keeps every exchange so it can be saved as a fixture. */
-export function recordingFetch(real: FetchFn): { fetch: FetchFn; save: (path: string) => void } {
+export function recordingFetch(real: FetchFn): {
+  fetch: FetchFn;
+  save: (path: string) => void;
+  /** The exchanges so far, as a fixture file. */
+  snapshot: () => FixtureFile;
+} {
   const exchanges: Exchange[] = [];
   return {
     fetch: async (input, init) => {
@@ -65,6 +70,7 @@ export function recordingFetch(real: FetchFn): { fetch: FetchFn; save: (path: st
         headers: response.headers,
       });
     },
+    snapshot: () => ({ recordedAt: new Date().toISOString(), exchanges: [...exchanges] }),
     save: (path) => {
       mkdirSync(dirname(path), { recursive: true });
       const file: FixtureFile = { recordedAt: new Date().toISOString(), exchanges };

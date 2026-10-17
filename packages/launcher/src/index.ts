@@ -158,3 +158,48 @@ export {
   rankedHouseholds,
   type HouseholdsResult,
 } from './households';
+export {
+  approveCohortGoLive,
+  approveCohortPurchase,
+  batchedTodos,
+  cohortCandidates,
+  CohortRefused,
+  cohortStageLabels,
+  createCohort,
+  listCohorts,
+  nameChoices,
+  parseAmount,
+  retryCohortTown,
+  setCohortPicks,
+  setCohortTodo,
+  type Cohort,
+  type CohortRow,
+  type CohortTown,
+  type CohortTownRow,
+  type NameChoice,
+  type PurchaseApproval,
+} from './cohorts';
+export { advanceCohort, advanceCohorts, type CohortDeps, type OnboardOutcome } from './cohort-run';
+export { cohortDepsFromEnv } from './cohort-env';
+export {
+  decideSourceProposal,
+  discoveryProgress,
+  estimateLabel,
+  listSourceProposals,
+  ProposalRefused,
+  sourceRow,
+  type DiscoveryProgress,
+  type SourceProposal,
+} from './source-proposals';
+export {
+  estimateItemsPerDay,
+  runSourceDiscovery,
+  type DiscoveryDeps,
+  type DiscoveryTownResult,
+} from './discovery-agent';
+export {
+  exportApprovedSources,
+  townFile,
+  withAddedSources,
+  type ExportResult,
+} from './sources-export';

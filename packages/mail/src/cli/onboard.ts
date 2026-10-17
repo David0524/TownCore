@@ -339,7 +339,7 @@ async function printStatus(ctx: CommandContext, domain?: string) {
   }
 }
 
-function realProviders(env: Env): Providers {
+export function realProviders(env: Env): Providers {
   const region = env.AWS_REGION ?? 'us-east-1';
   if (!env.VERCEL_DNS_TOKEN || !env.AWS_ACCESS_KEY_ID) return offlineProviders();
   return {

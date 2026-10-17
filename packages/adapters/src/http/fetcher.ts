@@ -145,6 +145,17 @@ export class Fetcher {
     return this.shared.file(url, options);
   }
 
+  /**
+   * A Fetcher that shares this one's politeness (per-host pacing, robots.txt, Crawl-delay and
+   * Visit-time) but sends through `wrap(fetch)`, e.g. to record a fixture of a failing fetch.
+   * Rule 8 is unchanged: the same checks run, and the host queue is the same one.
+   */
+  withFetch(wrap: (fetch: FetchFn) => FetchFn): Fetcher {
+    const child = Object.assign(Object.create(Fetcher.prototype) as Fetcher, this);
+    (child as unknown as { fetchImpl: FetchFn }).fetchImpl = wrap(this.fetchImpl);
+    return child;
+  }
+
   /** GET a URL politely. Throws FetchPolicyError if the URL is blocked or disallowed. */
   async get(url: string, headers: Record<string, string> = {}): Promise<Response> {
     let target = new URL(url);

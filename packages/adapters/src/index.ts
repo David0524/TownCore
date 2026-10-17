@@ -91,3 +91,16 @@ export {
 export { parseDatasetUrl, socrataAdapter, socrataDate } from './socrata';
 export { arcgisAdapter, arcgisQueryUrl, arcgisRecords } from './arcgis';
 export { escribeAdapter, escribeDate, escribeRecords } from './escribe';
+export {
+  classifyFailure,
+  diagnoseBrokenSources,
+  FixRequestRefused,
+  groupPlatformPatterns,
+  listFixRequests,
+  PLATFORM_PATTERN_TOWNS,
+  trimFixture,
+  updateFixRequest,
+  type Diagnosis,
+  type FixRequestRow,
+  type FixRun,
+} from './fixes';

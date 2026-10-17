@@ -14,6 +14,7 @@ import {
 } from '@towncore/pipeline';
 import { PgBoss } from 'pg-boss';
 import type { Logger } from 'pino';
+import { runAdapterFixes, runCohorts, runDigest, runDiscovery, runLearning } from './agents';
 import { recordHeartbeat } from './heartbeat';
 import {
   bulkFromEnv,
@@ -194,6 +195,23 @@ export async function startWorker({
       if (result.outcome !== 'waiting' && result.outcome !== 'exists')
         logger.info(result, 'newsletter issue');
     }
+  });
+
+  // Agentic operations (docs/plans/agentic-ops.md): each prepares a decision for a person.
+  await boss.work(queues.cohorts, async () => {
+    await runCohorts(db, fetcher, llm, logger);
+  });
+  await boss.work(queues.sourceDiscovery, async () => {
+    await runDiscovery(db, fetcher, llm, logger);
+  });
+  await boss.work(queues.adapterFixes, async () => {
+    await runAdapterFixes(db, fetcher, logger);
+  });
+  await boss.work(queues.learning, async () => {
+    await runLearning(db, logger);
+  });
+  await boss.work(queues.digest, async () => {
+    await runDigest(db, opsDeps.alertMail, logger);
   });
 
   for (const { queue, cron } of schedules) {

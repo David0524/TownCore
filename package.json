@@ -38,6 +38,8 @@
     "towns:rank": "pnpm --silent --filter @towncore/launcher towns:rank",
     "towns:households": "pnpm --silent --filter @towncore/launcher towns:households",
     "launch": "pnpm --silent --filter @towncore/launcher launch",
+    "cohort": "pnpm --silent --filter @towncore/launcher cohort",
+    "sources:export": "pnpm --silent --filter @towncore/launcher sources:export",
     "demo:migrate": "pnpm --filter @towncore/db demo:migrate",
     "demo:sync": "pnpm --silent --filter @towncore/db demo:sync"
   },

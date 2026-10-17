@@ -34,10 +34,10 @@ long-range plan (`docs/finance/`), the launch limits (`docs/finance/launch-capac
    - Each town's source reads its own city's rows, with its own run record and health.
    - 295 Florida towns: each file goes from 295 downloads a run to about 4 checks a day.
    - The worker needs a few hundred MB of disk for the copies.
-3. **Batch launch.**
-   - `pnpm launch --batch towns.csv` runs the steps for a list of approved towns.
-   - The owner picks names from one combined report.
-   - The domains are bought in one Rule 10 approval at a stated total price, with each domain's price shown and a typed confirmation of the total.
+3. **Batch launch. Built** (`docs/plans/agentic-ops.md`).
+   - Launch cohorts in Admin → Launches: approved towns run their steps as a chain (`pnpm cohort advance`, or the worker with `COHORT_ORCHESTRATOR=worker`).
+   - The admin picks names in one table per cohort.
+   - The domains are bought in one Rule 10 approval at a stated total price, with each domain's price shown and a typed confirmation of the total. Mail onboarding, DNS verification, provisioning and a batched draft review follow by themselves; go-live is one more click.
 4. **Search Console.** Verify and submit sitemaps through the Search Console API once a Google credential exists (owner). Until then it stays a manual launch to-do.
 5. **Cohort health on Admin.** Per cohort (go-live month):
    - towns, indexed vs. submitted pages, impressions, manual actions;
@@ -45,7 +45,7 @@ long-range plan (`docs/finance/`), the launch limits (`docs/finance/launch-capac
    - newsletter sign-ups;
    - items a day against the target (built: Admin → Health).
 
-   The gate below shows as pass or fail.
+   The gate below shows as pass, fail or unknown. **Built** for the data that exists: the daily learning loop proposes launching or pausing the next cohort in Admin → Proposals, and the daily digest summarizes each cohort. Indexing, impressions and manual actions stay unknown until Search Console is connected.
 6. **Kill switch for a whole cohort.** Built (Admin → Health).
 7. **County source registry.** Built for property sales; permits next.
    - Each county's verified data sets live in `counties/<state>/<county>.yaml`. Each entry records:

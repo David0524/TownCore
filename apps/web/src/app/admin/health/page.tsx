@@ -11,6 +11,7 @@ import {
   townAudience,
   townHealth,
 } from '@towncore/pipeline';
+import { discoveryProgress, type DiscoveryProgress } from '@towncore/launcher/source-proposals';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../admin.module.css';
@@ -34,7 +35,7 @@ export default async function Health({
   const me = await requireStaff();
   const admin = me.role === 'admin';
   const params = await searchParams;
-  const [rows, coverage, alerts, audience, spend] = await Promise.all([
+  const [rows, coverage, alerts, audience, spend, discovery] = await Promise.all([
     townHealth(db()),
     storyCoverage(db()),
     db()
@@ -44,6 +45,7 @@ export default async function Health({
       .orderBy(desc(mailAlerts.severity), desc(mailAlerts.firstSeenAt)),
     townAudience(db()),
     aiSpend(db()),
+    discoveryProgress(db()),
   ]);
   const experiments = await experimentReports(db(), audience);
   return (
@@ -228,7 +230,8 @@ export default async function Health({
       <p className={styles.muted}>
         Real items published a day over the last {COVERAGE_DAYS} days against the Rule 7 target (3,
         or 10 for large towns), furthest behind first. Close the gap with new sources, never by
-        padding.
+        padding: source discovery searches weekly for the towns furthest behind, and its finds wait
+        in Proposals.
       </p>
       <div className={styles.scroll}>
         <table className={styles.table} data-testid="story-coverage">
@@ -241,6 +244,7 @@ export default async function Health({
               <th>By source</th>
               <th>Skipped</th>
               <th>Sources to build next</th>
+              <th>Discovery</th>
             </tr>
           </thead>
           <tbody>
@@ -272,11 +276,27 @@ export default async function Health({
                     .map((k) => k.replace('_', ' '))
                     .join(', ') || 'All'}
                 </td>
+                <td data-testid="discovery-progress">
+                  <DiscoveryCell p={discovery.get(t.id)} />
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </main>
+  );
+}
+
+function DiscoveryCell({ p }: { p: ReturnType<Map<string, DiscoveryProgress>['get']> }) {
+  if (!p) return <>Not run yet</>;
+  return (
+    <>
+      {p.lastRunAt ? `Last ${p.lastRunAt.toISOString().slice(0, 10)}` : 'Not run yet'}
+      <div className={styles.muted}>
+        {p.proposed} waiting, {p.approved} approved
+        {p.approvedPerDay ? ` (+${p.approvedPerDay} a day estimated)` : ''}
+      </div>
+    </>
   );
 }

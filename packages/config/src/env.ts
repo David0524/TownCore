@@ -109,6 +109,10 @@ export const envSchema = z.object({
   // The standing approval for automatic Facebook posting. Off unless the owner grants it: until
   // then a person presses Post for every post (Rule 10's spirit for outward actions).
   FACEBOOK_AUTOPOST: optional(z.enum(['off', 'on'])),
+  // Where launch cohorts advance (docs/plans/agentic-ops.md): `worker` runs the chain every 5
+  // minutes in the worker; unset, it runs only by `pnpm cohort advance`, so the launch files land
+  // in a checkout for a pull request. Purchases still need the cohort's admin approval (Rule 10).
+  COHORT_ORCHESTRATOR: optional(z.enum(['off', 'worker'])),
   // Secret mixed into poll voters' address hashes, so the stored hashes can't be reversed.
   VOTE_HASH_SECRET: optional(z.string().min(16)),
   DEV_TOWN_SLUG: optional(z.string().regex(/^[a-z0-9-]+$/)),

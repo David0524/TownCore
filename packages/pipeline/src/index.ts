@@ -214,3 +214,41 @@ export {
   type PollResults,
   type VoteOutcome,
 } from './polls';
+export {
+  cohortGates,
+  GATE_CORRECTIONS_PER_TOWN,
+  GATE_FACTCHECK_MIN,
+  GATE_SIGNUPS_PER_TOWN,
+  type CohortGate,
+  type GateResult,
+  type GateStatus,
+} from './cohort-gates';
+export {
+  decideProposal,
+  experimentProposals,
+  gateProposal,
+  latestGateDecision,
+  listProposals,
+  MIN_LIFT,
+  MIN_TOWNS_PER_VARIANT,
+  ProposalDecisionRefused,
+  readVariantReports,
+  routingDiff,
+  routingProposals,
+  runLearningLoops,
+  upsertProposal,
+  type LearningRun,
+  type Proposal,
+  type ProposalInput,
+} from './proposals';
+export {
+  buildDigest,
+  DIGEST_SECTIONS,
+  digestText,
+  listDigests,
+  markDigestEmailed,
+  storeDigest,
+  type Digest,
+  type DigestItem,
+} from './digest';
+export { EVAL_VARIANTS, type VariantReport } from './evals';

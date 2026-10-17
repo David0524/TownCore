@@ -21,6 +21,11 @@ export const queues = {
   photos: 'photos.stock',
   facebook: 'social.facebook',
   aiBatches: 'ai.batches',
+  cohorts: 'launch.cohorts',
+  sourceDiscovery: 'sources.discover',
+  adapterFixes: 'adapters.fixes',
+  learning: 'learning.proposals',
+  digest: 'ops.digest',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -63,4 +68,15 @@ export const schedules = [
   // Every 10 minutes, send queued batch requests (guides) and collect finished batches; the
   // writers pick the answers up on their next run (owner, 2026-10-17, model protocol).
   { queue: queues.aiBatches, cron: '*/10 * * * *' },
+  // Agentic operations (docs/plans/agentic-ops.md). Launch cohorts advance every 5 minutes where
+  // COHORT_ORCHESTRATOR=worker; every step records state, so the next tick resumes a crash.
+  { queue: queues.cohorts, cron: '*/5 * * * *' },
+  // Weekly (Monday 08:10 UTC), new sources for the towns furthest below the Rule 7 target.
+  { queue: queues.sourceDiscovery, cron: '10 8 * * 1' },
+  // Hourly, broken sources get a recorded fixture, a diagnosis and a fix request.
+  { queue: queues.adapterFixes, cron: '50 * * * *' },
+  // Daily, the learning loops' proposals, just before the digest counts them.
+  { queue: queues.learning, cron: '25 9 * * *' },
+  // Daily at 09:40 UTC (5:40 a.m. Eastern in summer, 4:40 in winter), the ops digest.
+  { queue: queues.digest, cron: '40 9 * * *' },
 ] as const;
