@@ -11,14 +11,28 @@ export function isLiveKey(key: string): boolean {
   return /^(sk|rk)_live_/.test(key);
 }
 
-/** A Stripe client for a test-mode key, or null when no key is set. */
-export function stripeClient(secretKey: string | undefined): Stripe | null {
+/**
+ * A Stripe client for a test-mode key, or null when no key is set. `apiBase` points it at a
+ * local fake Stripe (end-to-end tests only; never with a live key, which is refused above).
+ */
+export function stripeClient(secretKey: string | undefined, apiBase?: string): Stripe | null {
   if (!secretKey) return null;
   if (isLiveKey(secretKey))
     throw new LiveModeRefused(
       'Stripe live mode is not enabled (D-M6-5). Use a test-mode key (sk_test_…) until the owner approves live payments.',
     );
-  return new Stripe(secretKey, { maxNetworkRetries: 2, appInfo: { name: 'TownCore directory' } });
+  const base = apiBase ? new URL(apiBase) : null;
+  return new Stripe(secretKey, {
+    maxNetworkRetries: base ? 0 : 2,
+    appInfo: { name: 'TownCore directory' },
+    ...(base
+      ? {
+          host: base.hostname,
+          port: Number(base.port) || (base.protocol === 'http:' ? 80 : 443),
+          protocol: base.protocol === 'http:' ? 'http' : 'https',
+        }
+      : {}),
+  });
 }
 
 export type { Stripe };

@@ -1,0 +1,128 @@
+/* Quick poll (owner, 2026-10-17): a question with 2–4 answers, then results as bars. Tokens only. */
+
+.poll {
+  border-top: var(--hairline);
+  border-bottom: var(--hairline);
+  padding: 1rem 0 1.25rem;
+}
+
+.question {
+  margin: 0.25rem 0 0.75rem;
+  font-family: var(--font-headline);
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.form {
+  margin: 0;
+}
+
+.options {
+  border: 0;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: var(--hairline);
+  border-radius: var(--radius-field);
+  background: var(--background);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.option:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--tint);
+}
+
+.option input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+.vote {
+  min-height: 2.75rem;
+  padding: 0.5rem 1.5rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent);
+  border: 0;
+  border-radius: var(--radius-button);
+  cursor: pointer;
+}
+
+.vote:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.error {
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+}
+
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.result {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-field);
+  background: var(--surface);
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--tint);
+}
+
+.label,
+.pct {
+  position: relative;
+}
+
+.pct {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.yours {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.note {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+}

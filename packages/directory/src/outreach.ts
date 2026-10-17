@@ -46,19 +46,18 @@ type Story = { id: string; slug: string; headline: string; publishedAt: Date | n
 
 const dayMs = 86_400_000;
 
+export type StoryMatch = { story: Story; listing: Listing };
+
 /**
- * Drafts outreach for the town's recent stories. A business is matched when the story names it
- * (its topic entity has the listing's name key) or was written from its own license record.
- * Roundups and alerts are skipped: one roundup names dozens of new filings.
+ * The town's recent stories and the listings each names. A business is matched when the story
+ * names it (its topic entity has the listing's name key) or was written from its own license
+ * record. Roundups and alerts are skipped: one roundup names dozens of new filings.
  */
-export async function draftOutreach(
+export async function storyListingMatches(
   db: Db,
   townId: string,
-  opts: { now?: Date; postalAddress?: string | null } = {},
-): Promise<OutreachReport> {
-  const now = opts.now ?? new Date();
-  const [town] = await db.select().from(towns).where(eq(towns.id, townId));
-  if (!town) throw new Error(`Unknown town ${townId}`);
+  now = new Date(),
+): Promise<StoryMatch[]> {
   const stories = await db
     .select({
       id: articles.id,
@@ -77,7 +76,7 @@ export async function draftOutreach(
       ),
     )
     .orderBy(asc(articles.publishedAt));
-  if (stories.length === 0) return { created: 0 };
+  if (stories.length === 0) return [];
 
   const named = await db
     .select({ articleId: articleEntities.articleId, key: entities.key })
@@ -93,7 +92,7 @@ export async function draftOutreach(
       ),
     );
   const recordIds = stories.flatMap((s) => s.sourceRecordIds);
-  if (named.length === 0 && recordIds.length === 0) return { created: 0 };
+  if (named.length === 0 && recordIds.length === 0) return [];
 
   const listings = await db
     .select({
@@ -115,7 +114,7 @@ export async function draftOutreach(
     if (l.sourceRecordId) byRecord.set(l.sourceRecordId, l);
   }
 
-  const matches: Array<{ story: Story; listing: Listing }> = [];
+  const matches: StoryMatch[] = [];
   for (const story of stories) {
     const found = new Map<string, Listing>();
     for (const n of named.filter((x) => x.articleId === story.id)) {
@@ -129,6 +128,25 @@ export async function draftOutreach(
     }
     for (const listing of found.values()) matches.push({ story, listing });
   }
+  return matches;
+}
+
+/**
+ * Drafts outreach for the town's recent stories (see storyListingMatches). A claimed listing's
+ * owner hears about the story through the owner follow-ups instead (./followups.ts), so only
+ * listings without an owner's address get a draft here.
+ */
+export async function draftOutreach(
+  db: Db,
+  townId: string,
+  opts: { now?: Date; postalAddress?: string | null } = {},
+): Promise<OutreachReport> {
+  const now = opts.now ?? new Date();
+  const [town] = await db.select().from(towns).where(eq(towns.id, townId));
+  if (!town) throw new Error(`Unknown town ${townId}`);
+  const matches = (await storyListingMatches(db, townId, now)).filter(
+    (m) => !(m.listing.claimedAt && m.listing.claimedByEmail),
+  );
   if (matches.length === 0) return { created: 0 };
 
   const recent = await db

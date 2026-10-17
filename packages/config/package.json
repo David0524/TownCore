@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./dotenv": "./src/dotenv.ts"
+    "./dotenv": "./src/dotenv.ts",
+    "./audience": "./src/audience.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

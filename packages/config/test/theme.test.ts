@@ -31,7 +31,7 @@ describe('theme schema', () => {
       'today-bento',
     ]);
     expect(theme.layout.nav).toBe('category-tabs');
-    expect(theme.layout.homeRail).toEqual(['events', 'schools-sports', 'find-a-pro']);
+    expect(theme.layout.homeRail).toEqual(['events', 'quick-poll', 'schools-sports', 'find-a-pro']);
     expect(theme.layout.homeBottom).toEqual([
       'photo-of-the-week',
       'new-now-open',

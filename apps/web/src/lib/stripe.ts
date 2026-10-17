@@ -11,7 +11,7 @@ export function stripe(): Stripe | null {
   if (cached && cached.key === key) return cached.client;
   let client: Stripe | null = null;
   try {
-    client = stripeClient(key);
+    client = stripeClient(key, loadEnv().STRIPE_API_BASE);
   } catch (error) {
     if (!(error instanceof LiveModeRefused)) throw error;
     console.error(error.message);

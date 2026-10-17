@@ -21,6 +21,7 @@ import { themeReviewV1, themeV1, type ThemeChoice, type ThemeReview } from '@tow
 import { capturePages, captureIdentity, type Shot, type ShotTarget } from './screenshots';
 import type { Place } from './census';
 import { adjustContrast, colorDistance, hexToOklch, oklchToHex, paletteFromAccent } from './color';
+import { logoPromptStep, type ArtDetail } from './identity-step';
 import type { NamesDetail } from './names-step';
 import { NEIGHBOR_MILES } from './names';
 import { milesBetween } from './rank';
@@ -57,7 +58,7 @@ export const familyPresets: Record<
         'new-businesses',
         'real-estate',
       ],
-      homeRail: ['coming-up', 'find-a-pro', 'essentials'],
+      homeRail: ['coming-up', 'quick-poll', 'find-a-pro', 'essentials'],
       homeBottom: ['photo-of-the-week', 'new-now-open'],
       article: 'classic-rail',
       directory: 'list-map',
@@ -80,6 +81,7 @@ export const familyPresets: Record<
         'directory-featured',
         'find-a-pro',
         'new-now-open',
+        'quick-poll',
         'documents-posted',
       ],
       article: 'wide-reading',
@@ -98,7 +100,7 @@ export const familyPresets: Record<
       grid: 'main-right-rail',
       homeTop: ['category-buttons', 'briefing-column', 'newsletter-cta', 'today-bento'],
       home: ['beat-sections', 'essentials', 'events', 'directory-featured', 'documents-posted'],
-      homeRail: ['coming-up'],
+      homeRail: ['coming-up', 'quick-poll'],
       article: 'classic-rail',
       directory: 'search-first',
       footer: 'community',
@@ -329,6 +331,8 @@ export type ThemeDetail = {
   shots: Shot[];
   /** The screenshot review passes (Anthropic only; at most two). */
   reviews: Array<{ verdict: ThemeReview['verdict']; problems: string[]; applied: string[] }>;
+  /** Logo art: the ChatGPT prompts, and whether art was imported (identity-step.ts). */
+  art?: ArtDetail;
 };
 
 /** At most this many review-and-fix rounds (docs/plans/M7.md §5). */
@@ -552,6 +556,13 @@ export async function themeStep(input: {
       shots = await capture();
     }
   }
+  // Logo art: ChatGPT prompts from the final theme for the owner, cut in code once imported.
+  const art = logoPromptStep({
+    config,
+    theme,
+    place: { name: town.name, state: town.state },
+    dir,
+  });
   return {
     detail: {
       mode,
@@ -564,7 +575,8 @@ export async function themeStep(input: {
       mastheads: mastheads(),
       shots,
       reviews,
+      art,
     },
-    files: [themeFile, ...shots.map((s) => s.path)],
+    files: [themeFile, art.promptFile, ...shots.map((s) => s.path)],
   };
 }

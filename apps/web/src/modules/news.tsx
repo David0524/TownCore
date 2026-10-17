@@ -9,7 +9,8 @@ import { StoryThumb } from '@/components/visuals/StoryThumb';
 import { WeatherTile } from '@/components/weather/WeatherTile';
 import { newsletterOpen } from '@/lib/newsletter';
 import { beats, townShortName, type TownConfig } from '@towncore/config';
-import type { Article } from '@towncore/db';
+import { townVariant, type Article } from '@towncore/db';
+import { db } from '@/lib/db';
 import { formatTownDate } from '@/lib/town';
 import { Slot } from '@/slots/Slot';
 import { SunsetTile } from '@/components/weather/SunsetTile';
@@ -221,18 +222,28 @@ export const BeatSections: HomeModuleComponent = async ({ town, modules }) => {
  * The signup box (Mail-5). Until the town's mail domain can send bulk mail it keeps the
  * "launching soon" line with no email field (D-M1-1).
  */
-export const NewsletterCta: HomeModuleComponent = async ({ town }) => {
+export const NewsletterCta: HomeModuleComponent = async ({ town, placement = 'home' }) => {
   const config = town.config as TownConfig;
+  // Heading copy is an experiment per town or cohort (owner, 2026-10-17), never per reader.
+  const variant = await townVariant(db(), 'signup-prompt', town);
+  const heading =
+    variant === 'local-news'
+      ? { wide: `Local news from ${town.name}, every morning.`, phone: 'Local news, daily' }
+      : { wide: 'The morning email for people who live here.', phone: 'The morning email' };
   const at = sendTime(config.newsletter_send_time);
   const what = `Weather, what City Hall decided and what's coming up. About five minutes${at ? `, ${at}` : ''}, free.`;
   return (
-    <section className={`${styles.module} ${styles.cta}`} data-module="newsletter-cta">
+    <section
+      className={`${styles.module} ${styles.cta}`}
+      data-module="newsletter-cta"
+      data-variant={variant}
+    >
       <span className={`${styles.ctaIcon} phone-only`} aria-hidden="true">
         <EnvelopeIcon />
       </span>
       <h2>
-        <span className="not-phone">The morning email for people who live here.</span>
-        <span className="phone-only">The morning email</span>
+        <span className="not-phone">{heading.wide}</span>
+        <span className="phone-only">{heading.phone}</span>
       </h2>
       {(await newsletterOpen(town)) ? (
         <>
@@ -243,7 +254,7 @@ export const NewsletterCta: HomeModuleComponent = async ({ town }) => {
             </span>
             <Link href="/methods">How we report</Link>.
           </p>
-          <NewsletterForm source="/" id="cta" />
+          <NewsletterForm source="/" id="cta" placement={placement} />
         </>
       ) : (
         <p>

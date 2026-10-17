@@ -20,6 +20,7 @@ export async function POST(request: Request, { params }: Ctx) {
     slug,
     headline: String(form.get('headline') ?? ''),
     body: String(form.get('body') ?? ''),
+    placementId: String(form.get('placementId') ?? '') || null,
   });
   const s = result.ok ? 'card_sent' : `card_${result.error}`;
   return new Response(null, {

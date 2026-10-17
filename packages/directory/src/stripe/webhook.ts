@@ -1,6 +1,7 @@
 import { directoryProducts, type DirectoryProduct, type FeaturedRank } from '@towncore/config';
 import { and, eq, isNull, placements, stripeEvents, type Db } from '@towncore/db';
 import type Stripe from 'stripe';
+import { bookedPeriods } from '../bookings';
 import { endPlacementCampaigns, syncPlacementCampaigns } from '../creatives';
 import { placesTaken } from './checkout';
 
@@ -101,9 +102,36 @@ async function apply(db: Db, event: Stripe.Event, now: Date) {
     case 'checkout.session.completed': {
       const session = event.data.object;
       const placementId = session.metadata?.placement_id ?? session.client_reference_id;
-      if (!placementId || session.mode !== 'subscription') return;
+      if (!placementId || (session.mode !== 'subscription' && session.mode !== 'payment')) return;
       const [placement] = await db.select().from(placements).where(eq(placements.id, placementId));
       if (!placement) throw new Error(`No placement ${placementId} for ${session.id}`);
+      if (session.mode === 'payment') {
+        // A dated booking (newsletter week, category month), paid once. Its period is checked
+        // again: one someone else booked first is held, never shown.
+        if (
+          !placement.period ||
+          placement.status !== 'pending' ||
+          session.payment_status !== 'paid'
+        )
+          return;
+        const taken = await bookedPeriods(
+          db,
+          placement.townId,
+          placement.product as DirectoryProduct,
+          placement.category,
+          now,
+          placement.id,
+        );
+        await db
+          .update(placements)
+          .set({
+            status: taken.has(placement.period) ? 'held' : 'active',
+            stripeCustomerId: idOf(session.customer),
+            updatedAt: now,
+          })
+          .where(eq(placements.id, placement.id));
+        return;
+      }
       if (placement.status !== 'pending') {
         // A subscription event got here first; just record the ids.
         await db
@@ -185,6 +213,7 @@ async function apply(db: Db, event: Stripe.Event, now: Date) {
           stripeSubscriptionId: sub.id,
           stripeCustomerId: idOf(sub.customer),
           endsAt: endsAt(sub),
+          trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
           updatedAt: now,
         })
         .where(eq(placements.id, placement.id));

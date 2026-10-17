@@ -19,3 +19,7 @@ when a step repeats across towns, automate it.
 - Check the archive history of delrayledger.com by hand: https://web.archive.org/web/*/delrayledger.com
 - Write identity notes for the theme (no model ran): landscape, architecture, signature places.
 - Turn on Stripe live mode only when you decide (runbook "Going live", D-M6-5).
+
+## Every town: Facebook page (2026-10-17)
+
+- Facebook pages can't be created through the Graph API, so each town's page is made by hand. Batch it: make every page in a cohort in one sitting, then add each page's address and numeric page id as `facebook:` in its town YAML and run `pnpm towns:sync`. Admin → Facebook lists towns still missing a page. Page tokens for the Post button go in `META_PAGE_TOKENS` (a secret, never committed). See docs/plans/facebook.md.

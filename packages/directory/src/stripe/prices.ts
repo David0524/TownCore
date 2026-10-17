@@ -11,7 +11,7 @@ import { and, eq, isNull, stripePrices, towns, type Db, type Town } from '@townc
 import type Stripe from 'stripe';
 
 // `pnpm directory:stripe sync` (M6 PR D): one Stripe Product and monthly Price per town and
-// enabled product, from the town's `pricing`. Dry run by default. Idempotent: a Price is found by
+// enabled subscription product, from the town's `pricing`. Dry run by default. Idempotent: a Price is found by
 // its lookup key before anything is created, and a changed amount makes a new Price. A ranked
 // product (featured spots) has one Price per rank.
 
@@ -47,6 +47,8 @@ export async function planPrices(db: Db, townSlugs?: string[]): Promise<PricePla
     if (townSlugs?.length && !townSlugs.includes(town.slug)) continue;
     const pricing = (town.config as TownConfig).pricing as Record<string, unknown> | undefined;
     for (const product of Object.keys(directoryProducts) as DirectoryProduct[]) {
+      // Dated bookings are paid once at the configured price (Checkout price_data), no Price.
+      if (directoryProducts[product].period) continue;
       const ranks = directoryProducts[product].ranked ? featuredRanks : [null];
       for (const rank of ranks) {
         const dollars = productPrice(pricing, product, rank ?? undefined);

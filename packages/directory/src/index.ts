@@ -37,7 +37,10 @@ export {
 } from './claims';
 export {
   LISTINGS_LOCAL_PART,
+  ownerMailToken,
+  ownerUnsubscribe,
   townMailDomain,
+  verifyOwnerMailToken,
   type DirectoryMailDeps,
   type MailOutcome,
 } from './mail';
@@ -91,7 +94,10 @@ export {
   decideSponsorCard,
   endPlacementCampaigns,
   pendingSponsorCards,
+  CATEGORY_SPONSOR_SLOT,
+  NEWSLETTER_SLOT,
   SPONSOR_SLOT,
+  slotForPlacement,
   slotForRank,
   TOP_SPOT_SLOT,
   sponsorCards,
@@ -114,12 +120,45 @@ export {
   type SlotEvent,
 } from './leads';
 export {
+  categoryQuoteRequests,
+  featuredUplift,
   monthRange,
+  paidInMonth,
+  pitchLines,
   previousMonth,
   proofReport,
   sendMonthlyReports,
+  UPLIFT_DAYS,
+  UPLIFT_MIN,
+  type FeaturedUplift,
   type ProofTotals,
 } from './reports';
+export {
+  BOOKING_HORIZON,
+  bookedPeriods,
+  bookingWindow,
+  openWindows,
+  upcomingBookings,
+  upcomingWindows,
+  type BookingWindow,
+} from './bookings';
+export {
+  draftFollowups,
+  followupApprovals,
+  FollowupError,
+  FOLLOWUP_QUIET_DAYS,
+  FOLLOWUPS_PER_HOUR,
+  ownerForMailToken,
+  ownerOptOut,
+  pendingFollowups,
+  sendApprovedFollowups,
+  sendFollowup,
+  setFollowupApproval,
+  skipFollowup,
+  TRIAL_NOTICE_DAYS,
+  type FollowupKind,
+  type PendingFollowup,
+} from './followups';
 export {
   dismissOutreach,
   draftOutreach,
@@ -128,6 +167,7 @@ export {
   outreachMessage,
   pendingOutreach,
   sendOutreach,
+  storyListingMatches,
   type OutreachReport,
   type PendingOutreach,
 } from './outreach';

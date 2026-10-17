@@ -1,3 +1,4 @@
+import { loadEnv } from './env';
 import type { BeatSlug } from './theme';
 
 // Directory categories (M6, docs/plans/M6.md §1): one list for every town. Each category says
@@ -414,9 +415,11 @@ export type FeaturedRank = (typeof featuredRanks)[number];
 
 /**
  * What businesses can buy (D-M6-6). Prices come from each town's `pricing`; a product without
- * a price there stays off. Category exclusive and newsletter sponsorship are built but off
- * until the owner prices them. Paid placements are always labeled (Rule 6) and never change
- * organic order. A ranked product sells one place per rank and category.
+ * a price there stays off. Category sponsorship and newsletter sponsorship are built but off
+ * until the owner prices them and turns them on here. Paid placements are always labeled
+ * (Rule 6) and never change organic order. A ranked product sells one place per rank and
+ * category. A product with a `period` is booked once for a dated week or month, paid up front
+ * (no subscription), one business per period (and per category when `perCategory` is set).
  */
 export const directoryProducts = {
   enhanced: {
@@ -425,6 +428,7 @@ export const directoryProducts = {
     enabled: true,
     perCategory: null,
     ranked: false,
+    period: null,
   },
   sponsored_slot: {
     name: 'Featured spot',
@@ -432,20 +436,23 @@ export const directoryProducts = {
     enabled: true,
     perCategory: maxSponsoredPerCategory,
     ranked: true,
+    period: null,
   },
   exclusive: {
-    name: 'Category exclusive',
-    priceKey: null,
+    name: 'Category sponsorship',
+    priceKey: 'category_month_usd',
     enabled: false,
     perCategory: 1,
     ranked: false,
+    period: 'month',
   },
   newsletter: {
     name: 'Newsletter sponsorship',
-    priceKey: null,
+    priceKey: 'newsletter_week_usd',
     enabled: false,
     perCategory: null,
     ranked: false,
+    period: 'week',
   },
   spotlight: {
     name: 'Business spotlight',
@@ -453,13 +460,25 @@ export const directoryProducts = {
     enabled: false,
     perCategory: null,
     ranked: false,
+    period: null,
   },
 } as const;
 export type DirectoryProduct = keyof typeof directoryProducts;
+export type BookingPeriod = 'week' | 'month';
 
 /**
- * Monthly price in whole dollars for a town, or null when the product is off there. A ranked
- * product has one price per rank (#1 first).
+ * Whether a product is on: its switch above, or, in development and tests only, a built-but-off
+ * product named in DIRECTORY_PRODUCTS_PREVIEW (Stripe stays in test mode either way, D-M6-5).
+ */
+export function productEnabled(product: DirectoryProduct): boolean {
+  if (directoryProducts[product].enabled) return true;
+  const preview = loadEnv().DIRECTORY_PRODUCTS_PREVIEW ?? '';
+  return preview.split(',').some((p) => p.trim() === product);
+}
+
+/**
+ * Price in whole dollars for a town (a month, or the product's booking period), or null when
+ * the product is off there. A ranked product has one price per rank (#1 first).
  */
 export function productPrice(
   pricing: Record<string, unknown> | undefined,
@@ -467,7 +486,7 @@ export function productPrice(
   rank?: FeaturedRank,
 ): number | null {
   const def = directoryProducts[product];
-  if (!def.enabled || !def.priceKey) return null;
+  if (!def.priceKey || !productEnabled(product)) return null;
   const value = pricing?.[def.priceKey];
   if (def.ranked) {
     if (!Array.isArray(value) || !rank) return null;

@@ -120,9 +120,16 @@ export const towns = pgTable('towns', {
   // Town theme (CLAUDE.md §11a); null means the network default theme.
   theme: jsonb('theme'),
   readinessScore: real('readiness_score'),
+  // Census ACS households (B11001), for subscribers per 1,000 households (owner, 2026-10-17).
+  households: integer('households'),
   // The search kill switch (owner, 2026-10-17): a live town hidden from search keeps serving
   // readers but is noindex everywhere and lists nothing in its sitemaps, until staff show it again.
   searchHidden: boolean('search_hidden').notNull().default(false),
+  // Automated follow-ups to business owners (trial ending, a competitor's spot, a story, a nearby
+  // claim) send by themselves only while an admin's standing approval is on (Rule 10, owner
+  // 2026-10-17); otherwise they wait as drafts for staff to press Send.
+  businessMailApprovedAt: timestamp('business_mail_approved_at', { withTimezone: true }),
+  businessMailApprovedBy: uuid('business_mail_approved_by'),
   // Launch cohort, the month a town went live ("2027-01"): towns roll out, and can be hidden from
   // search, a cohort at a time.
   cohort: text('cohort'),
@@ -691,6 +698,8 @@ export const businesses = pgTable(
     geocodedAt: timestamp('geocoded_at', { withTimezone: true }),
     claimedByEmail: text('claimed_by_email'),
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    /** The owner stopped follow-ups and monthly reports (the unsubscribe link in them). */
+    ownerMailOptOutAt: timestamp('owner_mail_opt_out_at', { withTimezone: true }),
     // Owner-edited fields (M6 PR C). A new name waits in pending_name for staff review.
     description: text('description'),
     hours: text('hours'),
@@ -852,6 +861,13 @@ export const placements = pgTable(
     buyerEmail: text('buyer_email'),
     startsAt: timestamp('starts_at', { withTimezone: true }),
     endsAt: timestamp('ends_at', { withTimezone: true }),
+    /** When the free trial ends and the first charge is due (from Stripe), for the reminder. */
+    trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+    /**
+     * A booked week or month (newsletter, category sponsorship): the first local day, as
+     * YYYY-MM-DD. Null for monthly subscriptions.
+     */
+    period: text('period'),
     status: placementStatus('status').notNull().default('pending'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -995,6 +1011,49 @@ export const outreachDrafts = pgTable(
     uniqueIndex('outreach_drafts_business_article_uq').on(t.businessId, t.articleId),
     index('outreach_drafts_status_idx').on(t.status),
     check('outreach_drafts_status', sql`${t.status} in ('draft', 'sent', 'dismissed')`),
+  ],
+);
+
+// Follow-ups to business owners (owner, 2026-10-17): the trial is ending, a competitor took a
+// featured spot in their category, a story named the business, or a business nearby in their
+// category was claimed. Built as drafts; the sender mails one by itself only while the town's
+// standing approval is on (towns.business_mail_approved_at), else staff press Send (Rule 10).
+// One row per event (dedupe_key), so a retry never mails twice.
+export const businessFollowups = pgTable(
+  'business_followups',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    kind: text('kind')
+      .$type<'trial_ending' | 'competitor_spot' | 'story_mention' | 'nearby_claim'>()
+      .notNull(),
+    dedupeKey: text('dedupe_key').notNull(),
+    toEmail: text('to_email').notNull(),
+    subject: text('subject').notNull(),
+    lines: jsonb('lines').$type<string[]>().notNull(),
+    linkHref: text('link_href').notNull(),
+    linkLabel: text('link_label').notNull(),
+    status: text('status').$type<'draft' | 'sent' | 'skipped'>().notNull().default('draft'),
+    /** Why it wasn't sent: suppressed, unsubscribed, stale, or a staff member's choice. */
+    note: text('note'),
+    sentBy: uuid('sent_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('business_followups_dedupe_uq').on(t.dedupeKey),
+    index('business_followups_status_idx').on(t.status, t.townId),
+    index('business_followups_business_idx').on(t.businessId, t.decidedAt),
+    check(
+      'business_followups_kind',
+      sql`${t.kind} in ('trial_ending', 'competitor_spot', 'story_mention', 'nearby_claim')`,
+    ),
+    check('business_followups_status', sql`${t.status} in ('draft', 'sent', 'skipped')`),
   ],
 );
 
@@ -1954,5 +2013,182 @@ export const scoreReports = pgTable(
       'score_reports_approved',
       sql`${t.status} <> 'approved' or (${t.reviewedBy} is not null and ${t.recordId} is not null)`,
     ),
+  ],
+);
+
+// A town's logo art (owner, 2026-10-17): made in ChatGPT from the prompt the launcher writes,
+// imported by a person, and cut in code into the hero, icons and share images. Recorded like
+// `images` (§11c): AI-generated, its source and license, and the person who approved it. It
+// belongs to a town, not an article (`images` rows are one per article), so it has its own table;
+// the latest row is the town's current art.
+export const identityArt = pgTable(
+  'identity_art',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    /** Who made it ("ChatGPT, by the owner"). */
+    source: text('source').notNull(),
+    license: text('license').notNull(),
+    /** The imported file's name and SHA-256, so the exact original can be identified. */
+    fileName: text('file_name').notNull(),
+    sha256: text('sha256').notNull(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    /** Where the derived files are served from (the town's `app_icon`). */
+    assetDir: text('asset_dir').notNull(),
+    aiGenerated: boolean('ai_generated').notNull().default(true),
+    approvedBy: uuid('approved_by')
+      .notNull()
+      .references(() => staff.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index('identity_art_town_idx').on(t.townId, t.createdAt)],
+);
+export type IdentityArt = typeof identityArt.$inferSelect;
+
+// Where article views came from, by class only (owner, 2026-10-17: Facebook referrals, search,
+// newsletter). The class is worked out in the reader's browser; the referrer URL is never sent.
+// Cookieless: no identifiers, only per-town daily counts (D-M4-3).
+export const referralStatsDaily = pgTable(
+  'referral_stats_daily',
+  {
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    day: date('day').notNull(),
+    source: text('source').notNull(),
+    views: integer('views').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.townId, t.day, t.source] })],
+);
+
+// Experiments (§11a-2, owner 2026-10-17): the variants live in code (packages/config audience.ts);
+// this records which experiments run, by town or cohort, and the winner once decided, which then
+// shows in every town. Assignment is by a hash of the town or cohort: never per reader.
+export const experiments = pgTable(
+  'experiments',
+  {
+    key: text('key').primaryKey(),
+    status: text('status').$type<'off' | 'running' | 'decided'>().notNull().default('off'),
+    unit: text('unit').$type<'town' | 'cohort'>().notNull().default('town'),
+    winner: text('winner'),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    updatedBy: uuid('updated_by').references(() => staff.id),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check('experiments_status', sql`${t.status} in ('off', 'running', 'decided')`),
+    check('experiments_unit', sql`${t.unit} in ('town', 'cohort')`),
+    check('experiments_winner', sql`${t.status} <> 'decided' or ${t.winner} is not null`),
+  ],
+);
+
+/** The variant each town got when an experiment started (or when it first showed after). */
+export const experimentAssignments = pgTable(
+  'experiment_assignments',
+  {
+    experimentKey: text('experiment_key')
+      .notNull()
+      .references(() => experiments.key, { onDelete: 'cascade' }),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    variant: text('variant').notNull(),
+    assignedAt: timestamp('assigned_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.experimentKey, t.townId] })],
+);
+
+// The Facebook post queue (owner, 2026-10-17): each town's best 1–3 published items a day and
+// its weekly shareable roundups, with factual post text written from the story. Staff post the
+// day's batch in one pass from Admin → Facebook, by hand or through the Graph API when they press
+// Post; nothing is posted automatically without the owner's standing approval (FACEBOOK_AUTOPOST).
+export const facebookPosts = pgTable(
+  'facebook_posts',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id, { onDelete: 'cascade' }),
+    /** 'daily': one of the day's best items; 'weekly': a shareable roundup. */
+    kind: text('kind').$type<'daily' | 'weekly'>().notNull(),
+    /** The town's local date the post is queued for. */
+    day: date('day').notNull(),
+    message: text('message').notNull(),
+    link: text('link').notNull(),
+    status: text('status').$type<'queued' | 'posted' | 'skipped'>().notNull().default('queued'),
+    /** How it went out: copied by staff, or posted through the Graph API. */
+    method: text('method').$type<'manual' | 'graph'>(),
+    /** The Graph API's post id, when posted through it. */
+    externalId: text('external_id'),
+    postedBy: uuid('posted_by').references(() => staff.id),
+    postedAt: timestamp('posted_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('facebook_posts_town_article_uq').on(t.townId, t.articleId),
+    index('facebook_posts_day_status_idx').on(t.day, t.status),
+    check('facebook_posts_kind', sql`${t.kind} in ('daily', 'weekly')`),
+    check('facebook_posts_status', sql`${t.status} in ('queued', 'posted', 'skipped')`),
+    check(
+      'facebook_posts_posted',
+      sql`${t.status} <> 'posted' or (${t.postedAt} is not null and ${t.method} is not null)`,
+    ),
+  ],
+);
+
+// Quick polls (owner, 2026-10-17, reader participation): an opinion question about a local topic,
+// never about a named private person, with 2–4 options. Staff write it and a staff member approves
+// it before it shows; readers vote once, counted by a salted hash of their address (never stored
+// raw).
+export const polls = pgTable(
+  'polls',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    question: text('question').notNull(),
+    options: text('options').array().notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    status: text('status').$type<'draft' | 'approved' | 'withdrawn'>().notNull().default('draft'),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => staff.id),
+    approvedBy: uuid('approved_by').references(() => staff.id),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('polls_town_status_idx').on(t.townId, t.status, t.startsAt),
+    check('polls_status', sql`${t.status} in ('draft', 'approved', 'withdrawn')`),
+    check('polls_options', sql`cardinality(${t.options}) between 2 and 4`),
+    check('polls_window', sql`${t.endsAt} > ${t.startsAt}`),
+    check('polls_approved', sql`${t.status} <> 'approved' or ${t.approvedBy} is not null`),
+  ],
+);
+
+export const pollVotes = pgTable(
+  'poll_votes',
+  {
+    id: id(),
+    pollId: uuid('poll_id')
+      .notNull()
+      .references(() => polls.id, { onDelete: 'cascade' }),
+    option: smallint('option').notNull(),
+    /** A salted hash of the voter's address and the poll: one vote per address per poll. */
+    voterHash: text('voter_hash').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('poll_votes_poll_voter_uq').on(t.pollId, t.voterHash),
+    check('poll_votes_option', sql`${t.option} between 0 and 3`),
   ],
 );

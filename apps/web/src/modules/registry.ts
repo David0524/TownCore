@@ -13,6 +13,7 @@ import { DirectoryCategories, DirectoryFeatured, FindAPro, NewNowOpen } from './
 import { UpcomingEvents } from './events';
 import { DirectoryGrid, QuickLinks } from './explore';
 import { PhotoOfTheWeek } from './photo';
+import { QuickPoll } from './poll';
 import { SchoolsSports } from './sports';
 import type { HomeModuleComponent } from './types';
 
@@ -45,6 +46,7 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
   'weather-strip': awaitingData('NWS, M2 (decision D-M1-3)'),
   'photo-of-the-day': awaitingData('reader submissions, M9'),
   'photo-of-the-week': PhotoOfTheWeek,
+  'quick-poll': QuickPoll,
   'directory-featured': DirectoryFeatured,
   'directory-categories': DirectoryCategories,
   'find-a-pro': FindAPro,
@@ -54,39 +56,4 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
   'jobs-classifieds': awaitingData('classifieds, later'),
 };
 
-/**
- * Modules that are navigation or a greeting, not content: they span the top band and don't
- * count toward "newsletter-cta among the first two modules on mobile".
- */
-export const SPANNING_MODULES = new Set<HomeModule>([
-  'good-morning',
-  'category-buttons',
-  'quick-links',
-]);
-
-const contentIndex = (list: readonly HomeModule[], module: HomeModule) =>
-  list.filter((m) => !SPANNING_MODULES.has(m)).indexOf(module);
-
-/**
- * The order to render the main column: the theme's list, with newsletter-cta guaranteed among
- * the first two modules on mobile. With a full-width top band (homeTop), the band's first module
- * counts as the first, so the CTA is added mobile-only right after it.
- */
-export function homeOrder(
-  list: readonly HomeModule[],
-  top: readonly HomeModule[] = [],
-): Array<{ module: HomeModule; mobileOnly: boolean }> {
-  const order = list.map((module) => ({ module, mobileOnly: false }));
-  const position = contentIndex([...top, ...list], 'newsletter-cta');
-  if (position === 0 || position === 1) return order;
-  if (top.length > 0) return order; // the page inserts it into the band (see topBand).
-  order.splice(1, 0, { module: 'newsletter-cta', mobileOnly: true });
-  return order;
-}
-
-/** Whether the top band needs a mobile-only newsletter CTA after its first module. */
-export function bandNeedsCta(list: readonly HomeModule[], top: readonly HomeModule[]): boolean {
-  if (top.length === 0) return false;
-  const position = contentIndex([...top, ...list], 'newsletter-cta');
-  return position !== 0 && position !== 1;
-}
+export { bandNeedsCta, homeOrder, SPANNING_MODULES } from './order';
