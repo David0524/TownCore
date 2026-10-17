@@ -28,6 +28,7 @@ import { articlePath, rssAlternate } from '@/lib/discovery';
 import {
   articleImage,
   guideLastChecked,
+  firstWithPicture,
   rankedBeatArticles,
   recentArticles,
   roundupFigure,
@@ -136,9 +137,15 @@ export async function ArticleView({
   const related = (await listArticlesByIds(db(), relatedIds)).filter((a) => !fixture(a));
   // Then up to three more from the same section, none already listed.
   const shown = new Set([article.id, ...related.map((a) => a.id)]);
+  // Up next needs a picture, like the lead (owner, 2026-10-17); none rather than a title card.
   const upNext = guide
     ? otherGuides[0]
-    : [...related, ...ranked].find((a) => a.id !== article.id && a.kind !== 'guide' && !fixture(a));
+    : await firstWithPicture(
+        [...related, ...ranked]
+          .filter((a) => a.id !== article.id && a.kind !== 'guide' && !fixture(a))
+          .slice(0, 12),
+        town.timezone,
+      );
   if (upNext) shown.add(upNext.id);
   const more = sameBeat.filter((a) => !shown.has(a.id) && !fixture(a)).slice(0, 3);
   const beat = beats.find((b) => b.slug === article.beat);
@@ -208,7 +215,7 @@ export async function ArticleView({
 
         {/* The story's visual (§11c), chosen by the image router. */}
         <figure className={styles.visual}>
-          <ArticleVisual town={town} theme={theme} article={article} figure={figure} />
+          <ArticleVisual town={town} article={article} figure={figure} />
           {image.kind === 'data-graphic' ? (
             <figcaption className={`meta ${styles.visualCaption}`}>
               Counted from this story&apos;s source records, listed below. Chart: {town.siteName}.
@@ -271,7 +278,7 @@ export async function ArticleView({
           </a>
         </p>
 
-        {upNext ? <UpNext town={town} theme={theme} story={upNext} /> : null}
+        {upNext ? <UpNext town={town} story={upNext} /> : null}
 
         {await NewsletterCta({ town, theme, modules: [], placement: 'article' })}
 

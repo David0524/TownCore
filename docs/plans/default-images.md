@@ -4,8 +4,8 @@ Brief: `docs/briefs/default-images.md` (owner, 2026-10-17: the title card on "Pr
 Raton, Sept. 28–Oct. 4" is "so ugly"). Governs: Rule 9, §11c, §11a (token-driven components), §6a
 (rank unchanged), §14 (build the system: every change on Boca, Harbor Point and Pine Hollow).
 
-**Status: waiting for the owner's OK.** Nothing below is built yet. Decisions for the owner are
-marked **D-DI-n** with a recommendation; "approve as written" takes every recommendation.
+**Status: approved by the owner, 2026-10-17** ("D1, approve as written"; keep the AI pictures, and
+they can lead; add photorealistic versions to the next batch). Decisions are marked **D-DI-n**.
 
 ---
 
@@ -135,7 +135,7 @@ New scenes (prompts are `ILLUSTRATION_STYLE` + scene, generated into
 - **fb-05** A park bench under a large shade tree beside a path.
 - **fb-06** (FL) A quiet street lined with palms and low pastel buildings.
 
-That is 41 new shots. With the 21 still missing below, the owner's next batch is **62 images**.
+That is 40 new shots. With the 21 still missing below, the next batch is **61 images**.
 
 ### 2.3 Inspections and spotlights (D-DI-2)
 
@@ -173,12 +173,17 @@ gd-15 (arborist's truck). Prompts are already in `docs/brand/illustration-shot-l
 
 ### 2.7 Import checklist for the owner
 
-1. Open `docs/brand/illustration-shot-list.md`; for each shot, paste its prompt into ChatGPT.
-2. Reject any image with lettering, a logo, a face, a real landmark, or (for `any` shots) palms or beaches.
-3. Save as `<id>.png` (or webp) in one folder.
-4. Run `pnpm illustrations import <folder> --approved-by partners@towncore.net` and write the alt
-   text for each from what it shows.
-5. Send me the list of any shot you redid with palms, so I set it to `region: 'FL'`.
+1. Open `docs/brand/illustration-shot-list.md`. "Next batch" lists every scene not made yet; paste
+   the style, then each scene, into ChatGPT.
+2. For a photorealistic version, paste the **photo style** instead and save it as `<id>-p.png`; a
+   second take of either is `<id>-2.png` or `<id>-p2.png`.
+3. Reject any image with lettering, a logo, a face, a real landmark, or (for `any` shots) palms or
+   beaches.
+4. Save each as `<id>.png` (or webp) in one folder, zip it and attach it to a GitHub draft release,
+   as before. I review each one, write its alt text from what it shows and run
+   `pnpm illustrations import <folder> --approved-by partners@towncore.net --alt <alts.json>`,
+   then `pnpm illustrations assign` so stories on a title card pick them up.
+5. Tell me about any `any` shot that came out with palms, so I set it to `region: 'FL'`.
 
 ## 3. The title card becomes a generic label image (D-DI-5)
 
@@ -251,7 +256,7 @@ be empty.
 2. **Record covers:** a nullable `images.cover_illustration_id` (migration), written by
    `assignArticleImage` when the visual is a chart, and counted by the no-repeat rule, so weekly
    roundups rotate.
-3. **Catalogue:** the 41 shots in `illustrations.ts`; regenerate the shot list.
+3. **Catalogue:** the 40 shots in `illustrations.ts`; regenerate the shot list.
 4. **Card:** the label slate (D1) in `TypographicCard`, labels in config; contrast test on all themes.
 5. **Cover rule:** `pickLead`, phone row, section fronts, Up next.
 6. **Fall-through test:** for every recurring roundup kind, alert and non-public-safety beat, with

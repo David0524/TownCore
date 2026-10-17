@@ -10,7 +10,7 @@ test('the guides index lists guides by section and links to them', async ({ page
   await page.goto(`${boca}/guides`);
   await expect(page.getByRole('heading', { level: 1, name: 'Guides' })).toBeVisible();
   const community = page.getByRole('region', { name: 'Community' });
-  const link = community.getByRole('link', { name: /How trash pickup works/ });
+  const link = community.getByRole('link', { name: /How curbside days work/ });
   await expect(link).toHaveAttribute('href', `/guides/${guide}`);
 });
 
@@ -53,7 +53,7 @@ test('a guide shows when it was updated and checked, the official-pages note and
   page,
 }) => {
   await page.goto(`${boca}/guides/${guide}`);
-  await expect(page.locator('h1')).toContainText('How trash pickup works');
+  await expect(page.locator('h1')).toContainText('How curbside days work');
   await expect(page.getByTestId('byline')).toHaveText('Boca Town Square Newsroom');
   await expect(page.getByTestId('guide-dates')).toHaveText(/^Updated .+ · Last checked .+$/);
   await expect(page.getByTestId('guide-note')).toContainText('check those pages before you act');
@@ -84,7 +84,7 @@ test('each article has one address: guides under /guides, news under /news', asy
 test('the Essentials module links guides; news lists never show them', async ({ page }) => {
   await page.goto(`${boca}/`);
   const essentials = page.locator('[data-module="essentials"]');
-  await expect(essentials.getByRole('link', { name: /How trash pickup works/ })).toHaveAttribute(
+  await expect(essentials.getByRole('link', { name: /How curbside days work/ })).toHaveAttribute(
     'href',
     `/guides/${guide}`,
   );
@@ -93,18 +93,18 @@ test('the Essentials module links guides; news lists never show them', async ({ 
     '/guides',
   );
   await expect(
-    page.locator('[data-module="latest-list"]').getByRole('link', { name: /How trash pickup/ }),
+    page.locator('[data-module="latest-list"]').getByRole('link', { name: /How curbside days/ }),
   ).toHaveCount(0);
   await page.goto(`${boca}/beat/community`);
-  await expect(page.getByRole('main').getByRole('link', { name: /How trash pickup/ })).toHaveCount(
+  await expect(page.getByRole('main').getByRole('link', { name: /How curbside days/ })).toHaveCount(
     0,
   );
 });
 
 test('search finds guides', async ({ page }) => {
-  await page.goto(`${boca}/search?q=trash+pickup`);
+  await page.goto(`${boca}/search?q=curbside+days`);
   await expect(
-    page.getByRole('main').getByRole('link', { name: /How trash pickup works/ }),
+    page.getByRole('main').getByRole('link', { name: /How curbside days work/ }),
   ).toHaveAttribute('href', `/guides/${guide}`);
 });
 

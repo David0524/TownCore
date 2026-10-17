@@ -1,7 +1,6 @@
-import type { Theme } from '@towncore/config';
 import type { Article, Town } from '@towncore/db';
 import { TypographicCard, type CardFigure } from '@/components/news/TypographicCard';
-import { articleImage, coverImage } from '@/modules/data';
+import { articleImage, coverImage, titleCardLabel } from '@/modules/data';
 import { DataGraphic } from './DataGraphic';
 import { MapGraphic } from './MapGraphic';
 import { SectionIllustration } from './SectionIllustration';
@@ -15,17 +14,15 @@ import { StockPhoto } from './StockPhoto';
  */
 export async function ArticleVisual({
   town,
-  theme,
   article,
   figure,
   cover = false,
 }: {
   town: Town;
-  theme: Theme;
   article: Pick<
     Article,
     'id' | 'townId' | 'headline' | 'dek' | 'bodyMd' | 'beat' | 'kind' | 'sourceRecordIds'
-  >;
+  > & { publishedAt?: Date | null };
   figure?: CardFigure | null;
   /** The homepage lead: a cover, never a chart (the chart stays in the article). */
   cover?: boolean;
@@ -46,12 +43,8 @@ export async function ArticleVisual({
   if (image.spec.type === 'illustration') {
     return <SectionIllustration spec={image.spec} alt={image.alt} />;
   }
+  const label = await titleCardLabel(article);
   return (
-    <TypographicCard
-      theme={theme}
-      beat={article.beat}
-      headline={article.headline}
-      figure={figure}
-    />
+    <TypographicCard label={label} siteName={town.siteName} beat={article.beat} figure={figure} />
   );
 }

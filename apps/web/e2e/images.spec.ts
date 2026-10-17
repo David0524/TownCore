@@ -52,11 +52,16 @@ test('a story with a street address gets a block-level map with the OpenStreetMa
   expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
 });
 
-test('other stories get the typographic card', async ({ page }) => {
-  await page.goto(`${boca}/news/test-article`);
-  await expect(
-    page.getByRole('main').locator('figure [data-visual="typographic-card"]'),
-  ).toHaveCount(1);
+test('a story with no picture gets the title card: a label, never its headline or a drawing', async ({
+  page,
+}) => {
+  await page.goto(`${boca}/news/test-safety-notice`);
+  const card = page.getByRole('main').locator('figure [data-visual="typographic-card"]');
+  await expect(card).toHaveCount(1);
+  await expect(card).toHaveAttribute('data-label', 'Public Safety');
+  await expect(card).toContainText('Boca Town Square');
+  await expect(card).not.toContainText('Sample police notice');
+  await expect(card.locator('svg')).toHaveCount(0);
 });
 
 test('every article has a 1200×630 share image in its metadata and structured data', async ({

@@ -3,12 +3,16 @@ import { execFileSync } from 'node:child_process';
 import { basename, extname, join } from 'node:path';
 import {
   aiLabel,
+  illustrationLibrary,
   ILLUSTRATION_STYLE,
   illustrationShots,
+  isPhotoVariant,
+  PHOTO_STYLE,
+  shotIdOf,
   type IllustrationSection,
   type LibraryIllustration,
 } from '@towncore/config';
-import { and, articles, eq, images, inArray, staff, type Db } from '@towncore/db';
+import { and, articles, eq, images, inArray, isNull, or, staff, type Db } from '@towncore/db';
 import { assignArticleImage, ILLUSTRATION_LICENSE } from '@towncore/pipeline';
 import { processIllustration } from '@towncore/photos';
 
@@ -26,8 +30,15 @@ const SECTION_TITLES: Record<IllustrationSection, string> = {
   guide: 'Guides (how-to topics)',
 };
 
+const shotLine = (s: (typeof illustrationShots)[number]) =>
+  `- **${s.id}** (${[s.region, ...s.kinds, ...(s.fallback ? ['fallback'] : [])].join(', ')}): ${s.scene}`;
+
 /** The shot list the owner works from in ChatGPT, generated from packages/config. */
-export function shotListMarkdown(): string {
+export function shotListMarkdown(
+  library: readonly LibraryIllustration[] = illustrationLibrary,
+): string {
+  const made = new Set(library.map((a) => shotIdOf(a.id)));
+  const todo = illustrationShots.filter((s) => !made.has(s.id));
   const lines = [
     '# Section illustration shot list',
     '',
@@ -40,9 +51,10 @@ export function shotListMarkdown(): string {
     '3. Re-paste the style every 10 images or so, or if the look drifts (text appearing, photo-like images, faces).',
     '4. Redo any image with words, logos, readable signs, faces up close, or a real recognizable building. Those are the rules that keep them honest.',
     '5. Save each image named by its ID, e.g. `gov-01.png`. If names get mixed up, keep them in order; I can match them by looking.',
+    '   - A photorealistic version (the **photo style** below instead) is saved as `gov-01-p.png`; a second take of either as `gov-01-2.png` or `gov-01-p2.png`. Each is its own picture in the library, and the no-repeat rule counts them as one scene.',
     '6. Zip them and attach the zip to a GitHub draft release, as with the map file. I review each one, write its alt text and import it.',
     '',
-    'Skipping a scene is fine; the library works with whatever is imported. Regions: **FL** scenes (palms, beaches) are used only for Florida towns; **any** fits every town.',
+    'Skipping a scene is fine; the library works with whatever is imported. Regions: **FL** scenes (palms, beaches) are used only for Florida towns; **any** fits every town. A story kind after the region (`roundup:sales`) means the scene is a default image for that kind of story; `fallback` means a calm scene for stories that match nothing else.',
     '',
     '## Style (paste first)',
     '',
@@ -50,12 +62,22 @@ export function shotListMarkdown(): string {
     ILLUSTRATION_STYLE,
     '```',
     '',
+    '## Photo style (for photorealistic versions)',
+    '',
+    '```',
+    PHOTO_STYLE,
+    '```',
+    '',
+    `## Next batch: not made yet (${todo.length})`,
+    '',
+    ...todo.map(shotLine),
+    '',
   ];
   for (const section of Object.keys(SECTION_TITLES) as IllustrationSection[]) {
     const shots = illustrationShots.filter((s) => s.sections[0] === section);
     if (shots.length === 0) continue;
     lines.push(`## ${SECTION_TITLES[section]} (${shots.length})`, '');
-    for (const s of shots) lines.push(`- **${s.id}** (${s.region}): ${s.scene}`);
+    for (const s of shots) lines.push(shotLine(s));
     lines.push('');
   }
   return lines.join('\n');
@@ -81,13 +103,13 @@ export async function importIllustrations(opts: {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(opts.approvedBy)) {
     throw new Error(`--approved-by needs the approver's email, not "${opts.approvedBy}"`);
   }
-  const ids = new Set(illustrationShots.map((s) => s.id));
+  const ids: ReadonlySet<string> = new Set(illustrationShots.map((s) => s.id));
   const library = new Map(opts.library.map((a) => [a.id, a]));
   const result: ImportResult = { imported: [], skipped: [] };
   for (const file of (await readdir(opts.dir)).sort()) {
     if (!IMAGE_EXTENSIONS.has(extname(file).toLowerCase())) continue;
     const id = basename(file, extname(file)).toLowerCase();
-    if (!ids.has(id)) {
+    if (!shotIdOf(id, ids)) {
       result.skipped.push({ file, why: 'not a shot ID' });
       continue;
     }
@@ -108,6 +130,7 @@ export async function importIllustrations(opts: {
         alt,
         approvedBy: opts.approvedBy.toLowerCase(),
         importedAt: (opts.now ?? new Date()).toISOString().slice(0, 10),
+        ...(isPhotoVariant(id) ? { photoreal: true } : {}),
       });
       result.imported.push(id);
     } catch (error) {
@@ -134,13 +157,14 @@ export function formatWithPrettier(root: string, files: string[]): void {
 }
 
 /**
- * Stories showing only a title card get the router run again, so they can take a section
- * illustration now that the library has some. Everything else keeps its image.
+ * Stories showing only a title card, and charts with no cover picture, get the router run again,
+ * so they can take a library illustration now that the library has more. Everything else keeps
+ * its image.
  */
 export async function assignIllustrations(
   db: Db,
   { townId }: { townId?: string } = {},
-): Promise<{ tried: number; illustrated: number }> {
+): Promise<{ tried: number; illustrated: number; covered: number }> {
   const rows = await db
     .select({ id: articles.id })
     .from(articles)
@@ -148,16 +172,27 @@ export async function assignIllustrations(
     .where(
       and(
         inArray(articles.status, ['published', 'corrected', 'in_review']),
-        eq(images.kind, 'typographic-card'),
+        or(
+          eq(images.kind, 'typographic-card'),
+          and(eq(images.kind, 'data-graphic'), isNull(images.coverIllustrationId)),
+        ),
         townId ? eq(articles.townId, townId) : undefined,
       ),
     );
   let illustrated = 0;
+  let covered = 0;
   for (const row of rows) {
     const choice = await assignArticleImage(db, row.id);
     if (choice.spec.type === 'illustration') illustrated++;
+    if (choice.kind === 'data-graphic') {
+      const [image] = await db
+        .select({ cover: images.coverIllustrationId })
+        .from(images)
+        .where(eq(images.articleId, row.id));
+      if (image?.cover) covered++;
+    }
   }
-  return { tried: rows.length, illustrated };
+  return { tried: rows.length, illustrated, covered };
 }
 
 /**

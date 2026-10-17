@@ -2009,6 +2009,9 @@ export const images = pgTable(
     // When the router last ran with its network options, maps and stock photos (null: not since
     // the article was last re-assigned; the worker's visuals jobs pick it up).
     mapCheckedAt: timestamp('map_checked_at', { withTimezone: true }),
+    // A chart is never a cover: the library illustration that covers this story in lists and on
+    // the homepage, recorded so the no-repeat rule sees it (docs/plans/default-images.md).
+    coverIllustrationId: text('cover_illustration_id'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

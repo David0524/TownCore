@@ -365,6 +365,13 @@
       "when": 1792212610897,
       "tag": "0051_agentic_ops",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1792252801845,
+      "tag": "0052_cover_illustration",
+      "breakpoints": true
     }
   ]
 }

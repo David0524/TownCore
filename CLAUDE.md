@@ -501,12 +501,12 @@ Every article gets a visual, but a visual must never be misleading. The image ro
 | --- | --- | --- |
 | **Generated map** (OpenStreetMap data, rendered in our town theme) | Permits, development, road work, property sales, public safety locations (block level only, never a home address) | Credit "© OpenStreetMap contributors" (ODbL) |
 | **Generated data graphic** (chart or table card in the town theme) | Budgets, votes, election results, sales prices, inspection scores | Built from the story's own source records |
-| **Typographic card** (headline, beat icon, motif, town colors) | Default fallback for anything | Always available, so every article has a visual |
+| **Title card** (a label slate: "Property Sales", "Public Safety", "Breaking News"; the section's dot and the site name, in the town's brand color) | Last resort for anything | Always available, so every article has a visual. Never the story's headline or a drawing. "Breaking News" only for a warning or urgent official notice in its first 24 hours. A story on its title card never leads |
 | **Business-supplied photo** | Openings, spotlights, directory | Only with a license grant captured in the claim flow or by email |
 | **Reader or contributor photos** | Community, events, weather, sports | Upload form with license grant, credit line and human approval; pay-per-photo contributors later |
 | **Government public-domain images** | Officials, facilities, projects | Federal government works are public domain. State and local works vary by state, so store the legal basis per source and credit the agency |
 | **Licensed stock** (e.g. Unsplash or Pexels under their licenses) | Generic topics only: weather, a generic gavel for court items, school buses | Never presented as the actual scene of the story; caption "Stock photo" |
-| **AI-generated image** | Explainers, evergreen guides, generic features, and generic section images on news stories from the network library (never public safety) | Photorealistic images are allowed (owner, 2026-10-16), but every AI image is still generic: no real people, no real events, no identifiable real places; a picture of a kind of thing, never presented as the story's scene; approved by a person; recorded as AI-generated in `images` (no label shown, owner 2026-10-16) |
+| **AI-generated image** | Explainers, evergreen guides, generic features, and generic section images on news stories from the network library, chosen by story kind (each recurring roundup has its own set) before section (never public safety or a single restaurant's inspection) | Photorealistic images are allowed (owner, 2026-10-16), but every AI image is still generic: no real people, no real events, no identifiable real places; a picture of a kind of thing, never presented as the story's scene; approved by a person; recorded as AI-generated in `images` (no label shown, owner 2026-10-16) |
 
 **Never:**
 - Images from other news sites, social media, Google Images or Street View.
@@ -516,14 +516,15 @@ Every article gets a visual, but a visual must never be misleading. The image ro
 
 **Every image needs:** alt text written from what it actually shows, a credit line, and an `images` row: id, kind, source_url, license, attribution, ai_generated, approved_by.
 
-**Defaults by beat** (stored in config; the first allowed option wins):
-- Development, permits, property: map → data graphic → section illustration → card
-- Meetings: data graphic (votes) → government image → section illustration → card
-- Business openings: business photo → section illustration → card
-- Schools: data graphic → section illustration → card
-- Public safety: block-level map → card
-- Community and weather: reader photo → stock → section illustration → card
-- Guides: AI illustration (the guide's own, then a section one) → stock → card
+**Defaults by beat** (stored in config; the first allowed option wins; "illustration" means the library: the story kind's own pictures, then a keyword match in the section, then the section's calm fallback scenes; `docs/plans/default-images.md`):
+- Code-built roundups: data graphic (in the article; its cover is the kind's illustration) → kind illustration → title card
+- Development, permits, property: map → data graphic → illustration → title card
+- Meetings: data graphic (votes) → government image → illustration → title card
+- Business openings: business photo → illustration → title card
+- Schools: data graphic → illustration → title card
+- Public safety and a single restaurant's inspection: block-level map → title card (no drawing)
+- Community and weather: reader photo → stock → illustration → title card; NWS alerts take weather pictures their event names
+- Guides: AI illustration (the guide's own, then a scene its title names) → stock → title card
 
 **Open Graph images:** generate a share image per article from the chosen visual, plus the headline in the town's theme, sized for Facebook and other platforms.
 
@@ -710,6 +711,14 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
 - 2026-10-17 — **Real launch and running costs in the LRP (owner: "I've launched Boca on just my Claude plan + Domain + Amazon thing and some minor expenses"; "Claude is covered for a year under the startup program").** AI costs nothing in FY2027 (startup program, assumed to cover API use), then $0.15 a story plus $0.05 a day of overhead; a launch's AI is the M7 estimate ($10), not the $25 cap; hosting is ~$2 a town a month, since every town shares one app, worker and database, with ~$75 a month of fixed plans (Vercel Pro, Railway, SES and AWS, small subscriptions; estimates until the bills replace them). Base case: 476 live towns at the end of FY2027 and 8,151 by FY2031, EBITDA positive every year, lowest cash about $3,100.
 
 - 2026-10-17 — **Spotlights: one named place per story (owner: "evaluate what Boca News Now publishes"; "I trust your judgement"; plan `docs/plans/content-depth.md`).** A record that is news on its own becomes its own short story, built in code beside the weekly roundup that still lists everything (`packages/pipeline/src/spotlights.ts`): an inspection with a closure order or complaint, or at least 5 high-priority or 15 total violations (up to 3 a week, always Tier 3, with the state's categories and the place's earlier visits), and a permit of at least $1M estimated cost (up to 2 a week, Tier 1). Keys `spotlight:<kind>:<week>:<id>` keep re-runs from doubling one. Single sales and single new licenses are not spotlighted: they share 47–55% of their text across towns under the near-duplicate guard, the mass-produced pattern of pink-slime networks (`docs/research/metric-media.md`), so they stay in their roundups.
+
+- 2026-10-17 — **Default story images; the title card never leads (owner: "This is so ugly"; "Stop with the stupid leaf. My thought was one that is a generic Breaking News headline"; plan `docs/plans/default-images.md`, approved as written with D1).**
+  - **Title card:** a label slate in the town's brand color (the house ads' deep-to-brand panel): one label for the kind of story ("Property Sales", "Road Work", "Public Safety", "City Hall"), the section's dot and the site name; no motif, glyph or headline. "Breaking News" only for an NWS warning or an urgent official notice (closure, boil-water, evacuation) in its first 24 hours.
+  - **Catalogue:** shots carry the code-built story kinds they're for, so each recurring roundup rotates through at least 6 pictures under the 14-day rule (counted by scene); calm fallback scenes serve stories that match no tag; a repeat beats the title card. 40 new scenes (sales, permits, filings, licenses, places, inspections, roads, meetings, alerts, fallbacks) join the 21 still missing in the next batch.
+  - **Photorealistic versions** (owner: "I want some photorealistic pictures in our next batch"): the shot list carries a photo style; a photo of a scene is saved as `<id>-p`, a second take as `<id>-2`, each its own library picture.
+  - **Cover rule:** a story whose cover is the title card never takes a lead slot (homepage, phone lead and the first "More top stories" card, section fronts, Up next). Library AI pictures may lead. Rank is unchanged; with no eligible picture, the lead module hides and the front opens with the next module.
+  - **No drawings** on public safety (block map, else the "Public Safety" slate) or beside one restaurant's failed inspection (D-DI-2). NWS alerts get weather pictures, not community ones. The style stays `ILLUSTRATION_STYLE`.
+  - Covers of chart stories are recorded (`images.cover_illustration_id`), and pages may pick a library picture for a story with no recorded image, which is why the property-sales roundup showed the old card.
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.

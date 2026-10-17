@@ -226,18 +226,19 @@
   flex: none;
 }
 
-/* Typographic card: the town's ink as the ground, its motif as a watermark. */
+/* Title card: a label slate in the town's brand (docs/plans/default-images.md, D1). The same
+   deep-to-brand panel as the house ads; accentText on accent passes the contrast checker. */
 .card {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 0.75rem;
+  justify-content: center;
+  gap: 0.6rem;
   overflow: hidden;
-  padding: clamp(1rem, 3vw, 1.75rem);
+  padding: clamp(1rem, 4vw, 2.25rem);
   border-radius: var(--radius);
-  background: var(--ink);
-  color: var(--background);
+  background: linear-gradient(135deg, var(--accent-deep), var(--accent));
+  color: var(--accent-text);
 }
 
 .cardWide {
@@ -248,82 +249,47 @@
   aspect-ratio: 3 / 2;
 }
 
-.card :global(.meta),
-.cardTop {
-  color: var(--background);
-}
-
-.cardTop {
+.slateLabel {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  position: relative;
-}
-
-.cardHeadline {
-  position: relative;
+  gap: 0.35em;
   font-family: var(--font-headline);
-  font-weight: var(--headline-weight);
-  font-size: clamp(1.5rem, 1rem + 2.4vw, 2.75rem);
-  line-height: 1.05;
-  letter-spacing: -0.01em;
-  max-width: 24ch;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
+  font-weight: 800;
+  font-size: clamp(1.75rem, 1rem + 3.4vw, 3.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
 }
 
-.cardFigure {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+/* The section's color, ringed so it reads on any brand color. */
+.slateDot {
+  flex: none;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: var(--round);
+  box-shadow: 0 0 0 0.09em var(--accent-text);
 }
 
-.cardNumber {
-  font-family: var(--font-headline);
-  font-weight: var(--headline-weight);
-  font-size: clamp(3.5rem, 2rem + 7vw, 7rem);
-  line-height: 0.9;
-  letter-spacing: -0.03em;
+.slateFigure {
+  font-size: 1.0625rem;
+}
+
+.slateSite {
+  font-family: var(--font-meta);
+  font-size: 0.9375rem;
+  opacity: 0.9;
 }
 
 .cardThumb {
   aspect-ratio: 3 / 2;
-  padding: 0.75rem;
+  padding: 0.6rem;
+  justify-content: flex-end;
 }
 
-.thumbNumber {
-  position: relative;
+.thumbLabel {
   font-family: var(--font-headline);
-  font-weight: var(--headline-weight);
-  font-size: 2.25rem;
-  line-height: 0.9;
-}
-
-.cardFigureLabel {
-  font-size: 1.0625rem;
-}
-
-.cardGlyph {
-  position: relative;
-  align-self: flex-end;
-}
-
-.cardMotif {
-  position: absolute;
-  right: -6%;
-  bottom: -18%;
-  width: 62%;
-  opacity: 0.14;
-  pointer-events: none;
-}
-
-.cardMotif svg {
-  width: 100%;
-  height: auto;
-  display: block;
+  font-weight: 800;
+  font-size: 0.9375rem;
+  line-height: 1.1;
 }
 
 .share {

@@ -10,10 +10,11 @@ import {
   pins,
   records,
   sources,
+  staff,
   townBasemaps,
   type Db,
 } from '@towncore/db';
-import { entityKey } from '@towncore/config';
+import { entityKey, illustrationLibrary } from '@towncore/config';
 import {
   assignArticleImage,
   buildByline,
@@ -64,6 +65,8 @@ type TestStory = {
    * town's channel has a video of the meeting the same day (owner's decision, 2026-10-16).
    */
   meeting?: { body: string; videoId: string; videoTitle: string };
+  /** Tier 3 approved by a person (public safety), so it may lead if it has a picture. */
+  reviewed?: boolean;
 };
 
 const testParagraph = (siteName: string, n: number) =>
@@ -74,6 +77,22 @@ const testParagraph = (siteName: string, n: number) =>
 export function testStories(siteName: string, townSlug: string): TestStory[] {
   const paragraphs = (count: number) =>
     Array.from({ length: count }, (_, i) => testParagraph(siteName, i + 1));
+  // The newest story, approved, on its title card (no drawing on public safety): it ranks high
+  // but never takes the lead slot (owner, 2026-10-17; docs/plans/default-images.md).
+  const safety: TestStory[] = ['boca-raton', 'harbor-point', 'pine-hollow'].includes(townSlug)
+    ? [
+        {
+          slug: 'test-safety-notice',
+          headline: `[TEST] Sample police notice for ${siteName}`,
+          dek: 'A fictional public-safety item used to check the title card. It is not news.',
+          beat: 'public-safety',
+          paragraphs: paragraphs(4),
+          source: { title: 'Fictional police notice (test source)', url: 'https://example.com/' },
+          hoursAgo: 0.25,
+          reviewed: true,
+        },
+      ]
+    : [];
   if (townSlug === 'feed-town') {
     // A fictional *live* town for the sitemap and feed tests. "fixture-" slugs are listed like
     // real stories; the "test-" one must never be.
@@ -121,6 +140,7 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
   }
   if (townSlug === 'boca-raton') {
     return [
+      ...safety,
       {
         slug: 'test-article',
         headline: `[TEST] This is a test article for ${siteName}`,
@@ -151,7 +171,7 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
       },
       {
         slug: 'test-guide-trash',
-        headline: `[TEST] How trash pickup works (sample guide for ${siteName})`,
+        headline: `[TEST] How curbside days work (sample guide for ${siteName})`,
         dek: 'A sample guide used to check the guide page. It is not real guidance.',
         beat: 'community',
         paragraphs: paragraphs(5),
@@ -187,6 +207,7 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
       streets: prefix === 'harbor' && beat !== 'business' ? ['Sample Harbor Road'] : [],
     }));
   return [
+    ...safety,
     ...(townSlug === 'harbor-point' ? extra('harbor') : []),
     // A roundup over several days, so the image router draws a data graphic (§11c).
     ...(townSlug === 'harbor-point'
@@ -223,12 +244,28 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
   ];
 }
 
+/**
+ * The staff member who approved the installed illustration library (§11c: AI images are
+ * approved by a person), so fixture stories get library pictures just as real ones do. Fixture
+ * databases only; also the approver of the fixtures' Tier 3 items.
+ */
+export async function fixtureReviewer(db: Db): Promise<string> {
+  const email = illustrationLibrary[0]?.approvedBy ?? 'partners@towncore.net';
+  await db
+    .insert(staff)
+    .values({ email, name: 'Library approver (fixture)', role: 'reviewer' })
+    .onConflictDoNothing();
+  const [row] = await db.select({ id: staff.id }).from(staff).where(eq(staff.email, email));
+  return row!.id;
+}
+
 export async function seedTestContent(
   db: Db,
   town: { id: string; slug: string; name: string; siteName: string; timezone: string },
 ) {
   const written: string[] = [];
   const topics: Array<{ id: string; streets: string[] }> = [];
+  const reviewerId = await fixtureReviewer(db);
   await db.transaction(async (tx) => {
     // Remove earlier test content for this town (rows that reference an article go first).
     const old = await tx
@@ -335,7 +372,8 @@ export async function seedTestContent(
           sourceRecordIds: [record!.id, ...chart.map((r) => r.id)],
           kind: story.guideTopic ? 'guide' : story.roundupDaysAgo ? 'roundup' : 'story',
           guideTopic: story.guideTopic ?? null,
-          tier: story.guideTopic ? 1 : 2,
+          tier: story.guideTopic ? 1 : story.reviewed ? 3 : 2,
+          reviewerId: story.reviewed ? reviewerId : null,
           publishedAt,
           createdAt: publishedAt,
           updatedAt: publishedAt,

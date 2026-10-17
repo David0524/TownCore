@@ -170,9 +170,17 @@ describe('the router with the library', () => {
     expect(row).toMatchObject({ aiGenerated: true, approvedBy: ownerId });
   });
 
-  it("doesn't repeat it in the town within two weeks", async () => {
+  it('prefers a scene not shown in the town within two weeks', async () => {
+    const choice = await assignArticleImage(
+      db,
+      (await story({ headline: 'Council approves budget and millage rate' })).id,
+    );
+    expect(choice.spec).toMatchObject({ illustrationId: 'gov-03' });
+  });
+
+  it('repeats a recent scene rather than fall back to the title card', async () => {
     const choice = await assignArticleImage(db, (await story()).id);
-    expect(choice.spec).not.toMatchObject({ illustrationId: 'gov-05' });
+    expect(choice.spec).toMatchObject({ illustrationId: 'gov-05' });
   });
 
   it('never illustrates public safety, and needs an approver on staff', async () => {
