@@ -2,6 +2,20 @@
 // sending, MIME, threading, suppression and bulk sending arrive phase by phase.
 export { parseAddress, type ParsedAddress } from './address';
 export {
+  boughtDomains,
+  MAIL_LEAD_DAYS,
+  missingForOnboarding,
+  needsOnboarding,
+  offlineProviders,
+  ONBOARD_GRACE_MS,
+  onboardBoughtDomain,
+  onboardBy,
+  providersFromEnv,
+  type BoughtDomain,
+  type MailStart,
+  type Providers,
+} from './bought';
+export {
   desiredRecords,
   MAIL_FROM_LABEL,
   NEWS_LABEL,

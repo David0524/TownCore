@@ -24,6 +24,7 @@ import { adaptersStep, readinessStep, sourcesStep } from './sources-step';
 import type { ReadinessDetail } from './readiness';
 import type { ShotTarget } from './screenshots';
 import { themeStep, type ThemeDetail } from './theme-step';
+import { mailStep, type MailDeps, type MailDetail } from './mail-step';
 import { provisionStep, seedStep } from './seed-step';
 import { DEFAULT_FRICTION_LOG, reportStep } from './report-step';
 
@@ -54,6 +55,8 @@ export type LaunchOptions = {
   sources?: string[];
   /** Re-run this step and every step after it (e.g. `theme` to retake screenshots). */
   redo?: LaunchStep;
+  /** The planned go-live month ("2026-12"): orders mail onboarding so the domain is warm by then. */
+  cohort?: string;
 };
 
 export type LaunchDeps = {
@@ -61,6 +64,8 @@ export type LaunchDeps = {
   resolve: (town: string) => Promise<ResolvedTown>;
   /** Step 2: names, domains and the registrar. Without it, step 2 stops the run. */
   names?: NameDeps;
+  /** Step 2b: SES and Vercel DNS for mail onboarding right after the purchase. */
+  mail?: MailDeps;
   /** Steps 3–5: the polite fetcher for discovery and ingest. */
   fetcher?: Fetcher;
   /** Steps 3, 5 and 6b: the model layer (discovery needs web search, the review needs images). */
@@ -104,6 +109,15 @@ const STEPS: Partial<Record<LaunchStep, StepRun>> = {
         launch: deps.launchDir ?? DEFAULT_LAUNCH_DIR,
         towns: deps.townsDir ?? DEFAULT_TOWNS_DIR,
       },
+    });
+  },
+  async mail({ deps, launch, done }) {
+    const cohort = (launch.options as LaunchOptions).cohort;
+    return mailStep({
+      db: deps.db,
+      ...(deps.mail ? { deps: deps.mail } : {}),
+      names: done.names as NamesDetail,
+      ...(cohort ? { cohort } : {}),
     });
   },
   async sources({ deps, launch, done }) {
@@ -254,6 +268,11 @@ export async function runLaunch(deps: LaunchDeps, opts: LaunchOptions): Promise<
       .insert(launchStepRecords)
       .values(launchSteps.map((step) => ({ launchId: launch!.id, step })));
   } else {
+    // Steps added since this launch started (2b mail) get their rows now.
+    await db
+      .insert(launchStepRecords)
+      .values(launchSteps.map((step) => ({ launchId: launch!.id, step })))
+      .onConflictDoNothing();
     [launch] = await db
       .update(launches)
       .set({
@@ -295,7 +314,16 @@ export async function runLaunch(deps: LaunchDeps, opts: LaunchOptions): Promise<
   )
     await again(after('names'));
   else if (names?.picked && opts.approveSpend && names.purchase?.status === 'not bought')
-    await again(['names']);
+    await again(['names', 'mail']);
+  // Mail onboarding left behind (credentials missing, a conflict since fixed) retries on resume;
+  // a dry-run plan runs for real once the domain is bought.
+  const mail = done.mail as MailDetail | undefined;
+  if (
+    mail &&
+    (((mail.state === 'not started' || mail.state === 'failed') && deps.mail) ||
+      (mail.state === 'planned' && names?.purchase && 'orderId' in names.purchase))
+  )
+    await again(['mail']);
   if (opts.redo) await again(after(opts.redo));
   // Screenshots asked for (--site) after a run without them: theme and what follows run again.
   const themed = done.theme as ThemeDetail | undefined;

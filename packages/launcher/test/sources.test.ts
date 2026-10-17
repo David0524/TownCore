@@ -466,7 +466,13 @@ describe('steps 3–5 in a launch', () => {
     expect(report).toContain(
       '3.1 items a day is under 5: the briefing-led community family is used',
     );
-    expect(report).toContain('pnpm mail:onboard add harborcitytownsquare.com --execute --approved');
+    // Mail onboarding isn't a to-do of its own: step 2b runs it after the purchase (owner,
+    // 2026-10-17); until then the report shows the plan.
+    expect(report).not.toContain('pnpm mail:onboard add');
+    expect(report).toContain('## Mail and warm-up');
+    expect(report).toContain(
+      '| Mail domain and warm-up | Pass | Starts when the domain is bought. |',
+    );
     // Chatham County isn't in the county registry and the test's catalogs answer nothing, so
     // county data becomes the first to-do (owner, 2026-10-17).
     const friction = readFileSync(frictionLog, 'utf8');

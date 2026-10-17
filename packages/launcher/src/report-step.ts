@@ -7,8 +7,9 @@ import {
   parseTownConfig,
   type LaunchStep,
 } from '@towncore/config';
-import { aiUsage, and, eq, gte, sql, towns, type Db } from '@towncore/db';
+import { aiUsage, and, eq, gte, mailDomains, sql, towns, type Db } from '@towncore/db';
 import type { DiscoverDetail } from './discover';
+import { mailTodos, type MailDetail } from './mail-step';
 import type { NamesDetail } from './names-step';
 import type { ReadinessDetail } from './readiness';
 import type { ResolvedTown } from './resolve';
@@ -45,6 +46,7 @@ export type ReportDetail = {
 export type Done = {
   resolve: ResolvedTown;
   names: NamesDetail;
+  mail?: MailDetail;
   sources?: DiscoverDetail;
   readiness?: ReadinessDetail;
   seed?: SeedDetail;
@@ -59,7 +61,40 @@ const notRun = (name: string, step: LaunchStep): Check => ({
 });
 const cell = (text: string) => text.replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
-export function launchChecks(done: Done, config: unknown): Check[] {
+/** The mail domain as it stands now (the worker takes it live after the step ran). */
+export type MailNow = {
+  status: string;
+  bulkStatus: string;
+  warmupDay: number;
+  bulkDailyCap: number;
+} | null;
+
+/**
+ * Mail warm-up (owner, 2026-10-17): before the purchase it passes when the plan has no
+ * conflicts; after, when onboarding has started (SES verifying or live). Going live itself
+ * still needs the mail domain live (Admin → Launches).
+ */
+export function mailCheck(mail: MailDetail | undefined, now: MailNow): Check {
+  const name = 'Mail domain and warm-up';
+  if (!mail) return notRun(name, 'mail');
+  if (now?.status === 'live')
+    return {
+      name,
+      status: 'pass',
+      detail: `Live; bulk ${now.bulkStatus}${now.bulkStatus === 'warming' ? `, day ${now.warmupDay} at ${now.bulkDailyCap} a day` : ''}.`,
+    };
+  if (now?.status === 'onboarding' || mail.state === 'waiting')
+    return {
+      name,
+      status: 'pass',
+      detail: 'SES is verifying the DNS; warm-up starts when it does.',
+    };
+  const failing =
+    mail.state === 'failed' || mail.state === 'not started' || now?.status === 'failed';
+  return { name, status: failing ? 'fail' : 'pass', detail: mail.detail };
+}
+
+export function launchChecks(done: Done, config: unknown, mailNow: MailNow = null): Check[] {
   const { names, readiness, theme } = done;
   const picked = names.proposals.find((p) => p.domain === names.picked?.domain);
   const tbd = findTbdFields(config);
@@ -74,6 +109,7 @@ export function launchChecks(done: Done, config: unknown): Check[] {
           detail: `${readiness.itemsPerDay} real items a day; target ${readiness.minimum} (${readiness.mode}).`,
         }
       : notRun('Readiness (Rule 7 target)', 'readiness'),
+    mailCheck(done.mail, mailNow),
     {
       name: 'No TBD fields in the town config',
       status: tbd.length ? 'fail' : 'pass',
@@ -223,6 +259,7 @@ export function launchReport(
     dir: string;
     /** Why the run stopped, when it did. */
     stopped?: string;
+    mailNow?: MailNow;
   },
 ): string {
   const { resolve: town, names } = done;
@@ -269,6 +306,10 @@ ${input.checks.map((c) => `| ${c.name} | ${c.status === 'pass' ? 'Pass' : c.stat
 - Purchase: ${purchase}
 - Other options: ${others}
 
+## Mail and warm-up
+
+${part(done.mail, (m) => mailSection(m, input.mailNow ?? null))}
+
 ## Sources
 
 ${part(done.sources, sourcesSection)}
@@ -299,8 +340,30 @@ $${input.aiCostUsd.toFixed(2)} (cap $25, D-M7-11)
 `;
 }
 
+function mailSection(mail: MailDetail, now: MailNow): string {
+  const status = now
+    ? `${now.status}; bulk ${now.bulkStatus}${now.bulkStatus === 'warming' ? `, day ${now.warmupDay} at ${now.bulkDailyCap} a day` : ''}`
+    : mail.state;
+  const lines = [
+    `- Status: **${status}**. ${mail.detail}`,
+    `- Approved by: ${mail.approvedBy ?? 'not yet (onboarding starts when the domain is bought, under that approval; Rule 10)'}`,
+    mail.cohort
+      ? `- Cohort ${mail.cohort}: onboard by ${mail.startBy}, so the domain is warm at go-live.`
+      : '- No cohort planned (pass --cohort YYYY-MM to order onboarding ahead of go-live).',
+    `- Warm-up from real, opted-in mail only (staff test issues, news@ replies, then confirmations and daily issues; never seed lists or warm-up networks): ${mail.ramp.map((r) => `day ${r.day} ${r.cap.toLocaleString('en-US')}`).join(', ')} a day while bounces stay under 3% and complaints under 0.08%.`,
+  ];
+  if (mail.actions.length)
+    lines.push(`- ${mail.state === 'planned' ? 'Planned' : 'Done'}: ${mail.actions.join('; ')}`);
+  for (const c of mail.conflicts)
+    lines.push(
+      `- **Conflict:** wants ${c.want.type} ${c.want.name || '@'} → ${c.want.value}; ${c.reason}`,
+    );
+  return lines.join('\n');
+}
+
 export function manualTodos(done: Done, domain: string): string[] {
   const todos: string[] = [];
+  todos.push(...mailTodos(done.mail));
   if (done.readiness && !done.readiness.passed)
     todos.push(
       `Readiness is ${done.readiness.itemsPerDay} a day, short of the ${done.readiness.minimum} target (Rule 7): find more official sources the bot may read, or build the adapter requests, and add them with --source kind=url. Never pad to close the gap.`,
@@ -391,7 +454,17 @@ export async function reportStep(input: {
       .where(and(eq(aiUsage.townId, town.id), gte(aiUsage.createdAt, input.launchStartedAt)));
     aiCostUsd = Number(cost?.usd ?? 0);
   }
-  const checks = launchChecks(done, config);
+  const [mail] = await input.db
+    .select({
+      status: mailDomains.status,
+      bulkStatus: mailDomains.bulkStatus,
+      warmupDay: mailDomains.warmupDay,
+      bulkDailyCap: mailDomains.bulkDailyCap,
+    })
+    .from(mailDomains)
+    .where(eq(mailDomains.name, config.domain.toLowerCase()));
+  const mailNow: MailNow = mail ?? null;
+  const checks = launchChecks(done, config, mailNow);
   const manual = manualTodos(done, config.domain);
   const dir = join(input.launchDir, done.resolve.slug);
   mkdirSync(dir, { recursive: true });
@@ -405,6 +478,7 @@ export async function reportStep(input: {
       manual,
       aiCostUsd,
       dir,
+      mailNow,
       ...(input.stopped ? { stopped: input.stopped } : {}),
     }),
   );

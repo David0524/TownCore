@@ -4,6 +4,7 @@
 export const launchSteps = [
   'resolve',
   'names',
+  'mail',
   'sources',
   'adapters',
   'readiness',
@@ -17,6 +18,7 @@ export type LaunchStep = (typeof launchSteps)[number];
 export const launchStepLabels: Record<LaunchStep, string> = {
   resolve: '1. Resolve the town',
   names: '2. Names and domains',
+  mail: '2b. Mail domain and warm-up',
   sources: '3. Discover sources',
   adapters: '4. Match adapters',
   readiness: '5. Readiness',

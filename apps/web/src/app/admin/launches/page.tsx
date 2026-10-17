@@ -74,6 +74,7 @@ export default async function Launches({
                 <th>Run</th>
                 <th>Steps</th>
                 <th>Report</th>
+                <th>Mail warm-up</th>
                 <th>Site</th>
               </tr>
             </thead>
@@ -222,6 +223,37 @@ function CandidateRow({ c, admin, state }: { c: Candidate; admin: boolean; state
   );
 }
 
+/** Step 2b and the mail domain now: warm-up starts the moment the domain is bought. */
+function MailWarmup({ r }: { r: LaunchRow }) {
+  if (r.mail) {
+    const warming = r.mail.bulkStatus === 'warming';
+    return (
+      <>
+        {r.mail.status === 'live'
+          ? warming
+            ? `Warming: day ${r.mail.warmupDay}, ${r.mail.bulkDailyCap.toLocaleString('en-US')} a day`
+            : `Live, bulk ${r.mail.bulkStatus}`
+          : r.mail.status === 'onboarding'
+            ? 'SES verifying DNS'
+            : r.mail.status}
+        {r.mail.failureReason ? <div className={styles.muted}>{r.mail.failureReason}</div> : null}
+      </>
+    );
+  }
+  if (!r.mailStep) return <>–</>;
+  return (
+    <>
+      {r.mailStep.state === 'planned' ? 'Starts when the domain is bought' : r.mailStep.state}
+      {r.mailStep.state !== 'planned' ? (
+        <div className={styles.muted}>{r.mailStep.detail}</div>
+      ) : null}
+      {r.mailStep.startBy ? (
+        <div className={styles.muted}>Onboard by {r.mailStep.startBy}</div>
+      ) : null}
+    </>
+  );
+}
+
 function LaunchRunRow({
   r,
   admin,
@@ -268,6 +300,9 @@ function LaunchRunRow({
         ) : (
           '–'
         )}
+      </td>
+      <td data-testid="mail-warmup">
+        <MailWarmup r={r} />
       </td>
       <td>
         {r.town ? r.town.status : '–'}

@@ -20,6 +20,7 @@
     "@towncore/config": "workspace:*",
     "@towncore/db": "workspace:*",
     "@towncore/directory": "workspace:*",
+    "@towncore/mail": "workspace:*",
     "@towncore/pipeline": "workspace:*",
     "@towncore/prompts": "workspace:*",
     "fflate": "^0.8.3",

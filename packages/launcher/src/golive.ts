@@ -14,7 +14,8 @@ import {
 
 // Admin → Launches → go live (CLAUDE.md §10 step 9; docs/plans/M7.md §7). Only an admin approves,
 // and only a launch whose every automated check passed, whose domain we bought, and whose mail
-// domain is live (Rule 10: the purchase and the mail onboarding were approved separately).
+// domain is live (Rule 10: buying the domain also approved its mail onboarding, step 2b, which
+// started warm-up the moment we owned it).
 // Approving sets the town live; schedules already run for drafts, so live changes indexing,
 // sitemaps and publishing. Pause takes a live town back to paused. Every decision is audited.
 // Imported by the web app: keep this module free of heavy dependencies.
@@ -39,6 +40,16 @@ export type LaunchRow = {
     checks: Array<{ name: string; status: string; detail: string }>;
   } | null;
   town: { id: string; status: string; domain: string; siteName: string } | null;
+  /** The mail domain as it stands now: onboarding, verification and warm-up (step 2b). */
+  mail: {
+    status: string;
+    bulkStatus: string;
+    warmupDay: number;
+    bulkDailyCap: number;
+    failureReason: string | null;
+  } | null;
+  /** What step 2b recorded (planned, waiting, live, not started, failed) and why. */
+  mailStep: { state: string; detail: string; startBy: string | null } | null;
 };
 
 export async function listLaunches(db: Db, limit = 25): Promise<LaunchRow[]> {
@@ -65,6 +76,21 @@ export async function listLaunches(db: Db, limit = 25): Promise<LaunchRow[]> {
       .where(eq(towns.slug, l.slug));
     const report = steps.find((s) => s.step === 'report' && s.status === 'done')
       ?.detail as LaunchRow['report'];
+    const mailStep = steps.find((s) => s.step === 'mail')?.detail as
+      { state: string; detail: string; startBy: string | null; domain: string } | undefined;
+    const domain = town?.domain ?? mailStep?.domain;
+    const [mail] = domain
+      ? await db
+          .select({
+            status: mailDomains.status,
+            bulkStatus: mailDomains.bulkStatus,
+            warmupDay: mailDomains.warmupDay,
+            bulkDailyCap: mailDomains.bulkDailyCap,
+            failureReason: mailDomains.failureReason,
+          })
+          .from(mailDomains)
+          .where(eq(mailDomains.name, domain.toLowerCase()))
+      : [];
     out.push({
       id: l.id,
       name: l.name,
@@ -77,6 +103,10 @@ export async function listLaunches(db: Db, limit = 25): Promise<LaunchRow[]> {
       steps: steps.map(({ step, status, error }) => ({ step, status, error })),
       report: report ?? null,
       town: town ?? null,
+      mail: mail ?? null,
+      mailStep: mailStep?.state
+        ? { state: mailStep.state, detail: mailStep.detail, startBy: mailStep.startBy }
+        : null,
     });
   }
   return out;
@@ -110,7 +140,7 @@ export async function goLiveBlockers(db: Db, launchId: string): Promise<string[]
   const [mail] = await db.select().from(mailDomains).where(eq(mailDomains.name, town.domain));
   if (mail?.status !== 'live')
     blockers.push(
-      `The mail domain ${town.domain} is ${mail?.status ?? 'not onboarded'}, not live (pnpm mail:onboard; Rule 10).`,
+      `The mail domain ${town.domain} is ${mail?.status ?? 'not onboarded'}, not live (step 2b onboards it after the purchase; catch up with pnpm mail:onboard bought --execute).`,
     );
   return blockers;
 }

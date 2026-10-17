@@ -344,6 +344,9 @@ importers:
       '@towncore/directory':
         specifier: workspace:*
         version: link:../directory
+      '@towncore/mail':
+        specifier: workspace:*
+        version: link:../mail
       '@towncore/pipeline':
         specifier: workspace:*
         version: link:../pipeline

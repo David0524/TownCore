@@ -220,6 +220,7 @@ describe('a launch run', () => {
     expect(again.steps.map((s) => [s.step, s.status])).toEqual([
       ['resolve', 'done'],
       ['names', 'failed'],
+      ['mail', 'pending'],
       ['sources', 'pending'],
       ['adapters', 'pending'],
       ['readiness', 'pending'],

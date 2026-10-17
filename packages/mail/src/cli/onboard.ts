@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { requireEnv, type Env } from '@towncore/config';
 import { eq, mailDomains, onboardingSteps, or, sql, towns, type Db } from '@towncore/db';
-import type { ExistingRecord } from '../dns';
+import {
+  boughtDomains,
+  needsOnboarding,
+  onboardBoughtDomain,
+  providersFromEnv,
+  type MailStart,
+  type Providers,
+} from '../bought';
 import {
   onboardDomain,
   resetFailedSteps,
@@ -12,8 +19,6 @@ import {
 } from '../onboarding';
 import { dryRunStore, pgOnboardingStore } from '../pg-store';
 import { applyRemoval, describeRemoval, planRemoval } from '../removal';
-import { sesIdentities, type IdentityProvider } from '../ses';
-import { vercelDns, type DnsProvider } from '../vercel';
 
 // `pnpm mail:onboard <add|status|retry|verify-all>` (brief Phase 1). Dry-run is the default and
 // prints exactly what would happen; --execute applies it. DNS changes on anything but the
@@ -25,12 +30,14 @@ export const USAGE = `Usage:
   pnpm mail:onboard retry <domain> [--execute] [--approved]
   pnpm mail:onboard verify-all [--execute]
   pnpm mail:onboard remove <domain> [--execute] [--approved]
+  pnpm mail:onboard bought [--execute]
 
 Dry-run is the default. --execute writes SES identities and DNS records (remove deletes them).
 --approved is required to change any domain not in MAIL_TEST_DOMAINS, and for more than
-one domain at a time outside the test list.`;
+one domain at a time outside the test list. \`bought\` onboards every domain a launch bought
+and that isn't onboarded yet, soonest cohort first: the purchase was the approval (Rule 10).`;
 
-export type Providers = { dns: DnsProvider; ses: IdentityProvider; offline: boolean };
+export type { Providers };
 
 export type CommandContext = {
   db: Db;
@@ -150,7 +157,7 @@ export async function runOnboardCommand(argv: string[], ctx: CommandContext): Pr
         ctx.out(error.message);
         return 3;
       }
-      const providers = (ctx.providers ?? realProviders)(ctx.env);
+      const providers = (ctx.providers ?? providersFromEnv)(ctx.env);
       if (providers.offline) {
         ctx.out('No Vercel token or AWS credentials: can’t remove anything.');
         return 1;
@@ -176,6 +183,8 @@ export async function runOnboardCommand(argv: string[], ctx: CommandContext): Pr
         { execute, approved: values.approved, concurrency },
       );
     }
+    case 'bought':
+      return runBought(ctx, execute);
     default:
       ctx.out(USAGE);
       return command ? 2 : 0;
@@ -211,7 +220,7 @@ async function runMany(
     }
     throw error;
   }
-  const providers = (ctx.providers ?? realProviders)(ctx.env);
+  const providers = (ctx.providers ?? providersFromEnv)(ctx.env);
   if (providers.offline) {
     if (options.execute) {
       ctx.out('--execute needs VERCEL_DNS_TOKEN and AWS credentials (see docs/mail/RUNBOOK.md).');
@@ -339,47 +348,62 @@ async function printStatus(ctx: CommandContext, domain?: string) {
   }
 }
 
-function realProviders(env: Env): Providers {
-  const region = env.AWS_REGION ?? 'us-east-1';
-  if (!env.VERCEL_DNS_TOKEN || !env.AWS_ACCESS_KEY_ID) return offlineProviders();
-  return {
-    dns: vercelDns({ token: env.VERCEL_DNS_TOKEN, teamId: env.VERCEL_TEAM_ID }),
-    ses: sesIdentities({ region }),
-    offline: false,
-  };
-}
-
-/** For a dry-run before any credentials exist: every zone empty, no SES identities. */
-export function offlineProviders(): Providers {
-  const none: ExistingRecord[] = [];
-  return {
-    offline: true,
-    dns: {
-      getDomain: async (name) => ({
-        name,
-        serviceType: 'zeit.world',
-        nameservers: ['ns1.vercel-dns.com', 'ns2.vercel-dns.com'],
-        intendedNameservers: ['ns1.vercel-dns.com', 'ns2.vercel-dns.com'],
-      }),
-      listRecords: async () => none,
-      createRecord: async () => {
-        throw new Error('offline');
-      },
-      deleteRecord: async () => {
-        throw new Error('offline');
-      },
-    },
-    ses: {
-      getIdentity: async () => null,
-      createIdentity: async () => {
-        throw new Error('offline');
-      },
-      setMailFrom: async () => {
-        throw new Error('offline');
-      },
-      deleteIdentity: async () => {
-        throw new Error('offline');
-      },
-    },
-  };
+/**
+ * Onboards every domain a launch bought that isn't onboarded (or failed), soonest cohort first.
+ * The purchase is the approval (owner, 2026-10-17), so this needs no --approved.
+ */
+async function runBought(ctx: CommandContext, execute: boolean): Promise<number> {
+  const all = await boughtDomains(ctx.db);
+  const todo = all.filter(needsOnboarding);
+  if (!all.length) {
+    ctx.out('No launch has bought a domain yet.');
+    return 0;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  for (const d of all.filter((d) => !needsOnboarding(d)))
+    ctx.out(
+      `${d.domain}: ${d.mail!.status}, bulk ${d.mail!.bulkStatus}` +
+        (d.mail!.bulkStatus === 'warming'
+          ? ` (day ${d.mail!.warmupDay}, cap ${d.mail!.bulkDailyCap})`
+          : ''),
+    );
+  if (!todo.length) {
+    ctx.out('Every bought domain is onboarded.');
+    return 0;
+  }
+  const providers = (ctx.providers ?? providersFromEnv)(ctx.env);
+  ctx.out(
+    execute
+      ? `Onboarding ${todo.length} bought domain(s), soonest cohort first.`
+      : `Dry-run: ${todo.length} bought domain(s) to onboard, soonest cohort first. Re-run with --execute.`,
+  );
+  let failedCount = 0;
+  for (const d of todo) {
+    const late =
+      d.startBy && d.startBy < today ? ` (late: cohort ${d.cohort} wanted it by ${d.startBy})` : '';
+    let report: MailStart;
+    try {
+      report = await onboardBoughtDomain(
+        ctx.db,
+        { domain: d.domain, displayName: d.siteName ?? d.domain, orderId: d.orderId },
+        { env: ctx.env, providers, execute },
+      );
+    } catch (error) {
+      report = failed(d.domain, error instanceof Error ? error.message : String(error));
+    }
+    ctx.out('');
+    ctx.out(
+      `${d.domain}${d.cohort ? ` [cohort ${d.cohort}]` : ''}: ${report.outcome}${late}` +
+        ('reason' in report ? ` — ${report.reason}` : report.error ? ` — ${report.error}` : ''),
+    );
+    if ('actions' in report) {
+      for (const action of report.actions) ctx.out(`  - ${action}`);
+      for (const c of report.conflicts)
+        ctx.out(
+          `  ! conflict: wants ${c.want.type} ${c.want.name || '@'} → ${c.want.value}; ${c.reason}`,
+        );
+    }
+    if (report.outcome === 'failed' || report.outcome === 'not started') failedCount++;
+  }
+  return failedCount ? 1 : 0;
 }
