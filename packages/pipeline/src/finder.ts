@@ -12,7 +12,6 @@ import {
   eq,
   gte,
   inArray,
-  lt,
   records,
   skippedCandidates,
   sources,
@@ -31,7 +30,8 @@ import {
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { MIN_SOURCE_CHARS, scoreCandidate, titleSimilarity } from './scoring';
 import { createGuideCandidates } from './guides';
-import { hasInspectionFailures, isIssuedLicense, isNewsworthyAlert } from './templates';
+import { roundupWeekRecords, townRecords } from './roundup-weeks';
+import { hasInspectionFailures, isNewsworthyAlert } from './templates';
 import { cannotBeArticle, decideTier } from './tiers';
 import { isoLocalDate, localDate, localWeekStart, startOfLocalDay } from './time';
 
@@ -139,33 +139,6 @@ async function skip(
 // ---------------------------------------------------------------------------------------------
 // 1. Templated items
 
-/** A UTC-midnight range covering the local calendar week, for date-only record fields. */
-function dateOnlyWeek(weekStart: Date, timeZone: string): [Date, Date] {
-  const [y, m, d] = isoLocalDate(weekStart, timeZone).split('-').map(Number);
-  const start = new Date(Date.UTC(y!, m! - 1, d!));
-  return [start, new Date(start.getTime() + 7 * 86_400_000)];
-}
-
-async function townRecords(
-  db: Db,
-  townId: string,
-  type: string,
-  from: Date,
-  to: Date,
-): Promise<(typeof records.$inferSelect)[]> {
-  return db
-    .select()
-    .from(records)
-    .where(
-      and(
-        eq(records.townId, townId),
-        eq(records.type, type),
-        gte(records.occurredAt, from),
-        lt(records.occurredAt, to),
-      ),
-    );
-}
-
 /** Record types that are written up with a meeting's results, never on their own. */
 const COMPANION_TYPES = ['transcript'];
 
@@ -207,9 +180,7 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
         ? localWeekStart(now, tz)
         : null;
   if (meetingWeek) {
-    const weekEnd = new Date(meetingWeek.getTime() + 7 * 86_400_000);
-    const from = now > meetingWeek ? now : meetingWeek;
-    const meetings = await townRecords(db, town.id, 'meeting', from, weekEnd);
+    const meetings = await roundupWeekRecords(db, town, 'meetings', meetingWeek, { from: now });
     await roundup(db, town, report, {
       key: `roundup:meetings:${isoLocalDate(meetingWeek, tz)}`,
       title: `Meetings, week of ${isoLocalDate(meetingWeek, tz)}`,
@@ -223,9 +194,8 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
   // files for the whole week are in. Both use date-only fields stored as UTC midnight.
   if (weekday === 0 || weekday >= 2) {
     const lastWeek = localWeekStart(now, tz, -1);
-    const [from, to] = dateOnlyWeek(lastWeek, tz);
     const week = isoLocalDate(lastWeek, tz);
-    const filings = await townRecords(db, town.id, 'new-filing', from, to);
+    const filings = await roundupWeekRecords(db, town, 'new-businesses', lastWeek);
     await roundup(db, town, report, {
       key: `roundup:new-businesses:${week}`,
       title: `New businesses, week of ${week}`,
@@ -233,9 +203,7 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       recordIds: filings.map((r) => r.id),
       now,
     });
-    const licenses = (await townRecords(db, town.id, 'license', from, to)).filter((r) =>
-      isIssuedLicense(r.raw),
-    );
+    const licenses = await roundupWeekRecords(db, town, 'new-licenses', lastWeek);
     await roundup(db, town, report, {
       key: `roundup:new-licenses:${week}`,
       title: `New contractor licenses, week of ${week}`,
@@ -244,10 +212,7 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       now,
     });
     // New places to eat and drink: new food service establishments and new liquor licenses.
-    const newPlaces = [
-      ...(await townRecords(db, town.id, 'new_food_license', from, to)),
-      ...(await townRecords(db, town.id, 'liquor_license', from, to)),
-    ];
+    const newPlaces = await roundupWeekRecords(db, town, 'new-places', lastWeek);
     await roundup(db, town, report, {
       key: `roundup:new-places:${week}`,
       title: `New places to eat and drink, week of ${week}`,
@@ -260,8 +225,7 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
     });
     // Permits from a city or county open-data source (§7: permit roundups are Tier 1). Their
     // dates are real timestamps, so the local week is used rather than the date-only range.
-    const weekEndLocal = new Date(lastWeek.getTime() + 7 * 86_400_000);
-    const permits = await townRecords(db, town.id, 'permit', lastWeek, weekEndLocal);
+    const permits = await roundupWeekRecords(db, town, 'permits', lastWeek);
     await roundup(db, town, report, {
       key: `roundup:permits:${week}`,
       title: `Building permits, week of ${week}`,
@@ -269,11 +233,21 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       recordIds: permits.map((r) => r.id),
       now,
     });
+    // Road work (owner, 2026-10-17): a county's weekly list, issued for the coming days, so this
+    // rounds up the list issued this week as soon as it's ingested.
+    const roadsWeek = localWeekStart(now, tz);
+    const roads = await roundupWeekRecords(db, town, 'roads', roadsWeek);
+    await roundup(db, town, report, {
+      key: `roundup:roads:${isoLocalDate(roadsWeek, tz)}`,
+      title: `Road work, week of ${isoLocalDate(roadsWeek, tz)}`,
+      beat: 'development',
+      recordIds: roads.map((r) => r.id),
+      now,
+    });
     // Property sales (owner, 2026-10-17): deeds are recorded about two weeks after a sale, so
     // this rounds up the week before last. Sale dates are date-only, like the filings.
     const salesWeek = localWeekStart(now, tz, -2);
-    const [salesFrom, salesTo] = dateOnlyWeek(salesWeek, tz);
-    const sales = await townRecords(db, town.id, 'sale', salesFrom, salesTo);
+    const sales = await roundupWeekRecords(db, town, 'sales', salesWeek);
     await roundup(db, town, report, {
       key: `roundup:sales:${isoLocalDate(salesWeek, tz)}`,
       title: `Property sales, week of ${isoLocalDate(salesWeek, tz)}`,
@@ -282,7 +256,7 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       now,
     });
     // Restaurant inspections: a week that names a closure or complaint needs a person (§7).
-    const inspections = await townRecords(db, town.id, 'inspection', from, to);
+    const inspections = await roundupWeekRecords(db, town, 'inspections', lastWeek);
     const failures = hasInspectionFailures(inspections.map((r) => r.raw));
     await roundup(db, town, report, {
       key: `roundup:inspections:${week}`,

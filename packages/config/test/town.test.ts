@@ -47,10 +47,12 @@ describe('town config', () => {
       'business_filings/fl-dbpr',
       'inspections/fl-dbpr',
       'business_filings/fl-dbpr',
-      'property_sales/arcgis',
       'city_news/feed',
+      'roads/pdf-list',
       'business_filings/fl-sunbiz',
       'weather/nws',
+      // From counties/fl/palm-beach.yaml (county_sources), appended last.
+      'property_sales/arcgis',
     ]);
   });
 

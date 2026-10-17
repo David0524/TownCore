@@ -106,48 +106,22 @@ sources:
     platform: fl-dbpr
     schedule: 1d
     options: { city: BOCA RATON, files: [daily.csv] }
-  # Verified 2026-10-17: Palm Beach County Property Appraiser sales (ArcGIS Server table
-  # PAO.PROPINFO; robots.txt 404, no rules), at a real price, not confidential. City limits by
-  # parcel number: county parcel numbers start with the municipality code (06 = Boca Raton);
-  # MUNICIPALITY is the mailing city, and two-thirds of "BOCA RATON" sales are unincorporated.
-  # Only these columns are requested: never owners' names or mailing addresses. Deeds appear
-  # about two weeks after a sale, so each run re-reads three weeks. Weekly roundup (Tier 1).
-  - kind: property_sales
-    platform: arcgis
-    url: https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Tables/MapServer/1
-    options:
-      dateField: SALE_DATE
-      idField: SALEKEY
-      title: '{SITE_ADDR_STR}'
-      where: "PARCEL_NUMBER LIKE '06%' AND PRICE >= 1000 AND (CONFID_FLG IS NULL OR CONFID_FLG <> 'Y')"
-      outFields:
-        [
-          SALEKEY,
-          PARCEL_NUMBER,
-          SITE_ADDR_STR,
-          SUBDIV_NAME,
-          SALE_DATE,
-          PRICE,
-          INSTRUMENT,
-          PROPERTY_USE,
-          TOTAL_MARKET,
-        ]
-      fields:
-        SITE_ADDR_STR: Address
-        PRICE: Price
-        SALE_DATE: Sale date
-        INSTRUMENT: Deed
-        PROPERTY_USE: Use
-        SUBDIV_NAME: Subdivision
-        PARCEL_NUMBER: Parcel
-      lagDays: 21
-      type: sale
   # Verified 2026-10-17: Greater Boca Raton Beach & Park District news (Drupal RSS; robots.txt
   # allows /rss.xml). An elected special district: parks, beaches, Sugar Sand Park.
   - kind: city_news
     platform: feed
     url: https://www.mybocaparks.org/rss.xml
     options: { pages: true }
+  # Verified 2026-10-17: Palm Beach County Engineering's weekly Road and Bridge Construction
+  # List (a PDF linked from discover.pbc.gov/Pages/Roads.aspx; robots.txt allows both). The
+  # county tags each project with its city, so only "(City of Boca Raton)" entries are kept.
+  # Weekly roundup of road work and lane closures (Tier 1).
+  - kind: roads
+    platform: pdf-list
+    url: https://discover.pbc.gov/Pages/Roads.aspx
+    schedule: 1d
+    options:
+      { link: Road and Bridge Construction List, match: (City of Boca Raton), type: road-work }
   # Verified 2026-10-15: Florida Division of Corporations daily filings (new businesses).
   - kind: business_filings
     platform: fl-sunbiz
@@ -163,6 +137,8 @@ sources:
     zone: FLZ168
     point: '26.3587,-80.0831'
     beach: { surf_office: MFL, tide_station: '8722670', uv_zip: '33432' }
+# County data from counties/fl/palm-beach.yaml, filtered to Boca Raton's city limits there.
+county_sources: [property_sales]
 pricing:
   # Featured spots #1, #2 and #3 a month; a business's first spot is free for 30 days.
   featured_usd: [19, 12, 7]

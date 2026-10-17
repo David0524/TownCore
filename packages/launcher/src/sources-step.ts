@@ -3,7 +3,9 @@ import { join } from 'node:path';
 import {
   defaultTheme,
   LAUNCH_AI_CAP_USD,
+  loadCountyRegistry,
   parseTownConfig,
+  withCountySources,
   type TownConfig,
   type TownSourceConfig,
 } from '@towncore/config';
@@ -20,6 +22,7 @@ import {
   type DiscoverDetail,
   type Finding,
 } from './discover';
+import { countyDiscovery, DEFAULT_COUNTIES_DIR } from './county';
 import { resemblesOutlet } from './names';
 import type { NamesDetail } from './names-step';
 import { measureReadiness, type ReadinessDetail } from './readiness';
@@ -34,6 +37,8 @@ export type SourceStepDeps = {
   /** The model layer; discovery runs only if its provider can search the web (D-M7-2). */
   llm?: Llm;
   now: () => Date;
+  /** The county source registry (default: counties/ at the repo root). */
+  countiesDir?: string;
 };
 
 /** The draft town's model budget: the whole launch shares $25 (D-M7-11). */
@@ -65,8 +70,12 @@ export async function launchLlmTown(
 export async function syncDraftTown(
   db: Db,
   townFile: string,
+  countiesDir = DEFAULT_COUNTIES_DIR,
 ): Promise<{ id: string; config: TownConfig }> {
-  const config = parseTownConfig(readFileSync(townFile, 'utf8'), townFile);
+  const config = withCountySources(
+    parseTownConfig(readFileSync(townFile, 'utf8'), townFile),
+    loadCountyRegistry(countiesDir),
+  );
   await syncTowns(db, [{ config, theme: defaultTheme, hasThemeFile: false }]);
   const [row] = await db.select({ id: towns.id }).from(towns).where(eq(towns.slug, config.slug));
   return { id: row!.id, config };
@@ -87,7 +96,7 @@ export async function sourcesStep(input: {
 }): Promise<{ detail: DiscoverDetail }> {
   const { deps, town } = input;
   const choice = picked(input.names);
-  const draft = await syncDraftTown(deps.db, choice.townFile);
+  const draft = await syncDraftTown(deps.db, choice.townFile, deps.countiesDir);
   const now = deps.now();
   const candidates: Array<{ kind: Finding['kind']; url: string; origin: Finding['origin'] }> =
     parseSourceFlags(input.flags).map((f) => ({ ...f, origin: 'flag' }));
@@ -133,7 +142,14 @@ export async function sourcesStep(input: {
 
   const findings: Finding[] = await stateSources(deps.fetcher, town, now);
   for (const c of candidates) findings.push(await verifyUrl(deps.fetcher, c, now));
-  return { detail: { mode, findings, outlets, flags: input.flags } };
+  // County data: the registry's data sets for this town, or a draft entry to confirm.
+  const county = await countyDiscovery(
+    deps.fetcher,
+    town,
+    loadCountyRegistry(deps.countiesDir ?? DEFAULT_COUNTIES_DIR),
+    now,
+  );
+  return { detail: { mode, findings, outlets, flags: input.flags, county } };
 }
 
 function adapterRequests(town: ResolvedTown, findings: Finding[]): string {
@@ -175,13 +191,22 @@ export async function adaptersStep(input: {
   const found = verifiedSources(discovery.findings);
   const keep = config.sources.filter((s) => s.kind === 'weather');
   const sources: TownSourceConfig[] = [...keep, ...found];
-  const text = withSources(readFileSync(choice.townFile, 'utf8'), sources, discovery.findings);
+  const text = withCountyKinds(
+    withSources(readFileSync(choice.townFile, 'utf8'), sources, discovery.findings),
+    discovery.county?.kinds ?? [],
+  );
   parseTownConfig(text, choice.townFile);
   writeFileSync(choice.townFile, text);
-  await syncDraftTown(deps.db, choice.townFile);
+  await syncDraftTown(deps.db, choice.townFile, deps.countiesDir);
 
   const dir = join(input.launchDir, town.slug);
   mkdirSync(dir, { recursive: true });
+  const files = [choice.townFile];
+  if (discovery.county?.draft) {
+    const draftFile = join(dir, 'county-draft.yaml');
+    writeFileSync(draftFile, discovery.county.draft);
+    files.push(draftFile);
+  }
   const requests = join(dir, 'adapter-requests.md');
   writeFileSync(requests, adapterRequests(town, discovery.findings));
   const count = (s: Finding['status']) => discovery.findings.filter((f) => f.status === s).length;
@@ -193,8 +218,23 @@ export async function adaptersStep(input: {
       blocked: count('blocked'),
       unreadable: count('unreadable'),
     },
-    files: [choice.townFile, requests],
+    files: [...files, requests],
   };
+}
+
+/** Sets the YAML's `county_sources:` line to the county data sets this town takes. */
+export function withCountyKinds(yaml: string, kinds: string[]): string {
+  const lines = yaml.split('\n').filter((l) => !l.startsWith('county_sources:'));
+  if (!kinds.length) return lines.join('\n');
+  const at = lines.findIndex((l) => l.startsWith('sources:'));
+  let end = at + 1;
+  while (
+    end < lines.length &&
+    (lines[end]!.startsWith(' ') || lines[end]!.startsWith('#') || lines[end] === '')
+  )
+    end++;
+  lines.splice(end, 0, `county_sources: [${kinds.join(', ')}]`);
+  return lines.join('\n');
 }
 
 /** Replaces the YAML's `sources:` block, keeping the rest of the file (and its comments). */

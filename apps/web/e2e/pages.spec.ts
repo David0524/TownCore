@@ -42,6 +42,23 @@ test.describe('About, Methods and Corrections (Rule 1)', () => {
     await expect(list.getByRole('link')).toHaveAttribute('href', '/news/test-article');
   });
 
+  test('Methods opens with the town’s own sources; shared policy pages stay out of search', async ({
+    page,
+  }) => {
+    for (const [host, name] of [
+      [harbor, 'Harbor Point'],
+      ['http://pinehollow.test', 'Pine Hollow'],
+    ] as const) {
+      const response = await page.goto(`${host}/methods`);
+      expect(response?.status()).toBe(200);
+      const own = page.getByTestId('methods-town-sources');
+      await expect(own.getByRole('heading')).toHaveText(`What we read for ${name}`);
+      await expect(page.getByRole('main')).toContainText('Fact-checking');
+      await page.goto(`${host}/privacy`);
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+    }
+  });
+
   test('only the About and Privacy pages mention the publisher', async ({ page }) => {
     for (const path of [
       '/',

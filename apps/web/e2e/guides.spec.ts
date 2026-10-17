@@ -22,6 +22,8 @@ test('links to other sites open in a new tab; our own links stay in this one', a
     route.fulfill({ status: 200, contentType: 'text/html', body: '<p>City page</p>' }),
   );
   await page.goto(`${boca}/guides/${guide}`);
+  // Hydration can re-render the page, so add the link only once it has settled.
+  await page.waitForLoadState('networkidle');
   // Any link to another site, even one written without a target (article text, say).
   await page.evaluate(() => {
     const link = document.createElement('a');

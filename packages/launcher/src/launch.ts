@@ -69,6 +69,8 @@ export type LaunchDeps = {
   shots?: Omit<ShotTarget, 'domain'>;
   launchDir?: string;
   townsDir?: string;
+  /** The county source registry (default: counties/ at the repo root). */
+  countiesDir?: string;
   /** docs/launch-friction.md (CLAUDE.md §10). */
   frictionLog?: string;
   now?: () => Date;
@@ -177,6 +179,7 @@ function sourceDeps(deps: LaunchDeps) {
     db: deps.db,
     fetcher,
     ...(deps.llm ? { llm: deps.llm } : {}),
+    ...(deps.countiesDir ? { countiesDir: deps.countiesDir } : {}),
     now: () => deps.now?.() ?? new Date(),
   };
 }

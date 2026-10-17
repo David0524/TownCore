@@ -7,6 +7,7 @@ import {
   type SourceProposal,
 } from '@towncore/adapters';
 import type { DiscoverResult } from '@towncore/prompts';
+import type { CountyDetail } from './county';
 import type { ResolvedTown } from './resolve';
 
 // Launch step 3 (CLAUDE.md §10; docs/plans/M7.md §3): find the town's sources. The model suggests
@@ -46,6 +47,8 @@ export type DiscoverDetail = {
   outlets: DiscoverResult['outlets'];
   /** The --source flags this run used; new flags on resume re-run discovery. */
   flags: string[];
+  /** County data: the registry's data sets for this town, or a draft entry (owner, 2026-10-17). */
+  county?: CountyDetail;
 };
 
 /** Parses `--source agenda=https://…` values. */

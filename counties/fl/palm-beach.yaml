@@ -1,0 +1,51 @@
+# Palm Beach County, FL: county data sets every town in the county can take with
+# `county_sources: [<kind>]` (owner, 2026-10-17). Verified by a person; drafts from launcher
+# discovery land in a launch's folder until confirmed here.
+state: FL
+county: Palm Beach
+sources:
+  # Property Appraiser sales: ArcGIS Server table PAO.PROPINFO (robots.txt answers 404: no
+  # rules). The last sale per parcel, at a real price and not confidential. Only the listed
+  # columns are requested: never owners' names or mailing addresses. Deeds appear about two
+  # weeks after a sale, so each run re-reads three weeks. Weekly roundup (Tier 1).
+  - kind: property_sales
+    platform: arcgis
+    url: https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Tables/MapServer/1
+    label: Palm Beach County Property Appraiser sales
+    verified: 2026-10-17
+    robots: maps.co.palm-beach.fl.us/robots.txt answers 404 (no rules)
+    roles:
+      date: SALE_DATE
+      id: SALEKEY
+      address: SITE_ADDR_STR
+      price: PRICE
+      deed: INSTRUMENT
+      use: PROPERTY_USE
+      subdivision: SUBDIV_NAME
+      parcel: PARCEL_NUMBER
+      value: TOTAL_MARKET
+    outFields:
+      [
+        SALEKEY,
+        PARCEL_NUMBER,
+        SITE_ADDR_STR,
+        SUBDIV_NAME,
+        SALE_DATE,
+        PRICE,
+        INSTRUMENT,
+        PROPERTY_USE,
+        TOTAL_MARKET,
+      ]
+    where: "PRICE >= 1000 AND (CONFID_FLG IS NULL OR CONFID_FLG <> 'Y')"
+    lagDays: 21
+    type: sale
+    # City limits by parcel number: Palm Beach County parcel numbers start with the
+    # municipality code (00 = unincorporated). MUNICIPALITY is the mailing city: two-thirds of
+    # 'BOCA RATON' sales are unincorporated, so it is never used. Only codes checked against
+    # real parcels are listed; a town without one gets a launch to-do.
+    cityLimits:
+      method: parcel_prefix
+      field: PARCEL_NUMBER
+      codes:
+        # 2026-10-17: 54 of 157 'BOCA RATON' mailing-city sales had 06, all in the city.
+        Boca Raton: '06'

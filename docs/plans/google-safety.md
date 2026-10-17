@@ -36,12 +36,53 @@ cohort rollout and a fast kill switch.
    - fix the cause;
    - file a reconsideration request where Google asks for one.
 
+## Near-duplicates: built
+
+**Measure.** The same template is built for two towns with different records. Both texts are
+normalized: lowercase, town and agency names masked, numbers become `#`, link targets and
+punctuation dropped. They're cut into 8-word shingles. The score is the shared shingles over
+the smaller text's shingles. `NEAR_DUP_MAX` is 0.3 and `NEAR_DUP_SHINGLE_WORDS` is 8, both in
+`packages/config/src/editorial.ts`. `packages/pipeline/test/near-duplicate.test.ts` checks every
+code-built template in CI: meetings, new businesses, new licenses, new places, inspections,
+permits, property sales and weather alerts.
+
+**Roundups lead with the town's own facts.** Before the rewrite, two towns shared 49–77% of
+each roundup; now every one is under 30%.
+
+| Roundup | Now leads with |
+| --- | --- |
+| Meetings | The count, the first meeting and the busiest day |
+| New businesses | The first names, the mix by type and the top ZIP |
+| New licenses | The trades |
+| New places | The first places and the mix |
+| Inspections | Closures and complaints, or the most-cited place |
+| Permits | The largest permit and the leading type |
+| Sales | The top address and price, the median and the mix |
+
+**Comparisons with the town's own past weeks.** Each roundup compares itself with the town's
+own past: "up from 12 the week before", and "the most in 5 weeks" once there are 3 or more
+past weeks.
+- `packages/pipeline/src/roundup-weeks.ts` holds the record selection the finder uses, so the
+  past weeks count exactly what the roundup counts.
+- Weeks before the town's first record of that kind are skipped, so a week with no data never
+  reads as zero.
+- Caveats are short ("Filings aren't openings.", "Addresses can be outside city limits."), and
+  nothing is added to fill space (Rule 7).
+
+**Site copy.**
+- Methods opens with "What we read for {town}": the town's own sources and its story count.
+- Privacy is the same policy on every site by design, so it's `noindex, follow`.
+- Corrections is `noindex, follow` and left out of the sitemap until it lists a correction.
+
+**Audited and left shared by design.**
+- The guide prompt already writes only from the town's official pages.
+- About lists the town's sources by section.
+- House ads, the newsletter frame and empty states don't use the article template.
+- The Methods process steps and the guide note are the same everywhere on purpose: they
+  describe one process.
+
 ## Still to do
 
-- **Near-duplicates across towns.** Roundups and guides share templated sentences. Audit the
-  templates and keep the fixed text to a minimum: each item should lead with the town's own
-  specifics (names, addresses, figures). Add a CI check that compares two towns' roundups for
-  shared text.
 - **Search Console per domain.** Verification is a manual launch to-do today. Automate it when a
   Google API credential exists (the owner's call).
 - **Own the audience.** The newsletter is the moat: push sign-ups (above the fold on phones

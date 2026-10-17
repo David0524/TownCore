@@ -305,6 +305,7 @@ export function manualTodos(done: Done, domain: string): string[] {
     todos.push(
       `Readiness is ${done.readiness.itemsPerDay} a day, short of the ${done.readiness.minimum} target (Rule 7): find more official sources the bot may read, or build the adapter requests, and add them with --source kind=url. Never pad to close the gap.`,
     );
+  for (const t of done.sources?.county?.todos ?? []) todos.push(t);
   for (const a of done.provision?.approvals ?? []) todos.push(`${a.what}: \`${a.command}\``);
   todos.push(
     'Trademark: search the picked name at https://tmsearch.uspto.gov/ (D-M7-4).',
