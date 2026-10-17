@@ -282,6 +282,9 @@ describe('traffic and self-serve revenue', () => {
     ).toBe(2);
     const first = new Date('2026-10-01T14:00:00Z');
     sent.length = 0;
+    // Unpaid owners get the email only once an admin gave the town's standing approval (Rule 10).
+    expect(await sendMonthlyReports(deps({ now: () => first }), first)).toEqual({ sent: 0 });
+    await db.update(towns).set({ businessMailApprovedAt: first }).where(eq(towns.id, townId));
     expect(await sendMonthlyReports(deps({ now: () => first }), first)).toEqual({ sent: 2 });
     const toAce = sent.find((r) => r.to[0] === 'owner@ace.test')!;
     const text = rawText(toAce);
@@ -296,6 +299,7 @@ describe('traffic and self-serve revenue', () => {
     expect(await sendMonthlyReports(deps({ now: () => first }), first)).toEqual({ sent: 0 });
     expect(await db.select().from(proofReports)).toHaveLength(2);
     await db.delete(leads);
+    await db.update(towns).set({ businessMailApprovedAt: null }).where(eq(towns.id, townId));
   });
 
   it('offers only open weeks and months at the town’s prices, behind the product switch', async () => {

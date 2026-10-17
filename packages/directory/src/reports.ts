@@ -339,7 +339,7 @@ export function pitchLines(input: {
 
 /**
  * On the first days of a month, emails last month's report to every claimed business (paying or
- * not) that hasn't opted out. Once per business and month (proof_reports); the owner's claim
+ * not, once the town's standing approval for business mail is on) that hasn't opted out. Once per business and month (proof_reports); the owner's claim
  * email only; never to a suppressed or unsubscribed address. Reports carry one-click
  * List-Unsubscribe; without MAIL_TOKEN_SECRET (no unsubscribe link) only paying businesses get
  * one, as before.
@@ -389,7 +389,9 @@ export async function sendMonthlyReports(
     const uplifts = new Map<string, FeaturedUplift>();
     for (const business of claimed) {
       const paying = await paidInMonth(db, business.id, month);
-      if (!paying && !deps.tokenSecret) continue;
+      // Unpaid owners get the report by email only where an admin gave the town's standing
+      // approval for business mail (Rule 10); paying owners get theirs as before (D-M6-10).
+      if (!paying && (!deps.tokenSecret || !town.businessMailApprovedAt)) continue;
       const featured = await paidInMonth(db, business.id, month, 'sponsored_slot');
       const totals = await proofReport(db, {
         businessId: business.id,
