@@ -22,7 +22,7 @@ import {
 } from './discover';
 import { resemblesOutlet } from './names';
 import type { NamesDetail } from './names-step';
-import { measureReadiness, ReadinessFailed, type ReadinessDetail } from './readiness';
+import { measureReadiness, type ReadinessDetail } from './readiness';
 import type { ResolvedTown } from './resolve';
 
 // Launch steps 3–5 (CLAUDE.md §10): discover sources, write the verified ones into the town's
@@ -234,8 +234,6 @@ export async function readinessStep(input: {
   deps: SourceStepDeps;
   names: NamesDetail;
   launchStartedAt: Date;
-  /** Dry-run preview: a failing score is recorded and the run goes on (it can't go live). */
-  preview?: boolean;
 }): Promise<{ detail: ReadinessDetail }> {
   const { deps } = input;
   const choice = picked(input.names);
@@ -256,12 +254,7 @@ export async function readinessStep(input: {
     ...(llm ? { llm } : {}),
     now: deps.now(),
   });
-  if (!detail.passed && !input.preview)
-    throw Object.assign(
-      new ReadinessFailed(
-        `${detail.itemsPerDay} real items a day, below the ${detail.minimum} a ${draft.config.tier} town needs (Rule 7). Add sources with --source kind=url and --resume.`,
-      ),
-      { detail },
-    );
+  // Rule 7 is a target, not a gate (owner, 2026-10-17): a town short of it still launches, and
+  // the report turns the gap into a list of sources to find.
   return { detail };
 }

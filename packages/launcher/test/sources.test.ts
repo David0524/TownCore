@@ -360,7 +360,7 @@ describe('steps 3–5 in a launch', () => {
   });
   afterAll(async () => drop());
 
-  it('discovers, verifies and stops when readiness is short (Rule 7)', async () => {
+  it('discovers, verifies and reports a readiness gap without stopping (Rule 7)', async () => {
     await runLaunch(deps(), { town });
     const run = await runLaunch(deps(), { town, resume: true, pick: 1 });
     const step = (s: string) => run.steps.find((x) => x.step === s)!;
@@ -396,13 +396,10 @@ describe('steps 3–5 in a launch', () => {
     );
 
     // 36 of 40 releases are about the town (every tenth is elsewhere), plus 3 weekly meeting
-    // roundups: 39 items in 30 days, 1.3 a day, short of 3.
-    expect(run.launch.status).toBe('failed');
-    expect(run.launch.stoppedReason).toMatch(
-      /1\.3 real items a day, below the 3 a small town needs \(Rule 7\)/,
-    );
+    // roundups: 39 items in 30 days, 1.3 a day, short of the target of 3. The launch goes on.
     const readiness = step('readiness');
-    expect(readiness.status).toBe('failed');
+    expect(readiness.status).toBe('done');
+    expect(step('report').status).toBe('done');
     const measured = readiness.detail as ReadinessDetail;
     expect(measured).toMatchObject({
       itemsPerDay: 1.3,
@@ -416,13 +413,14 @@ describe('steps 3–5 in a launch', () => {
     ]);
     const [scored] = await db.select().from(towns).where(eq(towns.slug, 'harbor-city'));
     expect(scored!.readinessScore).toBe(1.3);
-    // The stopped launch still has a report: why it stopped, readiness by source, the to-dos.
-    const partial = readFileSync(join(launchDir, 'harbor-city', 'launch-report.md'), 'utf8');
-    expect(partial).toContain('**The launch stopped:** 5. Readiness: 1.3 real items a day');
-    expect(partial).toContain('| city_news (civicplus) | ok |');
-    expect(partial).toContain('## Theme\n\nNot run yet.');
-    expect(partial).toMatch(/- \[ \] Readiness is 1\.3 a day, below 3 \(Rule 7\)/);
-    expect(partial).toContain(
+    // The report shows the gap as a target, readiness by source, and the sources to find.
+    const report = readFileSync(join(launchDir, 'harbor-city', 'launch-report.md'), 'utf8');
+    expect(report).toContain(
+      '| Readiness (Rule 7 target) | Below target | 1.3 real items a day; target 3 (classified). |',
+    );
+    expect(report).toContain('| city_news (civicplus) | ok |');
+    expect(report).toMatch(/- \[ \] Readiness is 1\.3 a day, short of the 3 target \(Rule 7\)/);
+    expect(report).toContain(
       "can't be read (robots.txt, or the site refused us): blocked.example.gov, cdn-denied.example.gov",
     );
     // Records were ingested, but nothing was written: readiness only counts.
@@ -462,7 +460,7 @@ describe('steps 3–5 in a launch', () => {
     expect(report).toContain('**Not passing yet:**');
     expect(report).toContain('| Every page type renders | Not run |');
     expect(report).toContain(
-      '| Readiness (Rule 7) | Pass | 3.1 real items a day; 3 needed (classified). |',
+      '| Readiness (Rule 7 target) | Pass | 3.1 real items a day; target 3 (classified). |',
     );
     expect(report).toMatch(/Family \*\*community\*\*, brand color #[0-9A-F]{6}, motif oak/);
     expect(report).toContain(

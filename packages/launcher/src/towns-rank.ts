@@ -191,7 +191,7 @@ score = ${w.business_value} business value + ${w.households_x_income} households
 - **Households × income:** ACS 2020–2024 households times median household income.
 - **Growth:** Vintage 2025 population estimate against the 2020 base.
 - **Cluster fit:** 1 next to a town we run, falling to 0 at ${rankingFilters.clusterRadiusMiles} miles.
-- **Source readiness and coverage gap are neutral (0.5) for every town for now,** so they don't change the order: source readiness until the launcher's light check runs on a shortlist (M7 PR D), news coverage until a Medill data license (D-M7-3). Rule 7 still applies at launch: a town that can't reach its daily items never goes live.
+- **Source readiness and coverage gap are neutral (0.5) for every town for now,** so they don't change the order: source readiness until the launcher's light check runs on a shortlist (M7 PR D), news coverage until a Medill data license (D-M7-3). Readiness is measured at launch against the Rule 7 target, and the gap becomes the town's source to-do list.
 - **Search demand** is skipped (no permitted data source, §10a).
 
 ${CENSUS_ATTRIBUTION}

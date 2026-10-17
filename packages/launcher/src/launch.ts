@@ -52,11 +52,6 @@ export type LaunchOptions = {
   pick?: number;
   /** Step 3: `kind=url` sources to verify, added to (or instead of) discovery. */
   sources?: string[];
-  /**
-   * Dry runs only: when readiness fails, keep going to show the theme and report. The report's
-   * Rule 7 check still fails, so the town can't go live.
-   */
-  preview?: boolean;
   /** Re-run this step and every step after it (e.g. `theme` to retake screenshots). */
   redo?: LaunchStep;
 };
@@ -167,12 +162,10 @@ const STEPS: Partial<Record<LaunchStep, StepRun>> = {
     });
   },
   async readiness({ deps, launch, done }) {
-    const opts = launch.options as LaunchOptions;
     return readinessStep({
       deps: sourceDeps(deps),
       names: done.names as NamesDetail,
       launchStartedAt: launch.createdAt,
-      preview: Boolean(opts.preview) && launch.dryRun,
     });
   },
 };

@@ -101,7 +101,7 @@ export {
   type DiscoverDetail,
   type Finding,
 } from './discover';
-export { measureReadiness, ReadinessFailed, type ReadinessDetail } from './readiness';
+export { measureReadiness, type ReadinessDetail } from './readiness';
 export { launchLlmTown, syncDraftTown, withSources } from './sources-step';
 export { adjustContrast, colorDistance, hexToOklch, oklchToHex, paletteFromAccent } from './color';
 export {

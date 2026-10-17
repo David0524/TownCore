@@ -1,4 +1,4 @@
-import { findTbdFields, readinessMinimum } from '@towncore/config';
+import { findTbdFields } from '@towncore/config';
 import {
   and,
   desc,
@@ -105,10 +105,8 @@ export async function goLiveBlockers(db: Db, launchId: string): Promise<string[]
   if (town.status !== 'draft') blockers.push(`The town is already ${town.status}.`);
   const tbd = findTbdFields(town.config);
   if (tbd.length) blockers.push(`The town config still has TBD fields: ${tbd.join(', ')}.`);
-  if ((town.readinessScore ?? 0) < readinessMinimum[town.tier])
-    blockers.push(
-      `Readiness ${town.readinessScore ?? 0} a day is below ${readinessMinimum[town.tier]} (Rule 7).`,
-    );
+  // Rule 7 is a target (owner, 2026-10-17): readiness must have been measured, not met.
+  if (town.readinessScore === null) blockers.push('Readiness has not been measured.');
   const [mail] = await db.select().from(mailDomains).where(eq(mailDomains.name, town.domain));
   if (mail?.status !== 'live')
     blockers.push(

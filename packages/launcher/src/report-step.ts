@@ -25,7 +25,13 @@ export const DEFAULT_FRICTION_LOG = fileURLToPath(
   new URL('../../../docs/launch-friction.md', import.meta.url),
 );
 
-export type Check = { name: string; status: 'pass' | 'fail' | 'not run'; detail: string };
+export type Check = {
+  name: string;
+  /** `below target` is shown but doesn't fail the report: Rule 7 is a target. */
+  status: 'pass' | 'fail' | 'not run' | 'below target';
+  detail: string;
+};
+const passes = (c: Check) => c.status === 'pass' || c.status === 'below target';
 
 export type ReportDetail = {
   passed: boolean;
@@ -63,11 +69,11 @@ export function launchChecks(done: Done, config: unknown): Check[] {
   return [
     readiness
       ? {
-          name: 'Readiness (Rule 7)',
-          status: readiness.passed ? 'pass' : 'fail',
-          detail: `${readiness.itemsPerDay} real items a day; ${readiness.minimum} needed (${readiness.mode}).`,
+          name: 'Readiness (Rule 7 target)',
+          status: readiness.passed ? 'pass' : 'below target',
+          detail: `${readiness.itemsPerDay} real items a day; target ${readiness.minimum} (${readiness.mode}).`,
         }
-      : notRun('Readiness (Rule 7)', 'readiness'),
+      : notRun('Readiness (Rule 7 target)', 'readiness'),
     {
       name: 'No TBD fields in the town config',
       status: tbd.length ? 'fail' : 'pass',
@@ -220,7 +226,7 @@ export function launchReport(
   },
 ): string {
   const { resolve: town, names } = done;
-  const passed = input.checks.every((c) => c.status === 'pass');
+  const passed = input.checks.every(passes);
   const purchase = names.purchase
     ? 'orderId' in names.purchase
       ? `order ${names.purchase.orderId}, ${names.purchase.status}${names.purchase.price ? ` at $${names.purchase.price}` : ''}`
@@ -249,7 +255,7 @@ ${headline} The town is a draft (not indexed). An admin approves it in Admin →
 
 | Check | Result | Detail |
 | --- | --- | --- |
-${input.checks.map((c) => `| ${c.name} | ${c.status === 'pass' ? 'Pass' : c.status === 'fail' ? '**Fail**' : 'Not run'} | ${cell(c.detail)} |`).join('\n')}
+${input.checks.map((c) => `| ${c.name} | ${c.status === 'pass' ? 'Pass' : c.status === 'fail' ? '**Fail**' : c.status === 'below target' ? 'Below target' : 'Not run'} | ${cell(c.detail)} |`).join('\n')}
 
 ## The town
 
@@ -297,7 +303,7 @@ export function manualTodos(done: Done, domain: string): string[] {
   const todos: string[] = [];
   if (done.readiness && !done.readiness.passed)
     todos.push(
-      `Readiness is ${done.readiness.itemsPerDay} a day, below ${done.readiness.minimum} (Rule 7): find more official sources the bot may read, or build the adapter requests, then resume with --source kind=url.`,
+      `Readiness is ${done.readiness.itemsPerDay} a day, short of the ${done.readiness.minimum} target (Rule 7): find more official sources the bot may read, or build the adapter requests, and add them with --source kind=url. Never pad to close the gap.`,
     );
   for (const a of done.provision?.approvals ?? []) todos.push(`${a.what}: \`${a.command}\``);
   todos.push(
@@ -409,7 +415,7 @@ export async function reportStep(input: {
   );
   return {
     detail: {
-      passed: !input.stopped && checks.every((c) => c.status === 'pass'),
+      passed: !input.stopped && checks.every(passes),
       checks,
       manual,
       report: reportPath,
