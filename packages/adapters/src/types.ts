@@ -23,6 +23,12 @@ export type RawRecord = {
   text?: string | null;
   url?: string | null;
   occurredAt?: Date | null;
+  /**
+   * The item has no date of its own (a project on a city's development map): ingest dates it
+   * when it's first stored and keeps that date when its content changes. Items stored on a
+   * source's first successful run stay undated, since they were already there, not news.
+   */
+  datedOnSight?: boolean;
   raw: unknown;
 };
 
