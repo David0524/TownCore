@@ -9,6 +9,7 @@ import {
 } from '@towncore/config';
 import { aiUsage, and, eq, gte, mailDomains, sql, towns, type Db } from '@towncore/db';
 import type { DiscoverDetail } from './discover';
+import type { ArtDetail } from './identity-step';
 import { mailTodos, type MailDetail } from './mail-step';
 import type { NamesDetail } from './names-step';
 import type { ReadinessDetail } from './readiness';
@@ -237,9 +238,23 @@ ${
         .join(', ')}. Compare with their sites before approving.\n`
     : ''
 }
+### Logo art
+
+${theme.art ? artSection(theme.art, dir) : 'Not written yet: re-run step 6b (--redo theme).'}
+
 ### Identity assets
 
 ${assets.map((s) => `- ${s.name}: ![${s.name}](${md(s.path, dir)})`).join('\n') || '- Drawn when screenshots run.'}`;
+}
+
+function artSection(art: ArtDetail, dir: string): string {
+  if (art.imported)
+    return 'Imported: the homepage art, icons, favicon, avatar, share, cover and email header are cut from it (`apps/web/public/brand/`). The masthead wordmark stays set in code.';
+  return `Not imported yet, so the site shows the motif and code-drawn icons. Make the art in ChatGPT from one of the prompts in [logo-prompt.md](${md(art.promptFile, dir)}), then run \`pnpm identity import <slug> <image> --approved-by you@towncore.net\`. The first prompt:
+
+\`\`\`text
+${art.prompts[0]}
+\`\`\``;
 }
 
 function provisionSection(provision: ProvisionDetail): string {
@@ -373,11 +388,15 @@ export function manualTodos(done: Done, domain: string): string[] {
   todos.push(
     'Trademark: search the picked name at https://tmsearch.uspto.gov/ (D-M7-4).',
     'Social handles: claim the name on Facebook, Instagram and X by hand (D-M7-5); upload the identity assets.',
-    `Facebook page for ${domain}, with the cover and avatar from identity/.`,
+    `Facebook page for ${domain}, with the cover and avatar from identity/, made in the cohort's batch; then add its address and numeric page id as \`facebook:\` in the town YAML, and its page token to META_PAGE_TOKENS if staff will press Post (docs/plans/facebook.md).`,
     `Google News Publisher Center and Search Console for ${domain} (D-M4-6).`,
   );
   if (done.theme)
     todos.push('Pick the masthead option above (the theme uses the first unless changed).');
+  if (done.theme?.art && !done.theme.art.imported)
+    todos.push(
+      `Logo art: make it in ChatGPT from ${relative(process.cwd(), done.theme.art.promptFile)} and run \`pnpm identity import ${done.resolve.slug} <image> --approved-by <your email>\`.`,
+    );
   if (!done.seed || done.seed.guides.topics === 0)
     todos.push(
       'Map the evergreen guide topics to official pages (guides: in the town YAML), then review the first batch (D-M4-2).',
@@ -440,7 +459,7 @@ export async function reportStep(input: {
 }): Promise<{ detail: ReportDetail; files: string[] }> {
   if (!input.done.resolve || !input.done.names?.picked)
     throw new Error('A report needs steps 1 and 2.');
-  const done = input.done as Done;
+  let done = input.done as Done;
   const config = parseTownConfig(readFileSync(done.names.picked!.townFile, 'utf8'));
   const [town] = await input.db
     .select({ id: towns.id })
@@ -454,6 +473,15 @@ export async function reportStep(input: {
       .where(and(eq(aiUsage.townId, town.id), gte(aiUsage.createdAt, input.launchStartedAt)));
     aiCostUsd = Number(cost?.usd ?? 0);
   }
+  // Logo art imported since step 6b ran (pnpm identity import writes the YAML).
+  if (done.theme?.art)
+    done = {
+      ...done,
+      theme: {
+        ...done.theme,
+        art: { ...done.theme.art, imported: Boolean(config.hero_art && config.app_icon) },
+      },
+    };
   const [mail] = await input.db
     .select({
       status: mailDomains.status,

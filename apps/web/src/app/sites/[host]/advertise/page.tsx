@@ -3,11 +3,12 @@ import Link from 'next/link';
 import {
   directoryCategory,
   featuredRanks,
+  productPrice,
   townContactEmail,
   type FeaturedRank,
   type TownConfig,
 } from '@towncore/config';
-import { openFeaturedRanks } from '@towncore/directory';
+import { openFeaturedRanks, openWindows } from '@towncore/directory';
 import { db } from '@/lib/db';
 import { directoryPath } from '@/lib/directory';
 import { StandardPage } from '@/lib/pages';
@@ -49,6 +50,27 @@ export default async function AdvertisePage({
   const category = directoryCategory((await searchParams).category ?? '');
   const open = category ? await openFeaturedRanks(db(), town.id, category.slug) : null;
   const trial = pricing.free_trial_days;
+  // Self-serve bookings, shown only when switched on and priced for this town (D-M6-6).
+  const prices = pricing as Record<string, unknown>;
+  const newsletterUsd = productPrice(prices, 'newsletter');
+  const categoryUsd = productPrice(prices, 'exclusive');
+  const newsletterWeeks = newsletterUsd
+    ? await openWindows(db(), {
+        townId: town.id,
+        timezone: town.timezone,
+        product: 'newsletter',
+        category: null,
+      })
+    : [];
+  const categoryMonths =
+    categoryUsd && category
+      ? await openWindows(db(), {
+          townId: town.id,
+          timezone: town.timezone,
+          product: 'exclusive',
+          category: category.slug,
+        })
+      : [];
 
   return (
     <StandardPage town={town} shortOnPhones>
@@ -105,7 +127,10 @@ export default async function AdvertisePage({
           Claim the listing. It&rsquo;s free: we email you a link to confirm, and an editor checks
           the first claim of every listing.
         </li>
-        <li>On your owner page, pick an open spot and check out with Stripe.</li>
+        <li>
+          On your <Link href="/owner">owner page</Link>, pick an open spot and check out with
+          Stripe. Already claimed? <Link href="/owner">Sign in</Link> and go straight there.
+        </li>
         <li>
           Write a short card about your business. An editor checks it, and it goes up labeled
           &ldquo;Sponsored.&rdquo;
@@ -119,10 +144,46 @@ export default async function AdvertisePage({
         and recent updates first. Our news coverage is never for sale.
       </p>
 
+      {newsletterUsd || categoryUsd ? (
+        <>
+          <h2>Book a week or a month</h2>
+          <ul className={styles.steps} data-testid="advertise-bookings">
+            {newsletterUsd ? (
+              <li>
+                <strong>Morning email sponsor</strong>, ${newsletterUsd} a week: your card at the
+                top of every issue for one week, labeled Sponsored.{' '}
+                {newsletterWeeks.length
+                  ? `Open: ${newsletterWeeks
+                      .slice(0, 4)
+                      .map((w) => w.label.replace('Week of ', ''))
+                      .join(', ')}${newsletterWeeks.length > 4 ? ' and later' : ''}.`
+                  : 'Every upcoming week is booked.'}
+              </li>
+            ) : null}
+            {categoryUsd ? (
+              <li>
+                <strong>Category sponsor</strong>, ${categoryUsd} a month: your card in the header
+                of {category ? category.name.toLowerCase() : 'your category'} for one month.{' '}
+                {category
+                  ? categoryMonths.length
+                    ? `Open: ${categoryMonths.map((w) => w.label).join(', ')}.`
+                    : 'Every upcoming month is booked.'
+                  : ''}
+              </li>
+            ) : null}
+          </ul>
+          <p className="meta">
+            Paid once through Stripe from your owner page; an editor checks your card before it
+            runs.
+          </p>
+        </>
+      ) : null}
+
       <h2>Also available</h2>
       <p>
-        An enhanced listing (${pricing.enhanced_usd} a month) marks your listing in its category.
-        For a sponsorship on the homepage or in the morning email, write to{' '}
+        An enhanced listing (${pricing.enhanced_usd} a month
+        {trial > 0 ? `, the first ${trial} days free` : ''}) marks your listing in its category. For
+        a sponsorship on the homepage or in the morning email, write to{' '}
         <a href={`mailto:${townContactEmail(config)}?subject=${encodeURIComponent('Advertising')}`}>
           {townContactEmail(config)}
         </a>

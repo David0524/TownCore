@@ -185,6 +185,8 @@ export const homeModules = [
   'photo-of-the-day',
   // The newest approved reader photo, full width with its credit (M9 uploads).
   'photo-of-the-week',
+  // A staff-approved opinion question about a local topic; readers vote once (owner, 2026-10-17).
+  'quick-poll',
   'directory-featured',
   'directory-categories',
   'find-a-pro',

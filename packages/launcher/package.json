@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "towns:rank": "tsx scripts/rank.ts",
-    "launch": "tsx scripts/launch.ts"
+    "launch": "tsx scripts/launch.ts",
+    "towns:households": "tsx scripts/households.ts"
   },
   "dependencies": {
     "@towncore/adapters": "workspace:*",
@@ -21,6 +22,7 @@
     "@towncore/db": "workspace:*",
     "@towncore/directory": "workspace:*",
     "@towncore/mail": "workspace:*",
+    "@towncore/photos": "workspace:*",
     "@towncore/pipeline": "workspace:*",
     "@towncore/prompts": "workspace:*",
     "fflate": "^0.8.3",

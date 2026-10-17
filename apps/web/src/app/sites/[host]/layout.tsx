@@ -6,6 +6,7 @@ import { SlotBeacon } from '@/components/SlotBeacon';
 import { externalLinksScript } from '@/components/ExternalLinks';
 import { AlertBar } from '@/components/weather/AlertBar';
 import { followBootScript, followCss } from '@/components/phone/follow';
+import { offerBootScript } from '@/components/SecondArticleOffer';
 import { PhoneWordmark } from '@/components/phone/PhoneWordmark';
 import { YourTown } from '@/components/phone/YourTown';
 import { newsletterOpen } from '@/lib/newsletter';
@@ -74,6 +75,7 @@ export default async function TownLayout({ children, params }: Props) {
       {/* Followed sections ("Your Boca") are applied before first paint: no layout shift. */}
       <script dangerouslySetInnerHTML={{ __html: followBootScript }} />
       <script dangerouslySetInnerHTML={{ __html: externalLinksScript }} />
+      <script dangerouslySetInnerHTML={{ __html: offerBootScript }} />
       {/* Family-specific styling keys on this attribute (docs/plans/M4b.md revision 6). */}
       <div data-family={theme.family} className="family">
         {/* Phones get iOS chrome instead of the town's header (docs/plans/M4b.md revision 5). */}

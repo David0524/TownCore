@@ -1,9 +1,11 @@
 import { eq, towns } from '@towncore/db';
 import {
+  followupApprovals,
   listClaims,
   listPlacements,
   pendingBusinessRequests,
   pendingNameChanges,
+  pendingFollowups,
   pendingOutreach,
   pendingSponsorCards,
 } from '@towncore/directory';
@@ -16,6 +18,8 @@ import {
   decideClaimAction,
   decideNameAction,
   decideRequestAction,
+  followupAction,
+  followupApprovalAction,
   sendOutreachAction,
 } from './actions';
 
@@ -32,7 +36,7 @@ export default async function DirectoryAdmin({
 }: {
   searchParams: Promise<{ done?: string; error?: string; confirm?: string }>;
 }) {
-  await requireStaff();
+  const me = await requireStaff();
   const { done, error, confirm } = await searchParams;
   const [waiting, decided, names, paid] = await Promise.all([
     listClaims(db(), { statuses: ['pending'] }),
@@ -40,10 +44,12 @@ export default async function DirectoryAdmin({
     pendingNameChanges(db()),
     listPlacements(db()),
   ]);
-  const [cards, outreach, requests] = await Promise.all([
+  const [cards, outreach, requests, followups, approvals] = await Promise.all([
     pendingSponsorCards(db()),
     pendingOutreach(db()),
     pendingBusinessRequests(db()),
+    pendingFollowups(db()),
+    followupApprovals(db()),
   ]);
   const townRows = names.length
     ? await Promise.all(
@@ -317,6 +323,77 @@ export default async function DirectoryAdmin({
               </button>
               <button type="submit" name="decision" value="dismiss" className={styles.secondary}>
                 Dismiss
+              </button>
+            </div>
+          </form>
+        ))}
+      </div>
+
+      <h2 id="followups">Owner follow-ups ({followups.length})</h2>
+      <p className={styles.muted}>
+        Short emails to claimed owners: a free trial ending in 3 days, a competitor taking a
+        featured spot in their category, a story naming the business, another business nearby in
+        their category claiming its listing. At most one a week per business besides the trial
+        reminder, each with a one-click unsubscribe, never to a suppressed address. They send by
+        themselves only in towns where an admin has turned on the standing approval below (Rule 10);
+        everywhere else they wait here until you press Send.
+      </p>
+      <table className={styles.table} data-testid="followup-approvals">
+        <thead>
+          <tr>
+            <th>Town</th>
+            <th>Automatic follow-ups</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {approvals.map((t) => (
+            <tr key={t.id}>
+              <td>{t.name}</td>
+              <td>{t.approvedAt ? `On since ${when(t.approvedAt)}` : 'Off: staff press Send'}</td>
+              <td>
+                {me.role === 'admin' ? (
+                  <form action={followupApprovalAction}>
+                    <input type="hidden" name="townId" value={t.id} />
+                    <input type="hidden" name="on" value={t.approvedAt ? 'no' : 'yes'} />
+                    <button
+                      type="submit"
+                      className={t.approvedAt ? styles.secondary : styles.button}
+                      aria-label={`${t.approvedAt ? 'Turn off' : 'Turn on'} automatic follow-ups in ${t.name}`}
+                    >
+                      {t.approvedAt ? 'Turn off' : 'Turn on'}
+                    </button>
+                  </form>
+                ) : (
+                  <span className={styles.muted}>Admins only</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {followups.length === 0 ? <p>No follow-ups are waiting.</p> : null}
+      <div data-testid="followup-drafts">
+        {followups.map((f) => (
+          <form key={f.id} action={followupAction} className={styles.form}>
+            <input type="hidden" name="followupId" value={f.id} />
+            <p>
+              <strong>{f.subject}</strong> · {f.town.name} · {f.business.name} · to {f.toEmail}
+            </p>
+            {f.lines.map((line, i) => (
+              <p key={i} className={styles.muted}>
+                {line}
+              </p>
+            ))}
+            <p className={styles.muted}>
+              {f.link.label}: {f.link.href}
+            </p>
+            <div className={styles.actions}>
+              <button type="submit" name="decision" value="send" className={styles.button}>
+                Send
+              </button>
+              <button type="submit" name="decision" value="skip" className={styles.secondary}>
+                Skip
               </button>
             </div>
           </form>

@@ -18,6 +18,8 @@ export function directoryMailDeps(): DirectoryMailDeps | null {
     transport:
       mode === 'log' ? logTransport() : sesTransport({ region: env.AWS_REGION ?? 'us-east-1' }),
     configurationSet: env.SES_CONFIG_SET_CONVERSATIONAL ?? 'log',
+    tokenSecret: env.MAIL_TOKEN_SECRET,
+    postalAddress: env.MAIL_POSTAL_ADDRESS ?? null,
   };
 }
 

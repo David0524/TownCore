@@ -14,9 +14,11 @@ export const queues = {
   directorySeed: 'directory.seed',
   directoryGeocode: 'directory.geocode',
   proofReports: 'directory.proof-reports',
+  followups: 'directory.followups',
   basemaps: 'maps.basemaps',
   maps: 'maps.draw',
   photos: 'photos.stock',
+  facebook: 'social.facebook',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -40,13 +42,17 @@ export const schedules = [
   { queue: queues.directorySeed, cron: '20 9 * * *' },
   // Every 15 minutes, geocode pending listings at the Census Geocoder's polite pace (M6).
   { queue: queues.directoryGeocode, cron: '*/15 * * * *' },
-  // Hourly, email last month's proof report to paying businesses on the 1st–3rd (D-M6-10);
+  // Hourly, email last month's proof report to claimed businesses on the 1st–3rd (D-M6-10);
   // once per business and month.
   { queue: queues.proofReports, cron: '7 * * * *' },
+  // Hourly, draft owner follow-ups and send them where a town's standing approval is on.
+  { queue: queues.followups, cron: '37 * * * *' },
   // Monthly (the 3rd, 07:40 UTC), rebuild town base maps from Geofabrik's state extracts (M4 E).
   { queue: queues.basemaps, cron: '40 7 3 * *' },
   // Every 30 minutes, give recent development and public-safety stories block-level maps.
   { queue: queues.maps, cron: '*/30 * * * *' },
   // Every 30 minutes (offset from maps), stock photos for new or rewritten guides (§11c).
   { queue: queues.photos, cron: '15,45 * * * *' },
+  // Hourly, each live town's Facebook posts for the day; staff post them from Admin → Facebook.
+  { queue: queues.facebook, cron: '25 * * * *' },
 ] as const;

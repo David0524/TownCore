@@ -36,7 +36,7 @@ export default async function NewsletterPage({
         what’s coming up, and links to every record we wrote from. It’s free.
       </p>
       {open ? (
-        <NewsletterForm source="/newsletter" />
+        <NewsletterForm source="/newsletter" placement="newsletter-page" />
       ) : (
         <p>Our free daily newsletter is launching soon.</p>
       )}

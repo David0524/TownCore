@@ -1,0 +1,23 @@
+/* The email offer after a reader's second story: a tinted panel, set apart from the story. */
+.offer {
+  margin: 2rem 0;
+  padding: 1.25rem 1.25rem 1.5rem;
+  border-radius: var(--radius-tile);
+  background: var(--tint);
+  color: var(--ink);
+}
+
+.offer[hidden] {
+  display: none;
+}
+
+.offer h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.375rem;
+  line-height: 1.15;
+}
+
+.offer p {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+}

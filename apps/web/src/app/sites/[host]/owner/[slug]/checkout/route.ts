@@ -41,6 +41,7 @@ export async function POST(request: Request, { params }: Ctx) {
     slug,
     product,
     rank: rank as FeaturedRank | null,
+    period: String(form.get('period') ?? '') || null,
     origin: `${proto === 'http' ? 'http' : 'https'}://${townHost}`,
   });
   if (result.status === 'redirect')

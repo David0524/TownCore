@@ -112,9 +112,11 @@ describe('outreach drafts', () => {
           .returning()
       )[0]!.id;
     ids.cafe = await listing('harbor-cafe', 'Harbor Cafe', { sourceRecordId: ids.cafeRecord });
-    ids.bakery = await listing('dock-bakery', 'Dock Bakery LLC', {
+    ids.bakery = await listing('dock-bakery', 'Dock Bakery LLC');
+    // A claimed listing's owner hears about stories through owner follow-ups, not outreach.
+    ids.pizza = await listing('pier-pizza', 'Pier Pizza', {
       claimedAt: now,
-      claimedByEmail: 'owner@dockbakery.test',
+      claimedByEmail: 'owner@pierpizza.test',
     });
     // Two listings share a name: a mention can't say which, so neither gets a draft.
     ids.twinA = await listing('twin-grill', 'Twin Grill');
@@ -152,9 +154,11 @@ describe('outreach drafts', () => {
       )[0]!.id;
     const bakery = await entity('Dock Bakery', 'dock bakery');
     const twin = await entity('Twin Grill', 'twin grill');
+    const pizza = await entity('Pier Pizza', 'pier pizza');
     await db.insert(articleEntities).values([
       { articleId: ids.council!, entityId: bakery, mention: 'Dock Bakery' },
       { articleId: ids.council!, entityId: twin, mention: 'Twin Grill' },
+      { articleId: ids.council!, entityId: pizza, mention: 'Pier Pizza' },
       { articleId: ids.old!, entityId: bakery, mention: 'Dock Bakery' },
     ]);
   });
@@ -166,7 +170,7 @@ describe('outreach drafts', () => {
     ).toEqual({ created: 2 });
     const drafts = await pendingOutreach(db);
     expect(drafts.map((d) => [d.business.name, d.article.slug, d.toEmail]).sort()).toEqual([
-      ['Dock Bakery LLC', 'council-hears-plans', 'owner@dockbakery.test'],
+      ['Dock Bakery LLC', 'council-hears-plans', null],
       ['Harbor Cafe', 'harbor-cafe-opens', null],
     ]);
     const cafe = drafts.find((d) => d.business.name === 'Harbor Cafe')!;
@@ -177,7 +181,7 @@ describe('outreach drafts', () => {
     expect(cafe.body).toContain('reply "no thanks"');
     expect(cafe.body).toContain('1 Main St, Reachville FL');
     const bakery = drafts.find((d) => d.business.name === 'Dock Bakery LLC')!;
-    expect(bakery.body).toContain('https://reachville.test/owner');
+    expect(bakery.body).toContain('claim the listing for free');
     expect(sent).toHaveLength(0);
   });
 

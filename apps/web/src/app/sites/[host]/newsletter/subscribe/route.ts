@@ -1,3 +1,4 @@
+import { isSignupPlacement } from '@towncore/config';
 import { signup, type SignupOutcome } from '@towncore/mail';
 import { bulkDeps, clientIp } from '@/lib/newsletter';
 import { resolveTown } from '@/lib/town';
@@ -17,6 +18,7 @@ export async function POST(request: Request, { params }: Ctx) {
   const deps = bulkDeps();
   if (!form || !deps) return back('unavailable');
   const source = String(form.get('source') ?? '/');
+  const placement = form.get('placement');
   let outcome: SignupOutcome;
   try {
     outcome = await signup(deps, {
@@ -25,6 +27,7 @@ export async function POST(request: Request, { params }: Ctx) {
       honeypot: String(form.get('website') ?? ''),
       ip: clientIp(request),
       sourceUrl: `https://${host}${source.startsWith('/') ? source : '/'}`,
+      placement: isSignupPlacement(placement) ? placement : null,
     });
   } catch (error) {
     console.error('newsletter signup failed', error);

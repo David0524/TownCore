@@ -1,6 +1,9 @@
 import {
   directoryProducts,
   featuredRanks,
+  productEnabled,
+  productPrice,
+  type BookingPeriod,
   type DirectoryProduct,
   type FeaturedRank,
   type TownConfig,
@@ -19,6 +22,7 @@ import {
   type Db,
 } from '@towncore/db';
 import type Stripe from 'stripe';
+import { openWindows, upcomingBookings, type BookingWindow } from '../bookings';
 import { ownerListings } from '../owners';
 import { currentPrice, offerName } from './prices';
 
@@ -26,7 +30,9 @@ import { currentPrice, offerName } from './prices';
 // owner portal (subscription mode). We never create access here or on the success page: only
 // the verified webhook turns a placement on (./webhook.ts). Featured spots are ranked: each of
 // #1, #2 and #3 in a category belongs to one business at a time, and a business's first spot
-// starts with the town's free trial (owner, 2026-10-16).
+// starts with the town's free trial (owner, 2026-10-16), and so does a business's first Enhanced
+// listing (owner, 2026-10-17). A dated booking (a newsletter week, a category month) is paid once
+// in payment mode at the town's configured price; only open periods are offered.
 
 /** Placements that count against a category's inventory. */
 export const HOLDS_INVENTORY = ['pending', 'active', 'held'] as const;
@@ -106,7 +112,7 @@ export async function openFeaturedRanks(
   return open;
 }
 
-/** A business's first featured spot gets the trial; one it has had before doesn't. */
+/** A business's first spot (or Enhanced listing) gets the trial; a repeat doesn't. */
 async function hadPlacement(db: Db, businessId: string, product: DirectoryProduct) {
   const [row] = await db
     .select({ id: placements.id })
@@ -132,6 +138,8 @@ export async function startCheckout(
     product: DirectoryProduct;
     /** Which featured spot, for a ranked product. */
     rank?: FeaturedRank | null;
+    /** The week or month to book (its first day, YYYY-MM-DD), for a dated product. */
+    period?: string | null;
     /** https://<town domain>, for the return links. */
     origin: string;
   },
@@ -142,9 +150,12 @@ export async function startCheckout(
   );
   if (!listing) return { status: 'not_owner' };
   const def = directoryProducts[input.product];
+  if (def.period) return startBooking(db, stripe, { ...input, listing }, now);
   const rank = def.ranked ? (input.rank ?? null) : null;
   if (def.ranked && !rank) return { status: 'unavailable' };
-  const price = def.enabled ? await currentPrice(db, input.townId, input.product, rank) : null;
+  const price = productEnabled(input.product)
+    ? await currentPrice(db, input.townId, input.product, rank)
+    : null;
   if (!price) return { status: 'unavailable' };
   const category = def.perCategory !== null ? listing.category : null;
   const [existing] = await db
@@ -164,9 +175,7 @@ export async function startCheckout(
     .select({ config: towns.config })
     .from(towns)
     .where(eq(towns.id, input.townId));
-  const trialDays = def.ranked
-    ? ((town?.config as TownConfig | undefined)?.pricing?.free_trial_days ?? 0)
-    : 0;
+  const trialDays = (town?.config as TownConfig | undefined)?.pricing?.free_trial_days ?? 0;
   const trial = trialDays > 0 && !(await hadPlacement(db, listing.id, input.product));
 
   const [placement] = await db
@@ -203,6 +212,99 @@ export async function startCheckout(
     success_url: `${back}?s=paid`,
     cancel_url: `${back}?s=canceled`,
     // Checkout holds a place for an hour at most (PENDING_HOLD_MS); expire the page with it.
+    expires_at: Math.floor((now.getTime() + PENDING_HOLD_MS) / 1000),
+  });
+  await db
+    .update(placements)
+    .set({ stripeCheckoutSessionId: session.id })
+    .where(eq(placements.id, placement!.id));
+  if (!session.url) throw new Error(`Checkout session ${session.id} has no URL`);
+  return { status: 'redirect', url: session.url };
+}
+
+/**
+ * Books a newsletter week or a category month: one Checkout payment at the town's price, for a
+ * period that is still open. The verified webhook turns it on, after checking the period again.
+ */
+async function startBooking(
+  db: Db,
+  stripe: Stripe,
+  input: {
+    townId: string;
+    email: string;
+    product: DirectoryProduct;
+    period?: string | null;
+    origin: string;
+    listing: { id: string; slug: string; name: string; category: string | null };
+  },
+  now: Date,
+): Promise<CheckoutOutcome> {
+  const def = directoryProducts[input.product];
+  const [town] = await db
+    .select({ config: towns.config, timezone: towns.timezone, siteName: towns.siteName })
+    .from(towns)
+    .where(eq(towns.id, input.townId));
+  if (!town || !def.period) return { status: 'unavailable' };
+  const dollars = productPrice(
+    (town.config as TownConfig).pricing as Record<string, unknown> | undefined,
+    input.product,
+  );
+  if (!dollars) return { status: 'unavailable' };
+  const category = def.perCategory !== null ? input.listing.category : null;
+  if (def.perCategory !== null && !category) return { status: 'unavailable' };
+  const open = await openWindows(
+    db,
+    { townId: input.townId, timezone: town.timezone, product: input.product, category },
+    now,
+  );
+  const window = open.find((w) => w.start === input.period);
+  if (!window) return { status: 'sold_out' };
+  const [placement] = await db
+    .insert(placements)
+    .values({
+      businessId: input.listing.id,
+      townId: input.townId,
+      product: input.product,
+      category,
+      period: window.start,
+      startsAt: window.startsAt,
+      endsAt: window.endsAt,
+      status: 'pending',
+      buyerEmail: input.email,
+      createdAt: now,
+    })
+    .returning();
+  const metadata = {
+    placement_id: placement!.id,
+    town_id: input.townId,
+    business_id: input.listing.id,
+    product: input.product,
+    category: category ?? '',
+    period: window.start,
+  };
+  const back = `${input.origin}/owner/${encodeURIComponent(input.listing.slug)}`;
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: dollars * 100,
+          product_data: {
+            name: `${town.siteName}: ${def.name}, ${window.label}`,
+            metadata: { product: input.product },
+          },
+        },
+      },
+    ],
+    customer_email: input.email,
+    customer_creation: 'always',
+    client_reference_id: placement!.id,
+    metadata,
+    payment_intent_data: { metadata },
+    success_url: `${back}?s=paid`,
+    cancel_url: `${back}?s=canceled`,
     expires_at: Math.floor((now.getTime() + PENDING_HOLD_MS) / 1000),
   });
   await db
@@ -250,6 +352,10 @@ export type ProductOffer = {
   left: number | null;
   /** The listing's current placement of this product (and rank), if any. */
   placement: { id: string; status: string; endsAt: Date | null } | null;
+  /** A dated product: what one booking buys, the open periods, and this listing's bookings. */
+  period: BookingPeriod | null;
+  open: BookingWindow[];
+  bookings: Array<{ id: string; status: string; window: BookingWindow }>;
 };
 
 /**
@@ -262,12 +368,34 @@ export async function listingOffers(
   listing: { id: string; category: string | null },
   now = new Date(),
 ): Promise<ProductOffer[]> {
-  const [town] = await db.select({ config: towns.config }).from(towns).where(eq(towns.id, townId));
-  const freeDays = (town?.config as TownConfig | undefined)?.pricing?.free_trial_days ?? 0;
+  const [town] = await db
+    .select({ config: towns.config, timezone: towns.timezone })
+    .from(towns)
+    .where(eq(towns.id, townId));
+  const pricing = (town?.config as TownConfig | undefined)?.pricing;
+  const freeDays = pricing?.free_trial_days ?? 0;
   const offers: ProductOffer[] = [];
   for (const product of Object.keys(directoryProducts) as DirectoryProduct[]) {
     const def = directoryProducts[product];
-    if (!def.enabled) continue;
+    if (!productEnabled(product)) continue;
+    if (def.period) {
+      const dollars = productPrice(pricing as Record<string, unknown> | undefined, product);
+      const category = def.perCategory !== null ? listing.category : null;
+      if (!dollars || !town || (def.perCategory !== null && !category)) continue;
+      offers.push({
+        product,
+        rank: null,
+        name: def.name,
+        monthlyUsd: dollars,
+        trialDays: 0,
+        left: null,
+        placement: null,
+        period: def.period,
+        open: await openWindows(db, { townId, timezone: town.timezone, product, category }, now),
+        bookings: await upcomingBookings(db, listing.id, product, town.timezone, now),
+      });
+      continue;
+    }
     const [current] = await db
       .select({
         id: placements.id,
@@ -283,7 +411,7 @@ export async function listingOffers(
           inArray(placements.status, ['active', 'held']),
         ),
       );
-    const trialDays = def.ranked && !(await hadPlacement(db, listing.id, product)) ? freeDays : 0;
+    const trialDays = !(await hadPlacement(db, listing.id, product)) ? freeDays : 0;
     const ranks: Array<FeaturedRank | null> = !def.ranked
       ? [null]
       : current?.rank
@@ -309,6 +437,9 @@ export async function listingOffers(
         placement: current
           ? { id: current.id, status: current.status, endsAt: current.endsAt }
           : null,
+        period: null,
+        open: [],
+        bookings: [],
       });
     }
   }

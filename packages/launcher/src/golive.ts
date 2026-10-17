@@ -165,11 +165,21 @@ export async function approveLaunch(
     .update(launches)
     .set({ status: 'approved', updatedAt: now })
     .where(eq(launches.id, launch!.id));
-  if (launch!.candidateId)
-    await db
+  if (launch!.candidateId) {
+    const [candidate] = await db
       .update(townCandidates)
       .set({ status: 'live' })
-      .where(eq(townCandidates.id, launch!.candidateId));
+      .where(eq(townCandidates.id, launch!.candidateId))
+      .returning({ inputs: townCandidates.inputs });
+    // Households from the ranking, for subscribers per 1,000 households (owner, 2026-10-17).
+    const households = (candidate?.inputs as { figures?: { households?: unknown } } | undefined)
+      ?.figures?.households;
+    if (town.households == null && typeof households === 'number' && households > 0)
+      await db
+        .update(towns)
+        .set({ households: Math.round(households) })
+        .where(eq(towns.id, town.id));
+  }
   await logAdminAction(db, {
     staffId: input.staff.id,
     action: 'launch.approve',
