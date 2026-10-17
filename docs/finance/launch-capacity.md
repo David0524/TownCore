@@ -1,41 +1,59 @@
 # Launch capacity (2026-10-17)
 
-How many towns TownCore can launch, how fast, and what limits it. Measured from the repo, the
-local database and public data; the long-range plan (`TownCore-LRP.xlsx`) uses these numbers.
+The plan (owner, 2026-10-17): launch in every US town with more than 2,000 people. Naming is not a
+limit. This note covers how many towns that is, how fast they can launch, and what still has to be
+true. The long-range plan (`TownCore-LRP.xlsx`) uses these numbers.
 
-## How many towns exist
+## How many towns
 
-- **4,901** US incorporated places with 5,000+ people (Census Vintage 2025, `sub-est2025.csv`,
-  SUMLEV 162); **229** in Florida. New England towns are county subdivisions and aren't counted.
-- By our tiers: 3,535 small (under 30,000), 1,023 mid, 343 large.
+**8,433 towns** (Census Vintage 2025, `sub-est2025.csv`):
 
-## The limits, in order
+- 7,683 incorporated places over 2,000 people (SUMLEV 162). Florida has 295.
+- 750 New England towns: active county subdivisions with no place of their own.
 
-| Limit | Today | What it allows | Fix |
+By our tiers:
+
+| Tier | Population | Towns | Average households |
 | --- | --- | --- | --- |
-| **Readiness (Rule 7)** | Boca: ~0.8 real items a day against a bar of 10 (5 city releases + ~19 weekly roundups in 30 days). Delray: 0.53 against 3. | Almost no town passes, Boca included. | More sources per town (permits, police and fire feeds, property sales, schools, sports, meeting platforms) and/or a lower bar. The bar is a Section 2 rule: owner's call. |
-| **Naming neighbor rule** | 22 patterns (was 6). | 74% of places (3,636; Florida 185). Was 41%. | Done 2026-10-17. |
-| **Shared data hosts at 1 request a second** | The weather tile makes 4 calls to api.weather.gov every 15 minutes per town; DBPR and Sunbiz state files are downloaded once per town. | ~225 towns before api.weather.gov is saturated (86,400 calls a day). | Share weather by NWS grid point and zone, refresh every 30 minutes, cache `/points`; ingest state files once per state and fan out to towns. Engineering, days. |
-| **Hosting** | The demo is on Vercel Hobby (50 domains per project). | 50 towns. | Vercel Pro: 100,000 domains per project (soft limit). |
-| **Domains** | Registrant contact and Vercel token not set. | — | 29 of the 30 top-ranked Florida towns have a free .com in our patterns (RDAP, 2026-10-17); about $11–20 each. |
-| **People per launch** | ~45 minutes: approval, Facebook page, Google Publisher Center. | ~400 launches a year per operator. | Batch approvals; keep driving `docs/launch-friction.md` to zero. |
-| **Pace and Google** | — | — | Google's scaled-content policy covers mass-produced AI pages and many sites hiding that scale. The plan paces launches at ~100 a month and watches indexing per cohort. |
+| Small | under 30,000 | 7,067 (84%) | ~3,300 |
+| Mid | 30,000–100,000 | 1,023 | ~21,000 |
+| Large | 100,000+ | 343 | ~70,000, with each town capped at 300,000 people |
 
-Not limits: AI cost (about $0.10 a story on current pricing, ~2–7% of revenue), newsletter
-warm-up (each domain doubles from 50 a day every 3 days), Anthropic and SES quotas (raised on
-request).
+## Naming: settled
+
+- 22 name patterns.
+- A pattern used by a town within 50 miles is offered last instead of ruled out, so naming never stops a launch.
+- Domains aren't scarce. RDAP on 2026-10-17: 29 of the 30 top-ranked Florida towns have a free .com in our patterns, at about $11–20 each.
+
+## What still has to be true
+
+| Item | Today | What it takes |
+| --- | --- | --- |
+| **Readiness (Rule 7)** | The bar is 3 real items a day, or 10 for a large town. Boca makes ~0.8 a day (in 30 days: 5 city releases plus ~19 weekly roundups); Delray makes 0.53. Almost no town passes. | Many more sources per town (permits, police and fire feeds, property sales, schools, sports, more meeting platforms), a lower bar, or both. The bar is a Section 2 rule, so it's the owner's call. Small towns (84% of the list) are where this bites. |
+| **Shared data hosts** (1 request a second each) | The weather tile calls api.weather.gov 4 times every 15 minutes per town, which saturates it at ~225 towns. DBPR and Sunbiz state files are downloaded once per town. | Share weather by NWS grid point and zone, cache `/points` and refresh every 30 minutes. Ingest each state file once per state and fan it out to towns. Engineering, days. |
+| **Hosting** | The demo is on Vercel Hobby: 50 domains a project, 100 deployments a day. | Vercel Pro: 100,000 domains a project (soft limit). |
+| **Domains** | No registrant contact or Vercel token set yet. | Owner inputs. About $100–170k for 8,433 domains. |
+| **People per launch** | ~45 minutes each: approval, Facebook page, Google Publisher Center. | At 250 launches a month, about 8 launch operators. Batch approvals and keep cutting `docs/launch-friction.md`. |
+| **Pace and Google** | — | Google's scaled-content policy covers mass-produced AI pages and many sites that hide that scale. Launch in monthly cohorts and watch each cohort's indexing before speeding up. |
+
+**Not limits:**
+- AI cost: ~$0.10 a story at current pricing.
+- Newsletter warm-up: each domain doubles from 50 a day every 3 days.
+- Anthropic and SES quotas: raised on request.
 
 ## The plan
 
-Launches each year = the smaller of the team's capacity (1,200 a year) and the towns left that
-pass readiness and the naming rule. The pool is 4,901 × readiness pass rate × 74%.
+- **Pace:** ~250 launches a month (3,000 a year) until every town that passes readiness is live.
+- **Town economics:** a mature average town makes ~$18k a year and contributes ~$11k after its own costs, with payback in year 4. That's thinner than before, because most towns are small.
 
-| Readiness pass rate | Towns | Launch years | FY2031 revenue | FY2031 EBITDA | Run-rate EBITDA | Equity needed |
+| Towns passing readiness | Towns | Launch years | FY2031 revenue | FY2031 EBITDA | Run-rate EBITDA | Equity needed |
 | --- | --- | --- | --- | --- | --- | --- |
-| 25% | 907 | FY2027 | $19.5M | $6.3M | $7.2M | $9.8M |
-| **50% (base)** | **1,813** | **FY2027–28** | **$36.8M** | **$16.3M** | **$20.1M** | **$14.7M** |
-| 75% | 2,720 | FY2027–29 | $51.5M | $23.9M | $33.0M | $17.4M |
-| 100% | 3,627 | FY2027–30 | $63.3M | $28.5M | $46.1M | $21.4M |
+| 25% | 2,108 | FY2027 | $37.8M | $15.4M | $17.2M | $20.5M |
+| 50% | 4,217 | FY2027–28 | $72.0M | $33.1M | $40.1M | $33.4M |
+| 75% | 6,325 | FY2027–29 | $102.3M | $47.0M | $63.1M | $42.6M |
+| **100% (base: every town)** | **8,433** | **FY2027–29** | **$125.6M** | **$54.0M** | **$86.3M** | **$52.8M** |
 
-So the readiness pass rate decides the size of the business. Every source adapter that works
-across many towns raises it.
+**Base case:**
+- EBITDA turns positive in FY2030.
+- Raises of $25M (FY2027) and $35M (FY2028) keep cash positive throughout.
+- At 554 people in FY2031, most of the cost is editors, salespeople and support hired per town at ratios set for bigger towns. Sizing those by tier (fewer people for the small towns) is the biggest lever on the funding needed.

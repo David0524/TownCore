@@ -1,6 +1,7 @@
-// Site names (CLAUDE.md §10b). Three proposals per town from rotating patterns, never a pattern a
-// town within 50 miles already uses, each with its .com and the conflict checks. The owner picks
-// one in the launch report; nothing is bought without `--approve-spend`.
+// Site names (CLAUDE.md §10b). Three proposals per town from rotating patterns (a pattern a town
+// within 50 miles already uses only when nothing else is left), each with its .com and the
+// conflict checks. The owner picks one in the launch report; nothing is bought without
+// `--approve-spend`.
 
 export const namePatterns = [
   { key: 'town-square', label: '{Town} Town Square' },
@@ -110,22 +111,27 @@ export type NameProposalInput = {
   /** The town as readers say it: "Delray" or "Delray Beach". */
   townWord: string;
   nickname?: string;
-  /** Patterns used by towns within 50 miles: never reused (neighbor rule). */
+  /** Patterns used by towns within 50 miles: offered last (neighbor rule, a preference). */
   nearbyPatterns: NamePattern[];
   /** How often each pattern is used network-wide, to rotate the least used first. */
   networkUse: Partial<Record<NamePattern, number>>;
 };
 
-/** The candidate names, best first: unused nearby, then least used network-wide. */
+/**
+ * The candidate names, best first: unused nearby, then least used network-wide. A pattern a
+ * neighbor uses comes last but is never ruled out, so naming never stops a launch (owner,
+ * 2026-10-17).
+ */
 export function nameCandidates(
   input: NameProposalInput,
 ): Array<{ pattern: NamePattern; siteName: string }> {
   return namePatterns
     .map((p, order) => ({ pattern: p.key, order }))
-    .filter((p) => !input.nearbyPatterns.includes(p.pattern))
     .filter((p) => p.pattern !== 'post' || !!input.nickname)
     .sort(
       (a, b) =>
+        Number(input.nearbyPatterns.includes(a.pattern)) -
+          Number(input.nearbyPatterns.includes(b.pattern)) ||
         (input.networkUse[a.pattern] ?? 0) - (input.networkUse[b.pattern] ?? 0) ||
         a.order - b.order,
     )

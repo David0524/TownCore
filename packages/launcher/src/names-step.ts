@@ -194,7 +194,7 @@ ${
     .join('\n') || '- None.'
 }
 
-## Towns within ${NEIGHBOR_MILES} miles (their patterns aren't reused)
+## Towns within ${NEIGHBOR_MILES} miles (their patterns are offered last)
 
 ${detail.neighbors.map((n) => `- ${n.siteName} (${n.name}), ${n.miles} miles`).join('\n') || '- None.'}
 

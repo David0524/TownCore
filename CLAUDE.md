@@ -276,7 +276,7 @@ score = 0.25 business_value + 0.20 households_x_income + 0.20 source_readiness
       + 0.15 coverage_gap + 0.10 cluster_fit + 0.10 growth
 ```
 
-**Hard filters:** population of at least 5,000, and a source readiness score that passes Rule 7. Never launch a town without a human approving it from the ranked list.
+**Hard filters:** population of at least 2,000 (owner, 2026-10-17: every US town over 2,000 people), and a source readiness score that passes Rule 7. Never launch a town without a human approving it from the ranked list.
 
 ---
 
@@ -288,7 +288,7 @@ score = 0.25 business_value + 0.20 households_x_income + 0.20 source_readiness
 - **Rules:**
   - Short, easy to say aloud, `.com` preferred, no hyphens or numbers.
   - Matching social handles available, or close to it.
-  - The neighbor rule applies: towns within 50 miles use different patterns.
+  - The neighbor rule is a preference: towns within 50 miles get different patterns when one is left, and naming never stops a launch (owner, 2026-10-17).
 - **Conflict checks (block the name if any fail):**
   - It matches or closely resembles a current local outlet, a defunct local newspaper, or a registered trademark (USPTO search).
   - It sounds official: "City of", "Official", "Gov", or a government department name.
@@ -632,7 +632,7 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
   - Vercel: the free plan's 100 deployments a day ran out on 2026-10-16; the owner will upgrade later, so pushes are batched meanwhile.
 - 2026-10-16 — **Sports tab (owner: "I do need a sports tab on the website too").** A new `sports` source kind and a network `game` record (`packages/config/src/sports.ts`: sport, level, home, away, scores, status, venue, which teams are local, a note), team level only so no player is ever named (§7). `/sports` lists the next two weeks' games and the last two weeks' finals by day as calendar cards, with sport chips; a Sports category (its own color, `#C2410C`) joins the header's category tabs and a "More" group on the phone Sections tab once the town has games, and the `schools-sports` homepage module shows the next games, or the latest scores when none are coming (Boca's rail, after events). Sources come next: FHSAA (inside its robots.txt Visit-time window) and, once the owner adds a key, a licensed pro scores feed (decision (e) above).
 - 2026-10-16 — **New sources become articles on the demo (owner: "if you find better sources - create new article on BocaTownSquare").** Each new Boca source is run through the normal finder and writer and the result copied to the demo database; tier rules still apply, so a Tier 3 item (an inspection week naming complaints) waits in the review queue for a person's approval.
-- 2026-10-17 — **22 site-name patterns and a capacity-led launch plan (owner: "we can incorporate more name patterns… Pool can expand greatly"; "Determine our launch capacity").** Sixteen patterns join the six (§10b), so the 50-mile neighbor rule allows 74% of the 4,901 US places of 5,000+ people instead of 41% (Florida 185 of 229); the launcher still checks ten per town. Findings and the plan in `docs/finance/launch-capacity.md`; the LRP launches the smaller of ~100 towns a month and the towns left that pass readiness. Readiness (Rule 7) is now the binding limit: Boca makes about 0.8 real items a day against a bar of 10. Domains aren't scarce (29 of 30 top Florida towns have a free .com in our patterns).
+- 2026-10-17 — **Every US town over 2,000 people; naming never blocks a launch (owner: "We will launch in every town in the United States with over 2000 people. Naming is not a serious boundary"; "we can incorporate more name patterns").** Sixteen name patterns join the six (§10b, 22 in all); a pattern a town within 50 miles uses is offered last instead of ruled out. The §10a population floor drops from 5,000 to 2,000: 8,433 towns (7,683 incorporated places, Florida 295, plus 750 New England towns). The LRP launches about 250 towns a month until all are live (FY2029); the findings are in `docs/finance/launch-capacity.md`. Rule 7 is unchanged and is now the limit that matters: Boca makes about 0.8 real items a day against a bar of 10, so the every-town plan needs many more sources per town or a lower bar (owner's call). Before going past a few hundred towns, shared hosts need fixing (the weather tile saturates api.weather.gov at ~225 towns) and hosting moves to Vercel Pro (Hobby allows 50 domains).
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.

@@ -163,25 +163,23 @@ blank()
 # Rollout
 section(A, row, 'Launch capacity: how many towns can launch, and how fast')
 row += 1
-single('addressable', 'US incorporated places with 5,000+ people', 4901, NUM,
-       'Census Vintage 2025 city estimates (sub-est2025.csv, SUMLEV 162). Florida: 229. The §10a '
-       'floor is 5,000 people. New England towns (county subdivisions) are not counted.',
-       unit='places')
-single('ready_share', 'Share that pass readiness (Rule 7)', 0.5, PCT,
-       'Estimate, and the biggest unknown. Today almost none pass: Boca makes about 0.8 real items '
-       'a day against a bar of 10, Delray 0.53 against 3. Getting here needs more sources per town '
-       '(permits, police and fire feeds, property sales, schools, sports) or a lower bar (owner call).',
+single('addressable', 'US towns with more than 2,000 people', 8433, NUM,
+       'Owner plan (2026-10-17): every US town over 2,000 people. Census Vintage 2025 '
+       '(sub-est2025.csv): 7,683 incorporated places (SUMLEV 162; Florida 295) plus 750 New '
+       'England towns (active county subdivisions with no place of their own).', unit='towns')
+single('ready_share', 'Share that pass readiness (Rule 7)', 1.0, PCT,
+       'Owner plan: every town. Rule 7 still stops a town below 3 real items a day (10 for large), '
+       'and today almost none pass: Boca makes about 0.8 a day, Delray 0.53. Reaching 100% needs '
+       'many more sources per town or a lower bar. Set lower to see the plan without that work.',
        key=True)
-single('name_share', 'Share allowed by the naming neighbor rule', 0.74, PCT,
-       'Towns within 50 miles must use different name patterns (§10b). Computed on the Census '
-       'gazetteer, largest towns first: the original 6 patterns allowed 41% (2,021 places); the 22 '
-       'patterns adopted 2026-10-17 allow 74% (3,636; Florida 185 of 229). The rest sit in metros '
-       'with more than 22 towns within 50 miles of each other.', key=True)
+single('name_share', 'Share allowed by the naming rule', 1.0, PCT,
+       'Owner, 2026-10-17: naming never stops a launch. 22 patterns; a neighbor\'s pattern is '
+       'used only when nothing else is left.')
 row += 1
 header(A, row, 'Fiscal year', YEARS)
 row += 1
-series('launch_cap', 'Launches the team can do in a year', [1200, 1200, 1200, 1200, 1200], NUM,
-       'About 100 a month: the launcher is automated, each launch needs ~45 minutes of people '
+series('launch_cap', 'Launches the team can do in a year', [3000, 3000, 3000, 3000, 3000], NUM,
+       'About 250 a month: the launcher is automated, each launch needs ~45 minutes of people '
        '(approval, Facebook page, Google Publisher Center). A pacing choice too: launching '
        'hundreds of AI-written sites at once invites Google\'s scaled-content review. Scaled by '
        'the launch multiplier.', key=True, unit='towns')
@@ -218,16 +216,17 @@ def tier(name, label, vals, fmt, note, key=False, weighted=True):
     row += 1
 
 
-tier('mix', 'Share of launches', [0.72, 0.21, 0.07], PCT,
-     'Census 2025, places of 5,000+: 3,535 under 30,000 (small), 1,023 of 30,000-100,000 (mid), '
-     '343 of 100,000+ (large); tiers from packages/config/src/launch.ts.',
+tier('mix', 'Share of launches', [0.84, 0.12, 0.04], PCT,
+     'Census 2025, towns over 2,000: 7,067 under 30,000 (small, incl. the 750 New England towns), '
+     '1,023 of 30,000-100,000 (mid), 343 of 100,000+ (large); tiers from packages/config/src/launch.ts.',
      key=True, weighted=False)
 A[f'F{REF["mix"]}'] = f'=SUM(C{REF["mix"]}:E{REF["mix"]})'
 A[f'F{REF["mix"]}'].number_format = PCT
 A[f'F{REF["mix"]}'].font = F_BOLD
-tier('households', 'Households per town', [4000, 19000, 60000], NUM,
-     'Median town population by tier (10,371 / 48,420 / 157,113, Census 2025) / ~2.5 people a household.')
-tier('listings', 'Directory listings per town', [200, 1000, 3000], NUM,
+tier('households', 'Households per town', [3300, 21000, 70000], NUM,
+     'Mean town population by tier (8,397 / 53,365 / 185,762, Census 2025, each town capped at '
+     '300,000) / ~2.5 people a household. Revenue scales with households, so the mean is used.')
+tier('listings', 'Directory listings per town', [180, 1100, 3500], NUM,
      'Boca live data 2026-10-16: 2,334 active listings (1,979 state licenses + 355 mapped). '
      'Small and mid scaled down; estimate.')
 tier('stories', 'Stories per day (story budget)', [3, 6, 10], NUM,
@@ -379,8 +378,8 @@ single('open_cash', 'Opening cash, start of FY2027', 250000, USD, 'Input: replac
 row += 1
 header(A, row, 'Fiscal year', YEARS)
 row += 1
-series('equity', 'Equity raised', [10000000, 6000000, 0, 0, 0], USD,
-       'Plan: $10M in FY2027 and $6M in FY2028, sized to the launch pace. Adjust to keep cash above zero.', key=True, unit='$')
+series('equity', 'Equity raised', [25000000, 35000000, 0, 0, 0], USD,
+       'Plan: $25M in FY2027 and $35M in FY2028, sized to the every-town launch pace with a buffer. Adjust to keep cash above zero.', key=True, unit='$')
 LAST_A = row
 
 # ----------------------------------------------------------------------------------------------
