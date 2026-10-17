@@ -19,7 +19,9 @@ import {
 // Admin → Launches (M7 PR A, CLAUDE.md §10a): ranked towns wait for an admin's approval. The
 // candidates are fictional (state "ZZ"), inserted as `pnpm towns:rank` would save them.
 const admin = 'http://admin.test';
-const db = createDb(loadEnv().DATABASE_URL!, { max: 1 });
+// Never closed: with fullyParallel a worker can run more of this file's tests after its
+// afterAll, so the client stays open; idle connections close by themselves.
+const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
 // One group per project: the fixtures are set up once, and the client is closed after both tests.
 test.describe.configure({ mode: 'serial' });
 
@@ -55,11 +57,6 @@ test.beforeAll(async ({ browserName: _browser }, info) => {
       inputs: { inputs: {}, figures: figures(50000), weights: {} },
     })),
   );
-});
-// Workers are shared across projects: only the desktop project, which owns the fixtures, closes
-// the client (the other project's hooks would end it before the desktop tests run).
-test.afterAll(async ({ browserName: _browser }, info) => {
-  if (info.project.name === 'desktop') await db.$client.end();
 });
 
 async function signIn(context: BrowserContext, role: 'admin' | 'reviewer', tag: string) {

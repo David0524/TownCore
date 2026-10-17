@@ -34,7 +34,9 @@ import { E2E_MAIL_TOKEN_SECRET, E2E_STRIPE_WEBHOOK_SECRET } from './newsletter-s
 // add", the follow-ups' standing approval, and the owners' unsubscribe link. Each project works
 // on its own listings in categories no other spec uses, on Harbor Point and Pine Hollow.
 
-const db = createDb(loadEnv().DATABASE_URL!, { max: 1 });
+// Never closed: with fullyParallel a worker can run more of this file's tests after its
+// afterAll, so the client stays open; idle connections close by themselves.
+const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
 const harbor = 'http://harborpoint.test';
 const pine = 'http://pinehollow.test';
 const app = 'http://127.0.0.1:3100';
@@ -169,10 +171,6 @@ async function staffPage(browser: Browser, role: 'admin' | 'reviewer') {
   await context.addCookies([{ name: 'tc_admin', value: token, url: 'http://admin.test/admin' }]);
   return { context, page: await context.newPage(), staffId: member!.id };
 }
-
-test.afterAll(async () => {
-  await db.$client.end();
-});
 
 test('from a house ad: a featured spot with the first month free, then Enhanced with its trial', async ({
   page,

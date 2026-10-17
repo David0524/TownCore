@@ -23,7 +23,9 @@ import { E2E_STRIPE_WEBHOOK_SECRET } from './newsletter-secret';
 // Stripe (M6 PR D), test mode. No request reaches Stripe here: the webhook is exercised with
 // events signed the way Stripe signs them (t=…,v1=HMAC-SHA256 of "t.payload"), and the owner
 // page with prices recorded in the database.
-const db = createDb(loadEnv().DATABASE_URL!, { max: 1 });
+// Never closed: with fullyParallel a worker can run more of this file's tests after its
+// afterAll, so the client stays open; idle connections close by themselves.
+const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
 const webhook = 'http://127.0.0.1:3100/api/stripe/webhook';
 const sign = (payload: string, secret = E2E_STRIPE_WEBHOOK_SECRET) => {
   const t = Math.floor(Date.now() / 1000);
@@ -33,10 +35,6 @@ const sign = (payload: string, secret = E2E_STRIPE_WEBHOOK_SECRET) => {
 const hash = (t: string) => createHash('sha256').update(t).digest('hex');
 
 test.describe.configure({ mode: 'serial' });
-
-test.afterAll(async () => {
-  await db.$client.end();
-});
 
 test('the webhook takes signed events once, refuses others, and lives on the admin host', async ({
   request,

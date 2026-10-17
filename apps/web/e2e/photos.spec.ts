@@ -18,7 +18,9 @@ import {
 // with the license grant, nothing shows until staff approve it with alt text, and the served
 // photo carries no location data. An owner adds a photo to their listing the same way.
 
-const db = createDb(loadEnv().DATABASE_URL!, { max: 1 });
+// Never closed: with fullyParallel a worker can run more of this file's tests after its
+// afterAll, so the client stays open; idle connections close by themselves.
+const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
 const hash = (t: string) => createHash('sha256').update(t).digest('hex');
 const newToken = () => randomBytes(24).toString('base64url');
 const pine = 'http://pinehollow.test';
@@ -34,10 +36,6 @@ test.beforeAll(async () => {
   const [town] = await db.select().from(towns).where(eq(towns.slug, 'pine-hollow'));
   townId = town!.id;
 });
-test.afterAll(async () => {
-  await db.$client.end();
-});
-
 async function staffPage(browser: Browser, tag: string) {
   const [member] = await db
     .insert(staff)

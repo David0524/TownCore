@@ -20,12 +20,10 @@ import {
 // Drafting itself (matching, quiet period, wording) is covered by packages/directory tests; here
 // the draft row is inserted as the worker would write it. Mail goes to the server log in tests.
 const admin = 'http://admin.test';
-const db = createDb(loadEnv().DATABASE_URL!, { max: 1 });
+// Never closed: with fullyParallel a worker can run more of this file's tests after its
+// afterAll, so the client stays open; idle connections close by themselves.
+const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
 const NAME = 'Dockside Water Works';
-
-test.afterAll(async () => {
-  await db.$client.end();
-});
 
 test('staff review an outreach draft, add an address and send it', async ({
   page,
