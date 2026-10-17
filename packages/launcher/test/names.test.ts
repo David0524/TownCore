@@ -111,7 +111,7 @@ describe('site names', () => {
       nameCandidates({ townWord: 'Delray', nearbyPatterns: nearby, networkUse: use }).map(
         (c) => c.siteName,
       );
-    expect(names(['town-square'])).toEqual([
+    expect(names(['town-square']).slice(0, 4)).toEqual([
       'The Delray Ledger',
       'Delray Daily',
       'Delray Local',
@@ -127,8 +127,10 @@ describe('site names', () => {
         nickname: 'Village by the Sea',
         nearbyPatterns: [],
         networkUse: {},
-      }).at(-1)!.siteName,
+      }).find((c) => c.pattern === 'post')!.siteName,
     ).toBe('The Village by the Sea Post');
+    expect(names([]).includes('The Delray Standard')).toBe(true);
+    expect(names([]).some((n) => n.endsWith('Post'))).toBe(false);
   });
 
   it('derives domains and recognizes existing names', () => {
@@ -137,7 +139,9 @@ describe('site names', () => {
     expect(domainsFor('Española Daily')).toEqual(['espanoladaily.com']);
     expect(patternOf('Boca Town Square')).toBe('town-square');
     expect(patternOf('The Harbor Point Ledger')).toBe('ledger');
-    expect(patternOf('Pine Hollow Gazette')).toBeNull();
+    expect(patternOf('Pine Hollow Gazette')).toBe('gazette');
+    expect(patternOf('The Delray Standard')).toBe('standard');
+    expect(patternOf('Pine Hollow News')).toBeNull();
   });
 
   it('blocks official-sounding names and look-alikes of local outlets', () => {
@@ -310,7 +314,9 @@ describe('step 2 in a launch', () => {
     expect(detail.neighbors).toEqual([
       { name: 'Boca Raton', siteName: 'Boca Town Square', pattern: 'town-square', miles: 6 },
     ]);
-    expect(detail.proposals.map((p) => [p.siteName, p.domain, p.blocked])).toEqual([
+    // Only two names are free in the fixture, so it keeps looking through the shortlist of ten.
+    expect(detail.proposals).toHaveLength(10);
+    expect(detail.proposals.slice(0, 4).map((p) => [p.siteName, p.domain, p.blocked])).toEqual([
       ['The Delray Ledger', 'delrayledger.com', []],
       ['Delray Courier', 'delraycourier.com', []],
       ['Delray Daily', 'delraydaily.com', ['delraydaily.com is taken']],

@@ -9,6 +9,23 @@ export const namePatterns = [
   { key: 'local', label: '{Town} Local' },
   { key: 'courier', label: '{Town} Courier' },
   { key: 'post', label: 'The {Nickname} Post' },
+  // Added 2026-10-17 (owner), so the 50-mile neighbor rule doesn't cap dense metros.
+  { key: 'dispatch', label: '{Town} Dispatch' },
+  { key: 'journal', label: '{Town} Journal' },
+  { key: 'chronicle', label: '{Town} Chronicle' },
+  { key: 'observer', label: '{Town} Observer' },
+  { key: 'sentinel', label: '{Town} Sentinel' },
+  { key: 'beacon', label: '{Town} Beacon' },
+  { key: 'bulletin', label: '{Town} Bulletin' },
+  { key: 'record', label: '{Town} Record' },
+  { key: 'report', label: '{Town} Report' },
+  { key: 'current', label: '{Town} Current' },
+  { key: 'today', label: '{Town} Today' },
+  { key: 'signal', label: '{Town} Signal' },
+  { key: 'tribune', label: '{Town} Tribune' },
+  { key: 'herald', label: '{Town} Herald' },
+  { key: 'gazette', label: '{Town} Gazette' },
+  { key: 'standard', label: 'The {Town} Standard' },
 ] as const;
 export type NamePattern = (typeof namePatterns)[number]['key'];
 
@@ -21,12 +38,13 @@ export function siteNameFor(pattern: NamePattern, town: string): string {
 /** Which pattern an existing site name follows ("Boca Town Square" → town-square). */
 export function patternOf(siteName: string): NamePattern | null {
   const s = siteName.trim();
-  if (/ Town Square$/i.test(s)) return 'town-square';
-  if (/^The .+ Ledger$/i.test(s)) return 'ledger';
-  if (/ Daily$/i.test(s)) return 'daily';
-  if (/ Local$/i.test(s)) return 'local';
-  if (/ Courier$/i.test(s)) return 'courier';
-  if (/^The .+ Post$/i.test(s)) return 'post';
+  for (const p of namePatterns) {
+    const re = new RegExp(
+      `^${p.label.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{(?:Town|Nickname)\}/, '.+')}$`,
+      'i',
+    );
+    if (re.test(s)) return p.key;
+  }
   return null;
 }
 
