@@ -303,12 +303,15 @@ single('ai_story', 'AI cost per published story', 0.15, USD2,
        'Writer, separate fact-check and an AI review pass (owner: article review becomes an AI agent). '
        'Measured ~$0.10 for writer + fact-check on repo pricing; verify against current Anthropic pricing '
        '(CLAUDE.md §8). Scaled by unit cost multiplier.', key=True, unit='$/story')
-single('ai_overhead', 'AI overhead per town per day', 0.50, USD2,
-       'Classification, revisions, guides, entity extraction. Estimate.', unit='$/day')
+single('ai_overhead', 'AI overhead per town per day', 0.05, USD2,
+       'Classification on Haiku, revisions, guides, entity extraction. pnpm ai:plan puts Boca at about '
+       '$0.05 a day at today\'s volume (2026-10-17). Estimate.', unit='$/day')
 single('ai_cap', 'AI spend cap per town per day', 5.0, USD2,
        'CLAUDE.md D-M3-7: $5 daily cap per town, enforced in code.', unit='$/day')
-single('hosting', 'Hosting, database and data per town', 25, USD,
-       'Vercel, Railway Postgres share, storage, maps. Estimate.', unit='$/month')
+single('hosting', 'Hosting, database and data per town', 2, USD,
+       'Marginal cost of one more town: every town runs on one Vercel app, one worker and one '
+       'database, so a town adds only storage, bandwidth and database rows. The shared plans are '
+       'in fixed platform costs. Estimate: check against the bills as towns grow.', unit='$/month')
 single('ses', 'Email sending (Amazon SES)', 0.10, USD2,
        'AWS SES list price per 1,000 emails; verify at aws.amazon.com/ses/pricing.', unit='$/1,000')
 single('stripe_pct', 'Card processing, % of directory revenue', 0.029, PCT,
@@ -316,8 +319,9 @@ single('stripe_pct', 'Card processing, % of directory revenue', 0.029, PCT,
 single('stripe_fixed', 'Card processing, fixed per charge', 0.30, USD2, 'Stripe standard US.',
        unit='$/charge')
 single('domain', 'Domain renewal per town', 20, USD, 'Estimate.', unit='$/year')
-single('launch_ai', 'AI cost per launch', 25, USD, 'CLAUDE.md D-M7-11: $25 of AI per launch.',
-       unit='$/launch')
+single('launch_ai', 'AI cost per launch', 10, USD,
+       'M7 estimate $7-16 a launch (discovery, readiness, guides, theme review); $25 is only the cap '
+       '(D-M7-11). Boca was launched by hand with no API cost.', unit='$/launch')
 single('launch_domain', 'Domain purchase per launch', 15, USD, 'Estimate.', unit='$/launch')
 single('launch_mkt', 'Launch audience seeding (paid social)', 0, USD,
        'Owner, 2026-10-17: bootstrapped, no paid launch seeding (was $1,500 a launch). Audience '
@@ -382,9 +386,9 @@ series('legal_fixed', 'Legal and media liability insurance (fixed)', [1500, 3000
        'network. Estimate: get a quote.', key=True, unit='$')
 single('brand_share', 'Corporate marketing, share of revenue', 0.02, PCT,
        'Bootstrapped: advertiser marketing paid out of revenue, not ahead of it. Estimate.')
-single('platform_base', 'Fixed platform costs', 100, USD,
-       'Vercel Pro, Railway base and other subscriptions before any town (per-town hosting is separate). '
-       'Estimate: check against the bills.',
+single('platform_base', 'Fixed platform costs', 75, USD,
+       'Vercel Pro ($20), Railway (~$20), Amazon SES and AWS (~$10), other small subscriptions (~$25). '
+       'Claude is covered by the startup program (AI credit row). Estimate: replace with the bills.',
        unit='$/month')
 single('legal_town', 'Legal and insurance per live town', 100, USD, 'Estimate.', unit='$/town/year')
 single('tools', 'Software and tools per employee', 3000, USD, 'Estimate.', unit='$/year')
@@ -407,6 +411,9 @@ single('buffer_months', 'Months of fixed costs and staff kept in the bank', 4, N
 row += 1
 header(A, row, 'Fiscal year', YEARS)
 row += 1
+series('ai_credit', 'Share of AI cost covered by credits', [1, 0, 0, 0, 0], PCT,
+       'Owner, 2026-10-17: Claude is covered for a year under the Anthropic startup program; '
+       'assumed to cover API use in FY2027. Paid from FY2028.', key=True)
 series('equity', 'Equity raised', [0, 0, 0, 0, 0], USD,
        'Owner, 2026-10-17: bootstrapped, no outside money. Added in the first month of its year.',
        key=True, unit='$')
@@ -719,9 +726,11 @@ for i in range(MONTHS):
     f['r1'] = '=' + '+'.join(f'{mref("launch", r - k)}*${get_column_letter(3 + k)}${MH["ramp"]}'
                              for k in range(min(12, m)))
     f['live'] = '=' + by_age('surv', r)
-    for k in ('r_feat', 'r_enh', 'r_cat', 'r_nl', 'r_ban', 'r_prog', 'c_ai', 'c_host', 'c_email', 'c_stripe',
+    for k in ('r_feat', 'r_enh', 'r_cat', 'r_nl', 'r_ban', 'r_prog', 'c_host', 'c_email', 'c_stripe',
               'c_domain', 'subs', 'pv', 'paying'):
         f[k] = '=' + by_age(k, r)
+    credit = f'(1-Assumptions!{COLS[yi]}${REF["ai_credit"]})'
+    f['c_ai'] = f'=({by_age("c_ai", r)})*{credit}'
     f['rev'] = f'=SUM({mref("r_feat", r)}:{mref("r_prog", r)})'
     f['c_newdom'] = f'={mref("launch", r)}*{REF["launch_domain"]}*{REF["m_cost"]}'
     f['cogs'] = f'=SUM({mref("c_ai", r)}:{mref("c_newdom", r)})'
@@ -754,7 +763,8 @@ for i in range(MONTHS):
     for k in ROLE_KEYS:
         share = 'f' if k in ('rev', 'ae', 'sup', 'ops') else 'fc'
         f['p_' + k] = f'={mref("k_" + k, r)}*{mref(share, r)}'
-    f['launch_mkt'] = f'={mref("launch", r)}*({REF["launch_mkt"]}+{REF["launch_ai"]})*{REF["m_cost"]}'
+    f['launch_mkt'] = (f'={mref("launch", r)}*({REF["launch_mkt"]}+{REF["launch_ai"]}*{credit})'
+                       f'*{REF["m_cost"]}')
     f['sub_cac'] = '=' + by_age('c_cac', r)
     f['brand'] = f'={REF["brand_share"]}*{mref("rev", r)}'
     f['legal'] = f'=Assumptions!{COLS[yi]}${REF["legal_fixed"]}/12+{mref("live", r)}*{REF["legal_town"]}/12'
