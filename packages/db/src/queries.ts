@@ -13,13 +13,14 @@ import {
   sql,
 } from 'drizzle-orm';
 import type { Db } from './client';
-import { articles, campaigns, corrections, placements, records, towns } from './schema';
+import { articles, campaigns, corrections, placements, records, sources, towns } from './schema';
 
 export type Town = typeof towns.$inferSelect;
 export type Article = typeof articles.$inferSelect;
 export type Campaign = typeof campaigns.$inferSelect;
 export type SourceRecord = typeof records.$inferSelect;
 export type Correction = typeof corrections.$inferSelect;
+export type RecordSource = Pick<typeof sources.$inferSelect, 'id' | 'kind' | 'platform' | 'url'>;
 
 /**
  * Strips port, trailing dot and a leading "www." and lowercases. Returns null for anything
@@ -186,6 +187,15 @@ export async function getSourceRecords(db: Db, ids: string[]): Promise<SourceRec
   if (ids.length === 0) return [];
   const rows = await db.select().from(records).where(inArray(records.id, ids));
   return ids.map((id) => rows.find((r) => r.id === id)).filter((r): r is SourceRecord => !!r);
+}
+
+/** The sources a story's records came from, for the grouped Sources box (Rule 4). */
+export async function getRecordSources(db: Db, ids: string[]): Promise<RecordSource[]> {
+  if (ids.length === 0) return [];
+  return db
+    .select({ id: sources.id, kind: sources.kind, platform: sources.platform, url: sources.url })
+    .from(sources)
+    .where(inArray(sources.id, [...new Set(ids)]));
 }
 
 export async function listArticleCorrections(db: Db, articleId: string): Promise<Correction[]> {

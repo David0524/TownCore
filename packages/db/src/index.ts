@@ -37,6 +37,7 @@ export {
   getPublishedArticle,
   listArticlesByIds,
   getSourceRecords,
+  getRecordSources,
   listArticleCorrections,
   listTownCorrections,
   getTownByHost,
@@ -49,6 +50,7 @@ export {
   type Campaign,
   type Correction,
   type SourceRecord,
+  type RecordSource,
   type Town,
 } from './queries';
 export {

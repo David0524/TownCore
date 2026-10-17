@@ -1,5 +1,5 @@
 import { publisher as company } from '@towncore/config';
-import type { Article, Town } from '@towncore/db';
+import type { Article, SourceRecord, Town } from '@towncore/db';
 import { articlePath, siteUrl } from './discovery';
 
 // JSON-LD for search engines (CLAUDE.md §11 "SEO"). The publisher is the site itself, so sites
@@ -34,6 +34,8 @@ export function newsArticleJsonLd(
     Article,
     'slug' | 'headline' | 'dek' | 'beat' | 'kind' | 'publishedAt' | 'updatedAt'
   >,
+  /** The story's source records (Rule 4): every one is cited, even when the page collapses them. */
+  sourceRecords: Pick<SourceRecord, 'title' | 'type' | 'url'>[] = [],
 ): Json {
   // The share image (1200×630) drawn for every article (§11c).
   const image = siteUrl(town, `/news/${article.slug}/og`);
@@ -61,6 +63,13 @@ export function newsArticleJsonLd(
       url: siteUrl(town, '/methods'),
     },
     publisher,
+    citation: sourceRecords.length
+      ? sourceRecords.map((r) => ({
+          '@type': 'CreativeWork',
+          name: r.title ?? r.type,
+          ...(r.url ? { url: r.url } : {}),
+        }))
+      : undefined,
   };
 }
 

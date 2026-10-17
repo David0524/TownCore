@@ -155,6 +155,84 @@ describe('near-duplicate guard', () => {
     ),
   );
 
+  // A full week, with highlights and a collapsed table: still mostly the town's own facts.
+  const many = (prefix: string, words: string[], zips: string[]) =>
+    words.map((w, i) =>
+      filing(
+        `${prefix}${i}`,
+        `${w} ${i % 3 ? 'LLC' : 'INC'}`,
+        i % 4 ? 'Florida Limited Liability Company' : 'Florida Profit Corporation',
+        zips[i % zips.length]!,
+      ),
+    );
+  check('newBusinessesRoundup, a full week', (t, side) =>
+    newBusinessesRoundup(
+      t,
+      week,
+      pick(
+        side,
+        many(
+          'H',
+          [
+            'SALTY DOG BREWING',
+            'TIDEWATER PIZZA',
+            'HARBOR DENTAL',
+            'MARINA NAIL STUDIO',
+            'DOCKSIDE HOLDINGS',
+            'BLUE HERON CAPITAL',
+            'SEAGRASS CONSULTING',
+            'KEEL LOGISTICS',
+            'LIGHTHOUSE REALTY',
+            'ANCHOR ROOFING',
+            'SANDBAR VENTURES',
+            'GULL MEDIA',
+            'PELICAN POOLS',
+            'CORAL COVE PROPERTIES',
+            'BRINE AND BARREL',
+            'NORTH JETTY',
+            'SEAWALL PARTNERS',
+            'FOGHORN STUDIO',
+            'SHOAL CREEK',
+            'ROPE AND RIGGING',
+          ],
+          ['33431', '33432', '33487'],
+        ),
+        many(
+          'P',
+          [
+            'OAK RIDGE BAKERY',
+            'PINE CAFE',
+            'HOLLOW FITNESS',
+            'TIMBER TRUCKING',
+            'MILL CREEK HOLDINGS',
+            'CEDAR INVESTMENTS',
+            'NORTHWOOD CONSTRUCTION',
+            'ACORN SOFTWARE',
+            'BIRCH LANE',
+            'FERN GULLY',
+            'RIDGELINE CAPITAL',
+            'COUNTY ROAD NINE',
+            'SAWMILL',
+            'MAPLE BOUTIQUE',
+            'HICKORY SMOKE BBQ',
+            'RED CLAY',
+            'BLACKWATER',
+            'TURPENTINE',
+            'LONGLEAF',
+            'WIREGRASS',
+            'SPANISH MOSS',
+            'CREEKSIDE',
+            'BOG HOLLOW',
+            'PIVOT IRRIGATION',
+            'FIRE TOWER',
+          ],
+          ['32501', '32502'],
+        ),
+      ),
+      pick(side, [12, 18, 15], [30, 22]),
+    ),
+  );
+
   const license = (id: string, name: string, occupation: string) =>
     rec({
       id,
@@ -425,11 +503,13 @@ describe('near-duplicate guard', () => {
         'Lane closures. RW72642',
       ),
     ]);
-    expect(d.headline).toBe('Road work and lane closures in Harbor Point, Oct. 19–Oct. 25');
-    expect(d.dek).toMatch(
-      /^3 road projects in Harbor Point, 1 with a road closed or detoured; Ocean Boulevard has the most, 2\.$/,
+    expect(d.headline).toBe(
+      'Ocean Blvd. at Harbor Walk closed or detoured; 3 road projects in Harbor Point, Oct. 19–25',
     );
-    expect(d.bodyMd.split('\n').find((l) => l.startsWith('- '))).toContain(
+    expect(d.bodyMd).toMatch(/^Ocean Blvd\. at Harbor Walk has a road closed or detoured\./);
+    expect(d.bodyMd).toContain('Ocean Boulevard has the most projects, 2.');
+    // Closures lead the data table.
+    expect(d.bodyMd.split('\n').filter((l) => l.startsWith('| '))[2]).toContain(
       'Ocean Blvd. at Harbor Walk',
     );
     expect(d.bodyMd).not.toMatch(/UT55559|RW72642/);

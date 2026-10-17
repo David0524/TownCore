@@ -18,6 +18,7 @@ import {
   assignArticleImage,
   buildByline,
   linkArticleEntities,
+  newBusinessesRoundup,
   type ImageDeps,
 } from '@towncore/pipeline';
 
@@ -26,6 +27,19 @@ import {
 // "fixture-" stories, which exist to test sitemaps and feeds. Idempotent: re-running replaces them.
 
 const TEST_PLATFORM = 'test-fixture';
+
+/** Fictional business names for the fixture roundup: a few that read as places to visit. */
+const TEST_FILING_NAMES = [
+  'SAMPLE BREWING COMPANY LLC',
+  'SAMPLE SMILES DENTAL PA',
+  'SAMPLE CREEK DENTAL GROUP LLC',
+  'SAMPLE NAIL SPA LLC',
+  'SAMPLE PIZZA KITCHEN INC',
+  'SAMPLE HOLDINGS LLC',
+  'SAMPLE CAPITAL PARTNERS LLC',
+  'SAMPLE ROOFING LLC',
+  ...Array.from({ length: 32 }, (_, i) => `SAMPLE VENTURE ${String(i + 1).padStart(2, '0')} LLC`),
+];
 
 type TestStory = {
   slug: string;
@@ -211,7 +225,7 @@ export function testStories(siteName: string, townSlug: string): TestStory[] {
 
 export async function seedTestContent(
   db: Db,
-  town: { id: string; slug: string; name: string; siteName: string },
+  town: { id: string; slug: string; name: string; siteName: string; timezone: string },
 ) {
   const written: string[] = [];
   const topics: Array<{ id: string; streets: string[] }> = [];
@@ -333,6 +347,78 @@ export async function seedTestContent(
       written.push(article!.id);
       if (story.streets?.length) topics.push({ id: article!.id, streets: story.streets });
     }
+    // A full-week roundup built by the real template from 40 fictional filings, in every town the
+    // e2e reviews (owner, 2026-10-17: "Roundups that read like articles"): lede and highlights
+    // before the table, a collapsed table and a grouped Sources box.
+    if (['boca-raton', 'harbor-point', 'pine-hollow'].includes(town.slug)) {
+      const [filingSource] = await tx
+        .insert(sources)
+        .values({
+          townId: town.id,
+          kind: 'business_filings',
+          platform: TEST_PLATFORM,
+          adapter: TEST_PLATFORM,
+          url: `https://example.com/${town.slug}-filings`,
+          lastOkAt: new Date(),
+        })
+        .returning();
+      const weekStart = new Date(Date.now() - 9 * 86_400_000);
+      const day = (i: number) => {
+        const d = new Date(weekStart.getTime() + (i % 7) * 86_400_000);
+        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+      };
+      const mmdd = (d: Date) =>
+        `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}/${d.getUTCFullYear()}`;
+      const filingRows = await tx
+        .insert(records)
+        .values(
+          TEST_FILING_NAMES.map((name, i) => ({
+            sourceId: filingSource!.id,
+            townId: town.id,
+            externalId: `test-filing-${i}`,
+            type: 'new-filing',
+            title: `${name} (FICTIONAL)`,
+            text: `${i % 4 ? 'Florida limited liability company' : 'Florida profit corporation'}, document number T${i}, filed ${mmdd(day(i))}.`,
+            url: `https://example.com/${town.slug}-filings/day-${i % 7}`,
+            occurredAt: day(i),
+            contentHash: `test-filing-${i}`,
+            raw: {
+              zip: `0000${i % 3}`,
+              address1: `${10 + i} SAMPLE ${i % 2 ? 'HARBOR' : 'MILL'} RD`,
+            },
+          })),
+        )
+        .returning();
+      const draft = newBusinessesRoundup(
+        { name: town.name, timezone: town.timezone, agency: town.name },
+        weekStart,
+        filingRows,
+        [31, 28, 35],
+      );
+      const publishedAt = new Date(Date.now() - 50 * 3_600_000);
+      const [roundup] = await tx
+        .insert(articles)
+        .values({
+          townId: town.id,
+          slug: 'test-filings-roundup',
+          headline: `[TEST] ${draft.headline}`,
+          dek: draft.dek,
+          bodyMd: draft.bodyMd,
+          beat: draft.beat,
+          status: 'published',
+          byline: buildByline(town.siteName),
+          sourceRecordIds: draft.sourceRecordIds,
+          kind: 'roundup',
+          promptVersions: ['template'],
+          tier: 1,
+          publishedAt,
+          createdAt: publishedAt,
+          updatedAt: publishedAt,
+        })
+        .returning();
+      written.push(roundup!.id);
+    }
+
     // Two fictional events on the town's calendar tomorrow; the first is listed twice, as when
     // two of the city's calendars carry the same event.
     const tomorrow = new Date(Date.now() + 26 * 3_600_000);

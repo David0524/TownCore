@@ -24,6 +24,7 @@
     "stories:once": "pnpm --filter @towncore/pipeline stories:once",
     "ai:plan": "pnpm --silent --filter @towncore/pipeline ai:plan",
     "images:backfill": "pnpm --filter @towncore/pipeline images:backfill",
+    "roundups:rerender": "pnpm --silent --filter @towncore/pipeline roundups:rerender",
     "directory:seed": "pnpm --silent --filter @towncore/directory directory:seed",
     "directory:stripe": "pnpm --silent --filter @towncore/directory directory:stripe",
     "mail:routing:sync": "pnpm --filter @towncore/db mail:routing:sync",

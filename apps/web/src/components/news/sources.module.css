@@ -1,0 +1,67 @@
+/* Locked: the Sources box looks the same in every town (§11a-2). A quiet box at the end of the
+   story in the metadata face, one compact line per source (owner, 2026-10-17). */
+.sources {
+  border-top: var(--hairline);
+  padding-top: 0.9rem;
+  margin: 2rem 0 1rem;
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.sources h2 {
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-weight: 500;
+  font-size: var(--fs-meta);
+  letter-spacing: 0;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.sources a {
+  color: var(--ink);
+}
+
+.groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.groups > li {
+  margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.about {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: var(--fs-meta);
+}
+
+.aboutLabel {
+  font-weight: 500;
+}
+
+.all {
+  margin-top: 0.5rem;
+}
+
+.all summary {
+  cursor: pointer;
+  padding: 0.6rem 0;
+  color: var(--ink);
+}
+
+.all ol {
+  margin: 0.25rem 0 0;
+  padding-left: 1.5rem;
+  overflow-wrap: anywhere;
+}
+
+.all li {
+  margin: 0.15rem 0;
+}
