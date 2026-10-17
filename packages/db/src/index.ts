@@ -87,3 +87,4 @@ export {
   WEATHER_MAX_AGE_MS,
 } from './weather';
 export { countReferral, experimentKeys, experimentStates, townVariant } from './audience';
+export { createHttpDb, neonTransport, type SqlTransport } from './http';

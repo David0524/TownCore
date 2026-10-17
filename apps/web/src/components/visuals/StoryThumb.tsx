@@ -1,7 +1,6 @@
-import type { Theme } from '@towncore/config';
 import type { Article, Town } from '@towncore/db';
 import { TypographicCard } from '@/components/news/TypographicCard';
-import { coverImage, roundupFigure } from '@/modules/data';
+import { coverImage, titleCardLabel } from '@/modules/data';
 import { MapGraphic } from './MapGraphic';
 import { SectionIllustrationThumb } from './SectionIllustration';
 import styles from './visuals.module.css';
@@ -13,15 +12,13 @@ import styles from './visuals.module.css';
  */
 export async function StoryThumb({
   town,
-  theme,
   article,
 }: {
   town: Town;
-  theme: Theme;
   article: Pick<
     Article,
     'id' | 'townId' | 'headline' | 'dek' | 'bodyMd' | 'beat' | 'kind' | 'sourceRecordIds'
-  >;
+  > & { publishedAt?: Date | null };
 }) {
   const image = await coverImage(article, town.timezone);
   if (image.spec.type === 'photo') {
@@ -45,14 +42,8 @@ export async function StoryThumb({
       </div>
     );
   }
-  const figure = await roundupFigure(article);
+  const label = await titleCardLabel(article);
   return (
-    <TypographicCard
-      theme={theme}
-      beat={article.beat}
-      headline={article.headline}
-      figure={figure}
-      ratio="thumb"
-    />
+    <TypographicCard label={label} siteName={town.siteName} beat={article.beat} ratio="thumb" />
   );
 }

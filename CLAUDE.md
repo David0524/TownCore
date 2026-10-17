@@ -505,12 +505,12 @@ Every article gets a visual, but a visual must never be misleading. The image ro
 | --- | --- | --- |
 | **Generated map** (OpenStreetMap data, rendered in our town theme) | Permits, development, road work, property sales, public safety locations (block level only, never a home address) | Credit "© OpenStreetMap contributors" (ODbL) |
 | **Generated data graphic** (chart or table card in the town theme) | Budgets, votes, election results, sales prices, inspection scores | Built from the story's own source records |
-| **Typographic card** (headline, beat icon, motif, town colors) | Default fallback for anything | Always available, so every article has a visual |
+| **Title card** (a label slate: "Property Sales", "Public Safety", "Breaking News"; the section's dot and the site name, in the town's brand color) | Last resort for anything | Always available, so every article has a visual. Never the story's headline or a drawing. "Breaking News" only for a warning or urgent official notice in its first 24 hours. A story on its title card never leads |
 | **Business-supplied photo** | Openings, spotlights, directory | Only with a license grant captured in the claim flow or by email |
 | **Reader or contributor photos** | Community, events, weather, sports | Upload form with license grant, credit line and human approval; pay-per-photo contributors later |
 | **Government public-domain images** | Officials, facilities, projects | Federal government works are public domain. State and local works vary by state, so store the legal basis per source and credit the agency |
 | **Licensed stock** (e.g. Unsplash or Pexels under their licenses) | Generic topics only: weather, a generic gavel for court items, school buses | Never presented as the actual scene of the story; caption "Stock photo" |
-| **AI-generated image** | Explainers, evergreen guides, generic features, and generic section images on news stories from the network library (never public safety) | Photorealistic images are allowed (owner, 2026-10-16), but every AI image is still generic: no real people, no real events, no identifiable real places; a picture of a kind of thing, never presented as the story's scene; approved by a person; recorded as AI-generated in `images` (no label shown, owner 2026-10-16) |
+| **AI-generated image** | Explainers, evergreen guides, generic features, and generic section images on news stories from the network library, chosen by story kind (each recurring roundup has its own set) before section (never public safety or a single restaurant's inspection) | Photorealistic images are allowed (owner, 2026-10-16), but every AI image is still generic: no real people, no real events, no identifiable real places; a picture of a kind of thing, never presented as the story's scene; approved by a person; recorded as AI-generated in `images` (no label shown, owner 2026-10-16) |
 
 **Never:**
 - Images from other news sites, social media, Google Images or Street View.
@@ -520,14 +520,15 @@ Every article gets a visual, but a visual must never be misleading. The image ro
 
 **Every image needs:** alt text written from what it actually shows, a credit line, and an `images` row: id, kind, source_url, license, attribution, ai_generated, approved_by.
 
-**Defaults by beat** (stored in config; the first allowed option wins):
-- Development, permits, property: map → data graphic → section illustration → card
-- Meetings: data graphic (votes) → government image → section illustration → card
-- Business openings: business photo → section illustration → card
-- Schools: data graphic → section illustration → card
-- Public safety: block-level map → card
-- Community and weather: reader photo → stock → section illustration → card
-- Guides: AI illustration (the guide's own, then a section one) → stock → card
+**Defaults by beat** (stored in config; the first allowed option wins; "illustration" means the library: the story kind's own pictures, then a keyword match in the section, then the section's calm fallback scenes; `docs/plans/default-images.md`):
+- Code-built roundups: data graphic (in the article; its cover is the kind's illustration) → kind illustration → title card
+- Development, permits, property: map → data graphic → illustration → title card
+- Meetings: data graphic (votes) → government image → illustration → title card
+- Business openings: business photo → illustration → title card
+- Schools: data graphic → illustration → title card
+- Public safety and a single restaurant's inspection: block-level map → title card (no drawing)
+- Community and weather: reader photo → stock → illustration → title card; NWS alerts take weather pictures their event names
+- Guides: AI illustration (the guide's own, then a scene its title names) → stock → title card
 
 **Open Graph images:** generate a share image per article from the chosen visual, plus the headline in the town's theme, sized for Facebook and other platforms.
 
@@ -730,6 +731,13 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
 - 2026-10-17 — **Production deploys migrate the database first (owner: "go with b, migrate on Vercel build").** The demo went down when #116 and #117 deployed code that read tables their migrations hadn't created on the demo database yet. `apps/web` now has a `vercel-build` script: on a production deploy (`VERCEL_ENV=production`) it applies the repo's migrations to the site's database (`DATABASE_URL_UNPOOLED`, Neon's direct connection, else `DATABASE_URL`) before `next build`; a failed migration fails the build, so the previous deploy stays live. Previews share that database and never migrate, so a pull request's migration runs only once it is merged. Vercel's Build Command must stay the default for `vercel-build` to run. Replaces running `pnpm demo:migrate` by hand after a merge (it stays for manual fixes).
 
 - 2026-10-17 — **Nursing-home inspections for every town (owner: "consider the below sources … I trust your judgement"; checks in `docs/plans/public-data-sources.md`).** A new `health_facilities` source kind and a `cms` adapter read Medicare Care Compare's Provider Data Catalog (a documented GET, no key; robots.txt allows `/provider-data/` with a 10-second crawl delay, written before its first group, which the Fetcher now honors network-wide): the town's nursing homes, their health citations (tag, CMS area, scope and severity A–L, the federal requirement's own wording) and their fines and payment denials, one record per inspection date per home and one per penalty, by the facility's mailing city. Only facility names: CMS publishes no resident, worker or inspector names, and none are written. CMS posts an inspection two to six months after the visit, so each run re-reads 240 days of inspections and 365 of penalties, and the weekly roundup covers what was first read last week, not last week's visits; a town's first roundup is its backlog, dated row by row. It leads with the most serious finding (immediate jeopardy, actual harm, the largest penalty, then the most citations) and compares each home with its previous inspection; a spotlight goes to a home with actual harm or immediate jeopardy, a payment denial or $25,000 in fines (two a week). Everything from this source is Tier 3 in code, whatever it found (§7: health). A penalty CMS lists twice under two ids is stored once, so a total is never doubled. The launcher gives every town this source; a town without a nursing home costs one request a week. Not built: hospital star ratings (monthly ratings, for guides rather than stories) and the CMS abuse icon and special focus status (they change monthly; worth a follow-up once a story can say when a flag was added).
+- 2026-10-17 — **Default story images; the title card never leads (owner: "This is so ugly"; "Stop with the stupid leaf. My thought was one that is a generic Breaking News headline"; plan `docs/plans/default-images.md`, approved as written with D1).**
+  - **Title card:** a label slate in the town's brand color (the house ads' deep-to-brand panel): one label for the kind of story ("Property Sales", "Road Work", "Public Safety", "City Hall"), the section's dot and the site name; no motif, glyph or headline. "Breaking News" only for an NWS warning or an urgent official notice (closure, boil-water, evacuation) in its first 24 hours.
+  - **Catalogue:** shots carry the code-built story kinds they're for, so each recurring roundup rotates through at least 6 pictures under the 14-day rule (counted by scene); calm fallback scenes serve stories that match no tag; a repeat beats the title card. 40 new scenes (sales, permits, filings, licenses, places, inspections, roads, meetings, alerts, fallbacks) join the 21 still missing in the next batch.
+  - **Photorealistic versions** (owner: "I want some photorealistic pictures in our next batch"): the shot list carries a photo style; a photo of a scene is saved as `<id>-p`, a second take as `<id>-2`, each its own library picture.
+  - **Cover rule:** a story whose cover is the title card never takes a lead slot (homepage, phone lead and the first "More top stories" card, section fronts, Up next). Library AI pictures may lead. Rank is unchanged; with no eligible picture, the lead module hides and the front opens with the next module.
+  - **No drawings** on public safety (block map, else the "Public Safety" slate) or beside one restaurant's failed inspection (D-DI-2). NWS alerts get weather pictures, not community ones. The style stays `ILLUSTRATION_STYLE`.
+  - Covers of chart stories are recorded (`images.cover_illustration_id`), and pages may pick a library picture for a story with no recorded image, which is why the property-sales roundup showed the old card. `pnpm illustrations assign <town> --demo` runs the backfill on the demo's database over HTTPS (`DEMO_DATABASE_URL`, after `pnpm demo:migrate`).
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.

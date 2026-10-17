@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import {
+  cardLabel,
   GAME_RECORD,
   TOPIC_INDEX_MIN_ARTICLES,
   tropicsBasin,
@@ -32,9 +33,10 @@ import {
   type RankableArticle,
 } from '@towncore/db';
 import {
+  articleStoryKind,
   chooseArticleImage,
   coverIllustration,
-  pickLead as pickRankedLead,
+  leadEligible,
   rankArticles,
   type ImageChoice,
 } from '@towncore/pipeline';
@@ -67,10 +69,68 @@ export async function rankedBeatArticles(townId: string, beat: string) {
   return rankArticles(articles, { now: new Date(), pinned, engagement, diversity: false });
 }
 
-/** The lead: the highest-ranked Tier 1–2 story, or Tier 3 only when a person approved it. */
-export function pickLead(articles: RankableArticle[]): RankableArticle | undefined {
-  return pickRankedLead(articles);
+type CoverArticle = Pick<
+  Article,
+  'id' | 'townId' | 'headline' | 'dek' | 'bodyMd' | 'beat' | 'kind' | 'sourceRecordIds'
+>;
+
+/**
+ * Whether a story's cover is a picture: anything but the title card (owner, 2026-10-17: a story
+ * whose only visual is the title card is never the cover story; a library picture may lead).
+ */
+export async function hasPicture(article: CoverArticle, timeZone: string): Promise<boolean> {
+  return (await coverImage(article, timeZone)).kind !== 'typographic-card';
 }
+
+/**
+ * The lead: the highest-ranked Tier 1–2 story (Tier 3 only when a person approved it) whose cover
+ * is a picture. Rank never changes; a story on its title card just doesn't take the lead slot.
+ * None when no eligible story has a picture: the lead module hides and the front opens with the
+ * next module.
+ */
+export async function pickLead(
+  articles: RankableArticle[],
+  timeZone: string,
+): Promise<RankableArticle | undefined> {
+  for (const a of articles) {
+    if (leadEligible(a) && (await hasPicture(a, timeZone))) return a;
+  }
+  return undefined;
+}
+
+/** The first story with a picture moved to the front, the rest in rank order. */
+export async function pictureFirst<T extends CoverArticle>(
+  stories: T[],
+  timeZone: string,
+): Promise<T[]> {
+  for (const [i, s] of stories.entries()) {
+    if (await hasPicture(s, timeZone)) return [s, ...stories.slice(0, i), ...stories.slice(i + 1)];
+  }
+  return stories;
+}
+
+/** The first story with a picture, or none (section-front leads and Up next). */
+export async function firstWithPicture<T extends CoverArticle>(
+  stories: T[],
+  timeZone: string,
+): Promise<T | undefined> {
+  for (const s of stories) if (await hasPicture(s, timeZone)) return s;
+  return undefined;
+}
+
+/** The title card's label for a story ("Property Sales", "Breaking News"). */
+export const titleCardLabel = cache(
+  async (
+    article: Pick<Article, 'id' | 'beat' | 'kind' | 'headline'> & { publishedAt?: Date | null },
+  ): Promise<string> =>
+    cardLabel({
+      storyKind: await articleStoryKind(db(), article.id),
+      beat: article.beat,
+      guide: article.kind === 'guide',
+      headline: article.headline,
+      publishedAt: article.publishedAt ?? null,
+    }),
+);
 
 /**
  * What the Today tile shows: the 15-minute NWS snapshot, or, if that's missing or stale, the
@@ -300,8 +360,12 @@ export const ALSO_TODAY = 3;
  * Splits the ranked stories between the front-page modules a theme uses, so no story shows
  * twice: the lead, the Today band's "Also today" list, then everything else.
  */
-export function frontSplit(articles: RankableArticle[], modules: readonly string[]) {
-  const lead = modules.includes('lead-story') ? pickLead(articles) : undefined;
+export async function frontSplit(
+  articles: RankableArticle[],
+  modules: readonly string[],
+  timeZone: string,
+) {
+  const lead = modules.includes('lead-story') ? await pickLead(articles, timeZone) : undefined;
   const rest = articles.filter((a) => a.id !== lead?.id);
   // With a Briefs column (heritage) or a briefing-led front (community) the short items are
   // already on the page, so Today doesn't repeat them.

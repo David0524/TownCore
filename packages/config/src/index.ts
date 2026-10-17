@@ -167,11 +167,15 @@ export {
   AI_ILLUSTRATION_LABEL,
   AI_IMAGE_LABEL,
   aiLabel,
+  BREAKING_HOURS,
+  cardLabel,
   illustrationSrc,
   imageDefaults,
   imageKinds,
   roundupImageDefaults,
   MAP_VIEW,
+  storyKindOf,
+  storyKinds,
   type DailyCountsSpec,
   type IllustrationSpec,
   type ImageKind,
@@ -179,6 +183,7 @@ export {
   type MapSpec,
   type PhotoSpec,
   type StockPhotoSpec,
+  type StoryKind,
 } from './images';
 export {
   entityKey,
@@ -215,6 +220,10 @@ export {
 } from './launch';
 export {
   ILLUSTRATION_STYLE,
+  PHOTO_STYLE,
+  isPhotoVariant,
+  photoPrompt,
+  shotIdOf,
   shotPrompt,
   illustrationShots,
   type IllustrationSection,

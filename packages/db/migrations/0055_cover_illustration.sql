@@ -1,0 +1,1 @@
+ALTER TABLE "images" ADD COLUMN "cover_illustration_id" text;

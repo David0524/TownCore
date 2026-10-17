@@ -103,7 +103,7 @@ describe('daily counts from the story’s own records', () => {
 describe('card alt text', () => {
   it('says what the card shows', () => {
     expect(cardAlt({ headline: 'Council sets budget', beat: 'government' })).toBe(
-      'Title card with the headline “Council sets budget” and the Government section mark.',
+      'Title card reading “City Hall”.',
     );
   });
 });

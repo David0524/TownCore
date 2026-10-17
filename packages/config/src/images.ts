@@ -40,6 +40,98 @@ export const roundupImageDefaults: readonly ImageKind[] = [
   'typographic-card',
 ];
 
+/**
+ * Kinds of story the pipeline builds in code, read from the story candidate's key
+ * (`roundup:sales:2026-10-05` → `roundup:sales`). The image catalogue and the title card's label
+ * are chosen by kind before beat (docs/plans/default-images.md).
+ */
+export const storyKinds = [
+  'roundup:meetings',
+  'roundup:new-businesses',
+  'roundup:new-licenses',
+  'roundup:new-places',
+  'roundup:inspections',
+  'roundup:permits',
+  'roundup:roads',
+  'roundup:sales',
+  'spotlight:permit',
+  'spotlight:inspection',
+  'alert',
+] as const;
+export type StoryKind = (typeof storyKinds)[number];
+
+/** The story kind a candidate key names, or null for model-written stories and guides. */
+export function storyKindOf(key: string | null | undefined): StoryKind | null {
+  if (!key) return null;
+  const [a, b] = key.split(':');
+  if (a === 'alert') return 'alert';
+  const kind = `${a}:${b}`;
+  return (storyKinds as readonly string[]).includes(kind) ? (kind as StoryKind) : null;
+}
+
+/**
+ * The title card is a generic label slate (owner, 2026-10-17: "a generic Breaking News
+ * headline"): one label for the kind of story, never the story's own headline or a drawing.
+ */
+const kindLabels: Record<StoryKind, string> = {
+  'roundup:meetings': 'City Hall',
+  'roundup:new-businesses': 'New Businesses',
+  'roundup:new-licenses': 'New Licenses',
+  'roundup:new-places': 'New Places to Eat',
+  'roundup:inspections': 'Restaurant Inspections',
+  'roundup:permits': 'Building Permits',
+  'roundup:roads': 'Road Work',
+  'roundup:sales': 'Property Sales',
+  'spotlight:permit': 'Building Permits',
+  'spotlight:inspection': 'Restaurant Inspections',
+  alert: 'Weather Alert',
+};
+
+const beatLabels: Record<string, string> = {
+  government: 'City Hall',
+  development: 'Development',
+  business: 'Business News',
+  'public-safety': 'Public Safety',
+  schools: 'Schools',
+  community: 'Community News',
+  weather: 'Weather',
+};
+
+/** "Breaking News" stays on a story this long, then it shows its usual label. */
+export const BREAKING_HOURS = 24;
+
+// Urgent official notices: closures, boil-water notices, evacuations. Only from public offices'
+// own records (the beats below), never a business story.
+const URGENT_NOTICE =
+  /\b(boil[- ]water|evacuat\w*|shelter in place|(road|bridge|street|lanes?) (is |are )?closed|(road|bridge|street) closures?)\b/i;
+const URGENT_BEATS = new Set(['government', 'development', 'community', 'public-safety']);
+
+/**
+ * The card's label. "Breaking News" only where it's true (§6a: no clickbait): a National Weather
+ * Service warning or an urgent official notice, in its first 24 hours.
+ */
+export function cardLabel(story: {
+  storyKind: StoryKind | null;
+  beat: string;
+  guide?: boolean;
+  headline: string;
+  publishedAt?: Date | null;
+  now?: Date;
+}): string {
+  const fresh =
+    story.publishedAt != null &&
+    (story.now ?? new Date()).getTime() - story.publishedAt.getTime() < BREAKING_HOURS * 3_600_000;
+  if (fresh) {
+    if (story.storyKind === 'alert' && /\bwarning\b/i.test(story.headline)) return 'Breaking News';
+    if (!story.storyKind && URGENT_BEATS.has(story.beat) && URGENT_NOTICE.test(story.headline)) {
+      return 'Breaking News';
+    }
+  }
+  if (story.guide) return 'Local Guide';
+  if (story.storyKind) return kindLabels[story.storyKind];
+  return beatLabels[story.beat] ?? 'Local News';
+}
+
 /** A bar chart of counts per day, built only from the story's own records. */
 export type DailyCountsSpec = {
   type: 'daily-counts';

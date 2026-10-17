@@ -170,7 +170,7 @@ function placeName(where: string): string {
  * Essentials (M4 PR F): quick links to the town's evergreen guides, in the order its config
  * lists the topics (the most-asked first), linking to the full list.
  */
-export const Essentials: HomeModuleComponent = async ({ town, theme }) => {
+export const Essentials: HomeModuleComponent = async ({ town }) => {
   const order: string[] = ((town.config as TownConfig).guides ?? []).map((g) => g.topic);
   const listed = (await listPublishedGuides(db(), town.id))
     .filter((g) => g.guideTopic && order.includes(g.guideTopic))
@@ -192,7 +192,7 @@ export const Essentials: HomeModuleComponent = async ({ town, theme }) => {
         {guides.map((g) => (
           <li key={g.id}>
             <Link href={articlePath(g.slug, g.kind)} className={styles.guideCard}>
-              <StoryThumb town={town} theme={theme} article={g} />
+              <StoryThumb town={town} article={g} />
               <span className={styles.guideTitle}>{g.headline}</span>
             </Link>
           </li>

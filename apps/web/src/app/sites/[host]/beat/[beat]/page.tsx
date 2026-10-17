@@ -13,7 +13,13 @@ import { rssAlternate } from '@/lib/discovery';
 import { thinUnless } from '@/lib/indexing';
 import { themeFor } from '@/lib/theme';
 import { requireTown, resolveTown } from '@/lib/town';
-import { rankedBeatArticles, realStoryCounts, roundupFigure, townSources } from '@/modules/data';
+import {
+  firstWithPicture,
+  rankedBeatArticles,
+  realStoryCounts,
+  roundupFigure,
+  townSources,
+} from '@/modules/data';
 import { ComingUp, DocumentsPosted } from '@/modules/front';
 import { Slot } from '@/slots/Slot';
 import styles from './beat.module.css';
@@ -69,7 +75,10 @@ export default async function BeatPage({ params }: Props) {
   const side: ReactNode[] = [meetings, postings].filter((n) => n !== null);
   const hasRail = theme.layout.grid === 'main-right-rail';
 
-  const [lead, ...rest] = articles;
+  // The section's lead is its first story with a picture (owner, 2026-10-17); the rest keep
+  // rank order, and with no picture at all every story is a brief.
+  const lead = await firstWithPicture(articles, town.timezone);
+  const rest = articles.filter((a) => a.id !== lead?.id);
   const figure = lead ? await roundupFigure(lead) : null;
 
   return (
@@ -92,36 +101,33 @@ export default async function BeatPage({ params }: Props) {
       {hasRail && meetings ? <div className="mobile-only">{meetings}</div> : null}
 
       {lead ? (
-        <>
-          <StoryBlock
-            story={lead}
-            town={town}
-            variant="lead"
-            as="h2"
-            visual={
-              <ArticleVisual town={town} theme={theme} article={lead} figure={figure} cover />
-            }
-          />
-          {rest.length > 0 ? (
-            <ul className={styles.list}>
-              {rest.map((article, i) => (
-                <Fragment key={article.id}>
-                  <li>
-                    <StoryBlock story={article} town={town} variant="brief" />
-                  </li>
-                  {(i + 1) % INFEED_EVERY === 0 ? (
-                    <li>
-                      <Slot town={town} name="home.infeed" />
-                    </li>
-                  ) : null}
-                </Fragment>
-              ))}
-            </ul>
-          ) : null}
-        </>
-      ) : (
+        <StoryBlock
+          story={lead}
+          town={town}
+          variant="lead"
+          as="h2"
+          visual={<ArticleVisual town={town} article={lead} figure={figure} cover />}
+        />
+      ) : null}
+      {rest.length > 0 ? (
+        <ul className={styles.list}>
+          {rest.map((article, i) => (
+            <Fragment key={article.id}>
+              <li>
+                <StoryBlock story={article} town={town} variant="brief" />
+              </li>
+              {(i + 1) % INFEED_EVERY === 0 ? (
+                <li>
+                  <Slot town={town} name="home.infeed" />
+                </li>
+              ) : null}
+            </Fragment>
+          ))}
+        </ul>
+      ) : null}
+      {articles.length === 0 ? (
         <p className={styles.empty}>No {beat.label.toLowerCase()} stories yet.</p>
-      )}
+      ) : null}
 
       {hasRail ? null : side}
       {hasRail ? null : <Slot town={town} name="rail.box" />}

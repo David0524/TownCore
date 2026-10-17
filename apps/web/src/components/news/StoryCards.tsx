@@ -1,4 +1,3 @@
-import type { Theme } from '@towncore/config';
 import type { Article, Town } from '@towncore/db';
 import Link from 'next/link';
 import { StoryThumb } from '@/components/visuals/StoryThumb';
@@ -25,15 +24,7 @@ type CardStory = Pick<
  * phone readers a reason to keep going). About two and a bit cards show, so the next one is
  * visibly cut off and invites a swipe.
  */
-export function TopStoriesRow({
-  town,
-  theme,
-  stories,
-}: {
-  town: Town;
-  theme: Theme;
-  stories: CardStory[];
-}) {
+export function TopStoriesRow({ town, stories }: { town: Town; stories: CardStory[] }) {
   if (stories.length < 2) return null;
   return (
     <section className={styles.row} aria-labelledby="top-row-h" data-testid="top-stories-row">
@@ -45,7 +36,7 @@ export function TopStoriesRow({
           <li key={story.id}>
             <Link href={articlePath(story.slug, story.kind)} className={styles.card}>
               <div className={styles.cardVisual} aria-hidden="true">
-                <StoryThumb town={town} theme={theme} article={story} />
+                <StoryThumb town={town} article={story} />
               </div>
               <BeatLabel beat={story.beat} />
               <span className={styles.cardHeadline}>{story.headline}</span>
@@ -61,7 +52,7 @@ export function TopStoriesRow({
  * "Up next" at the end of a story (owner, 2026-10-16): one picture card for the story to read
  * next, so the end of a story leads somewhere instead of out of the site.
  */
-export function UpNext({ town, theme, story }: { town: Town; theme: Theme; story: CardStory }) {
+export function UpNext({ town, story }: { town: Town; story: CardStory }) {
   return (
     <section className={styles.upNext} aria-labelledby="up-next-h" data-testid="up-next">
       <h2 id="up-next-h" className={styles.upNextLabel}>
@@ -69,7 +60,7 @@ export function UpNext({ town, theme, story }: { town: Town; theme: Theme; story
       </h2>
       <Link href={articlePath(story.slug, story.kind)} className={styles.upNextCard}>
         <div className={styles.upNextVisual} aria-hidden="true">
-          <StoryThumb town={town} theme={theme} article={story} />
+          <StoryThumb town={town} article={story} />
         </div>
         <div className={styles.upNextText}>
           <BeatLabel beat={story.beat} />

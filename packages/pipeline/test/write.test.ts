@@ -331,14 +331,15 @@ describe('writeCandidate: templated items', () => {
     });
     expect(a.bodyMd).toContain('Teens Academy LLC');
     expect(a.bodyMd).not.toContain('1 Main St');
-    // One record is too little for a chart: the router falls back to the typographic card.
+    // One record is too little for a chart, and this test has no illustration library: the
+    // router falls back to the title card, labeled with the kind of story.
     const [image] = await db.select().from(images).where(eq(images.articleId, a.id));
     expect(image).toMatchObject({
       kind: 'typographic-card',
       license: 'own-work',
       aiGenerated: false,
     });
-    expect(image!.alt).toContain(a.headline);
+    expect(image!.alt).toBe('Title card reading “New Businesses”.');
   });
 
   it('gives a roundup over several days a data graphic built from its records', async () => {

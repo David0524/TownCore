@@ -1,10 +1,13 @@
 import {
   AI_ILLUSTRATION_LABEL,
-  beats,
+  cardLabel,
   entityKey,
   illustrationLibrary,
   illustrationShots,
   imageDefaults,
+  shotIdOf,
+  storyKindOf,
+  type StoryKind,
   roundupImageDefaults,
   type DailyCountsSpec,
   type IllustrationSection,
@@ -36,6 +39,8 @@ import {
   ne,
   gte,
   inArray,
+  isNotNull,
+  or,
   records,
   staff,
   storyCandidates,
@@ -80,7 +85,9 @@ const BUILDABLE = new Set<ImageKind>([
   'business-photo',
   'ai-illustration',
 ]);
-const PHOTO_OPTIONS = new Set<ImageKind>(['reader-photo', 'business-photo', 'ai-illustration']);
+// Taking a reader photo marks it used, so only a recorded choice may take one. Library
+// illustrations have no side effect, so a page drawing an unrecorded story may pick one.
+const PHOTO_OPTIONS = new Set<ImageKind>(['reader-photo', 'business-photo']);
 
 /**
  * What the network options need: the polite Fetcher (Census Geocoder for maps, the Unsplash API
@@ -126,6 +133,8 @@ type ArticleForImage = {
   beat: string;
   kind: string;
   sourceRecordIds: string[];
+  /** The code-built kind (`roundup:sales`), from the candidate key; looked up when undefined. */
+  storyKind?: StoryKind | null;
 };
 
 /** The beat's list of options, roundups first trying a data graphic. */
@@ -205,9 +214,19 @@ export function dailyCountsAlt(spec: DailyCountsSpec, timeZone: string): string 
   return `Bar chart of ${spec.label} by day, ${first} to ${last}: ${values}. Total ${spec.total}.`;
 }
 
-export function cardAlt(article: Pick<ArticleForImage, 'headline' | 'beat'>): string {
-  const label = beats.find((b) => b.slug === article.beat)?.label ?? 'News';
-  return `Title card with the headline “${article.headline}” and the ${label} section mark.`;
+export function cardAlt(
+  article: Pick<ArticleForImage, 'headline' | 'beat'> & {
+    kind?: string;
+    storyKind?: StoryKind | null;
+  },
+): string {
+  const label = cardLabel({
+    storyKind: article.storyKind ?? null,
+    beat: article.beat,
+    guide: article.kind === 'guide',
+    headline: article.headline,
+  });
+  return `Title card reading “${label}”.`;
 }
 
 const OWN_WORK = 'own-work';
@@ -473,6 +492,7 @@ export async function assignArticleImage(
       townName: towns.name,
       townState: towns.state,
       candidateKind: storyCandidates.kind,
+      candidateKey: storyCandidates.key,
     })
     .from(articles)
     .innerJoin(towns, eq(articles.townId, towns.id))
@@ -495,16 +515,24 @@ export async function assignArticleImage(
   }
   // Articles written before `articles.kind` existed are roundups if their candidate was.
   const kind = row.candidateKind === 'roundup' ? 'roundup' : row.article.kind;
+  const storyKind = storyKindOf(row.candidateKey);
   const choice = await chooseArticleImage(
     db,
-    { ...row.article, kind },
+    { ...row.article, kind, storyKind },
     row.timezone,
     deps && { ...deps, town: { name: row.townName, state: row.townState } },
     { photos: true },
   );
+  // A chart is never a cover (owner, 2026-10-16): record the illustration that covers it, so the
+  // no-repeat rule sees it and weekly roundups rotate through their set.
+  const cover =
+    choice.kind === 'data-graphic'
+      ? await pickSectionIllustration(db, { ...row.article, kind, storyKind })
+      : null;
   const values = {
     ...choice,
     articleId,
+    coverIllustrationId: cover?.spec.type === 'illustration' ? cover.spec.illustrationId : null,
     aiGenerated: choice.aiGenerated ?? false,
     approvedBy: choice.approvedBy ?? null,
     updatedAt: new Date(),
@@ -541,11 +569,17 @@ function stableHash(text: string): number {
 }
 
 /**
- * The library illustration for a story (§11c, section illustrations): one made for its section
- * (a guide: any scene its own words name) and region, not shown in the town in the last two weeks, with the most of
- * its keywords in the headline and dek; ties broken by a stable hash, so a story keeps its pick.
- * A story that already shows one keeps it while it's in the library. Null for public safety,
- * which has none, and when nothing fits.
+ * The library illustration for a story (§11c; docs/plans/default-images.md). In order:
+ * - a code-built story kind (`roundup:sales`, `alert` …) takes a shot made for that kind, the best
+ *   keyword match first, else any (an alert only a matching or fallback one);
+ * - otherwise a shot of its section (a guide: any scene its own title names) with at least one of
+ *   its keywords in the headline or dek;
+ * - otherwise one of the section's calm fallback scenes.
+ * Only shots fit for the town's region, and none shown in the town in the last two weeks (counted
+ * by scene, so `sale-01` and its photo `sale-01-p` are one) unless every fitting scene was: a
+ * repeat beats the title card. Ties are broken by a stable hash, so
+ * a story keeps its pick, and a story keeps a current pick that still fits. Null for public safety
+ * and an inspection spotlight, which have none, and when nothing fits.
  */
 export function chooseLibraryIllustration(input: {
   section: string;
@@ -553,42 +587,66 @@ export function chooseLibraryIllustration(input: {
   text: string;
   /** The headline alone: a guide is matched on its title, not its summary. */
   title?: string;
+  storyKind?: StoryKind | null;
   articleId: string;
+  /** The library file the story shows now. */
   current: string | null;
+  /** Library files (or scenes) shown in the town recently. */
   recent: ReadonlySet<string>;
   shots?: readonly IllustrationShot[];
   library?: readonly LibraryIllustration[];
 }): { shot: IllustrationShot; art: LibraryIllustration } | null {
-  const shots = input.shots ?? illustrationShots;
-  const library = new Map((input.library ?? illustrationLibrary).map((a) => [a.id, a]));
+  // A drawing beside one named restaurant's failed inspection would read as its kitchen.
+  if (input.storyKind === 'spotlight:inspection') return null;
+  const shots = new Map((input.shots ?? illustrationShots).map((s) => [s.id, s]));
+  const ids = new Set(shots.keys());
+  const recentScenes = new Set(
+    [...input.recent].map((id) => shotIdOf(id, ids)).filter((id): id is string => id !== null),
+  );
+  const files = (input.library ?? illustrationLibrary).flatMap((art) => {
+    const shot = shots.get(shotIdOf(art.id, ids) ?? '');
+    const region = art.region ?? shot?.region;
+    return shot && (region === 'any' || region === input.state) ? [{ shot, art }] : [];
+  });
   const words = illustrationWords(input.text);
-  const score = (s: IllustrationShot) => s.tags.filter((t) => words.has(t)).length;
   // A guide explains one thing, so it only takes a scene its own words name ("garbage" → the
-  // garbage truck), from any section; otherwise it keeps its title card. Words every guide could
-  // share ("city") don't count.
+  // garbage truck), from any section. Words every guide could share ("city") don't count.
   const guide = input.section === 'guide';
   const titleWords = illustrationWords(input.title ?? input.text);
-  const named = (s: IllustrationShot) =>
-    s.tags.some((t) => titleWords.has(t) && !GENERIC_TAGS.has(t));
-  const titleScore = (s: IllustrationShot) =>
-    s.tags.filter((t) => titleWords.has(t) && !GENERIC_TAGS.has(t)).length;
-  const fits = shots.filter(
-    (s) =>
-      library.has(s.id) &&
-      (guide ? named(s) : s.sections.includes(input.section as IllustrationSection)) &&
-      (s.region === 'any' || s.region === input.state),
-  );
-  const kept = fits.find((s) => s.id === input.current);
-  if (kept) return { shot: kept, art: library.get(kept.id)! };
-  const best = fits
-    .filter((s) => !input.recent.has(s.id))
-    .map((s) => ({
-      s,
-      score: guide ? titleScore(s) : score(s),
-      tie: stableHash(`${input.articleId}:${s.id}`),
-    }))
-    .sort((a, b) => b.score - a.score || a.tie - b.tie)[0];
-  return best ? { shot: best.s, art: library.get(best.s.id)! } : null;
+  const score = (s: IllustrationShot) =>
+    guide
+      ? s.tags.filter((t) => titleWords.has(t) && !GENERIC_TAGS.has(t)).length
+      : s.tags.filter((t) => words.has(t)).length;
+  type File = (typeof files)[number];
+  const inSection = (f: File) => f.shot.sections.includes(input.section as IllustrationSection);
+  const kind = input.storyKind ?? null;
+  const pools: Array<(f: File) => boolean> = [];
+  if (kind) {
+    const ofKind = (f: File) => f.shot.kinds.includes(kind);
+    pools.push((f) => ofKind(f) && score(f.shot) > 0);
+    pools.push(kind === 'alert' ? (f) => ofKind(f) && f.shot.fallback : ofKind);
+  }
+  if (guide) {
+    pools.push((f) => score(f.shot) > 0);
+  } else if (kind !== 'alert') {
+    // (An alert keeps to weather it names, repeated if need be: never a fair-weather sky.)
+    pools.push((f) => inSection(f) && score(f.shot) > 0);
+    pools.push((f) => inSection(f) && f.shot.fallback);
+  }
+  const kept = files.find((f) => f.art.id === input.current && pools.some((fits) => fits(f)));
+  if (kept) return kept;
+  // Fresh scenes first; when every fitting scene was shown lately, a repeat beats the title card.
+  for (const fits of [
+    ...pools.map((p) => (f: File) => p(f) && !recentScenes.has(f.shot.id)),
+    ...pools,
+  ]) {
+    const best = files
+      .filter((f) => fits(f))
+      .map((f) => ({ f, score: score(f.shot), tie: stableHash(`${input.articleId}:${f.art.id}`) }))
+      .sort((a, b) => b.score - a.score || a.tie - b.tie)[0];
+    if (best) return best.f;
+  }
+  return null;
 }
 
 /**
@@ -604,42 +662,60 @@ export async function coverIllustration(
   return pickSectionIllustration(db, article);
 }
 
+/** The story kind of an article, from its candidate's key (null for written stories). */
+export async function articleStoryKind(db: Db, articleId: string): Promise<StoryKind | null> {
+  const [row] = await db
+    .select({ key: storyCandidates.key })
+    .from(articles)
+    .innerJoin(storyCandidates, eq(storyCandidates.id, articles.candidateId))
+    .where(eq(articles.id, articleId));
+  return storyKindOf(row?.key);
+}
+
 async function pickSectionIllustration(
   db: Db,
   article: ArticleForImage & { id: string },
 ): Promise<ImageChoice | null> {
   if (illustrationLibrary.length === 0) return null;
   const [town] = await db
-    .select({ state: towns.state })
+    .select({ state: towns.state, siteName: towns.siteName })
     .from(towns)
     .where(eq(towns.id, article.townId));
+  // The site's own name never picks a picture ("Boca Town Square" is not a town square).
+  const withoutSiteName = (text: string) =>
+    town?.siteName ? text.split(town.siteName).join(' ') : text;
   const [current] = await db
-    .select({ spec: images.spec })
+    .select({ spec: images.spec, cover: images.coverIllustrationId })
     .from(images)
     .where(eq(images.articleId, article.id));
+  const storyKind =
+    article.storyKind === undefined ? await articleStoryKind(db, article.id) : article.storyKind;
   const since = new Date(Date.now() - ILLUSTRATION_REPEAT_DAYS * 86_400_000);
   const used = await db
-    .select({ spec: images.spec })
+    .select({ spec: images.spec, cover: images.coverIllustrationId })
     .from(images)
     .innerJoin(articles, eq(images.articleId, articles.id))
     .where(
       and(
         eq(articles.townId, article.townId),
         ne(articles.id, article.id),
-        eq(images.kind, 'ai-illustration'),
+        or(eq(images.kind, 'ai-illustration'), isNotNull(images.coverIllustrationId)),
         gte(images.updatedAt, since),
       ),
     );
   const idOf = (spec: ImageSpec | undefined) =>
     spec?.type === 'illustration' ? spec.illustrationId : null;
   const pick = chooseLibraryIllustration({
-    section: article.kind === 'guide' ? 'guide' : article.beat,
+    section: article.kind === 'guide' ? 'guide' : storyKind === 'alert' ? 'weather' : article.beat,
     state: town?.state ?? '',
-    text: `${article.headline} ${article.dek ?? ''}`,
-    title: article.headline,
+    text: withoutSiteName(`${article.headline} ${article.dek ?? ''}`),
+    title: withoutSiteName(article.headline),
+    storyKind,
     articleId: article.id,
-    current: idOf(current?.spec),
-    recent: new Set(used.map((u) => idOf(u.spec)).filter((id): id is string => id !== null)),
+    current: current?.cover ?? idOf(current?.spec),
+    recent: new Set(
+      used.flatMap((u) => [u.cover, idOf(u.spec)]).filter((id): id is string => id !== null),
+    ),
   });
   if (!pick) return null;
   // `images.approved_by` is a staff member (§11c: AI images are approved by a person). An
@@ -656,6 +732,7 @@ async function pickSectionIllustration(
       illustrationId: pick.art.id,
       width: pick.art.width,
       height: pick.art.height,
+      ...(pick.art.photoreal ? { photoreal: true } : {}),
     },
     alt: pick.art.alt,
     license: ILLUSTRATION_LICENSE,

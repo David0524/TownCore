@@ -2,9 +2,12 @@
 //   Writes docs/brand/illustration-shot-list.md from packages/config/src/illustrations.ts.
 // pnpm illustrations import <dir> --approved-by <email> --alt <alts.json>
 //   Imports images named by shot ID (gov-01.png …) into apps/web/public/illustrations/ and the
-//   library, with alt text from alts.json ({ "gov-01": "…" }), written from what each shows.
-// pnpm illustrations assign [town-slug]
-//   Gives stories that only have a title card a section illustration, if one fits.
+//   library, with alt text from alts.json ({ "gov-01": "…" }), written from what each shows;
+//   { "gd-12": { "alt": "…", "region": "FL" } } keeps one picture of an any-town scene to Florida.
+// pnpm illustrations assign [town-slug] [--demo]
+//   Gives stories that only have a title card a library illustration, if one fits, and charts a
+//   cover picture. --demo runs it on the Vercel demo's database (DEMO_DATABASE_URL) over HTTPS;
+//   in cloud sessions add NODE_USE_ENV_PROXY=1. Run `pnpm demo:migrate` first.
 // pnpm illustrations pin <town-slug> <story-slug> <image> --alt "<what it shows>"
 //     --approved-by <email> [--photoreal]
 //   Pins an AI picture a person chose to one story; the router keeps it from then on.
@@ -13,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { illustrationLibrary, requireEnv } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
-import { createDb, getTownBySlug } from '@towncore/db';
+import { createDb, createHttpDb, getTownBySlug, neonTransport } from '@towncore/db';
 import {
   assignIllustrations,
   formatWithPrettier,
@@ -48,7 +51,10 @@ if (command === 'shotlist') {
   await mkdir(webDir, { recursive: true });
   const { result, library } = await importIllustrations({
     dir,
-    alts: JSON.parse(await readFile(altFile, 'utf8')) as Record<string, string>,
+    alts: JSON.parse(await readFile(altFile, 'utf8')) as Record<
+      string,
+      string | { alt: string; region?: 'FL' }
+    >,
     approvedBy,
     library: illustrationLibrary,
     webDir,
@@ -61,14 +67,17 @@ if (command === 'shotlist') {
   console.log(`library: ${library.length} illustrations`);
 } else if (command === 'assign') {
   loadDotEnv();
-  const db = createDb(requireEnv('DATABASE_URL'), { max: 1 });
+  const demo = rest.includes('--demo');
+  const db = demo
+    ? createHttpDb(neonTransport(requireEnv('DEMO_DATABASE_URL')))
+    : createDb(requireEnv('DATABASE_URL'), { max: 1 });
   try {
-    const slug = rest[0];
+    const slug = rest.find((a) => !a.startsWith('--'));
     const town = slug ? await getTownBySlug(db, slug) : null;
     if (slug && !town) throw new Error(`unknown town: ${slug}`);
     console.log('illustrations:', await assignIllustrations(db, { townId: town?.id }));
   } finally {
-    await db.$client.end();
+    if (!demo) await db.$client.end();
   }
 } else if (command === 'pin') {
   const [townSlug, storySlug, file] = rest;

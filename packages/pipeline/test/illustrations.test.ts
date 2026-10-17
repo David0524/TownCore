@@ -170,9 +170,17 @@ describe('the router with the library', () => {
     expect(row).toMatchObject({ aiGenerated: true, approvedBy: ownerId });
   });
 
-  it("doesn't repeat it in the town within two weeks", async () => {
+  it('prefers a scene not shown in the town within two weeks', async () => {
+    const choice = await assignArticleImage(
+      db,
+      (await story({ headline: 'Council approves budget and millage rate' })).id,
+    );
+    expect(choice.spec).toMatchObject({ illustrationId: 'gov-03' });
+  });
+
+  it('repeats a recent scene rather than fall back to the title card', async () => {
     const choice = await assignArticleImage(db, (await story()).id);
-    expect(choice.spec).not.toMatchObject({ illustrationId: 'gov-05' });
+    expect(choice.spec).toMatchObject({ illustrationId: 'gov-05' });
   });
 
   it('never illustrates public safety, and needs an approver on staff', async () => {
@@ -181,6 +189,32 @@ describe('the router with the library', () => {
     // biz-01's approver isn't staff here, so the business story falls back to the card.
     const opening = await story({ beat: 'business', headline: 'Grand opening of a bakery' });
     expect((await assignArticleImage(db, opening.id)).kind).toBe('typographic-card');
+  });
+
+  it("never matches a picture on the site's own name", async () => {
+    // "Budget" is in the site's name, not the story: no budget picture for it.
+    const [gazette] = await db
+      .insert(towns)
+      .values({
+        slug: 'gazette',
+        name: 'Gazette',
+        state: 'FL',
+        county: 'P',
+        timezone: 'America/New_York',
+        domain: 'gazette.test',
+        siteName: 'The Budget Gazette',
+        tier: 'small',
+        config: {},
+      })
+      .returning();
+    const a = await story({
+      townId: gazette!.id,
+      headline: 'The Budget Gazette looks back at the week',
+      byline: 'The Budget Gazette Newsroom',
+    });
+    expect((await assignArticleImage(db, a.id)).spec).not.toMatchObject({
+      illustrationId: 'gov-05',
+    });
   });
 
   it('keeps a picture a person pinned to the story', async () => {

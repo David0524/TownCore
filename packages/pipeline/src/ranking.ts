@@ -135,7 +135,18 @@ export function rankArticles<T extends Rankable>(
   return out;
 }
 
-/** The lead story: the highest-ranked Tier 1–2 item, or Tier 3 only when a person approved it. */
-export function pickLead<T extends Rankable>(ranked: T[]): T | undefined {
-  return ranked.find((a) => a.tier <= 2 || (a.tier === 3 && a.reviewed));
+/** A story that may lead: Tier 1–2, or Tier 3 only when a person approved it. */
+export const leadEligible = (a: Pick<Rankable, 'tier' | 'reviewed'>) =>
+  a.tier <= 2 || (a.tier === 3 && a.reviewed);
+
+/**
+ * The lead story: the highest-ranked eligible item. With `pictured`, only one whose cover is a
+ * picture (owner, 2026-10-17: a story with only the title card is never the cover story); rank
+ * itself never changes, only who takes the lead slot.
+ */
+export function pickLead<T extends Rankable>(
+  ranked: T[],
+  pictured?: (item: T) => boolean,
+): T | undefined {
+  return ranked.find((a) => leadEligible(a) && (!pictured || pictured(a)));
 }

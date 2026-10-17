@@ -19,6 +19,7 @@ import { townSunset } from '@/lib/sun';
 import {
   frontSplit,
   pickLead,
+  pictureFirst,
   recentArticles,
   roundupFigure,
   townPoint,
@@ -28,13 +29,19 @@ import {
 import type { HomeModuleComponent } from './types';
 import styles from './modules.module.css';
 
-export const LeadStory: HomeModuleComponent = async ({ town, theme }) => {
+export const LeadStory: HomeModuleComponent = async ({ town }) => {
   const articles = await recentArticles(town.id);
-  const lead = pickLead(articles);
+  // The lead needs a picture (owner, 2026-10-17); with none, this module hides and the front
+  // opens with the next one.
+  const lead = await pickLead(articles, town.timezone);
   if (!lead) return null;
   // Phones: the next stories as a row of picture cards under the lead, so there's always more
-  // in view (owner, 2026-10-16). "Also today" steps aside there, since the row covers it.
-  const next = articles.filter((a) => a.id !== lead.id && a.kind !== 'guide').slice(0, 6);
+  // in view (owner, 2026-10-16), the first one with a picture. "Also today" steps aside there,
+  // since the row covers it.
+  const next = await pictureFirst(
+    articles.filter((a) => a.id !== lead.id && a.kind !== 'guide').slice(0, 6),
+    town.timezone,
+  );
   const figure = await roundupFigure(lead);
   return (
     <section className={styles.module} data-module="lead-story">
@@ -43,17 +50,17 @@ export const LeadStory: HomeModuleComponent = async ({ town, theme }) => {
         town={town}
         variant="lead"
         as="h2"
-        visual={<ArticleVisual town={town} theme={theme} article={lead} figure={figure} cover />}
+        visual={<ArticleVisual town={town} article={lead} figure={figure} cover />}
       />
       <div className="phone-only">
-        <TopStoriesRow town={town} theme={theme} stories={next} />
+        <TopStoriesRow town={town} stories={next} />
       </div>
     </section>
   );
 };
 
 /** The Today tile: weather now (docs/plans/M4b.md). Hidden when the town has no NWS data. */
-export const TodayBento: HomeModuleComponent = async ({ town, theme, modules }) => {
+export const TodayBento: HomeModuleComponent = async ({ town, modules }) => {
   const [weather, point, articles, tropics] = await Promise.all([
     townWeather(town.id),
     townPoint(town.id),
@@ -61,7 +68,7 @@ export const TodayBento: HomeModuleComponent = async ({ town, theme, modules }) 
     townTropics(town.state),
   ]);
   const sunset = point ? townSunset(new Date(), town.timezone, point[0], point[1]) : null;
-  const { also } = frontSplit(articles, modules);
+  const { also } = await frontSplit(articles, modules, town.timezone);
   const b = weather?.kind === 'snapshot' ? weather.snapshot.beach : undefined;
   const beach = b && (b.surf || b.water || b.tides || b.uv) ? b : null;
   const wind = weather?.kind === 'snapshot' ? weather.snapshot.now : null;
@@ -93,7 +100,7 @@ export const TodayBento: HomeModuleComponent = async ({ town, theme, modules }) 
                   story={article}
                   town={town}
                   variant="today"
-                  visual={<StoryThumb town={town} theme={theme} article={article} />}
+                  visual={<StoryThumb town={town} article={article} />}
                 />
               </li>
             ))}
@@ -106,8 +113,10 @@ export const TodayBento: HomeModuleComponent = async ({ town, theme, modules }) 
 
 const INFEED_EVERY = 6;
 
-export const LatestList: HomeModuleComponent = async ({ town, theme, modules }) => {
-  const items = frontSplit(await recentArticles(town.id), modules).rest.slice(0, 12);
+export const LatestList: HomeModuleComponent = async ({ town, modules }) => {
+  const items = (
+    await frontSplit(await recentArticles(town.id), modules, town.timezone)
+  ).rest.slice(0, 12);
   if (items.length === 0) return null;
 
   // home.infeed every ~6 items, and once at the end of shorter lists.
@@ -119,7 +128,7 @@ export const LatestList: HomeModuleComponent = async ({ town, theme, modules }) 
           story={article}
           town={town}
           variant="brief"
-          visual={<StoryThumb town={town} theme={theme} article={article} />}
+          visual={<StoryThumb town={town} article={article} />}
         />
       </li>,
     );
@@ -146,7 +155,9 @@ export const LatestList: HomeModuleComponent = async ({ town, theme, modules }) 
 
 /** Short headlines after the lead and Today (heritage's right-hand column). */
 export const Briefs: HomeModuleComponent = async ({ town, modules }) => {
-  const items = frontSplit(await recentArticles(town.id), modules).rest.slice(0, 6);
+  const items = (
+    await frontSplit(await recentArticles(town.id), modules, town.timezone)
+  ).rest.slice(0, 6);
   if (items.length === 0) return null;
   return (
     <section
@@ -198,7 +209,7 @@ export const BriefingColumn: HomeModuleComponent = async ({ town, theme }) => {
 
 export const BeatSections: HomeModuleComponent = async ({ town, modules }) => {
   const all = await recentArticles(town.id);
-  const lead = modules.includes('lead-story') ? pickLead(all) : undefined;
+  const lead = modules.includes('lead-story') ? await pickLead(all, town.timezone) : undefined;
   const articles = all.filter((a) => a.id !== lead?.id);
   const sections = beats
     .map((beat) => ({ beat, items: articles.filter((a) => a.beat === beat.slug).slice(0, 3) }))

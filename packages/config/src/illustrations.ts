@@ -7,6 +7,14 @@
 //
 // The shot list (docs/brand/illustration-shot-list.md) is generated from this file
 // (`pnpm illustrations:shotlist`), so the prompts and the router never drift apart.
+//
+// Default images (docs/plans/default-images.md, owner approved 2026-10-17): shots carry the kinds
+// of code-built story they're made for (`kinds`), so a weekly roundup rotates through its own set,
+// and a few calm `fallback` scenes per section serve stories whose words match no tag. A shot can
+// be made more than once: `<id>-2`, and a photorealistic version `<id>-p` (or `-p2`), each its
+// own library file, all counted as one scene by the no-repeat rule.
+
+import type { StoryKind } from './images';
 
 /** Sections a library illustration can serve: news beats plus evergreen guides. */
 export type IllustrationSection =
@@ -22,6 +30,10 @@ export type IllustrationShot = {
   tags: readonly string[];
   /** What to draw, for the prompt. */
   scene: string;
+  /** Code-built story kinds this shot is made for; they're matched before the section. */
+  kinds: readonly StoryKind[];
+  /** A calm, generic scene of its sections, for stories whose words match no tag. */
+  fallback: boolean;
 };
 
 /** One style for every illustration, so the library reads as one set. */
@@ -38,12 +50,43 @@ export function shotPrompt(shot: Pick<IllustrationShot, 'scene'>): string {
   return `${ILLUSTRATION_STYLE}\n\nScene: ${shot.scene}`;
 }
 
+/**
+ * The photorealistic version of a scene (owner, 2026-10-16 and 2026-10-17: photorealistic AI
+ * images are allowed, and some go in each batch). Same rules: generic, no text, faces or real
+ * places, never presented as the story's scene.
+ */
+export const PHOTO_STYLE =
+  'Photorealistic photograph with natural daylight, true-to-life color and a shallow depth of ' +
+  'field, like a good local newspaper photo. Landscape, 3:2. No text, letters, numbers, logos, ' +
+  'brand names, flags or signs with writing; any signs are blank. Generic, not any real, ' +
+  'recognizable building, landmark or street. People only small, seen from behind or far away, ' +
+  'with no faces. Keep the main subject centered with room at the top and bottom, since pages ' +
+  'crop it to 16:9.';
+
+export function photoPrompt(shot: Pick<IllustrationShot, 'scene'>): string {
+  return `${PHOTO_STYLE}\n\nScene: ${shot.scene}`;
+}
+
+/**
+ * The shot a library file belongs to: `sale-01`, `sale-01-2`, `sale-01-p` and `sale-01-p2` are
+ * all `sale-01`. Null for a name that isn't a shot.
+ */
+export function shotIdOf(fileId: string, ids: ReadonlySet<string> = shotIds): string | null {
+  if (ids.has(fileId)) return fileId;
+  const m = fileId.match(/^(.+)-(p\d*|\d+)$/);
+  return m && ids.has(m[1]!) ? m[1]! : null;
+}
+
+/** A library file made from the photorealistic prompt. */
+export const isPhotoVariant = (fileId: string) => /-p\d*$/.test(fileId);
+
 type Row = [
   id: string,
   sections: IllustrationSection[],
   region: 'any' | 'FL',
   tags: string,
   scene: string,
+  options?: { kinds?: StoryKind[]; fallback?: boolean },
 ];
 
 const rows: Row[] = [
@@ -699,7 +742,7 @@ const rows: Row[] = [
     'sch-13',
     ['schools'],
     'any',
-    'test scores grades testing',
+    'scores grades testing exams',
     'A pencil, an answer sheet with bubbles (no text) and a timer on a student desk.',
   ],
   [
@@ -1106,17 +1149,391 @@ const rows: Row[] = [
     'trees tree removal permit',
     "A large shade tree in a front yard with an arborist's truck parked at the curb.",
   ],
+  // Default images by story kind (docs/plans/default-images.md, 2026-10-17).
+  // Property sales.
+  [
+    'sale-01',
+    ['development'],
+    'any',
+    'home house sold sale buyer',
+    'A tidy single-family house with a front porch, a potted plant and two moving boxes by the door.',
+    { kinds: ['roundup:sales'] },
+  ],
+  [
+    'sale-02',
+    ['development'],
+    'any',
+    'keys home sale',
+    'A ring of house keys hanging from the lock of a painted front door.',
+    { kinds: ['roundup:sales'] },
+  ],
+  [
+    'sale-03',
+    ['development'],
+    'any',
+    'neighborhood homes houses',
+    'A quiet residential street of varied houses and front lawns, seen from the sidewalk.',
+    { kinds: ['roundup:sales'] },
+  ],
+  [
+    'sale-04',
+    ['development'],
+    'any',
+    'listing yard sign home',
+    'A post-and-arm yard sign with a blank panel on a front lawn, the house soft behind it.',
+    { kinds: ['roundup:sales'] },
+  ],
+  [
+    'sale-05',
+    ['development'],
+    'any',
+    'neighborhood rooftops homes',
+    'Rooftops of a residential neighborhood from a gentle aerial angle, trees between them.',
+    { kinds: ['roundup:sales'] },
+  ],
+  [
+    'sale-06',
+    ['development'],
+    'FL',
+    'waterfront canal home',
+    'A low white house on a canal with a small dock and one palm tree.',
+    { kinds: ['roundup:sales'] },
+  ],
+  // Building permits.
+  [
+    'perm-01',
+    ['development'],
+    'any',
+    'permit permits plans blueprints',
+    'Rolled blueprints, a hard hat and a tape measure on a plywood work table.',
+    { kinds: ['roundup:permits', 'spotlight:permit'] },
+  ],
+  [
+    'perm-02',
+    ['development'],
+    'any',
+    'renovation addition scaffolding',
+    'A two-story house wrapped in scaffolding during renovation, tarps on the lawn.',
+    { kinds: ['roundup:permits'] },
+  ],
+  [
+    'perm-03',
+    ['development'],
+    'any',
+    'new construction framing house',
+    'A new wood-framed house against a blue sky, stacks of lumber in front.',
+    { kinds: ['roundup:permits', 'spotlight:permit'] },
+  ],
+  // New business filings.
+  [
+    'nb-01',
+    ['business'],
+    'any',
+    'new business opening shop',
+    'A small storefront at morning, a person seen from behind unlocking the glass door; the awning is blank.',
+    { kinds: ['roundup:new-businesses'] },
+  ],
+  [
+    'nb-02',
+    ['business'],
+    'any',
+    'storefronts shops small business',
+    'A row of small storefronts with blank awnings and planters along a sidewalk.',
+    { kinds: ['roundup:new-businesses'] },
+  ],
+  [
+    'nb-03',
+    ['business'],
+    'any',
+    'filings llc registered',
+    'A small home-office desk with an open laptop showing a blank form, a coffee and a folder.',
+    { kinds: ['roundup:new-businesses'] },
+  ],
+  [
+    'nb-04',
+    ['business'],
+    'any',
+    'new shop opening',
+    'A bunch of balloons tied to a blank sandwich board outside a new shop.',
+    { kinds: ['roundup:new-businesses'] },
+  ],
+  // New contractor licenses.
+  [
+    'lic-01',
+    ['business'],
+    'any',
+    'contractor contractors van',
+    "A contractor's white work van with ladders on its roof rack, parked at a curb; no lettering.",
+    { kinds: ['roundup:new-licenses'] },
+  ],
+  [
+    'lic-02',
+    ['business'],
+    'any',
+    'contractor tools trade',
+    'A tool belt, gloves and a hard hat on the tailgate of a pickup.',
+    { kinds: ['roundup:new-licenses'] },
+  ],
+  [
+    'lic-03',
+    ['business'],
+    'any',
+    'painter painting contractor',
+    'Paint cans, rollers and a folded drop cloth on a porch step.',
+    { kinds: ['roundup:new-licenses'] },
+  ],
+  // New places to eat and drink.
+  [
+    'np-01',
+    ['business'],
+    'any',
+    'bar liquor drinks lounge',
+    'A bar counter with empty stools, glasses on a shelf and warm pendant lights.',
+    { kinds: ['roundup:new-places'] },
+  ],
+  [
+    'np-02',
+    ['business'],
+    'any',
+    'restaurant dining table',
+    'A small table set for two by a restaurant window, menus closed with blank covers.',
+    { kinds: ['roundup:new-places'] },
+  ],
+  // Restaurant inspections (the weekly roundup only; never beside one named place).
+  [
+    'insp-01',
+    ['business'],
+    'any',
+    'inspection inspections kitchen',
+    'A spotless stainless-steel restaurant kitchen line, empty, under bright light.',
+    { kinds: ['roundup:inspections'] },
+  ],
+  [
+    'insp-02',
+    ['business'],
+    'any',
+    'inspection food safety temperature',
+    'A probe thermometer resting on a steel prep counter beside a cutting board.',
+    { kinds: ['roundup:inspections'] },
+  ],
+  [
+    'insp-03',
+    ['business'],
+    'any',
+    'inspection hand washing sink',
+    'A hand-washing sink with a soap dispenser and paper towels in a commercial kitchen.',
+    { kinds: ['roundup:inspections'] },
+  ],
+  [
+    'insp-04',
+    ['business'],
+    'any',
+    'inspection checklist',
+    'A clipboard with a blank checklist on a steel counter, a pen clipped to it.',
+    { kinds: ['roundup:inspections'] },
+  ],
+  [
+    'insp-05',
+    ['business'],
+    'any',
+    'inspection cooler storage',
+    'A walk-in cooler with shelves of lidded containers with blank labels, the door open.',
+    { kinds: ['roundup:inspections'] },
+  ],
+  [
+    'insp-06',
+    ['business'],
+    'any',
+    'inspection gloves hairnets',
+    'Boxes of disposable gloves and hairnets on a shelf by a kitchen door.',
+    { kinds: ['roundup:inspections'] },
+  ],
+  // Road work.
+  [
+    'road-01',
+    ['development'],
+    'any',
+    'lane closure cones road work',
+    'A line of orange cones and barrels narrowing a lane on a suburban road.',
+    { kinds: ['roundup:roads'] },
+  ],
+  [
+    'road-02',
+    ['development'],
+    'any',
+    'paving repaving asphalt',
+    'A paving machine and roller laying fresh asphalt, steam rising.',
+    { kinds: ['roundup:roads'] },
+  ],
+  [
+    'road-03',
+    ['development'],
+    'any',
+    'night work road work',
+    'Road work at night under work lights, a blank arrow board on a truck.',
+    { kinds: ['roundup:roads'] },
+  ],
+  // Meetings this week.
+  [
+    'mtg-01',
+    ['government'],
+    'any',
+    'meetings agenda agendas',
+    'A stack of agenda folders on the end of an empty row of chairs in a meeting room.',
+    { kinds: ['roundup:meetings'] },
+  ],
+  [
+    'mtg-02',
+    ['government'],
+    'any',
+    'meetings meeting room',
+    'A meeting room with a projector screen showing a blank slide and rows of chairs.',
+    { kinds: ['roundup:meetings'] },
+  ],
+  // Weather alerts.
+  [
+    'alrt-01',
+    ['weather'],
+    'any',
+    'flood flooding flash sandbags',
+    'Sandbags stacked across the doorway of a house, rain falling.',
+    { kinds: ['alert'] },
+  ],
+  [
+    'alrt-02',
+    ['weather'],
+    'any',
+    'freeze frost ice icy',
+    'Ice-coated branches and a frosted fence after a freezing night.',
+    { kinds: ['alert'] },
+  ],
+  [
+    'alrt-03',
+    ['weather'],
+    'any',
+    'winter snow blizzard',
+    'A snowplow clearing a residential street at dusk.',
+    { kinds: ['alert'] },
+  ],
+  [
+    'alrt-04',
+    ['weather'],
+    'any',
+    'wind high gusts',
+    'A large tree limb down on a lawn after wind, the house untouched.',
+    { kinds: ['alert'] },
+  ],
+  [
+    'alrt-05',
+    ['weather'],
+    'any',
+    'severe storm',
+    "Dark storm clouds building over a town's rooftops, the street empty.",
+    { kinds: ['alert'], fallback: true },
+  ],
+  // Calm, generic scenes for stories whose words match no tag.
+  [
+    'fb-01',
+    ['business', 'community'],
+    'any',
+    'downtown main street',
+    'A wide, quiet main street of small shops and trees in morning light.',
+    { fallback: true },
+  ],
+  [
+    'fb-02',
+    ['government', 'community'],
+    'any',
+    'town square downtown',
+    'A town square with a fountain, benches and trees; no statue or monument.',
+    { fallback: true },
+  ],
+  [
+    'fb-03',
+    ['community', 'development'],
+    'any',
+    'neighborhood evening',
+    'A residential street at dusk with porch lights on.',
+    { fallback: true },
+  ],
+  [
+    'fb-04',
+    ['community', 'government'],
+    'any',
+    'rural road mailboxes',
+    'A row of mailboxes along a country road with fields behind.',
+    { fallback: true },
+  ],
+  [
+    'fb-05',
+    ['community'],
+    'any',
+    'park bench shade',
+    'A park bench under a large shade tree beside a path.',
+    { fallback: true },
+  ],
+  [
+    'fb-06',
+    ['community', 'business'],
+    'FL',
+    'street palms downtown',
+    'A quiet street lined with palms and low pastel buildings.',
+    { fallback: true },
+  ],
 ];
 
+// Installed shots that already fit a story kind (docs/plans/default-images.md §2.2).
+const KIND_SHOTS: Partial<Record<StoryKind, string[]>> = {
+  'roundup:sales': ['biz-18', 'gd-11'],
+  'roundup:permits': ['dev-03', 'dev-05', 'dev-18', 'dev-22'],
+  'roundup:new-businesses': ['biz-01', 'biz-19', 'biz-22'],
+  'roundup:new-licenses': ['biz-13', 'biz-14', 'biz-15', 'biz-20'],
+  'roundup:new-places': ['biz-02', 'biz-03', 'biz-04', 'biz-05', 'biz-06', 'biz-07'],
+  'roundup:roads': ['dev-07', 'dev-08', 'dev-15', 'dev-16'],
+  'roundup:meetings': ['gov-01', 'gov-02', 'gov-03', 'gov-04', 'gov-11'],
+  'spotlight:permit': ['dev-01', 'dev-02', 'dev-04', 'dev-06', 'dev-09', 'dev-11', 'dev-13'],
+  alert: [
+    'wx-02',
+    'wx-03',
+    'wx-04',
+    'wx-06',
+    'wx-07',
+    'wx-08',
+    'wx-09',
+    'wx-13',
+    'wx-14',
+    'wx-17',
+    'wx-20',
+  ],
+};
+const FALLBACK_SHOTS = new Set([
+  'gov-08',
+  'dev-02',
+  'biz-22',
+  'com-01',
+  'sch-03',
+  'sch-05',
+  'wx-19',
+]);
+
 export const illustrationShots: readonly IllustrationShot[] = rows.map(
-  ([id, sections, region, tags, scene]) => ({
+  ([id, sections, region, tags, scene, options]) => ({
     id,
     sections,
     region,
     tags: tags.split(/\s+/).filter(Boolean),
     scene,
+    kinds: [
+      ...(options?.kinds ?? []),
+      ...(Object.entries(KIND_SHOTS) as Array<[StoryKind, string[]]>)
+        .filter(([, ids]) => ids.includes(id))
+        .map(([kind]) => kind),
+    ],
+    fallback: options?.fallback ?? FALLBACK_SHOTS.has(id),
   }),
 );
+
+const shotIds: ReadonlySet<string> = new Set(rows.map((r) => r[0]));
 
 /** An imported, owner-approved illustration (packages/config/src/illustrations.library.json). */
 export type LibraryIllustration = {
@@ -1128,4 +1545,8 @@ export type LibraryIllustration = {
   /** Email of the staff member who approved it; resolved to `staff.id` for `images.approved_by`. */
   approvedBy: string;
   importedAt: string;
+  /** Made from the photorealistic prompt (`<id>-p`). */
+  photoreal?: boolean;
+  /** This picture's own region, when it narrows its shot's (an `any` scene drawn with palms). */
+  region?: 'FL';
 };

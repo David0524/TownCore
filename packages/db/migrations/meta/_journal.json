@@ -386,6 +386,13 @@
       "when": 1792251678841,
       "tag": "0054_health_facilities_source_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1792255689650,
+      "tag": "0055_cover_illustration",
+      "breakpoints": true
     }
   ]
 }
