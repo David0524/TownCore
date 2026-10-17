@@ -48,5 +48,10 @@ test('staff see every town with its numbers, and the open alerts', async ({ page
   const boca = table.locator('[data-town="Boca Town Square"]');
   await expect(boca).toBeVisible();
   await expect(boca).toContainText('of $5.00');
+  // Stories against the Rule 7 target, with the sources to build next.
+  const coverage = page.getByTestId('story-coverage');
+  for (const header of ['A day', 'Target', 'Gap', 'Sources to build next'])
+    await expect(coverage.getByRole('columnheader', { name: header })).toBeVisible();
+  await expect(coverage.locator('[data-town="Boca Town Square"]')).toContainText('10');
   await expect(page.getByRole('link', { name: 'Health', exact: true })).toBeVisible();
 });

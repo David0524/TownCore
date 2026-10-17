@@ -110,6 +110,7 @@ export {
   relatedArticleIds,
   type ExtractReport,
 } from './entities';
+export { COVERAGE_DAYS, STORY_SOURCE_ORDER, storyCoverage, type TownCoverage } from './coverage';
 export { createGuideCandidates, pagesHash, writeGuide, type GuideOutcome } from './guides';
 export {
   COST_MIN_STORIES,

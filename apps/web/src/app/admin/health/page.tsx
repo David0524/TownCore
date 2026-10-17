@@ -1,5 +1,5 @@
 import { mailAlerts, isNull, desc } from '@towncore/db';
-import { townHealth } from '@towncore/pipeline';
+import { COVERAGE_DAYS, storyCoverage, townHealth } from '@towncore/pipeline';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../admin.module.css';
@@ -15,8 +15,9 @@ const usd = (n: number | null) => (n === null ? '–' : `$${n.toFixed(2)}`);
 
 export default async function Health() {
   await requireStaff();
-  const [rows, alerts] = await Promise.all([
+  const [rows, coverage, alerts] = await Promise.all([
     townHealth(db()),
+    storyCoverage(db()),
     db()
       .select()
       .from(mailAlerts)
@@ -93,6 +94,60 @@ export default async function Health() {
                 <td>{usd(t.ai.perStoryUsd)}</td>
                 <td>{t.subscribers}</td>
                 <td>{t.payingBusinesses}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Stories against the target</h2>
+      <p className={styles.muted}>
+        Real items published a day over the last {COVERAGE_DAYS} days against the Rule 7 target (3,
+        or 10 for large towns), furthest behind first. Close the gap with new sources, never by
+        padding.
+      </p>
+      <div className={styles.scroll}>
+        <table className={styles.table} data-testid="story-coverage">
+          <thead>
+            <tr>
+              <th>Town</th>
+              <th>A day</th>
+              <th>Target</th>
+              <th>Gap</th>
+              <th>By source</th>
+              <th>Skipped</th>
+              <th>Sources to build next</th>
+            </tr>
+          </thead>
+          <tbody>
+            {coverage.map((t) => (
+              <tr key={t.id} data-town={t.siteName}>
+                <td>
+                  {t.siteName}
+                  <div className={styles.muted}>
+                    {t.status}
+                    {t.readiness !== null ? `, launch readiness ${t.readiness}` : ''}
+                  </div>
+                </td>
+                <td>{t.perDay}</td>
+                <td>{t.target}</td>
+                <td>{t.gap ? t.gap : 'Met'}</td>
+                <td>
+                  {t.bySource.length
+                    ? t.bySource.map((s) => `${s.kind.replace('_', ' ')} ${s.perDay}`).join(', ')
+                    : 'None yet'}
+                </td>
+                <td>
+                  {t.skipped.length
+                    ? t.skipped.map((s) => `${s.reason.replace(/_/g, ' ')} ${s.count}`).join(', ')
+                    : 'None'}
+                </td>
+                <td>
+                  {t.missing
+                    .slice(0, 4)
+                    .map((k) => k.replace('_', ' '))
+                    .join(', ') || 'All'}
+                </td>
               </tr>
             ))}
           </tbody>
