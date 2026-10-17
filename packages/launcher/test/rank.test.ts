@@ -135,7 +135,7 @@ describe('ranking', () => {
     pop: new Map([
       ['1200001', { base2020: 90000, pop2025: 100000 }],
       ['1200002', { base2020: 40000, pop2025: 40000 }],
-      ['1200003', { base2020: 3000, pop2025: 4000 }],
+      ['1200003', { base2020: 1500, pop2025: 1800 }],
       ['1200004', { base2020: 50000, pop2025: 52000 }],
       ['1200005', { base2020: 20000, pop2025: 26000 }],
     ]),
@@ -176,7 +176,7 @@ describe('ranking', () => {
 
   it('filters, scores with the §10a weights and ranks', () => {
     const rows = rankPlaces(facts());
-    // Tinyville is under 5,000 people; Ourtown is already ours.
+    // Tinyville is under 2,000 people; Ourtown is already ours.
     expect(rows.map((r) => r.name)).toEqual(['Bigtown', 'Midtown', 'Faraway']);
     const big = rows[0]!;
     expect(big.figures.businessValue).toBe(100 * 1 + 50 * 0.6);

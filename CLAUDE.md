@@ -276,7 +276,7 @@ score = 0.25 business_value + 0.20 households_x_income + 0.20 source_readiness
       + 0.15 coverage_gap + 0.10 cluster_fit + 0.10 growth
 ```
 
-**Hard filters:** population of at least 5,000, and a source readiness score that passes Rule 7. Never launch a town without a human approving it from the ranked list.
+**Hard filters:** population of at least 2,000 (owner, 2026-10-17: every US town over 2,000 people), and a source readiness score that passes Rule 7. Never launch a town without a human approving it from the ranked list.
 
 ---
 
@@ -284,11 +284,11 @@ score = 0.25 business_value + 0.20 households_x_income + 0.20 source_readiness
 
 **Naming.** The launcher proposes 3 names per town, each with domain and conflict checks, and the human picks one in the launch report.
 
-- **Patterns** (rotate them; don't use one pattern network-wide): `{Town} Town Square`, `The {Town} Ledger`, `{Town} Daily`, `{Town} Local`, `The {Nickname} Post` (e.g. a well-known local nickname), `{Town} Courier`.
+- **Patterns** (rotate them; don't use one pattern network-wide): `{Town} Town Square`, `The {Town} Ledger`, `{Town} Daily`, `{Town} Local`, `The {Nickname} Post` (e.g. a well-known local nickname), `{Town} Courier`, and since 2026-10-17 `{Town} Dispatch`, `Journal`, `Chronicle`, `Observer`, `Sentinel`, `Beacon`, `Bulletin`, `Record`, `Report`, `Current`, `Today`, `Signal`, `Tribune`, `Herald`, `Gazette` and `The {Town} Standard` (22 in all, `packages/launcher/src/names.ts`).
 - **Rules:**
   - Short, easy to say aloud, `.com` preferred, no hyphens or numbers.
   - Matching social handles available, or close to it.
-  - The neighbor rule applies: towns within 50 miles use different patterns.
+  - The neighbor rule is a preference: towns within 50 miles get different patterns when one is left, and naming never stops a launch (owner, 2026-10-17).
 - **Conflict checks (block the name if any fail):**
   - It matches or closely resembles a current local outlet, a defunct local newspaper, or a registered trademark (USPTO search).
   - It sounds official: "City of", "Official", "Gov", or a government department name.
@@ -632,6 +632,9 @@ Target: M0–M5 in the first 1–3 days; M6–M8 in week 1.
   - Vercel: the free plan's 100 deployments a day ran out on 2026-10-16; the owner will upgrade later, so pushes are batched meanwhile.
 - 2026-10-16 — **Sports tab (owner: "I do need a sports tab on the website too").** A new `sports` source kind and a network `game` record (`packages/config/src/sports.ts`: sport, level, home, away, scores, status, venue, which teams are local, a note), team level only so no player is ever named (§7). `/sports` lists the next two weeks' games and the last two weeks' finals by day as calendar cards, with sport chips; a Sports category (its own color, `#C2410C`) joins the header's category tabs and a "More" group on the phone Sections tab once the town has games, and the `schools-sports` homepage module shows the next games, or the latest scores when none are coming (Boca's rail, after events). Sources come next: FHSAA (inside its robots.txt Visit-time window) and, once the owner adds a key, a licensed pro scores feed (decision (e) above).
 - 2026-10-16 — **New sources become articles on the demo (owner: "if you find better sources - create new article on BocaTownSquare").** Each new Boca source is run through the normal finder and writer and the result copied to the demo database; tier rules still apply, so a Tier 3 item (an inspection week naming complaints) waits in the review queue for a person's approval.
+- 2026-10-17 — **Every US town over 2,000 people; naming never blocks a launch (owner: "We will launch in every town in the United States with over 2000 people. Naming is not a serious boundary"; "we can incorporate more name patterns").** Sixteen name patterns join the six (§10b, 22 in all); a pattern a town within 50 miles uses is offered last instead of ruled out. The §10a population floor drops from 5,000 to 2,000: 8,433 towns (7,683 incorporated places, Florida 295, plus 750 New England towns). The LRP launches about 250 towns a month until all are live (FY2029); the findings are in `docs/finance/launch-capacity.md`. Rule 7 is unchanged and is now the limit that matters: Boca makes about 0.8 real items a day against a bar of 10, so the every-town plan needs many more sources per town or a lower bar (owner's call). Before going past a few hundred towns, shared hosts need fixing (the weather tile saturates api.weather.gov at ~225 towns) and hosting moves to Vercel Pro (Hobby allows 50 domains).
+
+- 2026-10-17 — **Self-serve sales and AI article review in the plan (owner: "These are not complex sales. People can sign up to advertise or promote their business directly on the website"; "cut article reviews. That will be an AI agent once we're confident in it").** The LRP drops commissioned account executives (a partnerships team of 1 per 1,000 towns) and per-town reviewers (an editorial standards team of 1 per 1,000 towns that audits the AI reviewer), and adds an AI review pass to the cost per story. Code is unchanged: Tier 3 still needs a person's approval until an AI reviewer is built and the owner switches it (Rule 5). The owner also said Rule 7 is a stretch target, not a blocker ("every town in America is capable of 3 per day"); the plan counts every town, while the launcher's readiness gate stays as written until the owner confirms changing Section 2 Rule 7.
 
 ## Status
 - 2026-10-15 — **M0 Scaffold: complete** (David0524/TownCore#1, #2, #3). Monorepo with pnpm + Turborepo; Postgres schema for all §5 tables with rule-enforcing CHECK constraints; town YAML config (Boca Raton, sources TBD); pg-boss worker with a per-minute heartbeat cron; CI runs format, lint, typecheck, migration drift check, tests against Postgres, build and a worker boot smoke test.

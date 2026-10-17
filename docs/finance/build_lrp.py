@@ -161,13 +161,30 @@ for name, label, vals, note in [
 blank()
 
 # Rollout
-section(A, row, 'Town rollout (by fiscal year)')
+section(A, row, 'Launch capacity: how many towns can launch, and how fast')
+row += 1
+single('addressable', 'US towns with more than 2,000 people', 8433, NUM,
+       'Owner plan (2026-10-17): every US town over 2,000 people. Census Vintage 2025 '
+       '(sub-est2025.csv): 7,683 incorporated places (SUMLEV 162; Florida 295) plus 750 New '
+       'England towns (active county subdivisions with no place of their own).', unit='towns')
+single('ready_share', 'Share that pass readiness (Rule 7)', 1.0, PCT,
+       'Owner, 2026-10-17: every town in America can make 3 real items a day; Rule 7 is the target '
+       'we build sources toward. Today Boca makes about 0.8 a day and Delray 0.53, so the source work '
+       'continues. Set lower to see the plan if some towns stay short.',
+       key=True)
+single('name_share', 'Share allowed by the naming rule', 1.0, PCT,
+       'Owner, 2026-10-17: naming never stops a launch. 22 patterns; a neighbor\'s pattern is '
+       'used only when nothing else is left.')
 row += 1
 header(A, row, 'Fiscal year', YEARS)
 row += 1
-series('launches', 'New towns launched (base case)', [20, 80, 200, 400, 700], NUM,
-       'Management target; CLAUDE.md goal is thousands of towns, one command per launch. '
-       'Scaled by the launch multiplier.', key=True, unit='towns')
+series('launch_cap', 'Launches the team can do in a year', [3000, 3000, 3000, 3000, 3000], NUM,
+       'About 250 a month: the launcher is automated, each launch needs ~45 minutes of people '
+       '(approval, Facebook page, Google Publisher Center). A pacing choice too: launching '
+       'hundreds of AI-written sites at once invites Google\'s scaled-content review. Scaled by '
+       'the launch multiplier.', key=True, unit='towns')
+single('per_launcher', 'Launches per launch operator per year', 400, NUM,
+       '~45 minutes of hands-on work per launch, plus fixes and follow-up. Estimate.', unit='towns')
 blank()
 section(A, row, 'Town size mix and size-driven inputs (CLAUDE.md §5 tiers)')
 row += 1
@@ -199,15 +216,17 @@ def tier(name, label, vals, fmt, note, key=False, weighted=True):
     row += 1
 
 
-tier('mix', 'Share of launches', [0.5, 0.35, 0.15], PCT,
-     'Ranked list (CLAUDE.md §10a) skews to smaller towns; population floor 5,000.',
+tier('mix', 'Share of launches', [0.84, 0.12, 0.04], PCT,
+     'Census 2025, towns over 2,000: 7,067 under 30,000 (small, incl. the 750 New England towns), '
+     '1,023 of 30,000-100,000 (mid), 343 of 100,000+ (large); tiers from packages/config/src/launch.ts.',
      key=True, weighted=False)
 A[f'F{REF["mix"]}'] = f'=SUM(C{REF["mix"]}:E{REF["mix"]})'
 A[f'F{REF["mix"]}'].number_format = PCT
 A[f'F{REF["mix"]}'].font = F_BOLD
-tier('households', 'Households per town', [4000, 15000, 45000], NUM,
-     'Estimate from Census place sizes; Boca Raton (large) is roughly 45,000 households.')
-tier('listings', 'Directory listings per town', [300, 900, 2300], NUM,
+tier('households', 'Households per town', [3300, 21000, 70000], NUM,
+     'Mean town population by tier (8,397 / 53,365 / 185,762, Census 2025, each town capped at '
+     '300,000) / ~2.5 people a household. Revenue scales with households, so the mean is used.')
+tier('listings', 'Directory listings per town', [180, 1100, 3500], NUM,
      'Boca live data 2026-10-16: 2,334 active listings (1,979 state licenses + 355 mapped). '
      'Small and mid scaled down; estimate.')
 tier('stories', 'Stories per day (story budget)', [3, 6, 10], NUM,
@@ -280,8 +299,9 @@ blank()
 # Direct costs
 section(A, row, 'Direct costs per town')
 row += 1
-single('ai_story', 'AI cost per published story', 0.12, USD2,
-       'Estimate for writer + separate fact-check calls; verify against current Anthropic pricing '
+single('ai_story', 'AI cost per published story', 0.15, USD2,
+       'Writer, separate fact-check and an AI review pass (owner: article review becomes an AI agent). '
+       'Measured ~$0.10 for writer + fact-check on repo pricing; verify against current Anthropic pricing '
        '(CLAUDE.md §8). Scaled by unit cost multiplier.', key=True, unit='$/story')
 single('ai_overhead', 'AI overhead per town per day', 0.50, USD2,
        'Classification, revisions, guides, entity extraction. Estimate.', unit='$/day')
@@ -311,20 +331,23 @@ section(A, row, 'People (fully loaded = salary x (1 + benefits load))')
 row += 1
 single('benefits', 'Benefits and payroll tax load', 0.25, PCT, 'Estimate.')
 single('raise', 'Annual salary increase', 0.03, PCT, 'Estimate.')
-single('commission', 'Sales commission on direct-sold revenue', 0.10, PCT,
-       'Paid on banners, newsletter and category sponsorships. Estimate.')
-single('per_reviewer', 'Towns per editorial reviewer', 40, NUM,
-       'Reviewers approve Tier 3 items and samples (§7). Estimate.', key=True, unit='towns')
-single('per_ae', 'Towns per local account executive', 30, NUM,
-       'Clustered towns share sales effort (§10a). Estimate.', key=True, unit='towns')
+single('commission', 'Sales commission on direct-sold revenue', 0.0, PCT,
+       'Owner: advertisers sign up and pay on the site; no commissioned sales force.')
+single('per_reviewer', 'Towns per editorial standards editor', 1000, NUM,
+       'Owner, 2026-10-17: article review becomes an AI agent once we trust it. A small team audits '
+       'the agent, handles corrections and reader reports. Until the agent ships, Tier 3 still needs '
+       'a person (Rule 5).', key=True, unit='towns')
+single('per_ae', 'Towns per advertiser partnerships manager', 1000, NUM,
+       'Owner, 2026-10-17: sales are self-serve on the site. A small team handles regional and '
+       'multi-town advertisers.', key=True, unit='towns')
 single('per_support', 'Towns per support and success rep', 120, NUM, 'Estimate.', unit='towns')
 blank()
 section(A, row, 'Base salaries (2027 $)')
 row += 1
 single('sal_lead', 'Leadership', 160000, USD, 'Estimate.', unit='$/year')
 single('sal_eng', 'Engineering', 170000, USD, 'Estimate.', unit='$/year')
-single('sal_rev', 'Editorial reviewer', 70000, USD, 'Estimate.', unit='$/year')
-single('sal_ae', 'Account executive (base)', 65000, USD, 'Estimate.', unit='$/year')
+single('sal_rev', 'Editorial standards and launch operations', 70000, USD, 'Estimate.', unit='$/year')
+single('sal_ae', 'Advertiser partnerships', 65000, USD, 'Estimate.', unit='$/year')
 single('sal_sup', 'Support and success', 55000, USD, 'Estimate.', unit='$/year')
 single('sal_ga', 'Finance, legal and operations', 110000, USD, 'Estimate.', unit='$/year')
 blank()
@@ -359,8 +382,8 @@ single('open_cash', 'Opening cash, start of FY2027', 250000, USD, 'Input: replac
 row += 1
 header(A, row, 'Fiscal year', YEARS)
 row += 1
-series('equity', 'Equity raised', [2000000, 8000000, 0, 15000000, 0], USD,
-       'Plan: seed in FY2027, Series A in FY2028, Series B in FY2030. Adjust to keep cash above zero.', key=True, unit='$')
+series('equity', 'Equity raised', [10000000, 0, 0, 0, 0], USD,
+       'Plan: $10M in FY2027, the ~$7.7M the every-town plan needs plus a buffer. Adjust to keep cash above zero.', key=True, unit='$')
 LAST_A = row
 
 # ----------------------------------------------------------------------------------------------
@@ -371,9 +394,20 @@ setw(R, {'A': 46, 'B': 4, 'C': 13, 'D': 13, 'E': 13, 'F': 13, 'G': 13, 'H': 50})
 header(R, 4, 'Fiscal year', YEARS)
 R['A5'] = 'New towns launched'
 for i, c in enumerate(COLS):
-    R[f'{c}5'] = f'=ROUND(Assumptions!{c}${REF["launches"]}*{REF["m_launch"]},0)'
+    left = '$C$10' if i == 0 else f'$C$10-{COLS[i-1]}6'
+    R[f'{c}5'] = f'=MAX(0,MIN(ROUND(Assumptions!{c}${REF["launch_cap"]}*{REF["m_launch"]},0),{left}))'
     R[f'{c}5'].number_format = NUM
-    R[f'{c}5'].font = F_LINK
+R['H5'] = 'The smaller of the team\'s capacity and the towns left in the pool.'
+R['A10'] = 'Launchable towns (pool)'
+R['C10'] = (f'=ROUND(MIN({REF["addressable"]},{REF["addressable"]}*{REF["ready_share"]}'
+            f'*{REF["name_share"]}*{REF["m_launch"]}),0)')
+R['C10'].number_format = NUM
+R['C10'].font = F_BOLD
+R['H10'] = 'Places of 5,000+ x readiness pass rate x naming rule (x launch multiplier).'
+R['A11'] = 'Pool left at year end'
+for i, c in enumerate(COLS):
+    R[f'{c}11'] = f'=$C$10-{c}6'
+    R[f'{c}11'].number_format = NUM
 R['A6'] = 'Cumulative towns launched'
 R['C6'] = '=C5'
 for i in range(1, 5):
@@ -502,9 +536,9 @@ urow_add('gp', 'Gross profit per launched town', lambda c, i: f'={c}{UREF["rev"]
          bold=True)
 urow_add('gm', 'Gross margin', lambda c, i: f'=IF({c}{UREF["rev"]}=0,0,{c}{UREF["gp"]}/{c}{UREF["rev"]})', PCT)
 usec('Town-level people and acquisition costs ($)')
-urow_add('c_rev', 'Editorial review (share of a reviewer)',
+urow_add('c_rev', 'Editorial standards (share)',
          lambda c, i: f'={REF["sal_rev"]}*(1+{REF["benefits"]})/{REF["per_reviewer"]}*{c}{UREF["town_years"]}', USD)
-urow_add('c_ae', 'Local sales (share of an AE) + commission',
+urow_add('c_ae', 'Advertiser partnerships (share) + commission',
          lambda c, i: f'={REF["sal_ae"]}*(1+{REF["benefits"]})/{REF["per_ae"]}*{c}{UREF["town_years"]}+{c}{UREF["rev_direct"]}*{REF["commission"]}',
          USD)
 urow_add('c_sup', 'Support and success (share)',
@@ -585,9 +619,10 @@ roles = [
     ('lead', 'Leadership', 'fixed', 'hc_lead', 'sal_lead'),
     ('eng', 'Engineering and product', 'fixed', 'hc_eng', 'sal_eng'),
     ('ga', 'Finance, legal and operations', 'fixed', 'hc_ga', 'sal_ga'),
-    ('rev', 'Editorial reviewers', 'ratio', 'per_reviewer', 'sal_rev'),
-    ('ae', 'Account executives', 'ratio', 'per_ae', 'sal_ae'),
+    ('rev', 'Editorial standards', 'ratio', 'per_reviewer', 'sal_rev'),
+    ('ae', 'Advertiser partnerships', 'ratio', 'per_ae', 'sal_ae'),
     ('sup', 'Support and success', 'ratio', 'per_support', 'sal_sup'),
+    ('ops', 'Launch operations', 'launch', 'per_launcher', 'sal_rev'),
 ]
 H['A5'] = 'Heads (year end)'
 H['A5'].font = F_BOLD
@@ -599,6 +634,8 @@ for key, label, kind, drv, sal in roles:
         if kind == 'fixed':
             H[f'{c}{hrow}'] = f'=Assumptions!{c}${REF[drv]}'
             H[f'{c}{hrow}'].font = F_LINK
+        elif kind == 'launch':
+            H[f'{c}{hrow}'] = f'=IF(Rollout!{c}$5=0,0,ROUNDUP(Rollout!{c}$5/{REF[drv]},0))'
         else:
             H[f'{c}{hrow}'] = f'=IF(Rollout!{c}$7=0,0,MAX(1,ROUNDUP(Rollout!{c}$7/{REF[drv]},0)))'
         H[f'{c}{hrow}'].number_format = NUM
@@ -684,11 +721,12 @@ crow_add('cogs', 'Total cost of revenue', lambda c, j: f'=SUM({c}{CREF["ai"]}:{c
 crow += 1
 section(C, crow, 'Operating expenses')
 crow += 1
-crow_add('p_editorial', 'Editorial review (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_rev"]}', font=F_LINK)
-crow_add('p_sales', 'Sales (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_ae"]}', font=F_LINK)
+crow_add('p_editorial', 'Editorial standards (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_rev"]}', font=F_LINK)
+crow_add('p_sales', 'Advertiser partnerships (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_ae"]}', font=F_LINK)
 crow_add('commission', 'Sales commission',
          lambda c, j: '=(' + cohort(UREF['rev_direct'], j)[1:] + f')*{REF["commission"]}')
 crow_add('p_support', 'Support and success (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_sup"]}', font=F_LINK)
+crow_add('p_ops', 'Launch operations (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_ops"]}', font=F_LINK)
 crow_add('launch_mkt', 'Launch marketing and launch AI',
          lambda c, j: f'=Rollout!{c}5*({REF["launch_mkt"]}+{REF["launch_ai"]})*{REF["m_cost"]}')
 crow_add('sub_cac', 'Paid subscriber acquisition', lambda c, j: cohort(UREF['c_cac'], j))
@@ -736,7 +774,7 @@ prow_add('gm', 'Gross margin', lambda c, j: f'=IF({c}{PREF["rev"]}=0,0,{c}{PREF[
 prow += 1
 prow_add('editorial', 'Editorial', lambda c, j: f'=Costs!{c}{CREF["p_editorial"]}', font=F_LINK)
 prow_add('sm', 'Sales and marketing',
-         lambda c, j: f'=Costs!{c}{CREF["p_sales"]}+Costs!{c}{CREF["commission"]}+Costs!{c}{CREF["p_support"]}'
+         lambda c, j: f'=Costs!{c}{CREF["p_sales"]}+Costs!{c}{CREF["commission"]}+Costs!{c}{CREF["p_support"]}+Costs!{c}{CREF["p_ops"]}'
                       f'+Costs!{c}{CREF["launch_mkt"]}+Costs!{c}{CREF["sub_cac"]}+Costs!{c}{CREF["brand"]}',
          font=F_LINK)
 prow_add('rd', 'Engineering and product', lambda c, j: f'=Costs!{c}{CREF["p_eng"]}', font=F_LINK)

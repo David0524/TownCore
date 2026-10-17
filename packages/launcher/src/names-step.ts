@@ -96,12 +96,14 @@ async function neighborsOf(db: Db, deps: NameDeps, town: ResolvedTown) {
 
 async function propose(db: Db, deps: NameDeps, town: ResolvedTown, opts: LaunchOptions) {
   const { neighbors, networkUse } = await neighborsOf(db, deps, town);
+  // The first ten of 22 patterns are plenty to find three clean names, and keep the domain
+  // search and registry lookups small.
   const candidates = nameCandidates({
     townWord: opts.shortName ?? town.name,
     ...(opts.nickname ? { nickname: opts.nickname } : {}),
     nearbyPatterns: neighbors.flatMap((n) => (n.pattern ? [n.pattern] : [])),
     networkUse,
-  });
+  }).slice(0, 10);
   const quotes = new Map(
     (
       await searchDomains(
@@ -192,7 +194,7 @@ ${
     .join('\n') || '- None.'
 }
 
-## Towns within ${NEIGHBOR_MILES} miles (their patterns aren't reused)
+## Towns within ${NEIGHBOR_MILES} miles (their patterns are offered last)
 
 ${detail.neighbors.map((n) => `- ${n.siteName} (${n.name}), ${n.miles} miles`).join('\n') || '- None.'}
 

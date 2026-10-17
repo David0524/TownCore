@@ -46,8 +46,8 @@ export const highValueIndustries: Array<{ naics: string; label: string; weight: 
 ];
 
 export const rankingFilters = {
-  /** §10a hard filter. */
-  minPopulation: 5_000,
+  /** §10a hard filter (owner, 2026-10-17: every town over about 2,000 people). */
+  minPopulation: 2_000,
   /** Cluster fit is 1 next to an existing town and 0 at this distance or beyond. */
   clusterRadiusMiles: 100,
 };
