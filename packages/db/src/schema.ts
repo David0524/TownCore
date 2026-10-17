@@ -12,6 +12,7 @@ import {
 } from '@towncore/config';
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   check,
   date,
@@ -135,6 +136,8 @@ export const towns = pgTable('towns', {
   // Launch cohort, the month a town went live ("2027-01"): towns roll out, and can be hidden from
   // search, a cohort at a time.
   cohort: text('cohort'),
+  /** When an admin took the town live (its age on Admin → Analytics). */
+  liveAt: timestamp('live_at', { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -655,6 +658,9 @@ export const articleStatsDaily = pgTable(
     views: integer('views').notNull().default(0),
     listImpressions: integer('list_impressions').notNull().default(0),
     listClicks: integer('list_clicks').notNull().default(0),
+    /** Seconds readers had the story open and visible, and how many reads reported it. */
+    engagedSeconds: integer('engaged_seconds').notNull().default(0),
+    engagedSamples: integer('engaged_samples').notNull().default(0),
   },
   (t) => [
     primaryKey({ columns: [t.articleId, t.day] }),
@@ -2270,6 +2276,44 @@ export const referralStatsDaily = pgTable(
     views: integer('views').notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.townId, t.day, t.source] })],
+);
+
+// Page views and time on page per town, day and kind of page (Admin → Analytics). Cookieless
+// like every counter (D-M4-3): a beacon reports a page view and, when the page is left, the
+// seconds it was visible; nothing about the reader is stored.
+export const pageStatsDaily = pgTable(
+  'page_stats_daily',
+  {
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    day: date('day').notNull(),
+    /** home, article, section, directory, guide, events, other */
+    kind: text('kind').notNull(),
+    views: integer('views').notNull().default(0),
+    engagedSeconds: bigint('engaged_seconds', { mode: 'number' }).notNull().default(0),
+    engagedSamples: integer('engaged_samples').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.townId, t.day, t.kind] })],
+);
+
+// Uptime checks (Admin → Analytics): every few minutes the worker, or a staff member's "Check
+// now", asks each live site's /api/health. A site is down after two failed checks in a row.
+export const siteChecks = pgTable(
+  'site_checks',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id, { onDelete: 'cascade' }),
+    checkedAt: timestamp('checked_at', { withTimezone: true }).notNull().defaultNow(),
+    url: text('url').notNull(),
+    ok: boolean('ok').notNull(),
+    statusCode: integer('status_code'),
+    ms: integer('ms'),
+    error: text('error'),
+  },
+  (t) => [index('site_checks_town_checked_idx').on(t.townId, t.checkedAt)],
 );
 
 // Experiments (§11a-2, owner 2026-10-17): the variants live in code (packages/config audience.ts);

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { PhoneBar } from '@/components/phone/PhoneBar';
 import { TabBar } from '@/components/phone/TabBar';
 import { SlotBeacon } from '@/components/SlotBeacon';
+import { PageBeacon } from '@/components/Beacon';
 import { externalLinksScript } from '@/components/ExternalLinks';
 import { AlertBar } from '@/components/weather/AlertBar';
 import { followBootScript, followCss } from '@/components/phone/follow';
@@ -121,6 +122,7 @@ export default async function TownLayout({ children, params }: Props) {
         <Footer town={town} theme={theme} />
         <TabBar />
         <SlotBeacon />
+        <PageBeacon />
       </div>
     </>
   );

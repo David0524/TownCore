@@ -157,7 +157,7 @@ export async function approveLaunch(
   const [town] = await db
     .update(towns)
     // The cohort is the month it goes live (for cohort rollout and the search kill switch).
-    .set({ status: 'live', cohort: now.toISOString().slice(0, 7), updatedAt: now })
+    .set({ status: 'live', cohort: now.toISOString().slice(0, 7), liveAt: now, updatedAt: now })
     .where(and(eq(towns.slug, launch!.slug), eq(towns.status, 'draft')))
     .returning();
   if (!town) throw new GoLiveRefused('The town changed while approving; reload and try again.');

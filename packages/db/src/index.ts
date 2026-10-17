@@ -87,3 +87,4 @@ export {
   WEATHER_MAX_AGE_MS,
 } from './weather';
 export { countReferral, experimentKeys, experimentStates, townVariant } from './audience';
+export { countEngagedTime, countPageView } from './analytics';

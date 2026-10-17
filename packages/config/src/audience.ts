@@ -189,3 +189,33 @@ export function resolveVariant<K extends ExperimentKey>(
   if (recorded && variants.includes(recorded)) return recorded as ExperimentVariant<K>;
   return assignVariant(key, state.unit === 'cohort' ? `cohort:${town.cohort ?? 'none'}` : town.id);
 }
+
+// Page views and time on page (Admin → Analytics, owner 2026-10-17). Worked out in the browser
+// from the path alone; counted by kind of page, never per reader (D-M4-3).
+export const PAGE_KINDS = [
+  'home',
+  'article',
+  'section',
+  'directory',
+  'guide',
+  'events',
+  'other',
+] as const;
+export type PageKind = (typeof PAGE_KINDS)[number];
+export const isPageKind = (v: unknown): v is PageKind =>
+  typeof v === 'string' && (PAGE_KINDS as readonly string[]).includes(v);
+
+/** A visit longer than this is counted as this long (a tab left open isn't reading). */
+export const MAX_ENGAGED_SECONDS = 30 * 60;
+
+/** The kind of a town page from its path. */
+export function pageKindOf(pathname: string): PageKind {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  if (path === '/') return 'home';
+  if (/^\/news\/[a-z0-9-]+$/.test(path)) return 'article';
+  if (/^\/(news|beat|sections|topics|sports|weather)(\/|$)/.test(path)) return 'section';
+  if (/^\/directory(\/|$)/.test(path)) return 'directory';
+  if (/^\/guides(\/|$)/.test(path)) return 'guide';
+  if (/^\/events(\/|$)/.test(path)) return 'events';
+  return 'other';
+}

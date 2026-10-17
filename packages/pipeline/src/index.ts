@@ -253,3 +253,23 @@ export {
   type DigestItem,
 } from './digest';
 export { EVAL_VARIANTS, type VariantReport } from './evals';
+export {
+  checkSites,
+  DOWN_AFTER,
+  lightFor,
+  lightLabels,
+  parseCheckUrls,
+  uptimeFor,
+  type Light,
+  type Uptime,
+} from './uptime';
+export {
+  ANALYTICS_RANGES,
+  networkAnalytics,
+  siteAnalytics,
+  type AnalyticsRange,
+  type DailyPoint,
+  type SiteDetail,
+  type SiteRow,
+  type SiteTotals,
+} from './analytics';

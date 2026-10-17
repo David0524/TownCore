@@ -27,6 +27,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <Link href="/admin/mail/inbox" data-testid="nav-inbox">
               Inbox{unread ? ` (${unread})` : ''}
             </Link>
+            <Link href="/admin/analytics">Analytics</Link>
             <Link href="/admin/health">Health</Link>
             <Link href="/admin/digest">Digest</Link>
             <Link href="/admin/proposals">Proposals</Link>
