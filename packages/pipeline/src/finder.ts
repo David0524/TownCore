@@ -191,6 +191,9 @@ async function companionRecords(db: Db, record: typeof records.$inferSelect): Pr
   return rows.map((r) => r.id);
 }
 
+/** A new-places roundup needs this many licenses in the week. */
+export const NEW_PLACES_MIN = 3;
+
 async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderReport) {
   const tz = town.timezone;
   const weekday = localDate(now, tz).weekday; // 0 = Sunday
@@ -238,6 +241,21 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       title: `New contractor licenses, week of ${week}`,
       beat: 'business',
       recordIds: licenses.map((r) => r.id),
+      now,
+    });
+    // New places to eat and drink: new food service establishments and new liquor licenses.
+    const newPlaces = [
+      ...(await townRecords(db, town.id, 'new_food_license', from, to)),
+      ...(await townRecords(db, town.id, 'liquor_license', from, to)),
+    ];
+    await roundup(db, town, report, {
+      key: `roundup:new-places:${week}`,
+      title: `New places to eat and drink, week of ${week}`,
+      beat: 'business',
+      recordIds: newPlaces.map((r) => r.id),
+      // A week with one or two is too thin for a story (never pad, Rule 7); the homepage's new
+      // places module still shows them.
+      min: NEW_PLACES_MIN,
       now,
     });
     // Permits from a city or county open-data source (§7: permit roundups are Tier 1). Their
@@ -291,9 +309,11 @@ async function roundup(
     now: Date;
     tier?: 1 | 3;
     tierReason?: string;
+    /** Fewest records worth a story (default 1). */
+    min?: number;
   },
 ) {
-  if (item.recordIds.length === 0) return;
+  if (item.recordIds.length < (item.min ?? 1)) return;
   const id = await insertCandidate(db, {
     townId: town.id,
     kind: 'roundup',

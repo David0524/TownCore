@@ -159,6 +159,89 @@ export function newLicensesRoundup(
   };
 }
 
+const COMPANY_NAME =
+  /\b(LLC|L\.L\.C|INC|CORP|CORPORATION|CO|COMPANY|LP|LLP|LTD|GROUP|HOLDINGS|ENTERPRISES)\b/i;
+
+/** Food service licenses that mean a place to eat, in plain words (vending and events left out). */
+const NEW_FOOD_KINDS: Record<string, string> = {
+  'Permanent Food Service, seating': 'restaurant with seating',
+  'Permanent Food Service, non-seating': 'takeout or counter service',
+  Catering: 'caterer',
+  'Mobile Food Dispensing Vehicle': 'food truck',
+};
+
+type NewFood = {
+  businessName?: string;
+  licenseeName?: string;
+  occupation?: string;
+  address1?: string;
+  approvedDate?: string;
+};
+type NewLiquor = { business?: string; sells?: string; street?: string; activityDate?: string };
+
+/**
+ * New places to eat and drink (owner, 2026-10-17): new food service establishments the state
+ * approved and new alcoholic beverage licenses, the same week, one line per place. Built in code,
+ * Tier 1. A place is named by its trade name, or its license holder only when that is a company,
+ * never a person. Addresses are mailing cities, like the other state roundups.
+ */
+export function newPlacesRoundup(
+  town: TownInfo,
+  weekStart: Date,
+  items: TemplateRecord[],
+): TemplatedDraft {
+  const weekEnd = new Date(weekStart.getTime() + 6 * 86_400_000);
+  const range = `${apDate(weekStart, town.timezone)}–${apDate(weekEnd, town.timezone)}`;
+  const places = new Map<
+    string,
+    { name: string; street: string; notes: string[]; ids: string[] }
+  >();
+  const add = (name: string, street: string, note: string, id: string) => {
+    const key = `${name.toUpperCase().replace(/[^A-Z0-9]/g, '')}|${street.toUpperCase().slice(0, 12)}`;
+    const place = places.get(key) ?? { name, street, notes: [], ids: [] };
+    if (!place.notes.includes(note)) place.notes.push(note);
+    place.ids.push(id);
+    places.set(key, place);
+  };
+  for (const item of items) {
+    if (item.type === 'new_food_license') {
+      const raw = (item.raw ?? {}) as NewFood;
+      const kind = NEW_FOOD_KINDS[raw.occupation ?? ''];
+      const name =
+        raw.businessName ||
+        (raw.licenseeName && COMPANY_NAME.test(raw.licenseeName) ? raw.licenseeName : '');
+      if (!kind || !name) continue;
+      add(titleCase(name), titleCase(raw.address1 ?? ''), `new ${kind}`, item.id);
+    } else if (item.type === 'liquor_license') {
+      const raw = (item.raw ?? {}) as NewLiquor;
+      if (!raw.business) continue;
+      add(
+        titleCase(raw.business),
+        titleCase(raw.street ?? ''),
+        `liquor license for ${raw.sells}`,
+        item.id,
+      );
+    }
+  }
+  const rows = [...places.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const n = rows.length;
+  return {
+    headline: `New places to eat and drink with a ${town.name} address, ${range}`,
+    dek: `The state approved ${n} new ${n === 1 ? 'restaurant, bar or store' : 'restaurants, bars and stores'} serving food or drink with a ${town.name} mailing address, according to its licensing records.`,
+    bodyMd: [
+      `These places with a ${town.name} mailing address were approved from ${range}: new food service establishments licensed by the Florida Division of Hotels and Restaurants, and new alcoholic beverage licenses from the Division of Alcoholic Beverages and Tobacco. An approval comes before opening day, so some aren't open yet. ${MAILING_CITY_NOTE(town.name)}`,
+      rows
+        .map(
+          (r) =>
+            `- **${md(r.name)}**${r.street ? `, ${md(r.street)}` : ''}: ${r.notes.join('; ')}.`,
+        )
+        .join('\n'),
+    ].join('\n\n'),
+    beat: 'business',
+    sourceRecordIds: rows.flatMap((r) => r.ids),
+  };
+}
+
 type Inspection = {
   licenseNumber?: string;
   business?: string;

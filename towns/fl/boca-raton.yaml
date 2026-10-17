@@ -99,6 +99,13 @@ sources:
   - kind: inspections
     platform: fl-dbpr
     options: { city: BOCA RATON, files: [2fdinspi.csv] }
+  # Verified 2026-10-17: Division of Alcoholic Beverages and Tobacco daily activity (statewide
+  # daily.csv in the same allowed extracts folder; one day per file, so it runs daily). Only new
+  # liquor licenses, by trade name: they join new food service licenses in a weekly roundup.
+  - kind: business_filings
+    platform: fl-dbpr
+    schedule: 1d
+    options: { city: BOCA RATON, files: [daily.csv] }
   # Verified 2026-10-17: Palm Beach County Property Appraiser sales (ArcGIS Server table
   # PAO.PROPINFO; robots.txt 404, no rules), at a real price, not confidential. City limits by
   # parcel number: county parcel numbers start with the municipality code (06 = Boca Raton);

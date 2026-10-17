@@ -12,6 +12,7 @@ import {
   parseNewFoodRow,
 } from './food';
 import { INSPECTION_FILE, inspectionRecord, parseInspectionRow } from './inspections';
+import { isNewLiquorLicense, LIQUOR_FILE, liquorRecord, parseLiquorRow } from './liquor';
 
 // Florida Department of Business and Professional Regulation licensee files (CLAUDE.md §9:
 // state-level adapter, written once, reused by every Florida town). Free public records under
@@ -19,7 +20,8 @@ import { INSPECTION_FILE, inspectionRecord, parseInspectionRow } from './inspect
 // Each file is statewide; rows are filtered to the town's city. Conditional GET skips unchanged
 // files. Source config: { city: "BOCA RATON", files?: string[] }. Food service files
 // (hrfood1–7.csv, and newfood.csv for new establishments) use the Hotels and Restaurants
-// layout in ./food.ts; food service inspections (1fdinspi–7fdinspi.csv) are in ./inspections.ts.
+// layout in ./food.ts; food service inspections (1fdinspi–7fdinspi.csv) are in ./inspections.ts;
+// the alcoholic beverage daily activity file (daily.csv, new licenses only) is in ./liquor.ts.
 
 const EXTRACTS = 'https://www2.myfloridalicense.com/sto/file_download/extracts/';
 
@@ -142,7 +144,16 @@ export const flDbprAdapter: SourceAdapter = {
       const food = FOOD_FILE.test(file);
       const newFood = NEW_FOOD_FILE.test(file);
       const inspections = INSPECTION_FILE.test(file);
+      const liquor = LIQUOR_FILE.test(file);
       for await (const line of streamLines(response.body)) {
+        if (liquor) {
+          const row = parseLiquorRow(line);
+          if (row && row.city.toUpperCase() === city && isNewLiquorLicense(row)) {
+            const record = liquorRecord(row, url);
+            if (record) records.push(record);
+          }
+          continue;
+        }
         if (inspections) {
           const row = parseInspectionRow(line);
           if (row && row.city.toUpperCase() === city) records.push(inspectionRecord(row, url));

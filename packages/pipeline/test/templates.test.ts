@@ -9,6 +9,7 @@ import {
   newLicensesRoundup,
   permitsRoundup,
   propertySalesRoundup,
+  newPlacesRoundup,
   weatherAlert,
   type TemplateRecord,
 } from '../src/templates';
@@ -324,5 +325,49 @@ describe('propertySalesRoundup', () => {
       '## By kind of property\n\n- Condominium: 2\n- Single Family: 1',
     );
     expect(draft.sourceRecordIds).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('newPlacesRoundup', () => {
+  it('merges a place’s food and liquor licenses into one line and never names a person', () => {
+    const draft = newPlacesRoundup(town, week, [
+      rec({
+        id: 'f1',
+        type: 'new_food_license',
+        raw: {
+          businessName: 'MAISON BRUNCH',
+          occupation: 'Permanent Food Service, seating',
+          address1: '23064 SANDALFOOT PLAZA DRIVE',
+        },
+      }),
+      rec({
+        id: 'l1',
+        type: 'liquor_license',
+        raw: {
+          business: 'MAISON BRUNCH',
+          sells: 'beer and wine served on site',
+          street: '23064 SANDALFOOT PLAZA DRIVE',
+        },
+      }),
+      // A sole proprietor with no trade name, and a vending machine: neither is listed.
+      rec({
+        id: 'f2',
+        type: 'new_food_license',
+        raw: { licenseeName: 'JANE DOE', occupation: 'Permanent Food Service, non-seating' },
+      }),
+      rec({
+        id: 'f3',
+        type: 'new_food_license',
+        raw: { businessName: 'SNACK BOX', occupation: 'Vending Machine', address1: '1 MAIN ST' },
+      }),
+    ]);
+    expect(draft.headline).toBe(
+      'New places to eat and drink with a Boca Raton address, Oct. 19–Oct. 25',
+    );
+    expect(draft.bodyMd.split('\n').filter((l) => l.startsWith('- '))).toEqual([
+      '- **Maison Brunch**, 23064 Sandalfoot Plaza Drive: new restaurant with seating; liquor license for beer and wine served on site.',
+    ]);
+    expect(draft.bodyMd).not.toContain('Jane');
+    expect(draft.sourceRecordIds).toEqual(['f1', 'l1']);
   });
 });
