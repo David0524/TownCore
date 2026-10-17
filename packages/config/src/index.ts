@@ -136,6 +136,22 @@ export {
   type DirectoryCategory,
 } from './directory';
 export {
+  decidePrice,
+  DYNAMIC_PRODUCTS,
+  isDynamicProduct,
+  listPriceCents,
+  PRICING_RULES,
+  PROOF_MINIMUMS,
+  scarcityLine,
+  TIER_PRICES,
+  townPricing,
+  type DynamicProduct,
+  type PriceDecision,
+  type PriceList,
+  type PricingSignals,
+  type TownPricing,
+} from './pricing';
+export {
   AI_ILLUSTRATION_LABEL,
   AI_IMAGE_LABEL,
   aiLabel,

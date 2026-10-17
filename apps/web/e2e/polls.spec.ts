@@ -17,7 +17,9 @@ import {
 // Quick polls and the Facebook queue (owner, 2026-10-17; docs/plans/facebook.md), on two towns
 // with different families: Harbor Point (heritage, main column) and Pine Hollow (community, rail).
 const admin = 'http://admin.test';
-const db = createDb(loadEnv().DATABASE_URL!, { max: 1 });
+// Never closed: with fullyParallel a worker can run more of this file's tests after its
+// afterAll, so the client stays open; idle connections close by themselves.
+const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
 const hash = (t: string) => createHash('sha256').update(t).digest('hex');
 
 const TOWNS = [
@@ -59,10 +61,6 @@ test.beforeAll(async () => {
       })
       .onConflictDoNothing();
   }
-});
-
-test.afterAll(async () => {
-  await db.$client.end();
 });
 
 async function signInStaff(context: BrowserContext, tag: string) {

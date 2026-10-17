@@ -267,3 +267,18 @@
 .claimList li > div {
   min-width: 0;
 }
+
+/* The owner page's one in-page prompt, at the right moment only (owner, 2026-10-17). */
+.prompt {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--tint);
+  max-width: var(--measure);
+}
+
+.prompt p {
+  margin: 0;
+}

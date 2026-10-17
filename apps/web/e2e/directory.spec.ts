@@ -50,7 +50,9 @@ test('the advertising page sells featured spots at the town’s prices', async (
     main.getByRole('heading', { name: 'Get your business featured', level: 1 }),
   ).toBeVisible();
   const spots = page.getByTestId('featured-spots').getByRole('listitem');
-  await expect(spots).toHaveCount(3);
+  // The three spots side by side, then the category sponsorship as the premium option.
+  await expect(spots).toHaveCount(4);
+  await expect(spots.nth(3)).toContainText('Category sponsor');
   await expect(spots.nth(0)).toContainText('#1');
   await expect(spots.nth(0)).toContainText('$19 a month');
   await expect(spots.nth(1)).toContainText('$12 a month');

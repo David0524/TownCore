@@ -140,7 +140,8 @@ sources:
 # County data from counties/fl/palm-beach.yaml, filtered to Boca Raton's city limits there.
 county_sources: [property_sales]
 pricing:
-  # Featured spots #1, #2 and #3 a month; a business's first spot is free for 30 days.
+  # The large tier's list prices (packages/config/src/pricing.ts), kept explicit: featured spots
+  # #1, #2 and #3 a month and Enhanced; a business's first spot is free for 30 days.
   featured_usd: [19, 12, 7]
   enhanced_usd: 39
 # Evergreen guides (D-M4-2): official pages only, each verified 2026-10-16 through the bot's own

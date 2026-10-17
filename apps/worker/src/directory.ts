@@ -5,6 +5,7 @@ import {
   DBPR,
   draftFollowups,
   geocodeListings,
+  runMonthlyPricing,
   seedDirectory,
   sendApprovedFollowups,
   sendMonthlyReports,
@@ -50,6 +51,16 @@ export async function sendProofReports(db: Db, mail: OpsDeps['alertMail'], logge
   if (!mail) return;
   const { sent } = await sendMonthlyReports({ db, ...mail, ...ownerMailEnv() });
   if (sent) logger.info({ sent }, 'proof reports sent');
+}
+
+/**
+ * Directory prices (owner, 2026-10-17): once per town and local month, each category product's
+ * price is recalculated from aggregate signals inside the guardrails; bigger increases wait as
+ * proposals in Admin → Directory → Pricing. Existing subscriptions are never changed.
+ */
+export async function recalculatePrices(db: Db, logger: Logger, now = new Date()) {
+  const result = await runMonthlyPricing(db, now);
+  if (result.towns) logger.info(result, 'directory prices recalculated');
 }
 
 /** Unsubscribe links and the postal footer for mail to owners. */

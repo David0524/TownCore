@@ -115,6 +115,24 @@ export const EXPERIMENTS = {
     metric: 'trial-to-paid conversion',
     variants: ['control', 'people-saw'],
   },
+  // Revenue experiments (owner, 2026-10-17: "Grow ad and directory revenue").
+  'upgrade-prompt-timing': {
+    label: 'Owner page upgrade prompt: after claim approval and a good month, or a good month only',
+    metric: 'featured trials started',
+    variants: ['control', 'good-month-only'],
+  },
+  'advertise-tiers': {
+    label: 'Advertise page: featured spots first, or the category sponsorship first',
+    metric: 'featured trials started',
+    variants: ['control', 'premium-first'],
+  },
+  // A price test varies by town or cohort, never by business: `hold` towns keep their prices
+  // for the month instead of the monthly recalculation.
+  'monthly-pricing': {
+    label: 'Monthly price recalculation, or prices held',
+    metric: 'revenue per town',
+    variants: ['control', 'hold'],
+  },
 } as const satisfies Record<
   string,
   { label: string; metric: string; variants: readonly [string, ...string[]] }

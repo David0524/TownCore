@@ -15,6 +15,7 @@ export const queues = {
   directoryGeocode: 'directory.geocode',
   proofReports: 'directory.proof-reports',
   followups: 'directory.followups',
+  pricing: 'directory.pricing',
   basemaps: 'maps.basemaps',
   maps: 'maps.draw',
   photos: 'photos.stock',
@@ -48,6 +49,9 @@ export const schedules = [
   { queue: queues.proofReports, cron: '7 * * * *' },
   // Hourly, draft owner follow-ups and send them where a town's standing approval is on.
   { queue: queues.followups, cron: '37 * * * *' },
+  // Daily; each town's category prices are recalculated once per local month, on the first run
+  // of the month (owner, 2026-10-17).
+  { queue: queues.pricing, cron: '43 6 * * *' },
   // Monthly (the 3rd, 07:40 UTC), rebuild town base maps from Geofabrik's state extracts (M4 E).
   { queue: queues.basemaps, cron: '40 7 3 * *' },
   // Every 30 minutes, give recent development and public-safety stories block-level maps.

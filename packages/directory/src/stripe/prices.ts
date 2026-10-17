@@ -3,17 +3,21 @@ import {
   featuredName,
   featuredRanks,
   productPrice,
+  townPricing,
   type DirectoryProduct,
   type FeaturedRank,
-  type TownConfig,
 } from '@towncore/config';
-import { and, eq, isNull, stripePrices, towns, type Db, type Town } from '@towncore/db';
+import { and, desc, eq, isNull, stripePrices, towns, type Db, type Town } from '@towncore/db';
 import type Stripe from 'stripe';
 
 // `pnpm directory:stripe sync` (M6 PR D): one Stripe Product and monthly Price per town and
-// enabled subscription product, from the town's `pricing`. Dry run by default. Idempotent: a Price is found by
-// its lookup key before anything is created, and a changed amount makes a new Price. A ranked
-// product (featured spots) has one Price per rank.
+// enabled subscription product, at the town's list price (its tier's, or its own `pricing`). Dry
+// run by default. Idempotent: a Price is found by its lookup key before anything is created, and a
+// changed amount makes a new Price. A ranked product (featured spots) has one Price per rank.
+//
+// Category prices move monthly (../pricing.ts), so a Price is one price level: town, product,
+// rank and amount, the amount in its lookup key. Checkout finds or makes the level it needs
+// (`stripePriceFor`); an existing subscription keeps the Price it was sold at (grandfathered).
 
 export type PricePlanItem = {
   town: Pick<Town, 'id' | 'slug' | 'siteName'>;
@@ -45,7 +49,7 @@ export async function planPrices(db: Db, townSlugs?: string[]): Promise<PricePla
   const plan: PricePlanItem[] = [];
   for (const town of all) {
     if (townSlugs?.length && !townSlugs.includes(town.slug)) continue;
-    const pricing = (town.config as TownConfig).pricing as Record<string, unknown> | undefined;
+    const pricing = townPricing(town) as unknown as Record<string, unknown>;
     for (const product of Object.keys(directoryProducts) as DirectoryProduct[]) {
       // Dated bookings are paid once at the configured price (Checkout price_data), no Price.
       if (directoryProducts[product].period) continue;
@@ -138,23 +142,59 @@ export async function applyPricePlan(
   return done;
 }
 
-/** The town's current Price for a product (and rank), or null if sync hasn't made one. */
-export async function currentPrice(
+/**
+ * The Stripe Price for one price level (town, product, rank and amount): the one we have, else
+ * the one Stripe has under its lookup key, else a new one. Never changes or retires another
+ * Price, so subscriptions sold at an earlier level are untouched.
+ */
+export async function stripePriceFor(
   db: Db,
-  townId: string,
+  stripe: Stripe,
+  town: Pick<Town, 'id' | 'slug' | 'siteName'>,
   product: DirectoryProduct,
-  rank: FeaturedRank | null = null,
+  rank: FeaturedRank | null,
+  amountCents: number,
 ) {
   const [row] = await db
     .select()
     .from(stripePrices)
     .where(
       and(
-        eq(stripePrices.townId, townId),
+        eq(stripePrices.townId, town.id),
         eq(stripePrices.product, product),
         rankIs(rank),
-        eq(stripePrices.active, true),
+        eq(stripePrices.unitAmountCents, amountCents),
       ),
-    );
-  return row ?? null;
+    )
+    .orderBy(desc(stripePrices.active), desc(stripePrices.createdAt))
+    .limit(1);
+  if (row) return row;
+  const key = lookupKey(town.slug, product, amountCents, rank);
+  const metadata = { town_slug: town.slug, product, ...(rank ? { rank: String(rank) } : {}) };
+  const found = await stripe.prices.list({ lookup_keys: [key], limit: 1 });
+  const price =
+    found.data[0] ??
+    (await stripe.prices.create({
+      currency: 'usd',
+      unit_amount: amountCents,
+      recurring: { interval: 'month' },
+      lookup_key: key,
+      product_data: { name: `${town.siteName}: ${offerName(product, rank)}`, metadata },
+      metadata,
+    }));
+  const [saved] = await db
+    .insert(stripePrices)
+    .values({
+      townId: town.id,
+      product,
+      rank,
+      stripeProductId: typeof price.product === 'string' ? price.product : price.product.id,
+      stripePriceId: price.id,
+      unitAmountCents: amountCents,
+      livemode: price.livemode,
+      active: true,
+    })
+    .onConflictDoUpdate({ target: stripePrices.stripePriceId, set: { active: true } })
+    .returning();
+  return saved!;
 }

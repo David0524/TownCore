@@ -472,6 +472,6 @@ sources:
     platform: nws
     zone: ${town.nws.zone} # NWS ${town.nws.office}, from api.weather.gov/points
     point: '${town.nws.point}'
-pricing: { featured_usd: [19, 12, 7], enhanced_usd: 39 } # Boca's prices until the owner sets this town's
+pricing: {} # the town's tier price list (packages/config/src/pricing.ts); set a field here to override it
 `;
 }

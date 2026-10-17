@@ -2,11 +2,10 @@ import {
   directoryProducts,
   featuredRanks,
   productEnabled,
-  productPrice,
+  townPricing,
   type BookingPeriod,
   type DirectoryProduct,
   type FeaturedRank,
-  type TownConfig,
 } from '@towncore/config';
 import {
   and,
@@ -24,7 +23,8 @@ import {
 import type Stripe from 'stripe';
 import { openWindows, upcomingBookings, type BookingWindow } from '../bookings';
 import { ownerListings } from '../owners';
-import { currentPrice, offerName } from './prices';
+import { categoryPrice } from '../pricing';
+import { offerName, stripePriceFor } from './prices';
 
 // Buying a placement (M6 PR D): an owner of a claimed listing starts Stripe Checkout from the
 // owner portal (subscription mode). We never create access here or on the success page: only
@@ -32,7 +32,9 @@ import { currentPrice, offerName } from './prices';
 // #1, #2 and #3 in a category belongs to one business at a time, and a business's first spot
 // starts with the town's free trial (owner, 2026-10-16), and so does a business's first Enhanced
 // listing (owner, 2026-10-17). A dated booking (a newsletter week, a category month) is paid once
-// in payment mode at the town's configured price; only open periods are offered.
+// in payment mode at the current price; only open periods are offered. The price is the category's
+// current one (../pricing.ts), fixed when the Checkout session is created, so a monthly change
+// never alters a checkout in progress or an existing subscription.
 
 /** Placements that count against a category's inventory. */
 export const HOLDS_INVENTORY = ['pending', 'active', 'held'] as const;
@@ -153,11 +155,11 @@ export async function startCheckout(
   if (def.period) return startBooking(db, stripe, { ...input, listing }, now);
   const rank = def.ranked ? (input.rank ?? null) : null;
   if (def.ranked && !rank) return { status: 'unavailable' };
-  const price = productEnabled(input.product)
-    ? await currentPrice(db, input.townId, input.product, rank)
-    : null;
-  if (!price) return { status: 'unavailable' };
+  const [town] = await db.select().from(towns).where(eq(towns.id, input.townId));
+  if (!town || !productEnabled(input.product)) return { status: 'unavailable' };
   const category = def.perCategory !== null ? listing.category : null;
+  const cents = await categoryPrice(db, town, input.product, category, rank);
+  if (!cents) return { status: 'unavailable' };
   const [existing] = await db
     .select({ id: placements.id })
     .from(placements)
@@ -171,11 +173,8 @@ export async function startCheckout(
   if (existing) return { status: 'already_active' };
   if ((await placesLeft(db, input.townId, input.product, category, now, rank)) === 0)
     return { status: 'sold_out' };
-  const [town] = await db
-    .select({ config: towns.config })
-    .from(towns)
-    .where(eq(towns.id, input.townId));
-  const trialDays = (town?.config as TownConfig | undefined)?.pricing?.free_trial_days ?? 0;
+  const price = await stripePriceFor(db, stripe, town, input.product, rank, cents);
+  const trialDays = townPricing(town).free_trial_days;
   const trial = trialDays > 0 && !(await hadPlacement(db, listing.id, input.product));
 
   const [placement] = await db
@@ -199,6 +198,7 @@ export async function startCheckout(
     product: input.product,
     category: category ?? '',
     rank: rank ? String(rank) : '',
+    price_cents: String(cents),
   };
   const back = `${input.origin}/owner/${encodeURIComponent(listing.slug)}`;
   const session = await stripe.checkout.sessions.create({
@@ -240,18 +240,12 @@ async function startBooking(
   now: Date,
 ): Promise<CheckoutOutcome> {
   const def = directoryProducts[input.product];
-  const [town] = await db
-    .select({ config: towns.config, timezone: towns.timezone, siteName: towns.siteName })
-    .from(towns)
-    .where(eq(towns.id, input.townId));
+  const [town] = await db.select().from(towns).where(eq(towns.id, input.townId));
   if (!town || !def.period) return { status: 'unavailable' };
-  const dollars = productPrice(
-    (town.config as TownConfig).pricing as Record<string, unknown> | undefined,
-    input.product,
-  );
-  if (!dollars) return { status: 'unavailable' };
   const category = def.perCategory !== null ? input.listing.category : null;
   if (def.perCategory !== null && !category) return { status: 'unavailable' };
+  const cents = await categoryPrice(db, town, input.product, category);
+  if (!cents) return { status: 'unavailable' };
   const open = await openWindows(
     db,
     { townId: input.townId, timezone: town.timezone, product: input.product, category },
@@ -281,6 +275,7 @@ async function startBooking(
     product: input.product,
     category: category ?? '',
     period: window.start,
+    price_cents: String(cents),
   };
   const back = `${input.origin}/owner/${encodeURIComponent(input.listing.slug)}`;
   const session = await stripe.checkout.sessions.create({
@@ -290,7 +285,7 @@ async function startBooking(
         quantity: 1,
         price_data: {
           currency: 'usd',
-          unit_amount: dollars * 100,
+          unit_amount: cents,
           product_data: {
             name: `${town.siteName}: ${def.name}, ${window.label}`,
             metadata: { product: input.product },
@@ -368,25 +363,23 @@ export async function listingOffers(
   listing: { id: string; category: string | null },
   now = new Date(),
 ): Promise<ProductOffer[]> {
-  const [town] = await db
-    .select({ config: towns.config, timezone: towns.timezone })
-    .from(towns)
-    .where(eq(towns.id, townId));
-  const pricing = (town?.config as TownConfig | undefined)?.pricing;
-  const freeDays = pricing?.free_trial_days ?? 0;
+  const [town] = await db.select().from(towns).where(eq(towns.id, townId));
+  if (!town) return [];
+  const freeDays = townPricing(town).free_trial_days;
   const offers: ProductOffer[] = [];
   for (const product of Object.keys(directoryProducts) as DirectoryProduct[]) {
     const def = directoryProducts[product];
     if (!productEnabled(product)) continue;
     if (def.period) {
-      const dollars = productPrice(pricing as Record<string, unknown> | undefined, product);
       const category = def.perCategory !== null ? listing.category : null;
-      if (!dollars || !town || (def.perCategory !== null && !category)) continue;
+      if (def.perCategory !== null && !category) continue;
+      const cents = await categoryPrice(db, town, product, category);
+      if (!cents) continue;
       offers.push({
         product,
         rank: null,
         name: def.name,
-        monthlyUsd: dollars,
+        monthlyUsd: cents / 100,
         trialDays: 0,
         left: null,
         placement: null,
@@ -418,13 +411,19 @@ export async function listingOffers(
         ? [current.rank as FeaturedRank]
         : [...featuredRanks];
     for (const rank of ranks) {
-      const price = await currentPrice(db, townId, product, rank);
-      if (!price) continue;
+      const cents = await categoryPrice(
+        db,
+        town,
+        product,
+        def.perCategory !== null ? listing.category : null,
+        rank,
+      );
+      if (!cents) continue;
       offers.push({
         product,
         rank,
         name: offerName(product, rank),
-        monthlyUsd: price.unitAmountCents / 100,
+        monthlyUsd: cents / 100,
         trialDays,
         left: await placesLeft(
           db,

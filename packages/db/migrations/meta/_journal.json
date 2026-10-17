@@ -351,6 +351,13 @@
       "when": 1792207491978,
       "tag": "0049_model_protocol",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792212272146,
+      "tag": "0050_directory_pricing",
+      "breakpoints": true
     }
   ]
 }

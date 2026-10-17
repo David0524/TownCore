@@ -8,6 +8,7 @@ import {
   pendingFollowups,
   pendingOutreach,
   pendingSponsorCards,
+  pendingTestimonials,
 } from '@towncore/directory';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
@@ -18,6 +19,7 @@ import {
   decideClaimAction,
   decideNameAction,
   decideRequestAction,
+  decideTestimonialAction,
   followupAction,
   followupApprovalAction,
   sendOutreachAction,
@@ -44,12 +46,13 @@ export default async function DirectoryAdmin({
     pendingNameChanges(db()),
     listPlacements(db()),
   ]);
-  const [cards, outreach, requests, followups, approvals] = await Promise.all([
+  const [cards, outreach, requests, followups, approvals, quotes] = await Promise.all([
     pendingSponsorCards(db()),
     pendingOutreach(db()),
     pendingBusinessRequests(db()),
     pendingFollowups(db()),
     followupApprovals(db()),
+    pendingTestimonials(db()),
   ]);
   const townRows = names.length
     ? await Promise.all(
@@ -63,6 +66,10 @@ export default async function DirectoryAdmin({
   return (
     <main>
       <h1>Directory</h1>
+      <p>
+        <a href="/admin/directory/pricing">Pricing</a>: current category prices, proposals waiting
+        for an admin, overrides, waitlists and revenue by category.
+      </p>
       {done ? (
         <p className={styles.notice} role="status">
           {done}
@@ -398,6 +405,45 @@ export default async function DirectoryAdmin({
             </div>
           </form>
         ))}
+      </div>
+
+      <h2>Testimonials waiting ({quotes.length})</h2>
+      <p className={styles.muted}>
+        Written by owners who have advertised, with their permission to show it on the advertise
+        page, credited to the business. Approve or reject as written; never edit the words.
+      </p>
+      {quotes.length === 0 ? <p>No testimonials are waiting.</p> : null}
+      <div className={styles.scroll}>
+        <table className={styles.table} data-testid="testimonials-waiting">
+          <tbody>
+            {quotes.map((q) => (
+              <tr key={q.id}>
+                <td>
+                  &ldquo;{q.quote}&rdquo;
+                  <div className={styles.muted}>
+                    {q.attribution} · {q.townName} · {q.email}
+                  </div>
+                </td>
+                <td>
+                  <form action={decideTestimonialAction} className={styles.actions}>
+                    <input type="hidden" name="testimonialId" value={q.id} />
+                    <button type="submit" name="decision" value="approve" className={styles.button}>
+                      Approve testimonial
+                    </button>
+                    <button
+                      type="submit"
+                      name="decision"
+                      value="reject"
+                      className={styles.secondary}
+                    >
+                      Reject
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <h2>Paid placements</h2>

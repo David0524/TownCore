@@ -6,14 +6,12 @@ import { createDb, staff, staffSessions } from '@towncore/db';
 // Reader scores (owner, 2026-10-17): a reader sends a final score from the Sports tab; nothing
 // shows until staff approve it; then it's a result marked as sent by a reader.
 
-const db = createDb(loadEnv().DATABASE_URL!, { max: 1 });
+// Never closed: with fullyParallel a worker can run more of this file's tests after its
+// afterAll, so the client stays open; idle connections close by themselves.
+const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
 const hash = (t: string) => createHash('sha256').update(t).digest('hex');
 const pine = 'http://pinehollow.test';
 const admin = 'http://admin.test';
-
-test.afterAll(async () => {
-  await db.$client.end();
-});
 
 async function staffPage(browser: Browser) {
   const [member] = await db

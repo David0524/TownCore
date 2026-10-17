@@ -14,7 +14,12 @@ import { requireTown } from '@/lib/town';
 
 type Props = {
   params: Promise<{ host: string; category: string }>;
-  searchParams: Promise<{ q?: string | string[]; cuisine?: string | string[]; quote?: string }>;
+  searchParams: Promise<{
+    q?: string | string[];
+    cuisine?: string | string[];
+    quote?: string;
+    waitlist?: string;
+  }>;
 };
 
 const queryOf = (raw: string | string[] | undefined) =>
@@ -39,7 +44,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const town = await requireTown(params);
   const category = directoryCategory((await params).category);
   if (!category) notFound();
-  const { q: rawQ, cuisine: rawCuisine, quote: quoteStatus } = await searchParams;
+  const { q: rawQ, cuisine: rawCuisine, quote: quoteStatus, waitlist } = await searchParams;
   const data = await loadCategory(town, category, {
     q: queryOf(rawQ),
     cuisine: queryOf(rawCuisine),
@@ -51,7 +56,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       </p>
       <LargeTitle title={categoryTitle(town, category)} as="h1" always />
       <CategoryBar town={town} active={category.slug} />
-      <CategoryView town={town} data={data} quoteStatus={quoteStatus} />
+      <CategoryView town={town} data={data} quoteStatus={quoteStatus} waitlistStatus={waitlist} />
     </StandardPage>
   );
 }

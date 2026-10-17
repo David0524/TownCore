@@ -17,12 +17,10 @@ const harbor = 'http://harborpoint.test';
 // Feed Town, so a new listing never changes the Harbor Point counts other specs check.
 const feed = 'http://feedtown.test';
 const admin = 'http://admin.test';
-const db = createDb(loadEnv().DATABASE_URL!, { max: 1 });
+// Never closed: with fullyParallel a worker can run more of this file's tests after its
+// afterAll, so the client stays open; idle connections close by themselves.
+const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
 const hash = (t: string) => createHash('sha256').update(t).digest('hex');
-
-test.afterAll(async () => {
-  await db.$client.end();
-});
 
 async function signInStaff(context: BrowserContext, tag: string) {
   const [member] = await db
