@@ -1,6 +1,8 @@
 # Rollout: 3,000 towns, November 2026 – December 2027 (owner, 2026-10-17)
 
-The goal is 3,000 live towns by the end of 2027, launched in monthly cohorts. Each cohort has to
+**Bootstrapped (owner, 2026-10-17):** the monthly ramp below is the most the team could launch, not the plan. Cash sets the pace: the LRP's Monthly sheet launches each month only what the cash allows, about 476 live towns by the end of FY2027 in the base case (`docs/finance/launch-capacity.md`). The gates, order and readiness work below still apply.
+
+The goal was 3,000 live towns by the end of 2027, launched in monthly cohorts. Each cohort has to
 show healthy results before the next one goes out. Google safety comes first. Related: the
 long-range plan (`docs/finance/`), the launch limits (`docs/finance/launch-capacity.md`) and
 `docs/plans/google-safety.md`.
@@ -107,4 +109,4 @@ If a cohort is unhealthy: pause launches, use the kill switch if needed, fix the
 - **Domains:** ~$35–60k for 3,000.
 - **AI:** ~$25 a launch plus ~$0.15 a story.
 
-The LRP's base case launches 3,000 towns a year, which matches this ramp's 2027.
+The bootstrapped LRP launches about 476 towns in FY2027 and 895 in FY2028, as cash and paid support staff allow.
