@@ -100,6 +100,7 @@ export {
 } from './unsplash';
 export { parseDatasetUrl, socrataAdapter, socrataDate } from './socrata';
 export { arcgisAdapter, arcgisQueryUrl, arcgisRecords } from './arcgis';
+export { DEVELOPMENT_STAGES, STAGE_TEXT, type DevelopmentStage } from './arcgis/stages';
 export { escribeAdapter, escribeDate, escribeRecords } from './escribe';
 export {
   classifyFailure,

@@ -51,7 +51,8 @@ export type RoundupKind =
   | 'inspections'
   | 'roads'
   | 'federal'
-  | 'nursing-homes';
+  | 'nursing-homes'
+  | 'development';
 
 type TownInfo = { name: string; timezone: string; agency: string };
 
@@ -1073,6 +1074,164 @@ export function permitsRoundup(
   };
 }
 
+// --- Development projects --------------------------------------------------------------------
+
+/** Stages as the roundup says them, in the order a project moves through them. */
+const STAGES: Record<string, { words: string; rank: number }> = {
+  proposed: { words: 'proposed', rank: 1 },
+  approved: { words: 'approved', rank: 2 },
+  under_construction: { words: 'under construction', rank: 3 },
+  completed: { words: 'completed', rank: 4 },
+};
+
+type ProjectRaw = { project?: string; case?: string | null; stage?: string };
+
+/** Cut at a word near `max` characters, in the record's own words; a whole one ends in a period. */
+const clip = (s: string, max: number) => {
+  const t = s.replace(/\s+/g, ' ').trim();
+  if (t.length > max) return `${t.slice(0, max).replace(/\s+\S*$/, '')}…`;
+  return /[.!?]$/.test(t) ? t : `${t}.`;
+};
+
+/** "829 Units / 185 Rooms" → "829 units / 185 rooms"; "105" → "105 units"; "N/A" → null. */
+const projectSize = (value: string | null) => {
+  const v = (value ?? '').replace(/\s+/g, ' ').trim();
+  if (!v || /^(n\/?a|none|0|tbd)$/i.test(v)) return null;
+  return /^\d+$/.test(v)
+    ? `${v} units`
+    : v.replace(/\b(Units?|Rooms?|Beds?)\b/g, (w) => w.toLowerCase());
+};
+
+/** Every number in the size, added up ("829 units / 185 rooms" → 1014): how big a project is. */
+const projectScale = (size: string | null) =>
+  [...(size ?? '').matchAll(/\d[\d,]*/g)].reduce(
+    (sum, m) => sum + Number(m[0].replace(/,/g, '')),
+    0,
+  );
+
+/**
+ * The week's projects that are new on a development map or moved to another stage, biggest
+ * first. `recs` holds the week's records plus each project's earlier ones (roundup-weeks.ts):
+ * a project's records share its id or case number, the newest dated one is where it stands now,
+ * and the newest older one at another stage is where it was. A project seen again at the same
+ * stage isn't news, and a single private home is left out: it names a household, not a project.
+ */
+export function developmentMoves(recs: TemplateRecord[]) {
+  const groups = new Map<string, TemplateRecord[]>();
+  for (const r of recs) {
+    const raw = (r.raw ?? {}) as ProjectRaw;
+    const key = raw.case || raw.project;
+    if (key && raw.stage && STAGES[raw.stage]) groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  const at = (r: TemplateRecord) => r.occurredAt?.getTime() ?? -Infinity;
+  const stageOf = (r: TemplateRecord) => ((r.raw ?? {}) as ProjectRaw).stage!;
+  const moves = [];
+  for (const group of groups.values()) {
+    const [now, ...rest] = [...group].sort((a, b) => at(b) - at(a));
+    if (!now?.occurredAt) continue;
+    const older = rest.filter((r) => at(r) < at(now));
+    if (older.some((r) => stageOf(r) === stageOf(now))) continue;
+    const was = older.find((r) => stageOf(r) !== stageOf(now)) ?? null;
+    const name = labeled(now.text, /^(project|name)$/i) ?? now.title ?? '';
+    const what = labeled(now.text, /^description$/i);
+    const size = projectSize(labeled(now.text, /^(size|units)$/i));
+    const scale = projectScale(size);
+    const home =
+      scale <= 1 &&
+      (/single[\W_]*family (home|house|residence|dwelling)/i.test(what ?? '') ||
+        /\bresidence$/i.test(name));
+    if (!name || home) continue;
+    moves.push({
+      r: now,
+      was,
+      name,
+      what,
+      size,
+      scale,
+      address: labeled(now.text, /^(address|location)$/i),
+      stage: stageOf(now),
+      before: was ? stageOf(was) : null,
+    });
+  }
+  return moves.sort(
+    (a, b) =>
+      b.scale - a.scale ||
+      STAGES[b.stage]!.rank - STAGES[a.stage]!.rank ||
+      a.name.localeCompare(b.name),
+  );
+}
+
+/**
+ * Projects new or moved on a city's development map last week (proposed → approved → under
+ * construction → completed), from an ArcGIS development activity layer (arcgis/stages.ts in the
+ * adapters), any town. The biggest leads; every move is in the table, with where it was before.
+ * Development is civic news: Tier 2 (§7). Owners are never named (the source's field map leaves
+ * them out), and single homes are left out.
+ */
+export function developmentRoundup(
+  town: TownInfo,
+  weekStart: Date,
+  items: TemplateRecord[],
+  past?: number[],
+): TemplatedDraft {
+  const range = weekRange(town, weekStart);
+  const moves = developmentMoves(items);
+  const n = moves.length;
+  const thin = n <= THIN_WEEK;
+  const top = moves[0];
+  const words = (stage: string | null) => (stage ? (STAGES[stage]?.words ?? stage) : '');
+  const named = (m: (typeof moves)[number]) => `${m.name}${m.size ? ` (${m.size})` : ''}`;
+  const change = (m: (typeof moves)[number]) =>
+    m.before ? `from ${words(m.before)} to ${words(m.stage)}` : `new, ${words(m.stage)}`;
+  // "Two projects moved to approved and one new project is listed as proposed", furthest first.
+  const changes = ranked(tally(moves, (m) => `${m.before ? 'moved' : 'new'}:${m.stage}`))
+    .sort((a, b) => STAGES[b[0].split(':')[1]!]!.rank - STAGES[a[0].split(':')[1]!]!.rank)
+    .map(([key, c]) => {
+      const [how, stage] = key.split(':');
+      return how === 'moved'
+        ? `${numWord(c)} ${c === 1 ? 'project' : 'projects'} moved to ${words(stage!)}`
+        : `${numWord(c)} new ${c === 1 ? 'project is' : 'projects are'} listed as ${words(stage!)}`;
+    });
+  const map = `${town.name}'s development map`;
+  return {
+    headline: top
+      ? `${named(top)} ${top.before ? `moves from ${words(top.before)} to ${words(top.stage)} on` : `is new on`} ${map}${top.before ? '' : `, listed as ${words(top.stage)}`}${n > 1 ? `, one of ${n} changes` : ''}`
+      : `Development projects in ${town.name}, ${range}`,
+    dek: `${cap(count(n, 'project', 'projects'))} new or moved on the ${town.agency} development map, ${range}.`,
+    bodyMd: roundupBody({
+      thin,
+      lede: [
+        n ? `${cap(list(changes))}.` : null,
+        trendSentence(n, past),
+        top?.what
+          ? `${md(top.name)}${top.address ? `, at ${md(top.address)}` : ''}: ${md(clip(top.what, 220))}`
+          : null,
+      ],
+      highlights: moves
+        .slice(0, 5)
+        .map(
+          (m) =>
+            `**${linked(md(m.name), m.r.url)}**${m.address ? `, ${md(m.address)}` : ''}: ${change(m)}${m.size ? `, ${md(m.size)}` : ''}.${m.what && m !== top ? ` ${md(clip(m.what, 140))}` : ''}`,
+        ),
+      dataTitle: `All ${count(n, 'project', 'projects')}, largest first`,
+      data: dataTable({
+        head: ['Project', 'Address', 'Now', 'Before', 'Size'],
+        rows: moves.map((m) => [
+          linked(md(m.name), m.r.url),
+          md(m.address ?? ''),
+          cap(words(m.stage)),
+          m.before ? cap(words(m.before)) : 'New to the map',
+          md(m.size ?? ''),
+        ]),
+        noun: ['project', 'projects'],
+      }),
+    }),
+    beat: 'development',
+    // The earlier stage's record is the source for where a project was.
+    sourceRecordIds: moves.flatMap((m) => [m.r.id, ...(m.was ? [m.was.id] : [])]),
+  };
+}
+
 // --- Property sales --------------------------------------------------------------------------
 
 /** "1790899200000"-style dates are already days in the record text; this prints Oct. 2. */
@@ -1193,6 +1352,7 @@ export function roundupUnits(kind: RoundupKind, recs: TemplateRecord[]): number 
   if (kind === 'inspections') return inspectedPlaces(recs).length;
   if (kind === 'sales') return saleRows(recs, 'UTC').length;
   if (kind === 'nursing-homes') return nursingHomeCount(recs);
+  if (kind === 'development') return developmentMoves(recs).length;
   return recs.length;
 }
 

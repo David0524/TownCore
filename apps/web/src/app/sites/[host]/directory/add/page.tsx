@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { directoryCategories } from '@towncore/config';
 import { LargeTitle } from '@/components/phone/LargeTitle';
-import { directoryPath } from '@/lib/directory';
+import { directoryPath, townKindsRanked } from '@/lib/directory';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 import styles from '../directory.module.css';
@@ -36,7 +35,8 @@ export default async function AddBusinessPage({
 }) {
   const town = await requireTown(params);
   const message = MESSAGES[(await searchParams).s ?? ''];
-  const kinds = [...directoryCategories].sort((a, b) => a.name.localeCompare(b.name));
+  // Ranked like the rest of the directory, never A–Z (owner, 2026-10-17).
+  const kinds = await townKindsRanked(town);
   return (
     <StandardPage town={town}>
       <p className="meta">

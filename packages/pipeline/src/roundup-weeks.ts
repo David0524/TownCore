@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lt, records, sql, type Db } from '@towncore/db';
+import { and, eq, gte, inArray, isNull, lt, or, records, sql, type Db } from '@towncore/db';
 import { isIssuedLicense, roundupUnits, type RoundupKind } from './templates';
 import { isoLocalDate } from './time';
 
@@ -60,6 +60,7 @@ const SPEC: Record<
     dateOnly: false,
     by: 'createdAt',
   },
+  development: { types: ['development-project'], dateOnly: false },
 };
 
 /** The records a roundup of this kind covers for the local week starting `weekStart`. */
@@ -78,7 +79,45 @@ export async function roundupWeekRecords(
         new Date(weekStart.getTime() + 7 * DAY),
       ];
   const rows = await townRecords(db, town.id, spec.types, from, to, spec.by);
+  if (kind === 'development') return withEarlierStages(db, town.id, rows, from);
   return kind === 'new-licenses' ? rows.filter((r) => isIssuedLicense(r.raw)) : rows;
+}
+
+/**
+ * A development map's records for the week, plus each project's earlier records (by its id or
+ * case number): an earlier stage, or undated from the source's first run. They say where a
+ * project moved from, and the roundup cites them for it.
+ */
+async function withEarlierStages(
+  db: Db,
+  townId: string,
+  rows: (typeof records.$inferSelect)[],
+  before: Date,
+) {
+  const keys = [
+    ...new Set(
+      rows.flatMap((r) => {
+        const raw = (r.raw ?? {}) as { project?: string; case?: string | null };
+        return [raw.project, raw.case].filter((k): k is string => Boolean(k));
+      }),
+    ),
+  ];
+  if (keys.length === 0) return rows;
+  const earlier = await db
+    .select()
+    .from(records)
+    .where(
+      and(
+        eq(records.townId, townId),
+        inArray(records.type, SPEC.development.types),
+        or(isNull(records.occurredAt), lt(records.occurredAt, before)),
+        or(
+          inArray(sql<string>`${records.raw}->>'project'`, keys),
+          inArray(sql<string>`${records.raw}->>'case'`, keys),
+        ),
+      ),
+    );
+  return [...rows, ...earlier];
 }
 
 /** How many past weeks a roundup compares itself with. */

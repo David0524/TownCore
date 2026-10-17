@@ -37,7 +37,7 @@ import {
   permitSpotlights,
   type Spotlight,
 } from './spotlights';
-import { hasInspectionFailures, isNewsworthyAlert } from './templates';
+import { developmentMoves, hasInspectionFailures, isNewsworthyAlert } from './templates';
 import { cannotBeArticle, decideTier } from './tiers';
 import { isoLocalDate, localDate, localWeekStart, startOfLocalDay } from './time';
 
@@ -245,6 +245,18 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       now,
     });
     await spotlights(db, town, report, week, permitSpotlights(permits), now);
+    // Projects new or moved on a city's development map (proposed, approved, under construction,
+    // completed). Development is civic news (§7 Tier 2), so a share goes to review first.
+    const development = await roundupWeekRecords(db, town, 'development', lastWeek);
+    await roundup(db, town, report, {
+      key: `roundup:development:${week}`,
+      title: `Development projects, week of ${week}`,
+      beat: 'development',
+      recordIds: developmentMoves(development).length ? development.map((r) => r.id) : [],
+      tier: 2,
+      tierReason: 'development projects are civic news (§7 Tier 2)',
+      now,
+    });
     // Road work (owner, 2026-10-17): a county's weekly list, issued for the coming days, so this
     // rounds up the list issued this week as soon as it's ingested.
     const roadsWeek = localWeekStart(now, tz);
@@ -318,7 +330,7 @@ async function roundup(
     beat: string;
     recordIds: string[];
     now: Date;
-    tier?: 1 | 3;
+    tier?: 1 | 2 | 3;
     tierReason?: string;
     /** Fewest records worth a story (default 1). */
     min?: number;

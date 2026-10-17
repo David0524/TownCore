@@ -240,7 +240,7 @@ test('an admin override sets a category price; the advertise page and its house 
   await page.goto(`${harbor}/directory/${category}`);
   const topspot = page.locator('[data-slot="directory.topspot"]');
   await expect(topspot).toHaveAttribute('data-fill', 'house');
-  await expect(topspot).toContainText('$23 a month');
+  await expect(topspot).toContainText('#1 $23/mo');
   // Other categories keep the list price.
   await page.goto(`${harbor}/advertise`);
   await expect(page.getByTestId('tier-1')).toContainText('$19');

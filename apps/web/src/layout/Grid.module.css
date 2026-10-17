@@ -29,6 +29,11 @@
   font-size: 1.125rem;
 }
 
+/* The whole page width, no rail: directory pages lay out their own columns. */
+.full {
+  max-width: var(--wide);
+}
+
 /* main-right-rail: content plus a rail on desktop; the rail stacks below on mobile. */
 .rail {
   max-width: var(--wide);
@@ -45,6 +50,12 @@
   /* coastal-modern: the rail lines up with the band's 8 + 4 columns (canvas "Homepage"). */
   :global([data-family='coastal-modern']) .rail {
     grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  }
+
+  /* Directory pages: a 300px rail on every family, so listings fit three across. */
+  .rail.narrowRail,
+  :global([data-family='coastal-modern']) .rail.narrowRail {
+    grid-template-columns: minmax(0, 1fr) 300px;
   }
 }
 

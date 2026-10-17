@@ -1,5 +1,6 @@
 import { cell, fieldMap, fillTemplate, rowText, rowType, type Row } from '../lib/rows';
 import type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from '../types';
+import { fetchStages, stagesHealth } from './stages';
 
 // ArcGIS REST feature layers (CLAUDE.md §9): the GIS server most US counties and cities use to
 // publish permits, code cases, development applications and road closures, on ArcGIS Online
@@ -22,6 +23,9 @@ import type { AdapterContext, RawRecord, SourceAdapter, SourceConfig } from '../
 //                                    records appear after their date (deeds are recorded ~10 days
 //                                    after a sale); records already stored are deduped
 //   linkField, type, days         — as for the Socrata adapter
+//
+// A development activity map (projects by stage, usually undated) uses `stages` in place of
+// dateField: see stages.ts.
 
 type Options = {
   layer: string;
@@ -158,6 +162,7 @@ export const arcgisAdapter: SourceAdapter = {
   },
 
   async fetch(source, since, ctx) {
+    if (source.config.stages) return fetchStages(source, ctx);
     const opts = options(source);
     const from = since
       ? new Date(since.getTime() - opts.lagDays * 86_400_000)
@@ -167,6 +172,10 @@ export const arcgisAdapter: SourceAdapter = {
 
   async healthCheck(source, ctx) {
     try {
+      if (source.config.stages) {
+        await stagesHealth(source, ctx);
+        return { ok: true };
+      }
       const opts = options(source);
       await query(opts, new Date(ctx.now.getTime() - 365 * 86_400_000), ctx, 1);
       return { ok: true };

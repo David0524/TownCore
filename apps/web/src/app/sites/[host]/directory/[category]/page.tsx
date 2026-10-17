@@ -5,11 +5,11 @@ import { directoryCategory } from '@towncore/config';
 import { categoryListings, MIN_INDEXABLE } from '@towncore/directory';
 import { CategoryBar } from '@/components/directory/CategoryBar';
 import { CategoryView, loadCategory } from '@/components/directory/CategoryView';
+import { DirectoryFrame } from '@/components/directory/DirectoryFrame';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
 import { categoryTitle, directoryPath } from '@/lib/directory';
 import { rssAlternate } from '@/lib/discovery';
-import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 
 type Props = {
@@ -50,13 +50,21 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     cuisine: queryOf(rawCuisine),
   });
   return (
-    <StandardPage town={town} shortOnPhones={data.shortOnPhones}>
-      <p className="meta">
-        <Link href={directoryPath()}>Places</Link> › {category.name}
-      </p>
-      <LargeTitle title={categoryTitle(town, category)} as="h1" always />
-      <CategoryBar town={town} active={category.slug} />
+    <DirectoryFrame
+      town={town}
+      category={category}
+      shortOnPhones={data.shortOnPhones}
+      head={
+        <>
+          <p className="meta">
+            <Link href={directoryPath()}>Places</Link> › {category.name}
+          </p>
+          <LargeTitle title={categoryTitle(town, category)} as="h1" always />
+          <CategoryBar town={town} active={category.slug} />
+        </>
+      }
+    >
       <CategoryView town={town} data={data} quoteStatus={quoteStatus} waitlistStatus={waitlist} />
-    </StandardPage>
+    </DirectoryFrame>
   );
 }
