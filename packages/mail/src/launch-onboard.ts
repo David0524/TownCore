@@ -1,6 +1,7 @@
 import type { Env } from '@towncore/config';
 import type { Db } from '@towncore/db';
-import { realProviders, type Providers } from './cli/onboard';
+import type { OnboardingStore } from './onboarding';
+import { providersFromEnv, type Providers } from './providers';
 import { onboardDomain, type OnboardingReport } from './onboarding';
 import { dryRunStore, pgOnboardingStore } from './pg-store';
 
@@ -14,7 +15,9 @@ export async function onboardLaunchDomain(
   env: Env,
   spec: { name: string; displayName: string; townId: string | null },
   options: { execute: boolean },
-  providers: Providers = realProviders(env),
+  providers: Providers = providersFromEnv(env),
+  /** A dry run's in-memory store, when the caller already prepared one. */
+  dryStore?: OnboardingStore,
 ): Promise<OnboardingReport> {
   const name = spec.name.toLowerCase();
   const refuse = (error: string): OnboardingReport => ({
@@ -40,7 +43,7 @@ export async function onboardLaunchDomain(
       isTest: (env.MAIL_TEST_DOMAINS ?? []).includes(name),
     },
     {
-      store: options.execute ? pgOnboardingStore(db) : await dryRunStore(db, name),
+      store: options.execute ? pgOnboardingStore(db) : (dryStore ?? (await dryRunStore(db, name))),
       dns: providers.dns,
       ses: providers.ses,
       region: env.AWS_REGION ?? 'us-east-1',

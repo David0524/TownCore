@@ -1,13 +1,16 @@
 // pnpm launch "Delray Beach, FL" [--short-name Delray] [--nickname "Atlantic"] [--outlet "Name"]...
 //   [--source kind=url]... [--site http://localhost:3000 [--chromium path]] [--resume] [--pick N] [--approve-spend]
+//   [--cohort 2026-12]
 // Launches a town from an approved candidate (CLAUDE.md §10). A dry run unless --approve-spend:
 // nothing is bought, sent or deployed. Step 2 proposes names and waits for --pick; a domain is
-// bought only with --approve-spend and the domain typed back at the price shown (Rule 10).
+// bought only with --approve-spend and the domain typed back at the price shown (Rule 10); step 2b
+// then onboards it for mail under that same approval, so warm-up starts the moment we own it.
 import { createInterface } from 'node:readline/promises';
 import { Fetcher } from '@towncore/adapters';
 import { launchStepLabels, loadEnv, requireEnv, type LaunchStep } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
 import { createDb } from '@towncore/db';
+import { providersFromEnv } from '@towncore/mail';
 import { providerFromEnv, resolveProviderName, type Llm } from '@towncore/pipeline';
 import { LaunchRefused, resolveTown, runLaunch, statePlaces } from '../src';
 
@@ -29,13 +32,14 @@ const VALUE_FLAGS = [
   '--site',
   '--chromium',
   '--redo',
+  '--cohort',
 ];
 const town = args.find(
   (a, i) => !a.startsWith('--') && a.includes(',') && !VALUE_FLAGS.includes(args[i - 1] ?? ''),
 );
 if (!town) {
   console.error(
-    'Usage: pnpm launch "Town, ST" [--short-name X] [--nickname X] [--outlet "Name"]... [--source kind=url]... [--resume] [--pick N] [--approve-spend]',
+    'Usage: pnpm launch "Town, ST" [--short-name X] [--nickname X] [--outlet "Name"]... [--source kind=url]... [--resume] [--pick N] [--approve-spend] [--cohort YYYY-MM]',
   );
   process.exit(1);
 }
@@ -73,6 +77,10 @@ try {
     const { name, provider } = providerFromEnv();
     llm = { providerName: name, provider, db };
   }
+  const cohort = flag('cohort');
+  if (cohort !== undefined && !/^\d{4}-(0[1-9]|1[0-2])$/.test(cohort))
+    throw new LaunchRefused('--cohort takes the planned go-live month, like 2026-12.');
+  const env = loadEnv();
   const pick = flag('pick');
   if (pick !== undefined && !/^[1-9]$/.test(pick))
     throw new LaunchRefused('--pick takes 1, 2 or 3.');
@@ -91,12 +99,14 @@ try {
             },
           }
         : {}),
+      // Step 2b: mail onboarding right after the purchase (offline stand-ins without credentials).
+      mail: { env, providers: providersFromEnv(env) },
       names: {
         fetcher,
         places: (state) => statePlaces(state, { fetcher }),
         // Only the string settings (registrar token, team, registrant contact) are read.
         env: Object.fromEntries(
-          Object.entries(loadEnv()).filter((e): e is [string, string] => typeof e[1] === 'string'),
+          Object.entries(env).filter((e): e is [string, string] => typeof e[1] === 'string'),
         ),
         confirmPurchase,
       },
@@ -111,6 +121,7 @@ try {
       ...(pick ? { pick: Number(pick) } : {}),
       approveSpend: args.includes('--approve-spend'),
       ...(flag('redo') ? { redo: flag('redo') as LaunchStep } : {}),
+      ...(cohort ? { cohort } : {}),
       resume: args.includes('--resume'),
     },
   );

@@ -38,6 +38,7 @@ long-range plan (`docs/finance/`), the launch limits (`docs/finance/launch-capac
    - Launch cohorts in Admin → Launches: approved towns run their steps as a chain (`pnpm cohort advance`, or the worker with `COHORT_ORCHESTRATOR=worker`).
    - The admin picks names in one table per cohort.
    - The domains are bought in one Rule 10 approval at a stated total price, with each domain's price shown and a typed confirmation of the total. Mail onboarding, DNS verification, provisioning and a batched draft review follow by themselves; go-live is one more click.
+   - A single-town `pnpm launch … --approve-spend` onboards its domain's mail right after the purchase too (launch step 2b), so warm-up starts the moment any domain is ours. Buy each cohort's domains at least 21 days before its go-live month (`pnpm launch --cohort YYYY-MM`); `pnpm mail:onboard bought --execute` catches up any left behind.
 4. **Search Console.** Verify and submit sitemaps through the Search Console API once a Google credential exists (owner). Until then it stays a manual launch to-do.
 5. **Cohort health on Admin.** Per cohort (go-live month):
    - towns, indexed vs. submitted pages, impressions, manual actions;
