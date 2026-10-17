@@ -8,6 +8,7 @@ import {
   newBusinessesRoundup,
   newLicensesRoundup,
   permitsRoundup,
+  propertySalesRoundup,
   weatherAlert,
   type TemplateRecord,
 } from '../src/templates';
@@ -289,5 +290,39 @@ describe('permitsRoundup', () => {
     expect(draft.bodyMd).toContain('## By type\n\n- Building Permit: 2\n- Demolition Permit: 1');
     expect(draft.beat).toBe('development');
     expect(draft.sourceRecordIds).toEqual(['p1', 'p2', 'p3']);
+  });
+});
+
+describe('propertySalesRoundup', () => {
+  const sale = (id: string, address: string, price: number, use: string, day: string) =>
+    rec({
+      id,
+      type: 'sale',
+      title: address,
+      text: `Address: ${address}\nPrice: ${price}\nSale date: ${day}\nDeed: WD\nUse: ${use}`,
+      url: 'https://maps.example.gov/MapServer/1',
+    });
+
+  it('lists the highest prices with the median and counts by kind, with no names', () => {
+    const draft = propertySalesRoundup(town, week, [
+      sale('a', '6760 WILLOW WOOD DR 1201', 700000, 'CONDOMINIUM', '2026-10-20'),
+      sale('b', '1200 S OCEAN BLVD', 12500000, 'SINGLE FAMILY', '2026-10-21'),
+      sale('c', '22 NE 5TH AVE', 450000, 'CONDOMINIUM', '2026-10-22'),
+    ]);
+    expect(draft.headline).toBe('Property sales in Boca Raton, Oct. 19–Oct. 25');
+    expect(draft.dek).toBe(
+      '3 sales recorded, with a median price of $700,000, according to county property records.',
+    );
+    expect(draft.beat).toBe('development');
+    const items = draft.bodyMd.split('\n').filter((l) => l.startsWith('- **'));
+    expect(items).toEqual([
+      '- **1200 S Ocean Blvd**: $12,500,000, single family, Oct. 21. [Record](https://maps.example.gov/MapServer/1)',
+      '- **6760 Willow Wood Dr 1201**: $700,000, condominium, Oct. 20. [Record](https://maps.example.gov/MapServer/1)',
+      '- **22 NE 5th Ave**: $450,000, condominium, Oct. 22. [Record](https://maps.example.gov/MapServer/1)',
+    ]);
+    expect(draft.bodyMd).toContain(
+      '## By kind of property\n\n- Condominium: 2\n- Single Family: 1',
+    );
+    expect(draft.sourceRecordIds).toEqual(['a', 'b', 'c']);
   });
 });

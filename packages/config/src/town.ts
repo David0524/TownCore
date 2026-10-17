@@ -78,7 +78,19 @@ const sourceSchema = z.strictObject({
     .optional(),
   schedule: scheduleSchema.optional(),
   // Other platform-specific settings, validated by the adapter.
-  options: z.record(z.string(), z.union([z.string(), z.number(), z.array(z.string())])).optional(),
+  options: z
+    .record(
+      z.string(),
+      z.union([
+        z.string(),
+        z.number(),
+        z.boolean(),
+        z.array(z.string()),
+        // A column → label map (open-data field maps).
+        z.record(z.string(), z.string()),
+      ]),
+    )
+    .optional(),
 });
 export type TownSourceConfig = z.infer<typeof sourceSchema>;
 

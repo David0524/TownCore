@@ -91,4 +91,80 @@ describe('arcgis adapter', () => {
     );
     expect(await arcgisAdapter.detect(`${layer}`, '')).toBe(0.95);
   });
+
+  // Recorded live from maps.co.palm-beach.fl.us (ArcGIS Server; robots.txt answers 404, no
+  // rules) on 2026-10-17: the Property Appraiser's sales table for Boca Raton, asking only for
+  // the columns a story may use. Trimmed to the newest 120 sales.
+  it('requests only the listed columns and re-reads lagging records (property sales)', async () => {
+    const sales = fileURLToPath(new URL('../fixtures/arcgis/pbc-boca-sales.json', import.meta.url));
+    const salesSource: SourceConfig = {
+      id: 'pbc-sales',
+      townId: 't',
+      kind: 'property_sales',
+      platform: 'arcgis',
+      url: 'https://maps.co.palm-beach.fl.us/arcgis/rest/services/OpenData/Tables/MapServer/1',
+      config: {
+        dateField: 'SALE_DATE',
+        idField: 'SALEKEY',
+        title: '{SITE_ADDR_STR}',
+        where:
+          "MUNICIPALITY = 'BOCA RATON' AND PRICE >= 1000 AND (CONFID_FLG IS NULL OR CONFID_FLG <> 'Y')",
+        outFields: [
+          'SALEKEY',
+          'PARCEL_NUMBER',
+          'SITE_ADDR_STR',
+          'SUBDIV_NAME',
+          'SALE_DATE',
+          'PRICE',
+          'INSTRUMENT',
+          'PROPERTY_USE',
+          'TOTAL_MARKET',
+        ],
+        fields: {
+          SITE_ADDR_STR: 'Address',
+          PRICE: 'Price',
+          SALE_DATE: 'Sale date',
+          INSTRUMENT: 'Deed',
+          PROPERTY_USE: 'Use',
+          SUBDIV_NAME: 'Subdivision',
+          PARCEL_NUMBER: 'Parcel',
+        },
+        lagDays: 21,
+        type: 'sale',
+      },
+    };
+    const urls: string[] = [];
+    const replay = replayFetch(sales);
+    const fetchImpl: FetchFn = async (url, init) => {
+      urls.push(String(url));
+      return replay(url, init);
+    };
+    // The last run was Sept. 20; with 21 days of lag the query starts Aug. 30.
+    const records = await arcgisAdapter.fetch(salesSource, new Date('2026-09-20T00:00:00Z'), {
+      fetcher: fetcherFor(fetchImpl),
+      now: new Date('2026-10-17T00:00:00Z'),
+    });
+    expect(records).toHaveLength(120);
+    const q = new URL(urls.find((u) => u.includes('/query'))!).searchParams;
+    expect(q.get('where')).toMatch(/^\(SALE_DATE > timestamp '2026-08-30 00:00:00'\)/);
+    expect(q.get('outFields')!.split(',')).not.toContain('OWNER_NAME1');
+    for (const r of records) {
+      expect(r.type).toBe('sale');
+      expect(r.externalId).toMatch(/^feature:\d+$/);
+      expect(Object.keys(r.raw as object).sort()).toEqual(
+        [
+          'INSTRUMENT',
+          'PARCEL_NUMBER',
+          'PRICE',
+          'PROPERTY_USE',
+          'SALEKEY',
+          'SALE_DATE',
+          'SITE_ADDR_STR',
+          'SUBDIV_NAME',
+          'TOTAL_MARKET',
+        ].sort(),
+      );
+      expect(r.text).toMatch(/^Address: .+\nPrice: \d+\nSale date: 2026-\d{2}-\d{2}/);
+    }
+  });
 });

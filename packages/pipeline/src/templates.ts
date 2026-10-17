@@ -360,6 +360,84 @@ export function permitsRoundup(
   };
 }
 
+/** How many sales the roundup lists by address; the rest are counted by kind of property. */
+const SALES_LISTED = 10;
+
+/** "1790899200000"-style dates are already days in the record text; this prints Oct. 2. */
+const saleDay = (value: string | null, timeZone: string) => {
+  const d = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00Z`) : null;
+  return d ? apDate(d, timeZone) : null;
+};
+
+/**
+ * A weekly roundup of property sales from the county property appraiser's records (owner,
+ * 2026-10-17: "biggest home sales this week"). Built in code, Tier 1: addresses, prices and the
+ * kind of property, never an owner's or buyer's name (the source never fetches them). Deeds are
+ * recorded about two weeks after a sale, so the finder rounds up the week before last.
+ */
+export function propertySalesRoundup(
+  town: TownInfo,
+  weekStart: Date,
+  sales: TemplateRecord[],
+): TemplatedDraft {
+  const weekEnd = new Date(weekStart.getTime() + 6 * 86_400_000);
+  const range = `${apDate(weekStart, town.timezone)}–${apDate(weekEnd, town.timezone)}`;
+  const rows = sales
+    .map((s) => ({
+      s,
+      address: titleCase(labeled(s.text, /^address$/i) ?? s.title ?? ''),
+      price: money(labeled(s.text, /^price$/i)),
+      use: labeled(s.text, /^use$/i),
+      day: saleDay(labeled(s.text, /^sale date$/i), town.timezone),
+    }))
+    .filter((r) => r.price !== null && r.address);
+  const ranked = [...rows].sort(
+    (a, b) => b.price! - a.price! || a.address.localeCompare(b.address),
+  );
+  const listed = ranked.slice(0, SALES_LISTED);
+  const prices = rows.map((r) => r.price!).sort((a, b) => a - b);
+  const median = prices.length
+    ? prices.length % 2
+      ? prices[(prices.length - 1) / 2]!
+      : (prices[prices.length / 2 - 1]! + prices[prices.length / 2]!) / 2
+    : 0;
+  const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+  const kind = (use: string | null) => (use ? titleCase(use) : 'Other');
+  const byUse = new Map<string, number[]>();
+  for (const r of rows) byUse.set(kind(r.use), [...(byUse.get(kind(r.use)) ?? []), r.price!]);
+  const n = rows.length;
+  return {
+    headline: `Property sales in ${town.name}, ${range}`,
+    dek: `${n} ${n === 1 ? 'sale' : 'sales'} recorded, with a median price of ${usd(median)}, according to county property records.`,
+    bodyMd: [
+      `These are the sales of property in ${town.name} that closed from ${range}, as the county property appraiser recorded them. Deeds are recorded about two weeks after a sale, so a few may still be missing. Prices are the amounts on the deeds; sales for nominal amounts aren't counted.`,
+      `## ${listed.length < n ? `The ${listed.length} highest prices` : 'Every sale'}`,
+      listed
+        .map((r) => {
+          const parts = [usd(r.price!), r.use ? kind(r.use).toLowerCase() : null, r.day].filter(
+            Boolean,
+          );
+          const link = r.s.url ? ` [Record](${r.s.url})` : '';
+          return `- **${md(r.address)}**: ${parts.join(', ')}.${link}`;
+        })
+        .join('\n'),
+      byUse.size > 1
+        ? [
+            '## By kind of property',
+            [...byUse.entries()]
+              .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
+              .map(([use, p]) => `- ${md(use)}: ${p.length}`)
+              .join('\n'),
+          ].join('\n\n')
+        : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    beat: 'development',
+    sourceRecordIds: rows.map((r) => r.s.id),
+  };
+}
+
 type Alert = {
   event?: string;
   headline?: string;
