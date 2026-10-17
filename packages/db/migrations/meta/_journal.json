@@ -330,6 +330,13 @@
       "when": 1792206081001,
       "tag": "0046_audience_metrics",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792206260024,
+      "tag": "0047_facebook_posts_and_polls",
+      "breakpoints": true
     }
   ]
 }

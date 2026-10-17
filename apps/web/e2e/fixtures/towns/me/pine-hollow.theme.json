@@ -24,7 +24,7 @@
       "today-bento"
     ],
     "home": ["beat-sections", "documents-posted"],
-    "homeRail": ["coming-up"],
+    "homeRail": ["coming-up", "quick-poll"],
     "article": "classic-rail",
     "directory": "search-first",
     "footer": "community"

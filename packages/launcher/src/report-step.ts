@@ -325,7 +325,7 @@ export function manualTodos(done: Done, domain: string): string[] {
   todos.push(
     'Trademark: search the picked name at https://tmsearch.uspto.gov/ (D-M7-4).',
     'Social handles: claim the name on Facebook, Instagram and X by hand (D-M7-5); upload the identity assets.',
-    `Facebook page for ${domain}, with the cover and avatar from identity/.`,
+    `Facebook page for ${domain}, with the cover and avatar from identity/, made in the cohort's batch; then add its address and numeric page id as \`facebook:\` in the town YAML, and its page token to META_PAGE_TOKENS if staff will press Post (docs/plans/facebook.md).`,
     `Google News Publisher Center and Search Console for ${domain} (D-M4-6).`,
   );
   if (done.theme)

@@ -2044,3 +2044,94 @@ export const experimentAssignments = pgTable(
   },
   (t) => [primaryKey({ columns: [t.experimentKey, t.townId] })],
 );
+
+// The Facebook post queue (owner, 2026-10-17): each town's best 1–3 published items a day and
+// its weekly shareable roundups, with factual post text written from the story. Staff post the
+// day's batch in one pass from Admin → Facebook, by hand or through the Graph API when they press
+// Post; nothing is posted automatically without the owner's standing approval (FACEBOOK_AUTOPOST).
+export const facebookPosts = pgTable(
+  'facebook_posts',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id, { onDelete: 'cascade' }),
+    /** 'daily': one of the day's best items; 'weekly': a shareable roundup. */
+    kind: text('kind').$type<'daily' | 'weekly'>().notNull(),
+    /** The town's local date the post is queued for. */
+    day: date('day').notNull(),
+    message: text('message').notNull(),
+    link: text('link').notNull(),
+    status: text('status').$type<'queued' | 'posted' | 'skipped'>().notNull().default('queued'),
+    /** How it went out: copied by staff, or posted through the Graph API. */
+    method: text('method').$type<'manual' | 'graph'>(),
+    /** The Graph API's post id, when posted through it. */
+    externalId: text('external_id'),
+    postedBy: uuid('posted_by').references(() => staff.id),
+    postedAt: timestamp('posted_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('facebook_posts_town_article_uq').on(t.townId, t.articleId),
+    index('facebook_posts_day_status_idx').on(t.day, t.status),
+    check('facebook_posts_kind', sql`${t.kind} in ('daily', 'weekly')`),
+    check('facebook_posts_status', sql`${t.status} in ('queued', 'posted', 'skipped')`),
+    check(
+      'facebook_posts_posted',
+      sql`${t.status} <> 'posted' or (${t.postedAt} is not null and ${t.method} is not null)`,
+    ),
+  ],
+);
+
+// Quick polls (owner, 2026-10-17, reader participation): an opinion question about a local topic,
+// never about a named private person, with 2–4 options. Staff write it and a staff member approves
+// it before it shows; readers vote once, counted by a salted hash of their address (never stored
+// raw).
+export const polls = pgTable(
+  'polls',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    question: text('question').notNull(),
+    options: text('options').array().notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    status: text('status').$type<'draft' | 'approved' | 'withdrawn'>().notNull().default('draft'),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => staff.id),
+    approvedBy: uuid('approved_by').references(() => staff.id),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('polls_town_status_idx').on(t.townId, t.status, t.startsAt),
+    check('polls_status', sql`${t.status} in ('draft', 'approved', 'withdrawn')`),
+    check('polls_options', sql`cardinality(${t.options}) between 2 and 4`),
+    check('polls_window', sql`${t.endsAt} > ${t.startsAt}`),
+    check('polls_approved', sql`${t.status} <> 'approved' or ${t.approvedBy} is not null`),
+  ],
+);
+
+export const pollVotes = pgTable(
+  'poll_votes',
+  {
+    id: id(),
+    pollId: uuid('poll_id')
+      .notNull()
+      .references(() => polls.id, { onDelete: 'cascade' }),
+    option: smallint('option').notNull(),
+    /** A salted hash of the voter's address and the poll: one vote per address per poll. */
+    voterHash: text('voter_hash').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('poll_votes_poll_voter_uq').on(t.pollId, t.voterHash),
+    check('poll_votes_option', sql`${t.option} between 0 and 3`),
+  ],
+);

@@ -84,6 +84,26 @@ export const envSchema = z.object({
   /** YouTube Data API v3 key: finds town meeting videos to embed (packages/adapters/src/youtube). */
   YOUTUBE_API_KEY: optional(z.string()),
   SOCRATA_APP_TOKEN: optional(z.string()),
+  // Facebook page access tokens as JSON, {"<page id>": "<token>"} (owner, 2026-10-17). Only
+  // used when staff press Post in Admin → Facebook; never committed.
+  META_PAGE_TOKENS: optional(
+    z.string().transform((json, ctx) => {
+      try {
+        const parsed: unknown = JSON.parse(json);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+          return parsed as Record<string, string>;
+      } catch {
+        // fall through
+      }
+      ctx.addIssue({ code: 'custom', message: 'META_PAGE_TOKENS must be a JSON object' });
+      return z.NEVER;
+    }),
+  ),
+  // The standing approval for automatic Facebook posting. Off unless the owner grants it: until
+  // then a person presses Post for every post (Rule 10's spirit for outward actions).
+  FACEBOOK_AUTOPOST: optional(z.enum(['off', 'on'])),
+  // Secret mixed into poll voters' address hashes, so the stored hashes can't be reversed.
+  VOTE_HASH_SECRET: optional(z.string().min(16)),
   DEV_TOWN_SLUG: optional(z.string().regex(/^[a-z0-9-]+$/)),
 });
 

@@ -17,6 +17,7 @@ export const queues = {
   basemaps: 'maps.basemaps',
   maps: 'maps.draw',
   photos: 'photos.stock',
+  facebook: 'social.facebook',
 } as const;
 
 export type QueueName = (typeof queues)[keyof typeof queues];
@@ -49,4 +50,6 @@ export const schedules = [
   { queue: queues.maps, cron: '*/30 * * * *' },
   // Every 30 minutes (offset from maps), stock photos for new or rewritten guides (§11c).
   { queue: queues.photos, cron: '15,45 * * * *' },
+  // Hourly, each live town's Facebook posts for the day; staff post them from Admin → Facebook.
+  { queue: queues.facebook, cron: '25 * * * *' },
 ] as const;

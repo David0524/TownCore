@@ -4,7 +4,9 @@ import { createDb, type Db } from '@towncore/db';
 import { runNewsletterTick } from '@towncore/email';
 import type { IdentityProvider } from '@towncore/mail';
 import {
+  autopostFacebook,
   providerFromEnv,
+  queueFacebookPosts,
   resolveProviderName,
   type Llm,
   type LlmProvider,
@@ -152,6 +154,14 @@ export async function startWorker({
   const unsplash = unsplashFromEnv();
   await boss.work(queues.photos, async () => {
     await drawStockPhotos(db, fetcher, unsplash, logger);
+  });
+
+  // Facebook (owner, 2026-10-17): queue each live town's posts. Posting waits for staff, unless
+  // the owner has granted a standing approval (FACEBOOK_AUTOPOST=on).
+  await boss.work(queues.facebook, async () => {
+    const queued = await queueFacebookPosts(db);
+    const posted = await autopostFacebook(db);
+    if (queued || posted) logger.info({ queued, posted }, 'facebook posts');
   });
 
   // The daily newsletter (M5): test list or every subscriber, once per town and local date.

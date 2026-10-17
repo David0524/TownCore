@@ -133,6 +133,15 @@ export const townConfigSchema = z.strictObject({
   // A folder of ready-made icons (icon-32.png for the browser tab; icon-180, -192 and -512.png
   // for Home Screens and the app manifest), in place of the motif icons drawn in code.
   app_icon: z.string().min(1).optional(),
+  // The town's Facebook page (owner, 2026-10-17): set once per cohort as a batched launch to-do.
+  // The page id is what the Graph API posts to; its token is a secret (META_PAGE_TOKENS), never
+  // here.
+  facebook: z
+    .strictObject({
+      url: z.url({ protocol: /^https$/ }),
+      page_id: z.string().regex(/^\d{5,20}$/, 'a numeric Facebook page id'),
+    })
+    .optional(),
   // Public contact shown on the site; defaults to news@{domain} (forwarded to the publisher inbox).
   contact_email: z.email().optional(),
   tier: z.enum(townTiers),

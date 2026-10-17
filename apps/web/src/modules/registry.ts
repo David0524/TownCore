@@ -13,6 +13,7 @@ import { DirectoryCategories, DirectoryFeatured, FindAPro, NewNowOpen } from './
 import { UpcomingEvents } from './events';
 import { DirectoryGrid, QuickLinks } from './explore';
 import { PhotoOfTheWeek } from './photo';
+import { QuickPoll } from './poll';
 import { SchoolsSports } from './sports';
 import type { HomeModuleComponent } from './types';
 
@@ -45,6 +46,7 @@ export const homeModules: Record<HomeModule, HomeModuleComponent> = {
   'weather-strip': awaitingData('NWS, M2 (decision D-M1-3)'),
   'photo-of-the-day': awaitingData('reader submissions, M9'),
   'photo-of-the-week': PhotoOfTheWeek,
+  'quick-poll': QuickPoll,
   'directory-featured': DirectoryFeatured,
   'directory-categories': DirectoryCategories,
   'find-a-pro': FindAPro,
