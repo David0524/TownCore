@@ -293,87 +293,104 @@ export async function runMonthlyPricing(db: Db, now = new Date()): Promise<Prici
   for (const town of await db.select().from(towns).where(ne(towns.status, 'paused'))) {
     const month = localMonth(now, town.timezone);
     const variant = await townVariant(db, 'monthly-pricing', town);
-    const [run] = await db
-      .insert(pricingRuns)
-      .values({ townId: town.id, month, variant, createdAt: now })
-      .onConflictDoNothing()
-      .returning({ id: pricingRuns.id });
-    if (!run) continue;
+    // One transaction per town: the run marker and every price it changes commit together, so a
+    // crash halfway leaves the month to do again on the next daily run, never half recalculated.
+    const done = await db.transaction(async (tx) =>
+      priceTownMonth(tx as unknown as Db, town, month, variant, now),
+    );
+    if (!done) continue;
     result.towns++;
-    await db
-      .update(priceChanges)
-      .set({ status: 'expired', decidedAt: now })
-      .where(
-        and(
-          eq(priceChanges.townId, town.id),
-          eq(priceChanges.status, 'proposed'),
-          lt(priceChanges.month, month),
-        ),
-      );
-    if (variant === 'hold') continue;
-    const categories = await db
-      .selectDistinct({ category: businesses.category })
-      .from(businesses)
-      .where(and(eq(businesses.townId, town.id), eq(businesses.active, true)));
-    let evaluated = 0;
-    let changed = 0;
-    let proposed = 0;
-    for (const { category } of categories) {
-      if (!category || !directoryCategory(category)) continue;
-      for (const product of DYNAMIC_PRODUCTS) {
-        if (!productEnabled(product)) continue;
-        const signals = await pricingSignals(db, { townId: town.id, category, product }, now);
-        const ranks: Array<FeaturedRank | null> = directoryProducts[product].ranked
-          ? [...featuredRanks]
-          : [null];
-        for (const rank of ranks) {
-          const listCents = listPriceCents(townPricing(town), product, rank);
-          const currentCents = await categoryPrice(db, town, product, category, rank);
-          if (listCents === null || currentCents === null) continue;
-          evaluated++;
-          const decision = decidePrice({ currentCents, listCents, signals });
-          if (decision.status === 'unchanged') continue;
-          await db.insert(priceChanges).values({
-            townId: town.id,
-            category,
-            product,
-            rank,
-            month,
-            kind: 'monthly',
-            oldCents: currentCents,
-            newCents: decision.newCents,
-            status: decision.status,
-            reason: decision.reason,
-            inputs: { ...signals, listCents, step: Math.round(decision.step * 1000) / 1000 },
-            createdAt: now,
-          });
-          if (decision.status === 'applied') {
-            await setPrice(
-              db,
-              {
-                townId: town.id,
-                category,
-                product,
-                rank,
-                cents: decision.newCents,
-                setBy: 'monthly',
-              },
-              now,
-            );
-            changed++;
-          } else proposed++;
-        }
-      }
-    }
-    await db
-      .update(pricingRuns)
-      .set({ evaluated, changed, proposed })
-      .where(eq(pricingRuns.id, run.id));
-    result.evaluated += evaluated;
-    result.changed += changed;
-    result.proposed += proposed;
+    result.evaluated += done.evaluated;
+    result.changed += done.changed;
+    result.proposed += done.proposed;
   }
   return result;
+}
+
+/** One town's month of recalculation, or null when that month already ran. */
+async function priceTownMonth(
+  db: Db,
+  town: typeof towns.$inferSelect,
+  month: string,
+  variant: string,
+  now: Date,
+): Promise<{ evaluated: number; changed: number; proposed: number } | null> {
+  const [run] = await db
+    .insert(pricingRuns)
+    .values({ townId: town.id, month, variant, createdAt: now })
+    .onConflictDoNothing()
+    .returning({ id: pricingRuns.id });
+  if (!run) return null;
+  await db
+    .update(priceChanges)
+    .set({ status: 'expired', decidedAt: now })
+    .where(
+      and(
+        eq(priceChanges.townId, town.id),
+        eq(priceChanges.status, 'proposed'),
+        lt(priceChanges.month, month),
+      ),
+    );
+  if (variant === 'hold') return { evaluated: 0, changed: 0, proposed: 0 };
+  const categories = await db
+    .selectDistinct({ category: businesses.category })
+    .from(businesses)
+    .where(and(eq(businesses.townId, town.id), eq(businesses.active, true)));
+  let evaluated = 0;
+  let changed = 0;
+  let proposed = 0;
+  for (const { category } of categories) {
+    if (!category || !directoryCategory(category)) continue;
+    for (const product of DYNAMIC_PRODUCTS) {
+      if (!productEnabled(product)) continue;
+      const signals = await pricingSignals(db, { townId: town.id, category, product }, now);
+      const ranks: Array<FeaturedRank | null> = directoryProducts[product].ranked
+        ? [...featuredRanks]
+        : [null];
+      for (const rank of ranks) {
+        const listCents = listPriceCents(townPricing(town), product, rank);
+        const currentCents = await categoryPrice(db, town, product, category, rank);
+        if (listCents === null || currentCents === null) continue;
+        evaluated++;
+        const decision = decidePrice({ currentCents, listCents, signals });
+        if (decision.status === 'unchanged') continue;
+        await db.insert(priceChanges).values({
+          townId: town.id,
+          category,
+          product,
+          rank,
+          month,
+          kind: 'monthly',
+          oldCents: currentCents,
+          newCents: decision.newCents,
+          status: decision.status,
+          reason: decision.reason,
+          inputs: { ...signals, listCents, step: Math.round(decision.step * 1000) / 1000 },
+          createdAt: now,
+        });
+        if (decision.status === 'applied') {
+          await setPrice(
+            db,
+            {
+              townId: town.id,
+              category,
+              product,
+              rank,
+              cents: decision.newCents,
+              setBy: 'monthly',
+            },
+            now,
+          );
+          changed++;
+        } else proposed++;
+      }
+    }
+  }
+  await db
+    .update(pricingRuns)
+    .set({ evaluated, changed, proposed })
+    .where(eq(pricingRuns.id, run.id));
+  return { evaluated, changed, proposed };
 }
 
 export class PricingError extends Error {}
