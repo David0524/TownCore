@@ -18,6 +18,11 @@ export const envSchema = z.object({
   LLM_PROVIDER: optional(z.enum(['anthropic', 'gemini'])),
   STRIPE_SECRET_KEY: optional(z.string()),
   STRIPE_WEBHOOK_SECRET: optional(z.string()),
+  // Development and tests only: built-but-off directory products to show anyway
+  // ("newsletter,exclusive"). Never set in production until the owner turns a product on.
+  DIRECTORY_PRODUCTS_PREVIEW: optional(z.string()),
+  // End-to-end tests only: a local fake Stripe API ("http://127.0.0.1:3199"), test keys only.
+  STRIPE_API_BASE: optional(z.url()),
   REGISTRAR_API_KEY: optional(z.string()),
   REGISTRANT_FIRST_NAME: optional(z.string()),
   REGISTRANT_LAST_NAME: optional(z.string()),

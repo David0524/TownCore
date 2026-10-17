@@ -125,6 +125,11 @@ export const towns = pgTable('towns', {
   // The search kill switch (owner, 2026-10-17): a live town hidden from search keeps serving
   // readers but is noindex everywhere and lists nothing in its sitemaps, until staff show it again.
   searchHidden: boolean('search_hidden').notNull().default(false),
+  // Automated follow-ups to business owners (trial ending, a competitor's spot, a story, a nearby
+  // claim) send by themselves only while an admin's standing approval is on (Rule 10, owner
+  // 2026-10-17); otherwise they wait as drafts for staff to press Send.
+  businessMailApprovedAt: timestamp('business_mail_approved_at', { withTimezone: true }),
+  businessMailApprovedBy: uuid('business_mail_approved_by'),
   // Launch cohort, the month a town went live ("2027-01"): towns roll out, and can be hidden from
   // search, a cohort at a time.
   cohort: text('cohort'),
@@ -693,6 +698,8 @@ export const businesses = pgTable(
     geocodedAt: timestamp('geocoded_at', { withTimezone: true }),
     claimedByEmail: text('claimed_by_email'),
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    /** The owner stopped follow-ups and monthly reports (the unsubscribe link in them). */
+    ownerMailOptOutAt: timestamp('owner_mail_opt_out_at', { withTimezone: true }),
     // Owner-edited fields (M6 PR C). A new name waits in pending_name for staff review.
     description: text('description'),
     hours: text('hours'),
@@ -854,6 +861,13 @@ export const placements = pgTable(
     buyerEmail: text('buyer_email'),
     startsAt: timestamp('starts_at', { withTimezone: true }),
     endsAt: timestamp('ends_at', { withTimezone: true }),
+    /** When the free trial ends and the first charge is due (from Stripe), for the reminder. */
+    trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+    /**
+     * A booked week or month (newsletter, category sponsorship): the first local day, as
+     * YYYY-MM-DD. Null for monthly subscriptions.
+     */
+    period: text('period'),
     status: placementStatus('status').notNull().default('pending'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -997,6 +1011,49 @@ export const outreachDrafts = pgTable(
     uniqueIndex('outreach_drafts_business_article_uq').on(t.businessId, t.articleId),
     index('outreach_drafts_status_idx').on(t.status),
     check('outreach_drafts_status', sql`${t.status} in ('draft', 'sent', 'dismissed')`),
+  ],
+);
+
+// Follow-ups to business owners (owner, 2026-10-17): the trial is ending, a competitor took a
+// featured spot in their category, a story named the business, or a business nearby in their
+// category was claimed. Built as drafts; the sender mails one by itself only while the town's
+// standing approval is on (towns.business_mail_approved_at), else staff press Send (Rule 10).
+// One row per event (dedupe_key), so a retry never mails twice.
+export const businessFollowups = pgTable(
+  'business_followups',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'cascade' }),
+    kind: text('kind')
+      .$type<'trial_ending' | 'competitor_spot' | 'story_mention' | 'nearby_claim'>()
+      .notNull(),
+    dedupeKey: text('dedupe_key').notNull(),
+    toEmail: text('to_email').notNull(),
+    subject: text('subject').notNull(),
+    lines: jsonb('lines').$type<string[]>().notNull(),
+    linkHref: text('link_href').notNull(),
+    linkLabel: text('link_label').notNull(),
+    status: text('status').$type<'draft' | 'sent' | 'skipped'>().notNull().default('draft'),
+    /** Why it wasn't sent: suppressed, unsubscribed, stale, or a staff member's choice. */
+    note: text('note'),
+    sentBy: uuid('sent_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('business_followups_dedupe_uq').on(t.dedupeKey),
+    index('business_followups_status_idx').on(t.status, t.townId),
+    index('business_followups_business_idx').on(t.businessId, t.decidedAt),
+    check(
+      'business_followups_kind',
+      sql`${t.kind} in ('trial_ending', 'competitor_spot', 'story_mention', 'nearby_claim')`,
+    ),
+    check('business_followups_status', sql`${t.status} in ('draft', 'sent', 'skipped')`),
   ],
 );
 

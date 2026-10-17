@@ -6,10 +6,12 @@ import {
   campaigns,
   desc,
   eq,
+  gt,
   inArray,
   isNotNull,
   isNull,
   logAdminAction,
+  lt,
   ne,
   or,
   placements,
@@ -27,9 +29,20 @@ import { ownerListings } from './owners';
 
 export const SPONSOR_SLOT = 'directory.category.top';
 export const TOP_SPOT_SLOT = 'directory.topspot';
+/** A booked newsletter week shows in the issue's top sponsor slot. */
+export const NEWSLETTER_SLOT = 'newsletter.top';
+/** A booked category month shows in the category page's header slot. */
+export const CATEGORY_SPONSOR_SLOT = 'directory.category.exclusive';
 
 /** Where a featured spot's card shows. */
 export const slotForRank = (rank: number | null) => (rank === 1 ? TOP_SPOT_SLOT : SPONSOR_SLOT);
+
+/** Where a placement's card shows. */
+export function slotForPlacement(p: { product: string; rank: number | null }): string {
+  if (p.product === 'newsletter') return NEWSLETTER_SLOT;
+  if (p.product === 'exclusive') return CATEGORY_SPONSOR_SLOT;
+  return slotForRank(p.rank);
+}
 
 /** Cards a slot shows at once in a category: the Top spot one, the sponsored cards the rest. */
 const slotCap = (slot: string) => (slot === TOP_SPOT_SLOT ? 1 : maxSponsoredPerCategory - 1);
@@ -96,10 +109,20 @@ export async function sponsorCards(db: Db, placementId: string): Promise<Sponsor
 export type SubmitResult =
   { ok: true } | { ok: false; error: 'no_placement' | 'headline' | 'body' | 'not_owner' };
 
-/** The owner submits (or edits) the card. A new version waits for staff; the live one stays up. */
+/**
+ * The owner submits (or edits) the card for their featured spot, or for one booked week or month
+ * (`placementId`). A new version waits for staff; the live one stays up.
+ */
 export async function submitSponsorCard(
   db: Db,
-  input: { townId: string; email: string; slug: string; headline: string; body: string },
+  input: {
+    townId: string;
+    email: string;
+    slug: string;
+    headline: string;
+    body: string;
+    placementId?: string | null;
+  },
   now = new Date(),
 ): Promise<SubmitResult> {
   const listing = (await ownerListings(db, input.townId, input.email)).find(
@@ -116,11 +139,20 @@ export async function submitSponsorCard(
     .where(
       and(
         eq(placements.businessId, listing.id),
-        eq(placements.product, 'sponsored_slot'),
+        input.placementId
+          ? eq(placements.id, input.placementId)
+          : eq(placements.product, 'sponsored_slot'),
         eq(placements.status, 'active'),
       ),
     );
-  if (!placement?.category) return { ok: false, error: 'no_placement' };
+  if (!placement) return { ok: false, error: 'no_placement' };
+  const newsletter = placement.product === 'newsletter';
+  if (!newsletter && !placement.category) return { ok: false, error: 'no_placement' };
+  const [town] = await db
+    .select({ domain: towns.domain })
+    .from(towns)
+    .where(eq(towns.id, input.townId));
+  const href = `/directory/${listing.category}/${listing.slug}`;
   // One waiting version at a time: a new submission replaces the previous draft.
   await db
     .update(campaigns)
@@ -128,17 +160,18 @@ export async function submitSponsorCard(
     .where(and(eq(campaigns.placementId, placement.id), eq(campaigns.status, 'draft')));
   await db.insert(campaigns).values({
     townId: input.townId,
-    slot: slotForRank(placement.rank),
-    category: placement.category,
+    slot: slotForPlacement(placement),
+    category: newsletter ? null : placement.category,
     placementId: placement.id,
     status: 'draft',
-    startsAt: now,
+    startsAt: placement.period && placement.startsAt ? placement.startsAt : now,
     endsAt: placement.endsAt,
     creative: creativeSchema.parse({
       advertiser: listing.name,
       headline,
       ...(body ? { body } : {}),
-      href: `/directory/${listing.category}/${listing.slug}`,
+      // The newsletter is an email: its link must be absolute.
+      href: newsletter ? `https://${town?.domain}${href}` : href,
       cta: 'See the listing',
     }),
     createdAt: now,
@@ -203,24 +236,53 @@ export async function decideSponsorCard(
       .innerJoin(placements, eq(placements.id, campaigns.placementId))
       .where(and(eq(campaigns.id, input.campaignId), eq(campaigns.status, 'draft')));
     if (!row) throw new CardNotWaiting('This card is not waiting for a decision.');
+    // A booked week or month starts on its own date, and holds the slot only for that period.
+    const dated = Boolean(row.placement.period);
+    const startsAt =
+      dated && row.placement.startsAt && row.placement.startsAt > now
+        ? row.placement.startsAt
+        : now;
     if (input.decision === 'approve') {
       if (row.placement.status !== 'active')
         throw new CardNotWaiting('Its placement is not active, so the card can’t go live.');
-      const live = await tx
-        .select({ id: campaigns.id })
-        .from(campaigns)
-        .where(
-          and(
-            eq(campaigns.townId, row.campaign.townId),
-            eq(campaigns.slot, row.campaign.slot),
-            eq(campaigns.category, row.campaign.category ?? ''),
-            eq(campaigns.status, 'active'),
-            or(isNull(campaigns.placementId), ne(campaigns.placementId, row.placement.id)),
-          ),
-        );
+      if (dated) {
+        const clash = await tx
+          .select({ id: campaigns.id })
+          .from(campaigns)
+          .where(
+            and(
+              eq(campaigns.townId, row.campaign.townId),
+              eq(campaigns.slot, row.campaign.slot),
+              row.campaign.category
+                ? eq(campaigns.category, row.campaign.category)
+                : isNull(campaigns.category),
+              eq(campaigns.status, 'active'),
+              or(isNull(campaigns.placementId), ne(campaigns.placementId, row.placement.id)),
+              // Overlapping periods (an open-ended campaign overlaps everything after it starts).
+              lt(campaigns.startsAt, row.placement.endsAt!),
+              or(isNull(campaigns.endsAt), gt(campaigns.endsAt, startsAt)),
+            ),
+          );
+        if (clash.length)
+          throw new CardNotWaiting('Another sponsor already holds that slot for this period.');
+      }
+      const live = dated
+        ? []
+        : await tx
+            .select({ id: campaigns.id })
+            .from(campaigns)
+            .where(
+              and(
+                eq(campaigns.townId, row.campaign.townId),
+                eq(campaigns.slot, row.campaign.slot),
+                eq(campaigns.category, row.campaign.category ?? ''),
+                eq(campaigns.status, 'active'),
+                or(isNull(campaigns.placementId), ne(campaigns.placementId, row.placement.id)),
+              ),
+            );
       // A card from before ranks (no rank) may use all three sponsored places.
       const cap = row.placement.rank ? slotCap(row.campaign.slot) : maxSponsoredPerCategory;
-      if (live.length >= cap)
+      if (!dated && live.length >= cap)
         throw new CardNotWaiting(
           row.campaign.slot === TOP_SPOT_SLOT
             ? 'The category’s Top spot already shows a card.'
@@ -235,7 +297,7 @@ export async function decideSponsorCard(
       .update(campaigns)
       .set(
         input.decision === 'approve'
-          ? { status: 'active', startsAt: now, endsAt: row.placement.endsAt, updatedAt: now }
+          ? { status: 'active', startsAt, endsAt: row.placement.endsAt, updatedAt: now }
           : { status: 'ended', updatedAt: now },
       )
       .where(eq(campaigns.id, row.campaign.id));

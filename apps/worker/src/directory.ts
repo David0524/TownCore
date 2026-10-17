@@ -1,6 +1,14 @@
 import type { Fetcher } from '@towncore/adapters';
+import { loadEnv } from '@towncore/config';
 import { and, eq, ne, sources, towns, type Db } from '@towncore/db';
-import { DBPR, geocodeListings, seedDirectory, sendMonthlyReports } from '@towncore/directory';
+import {
+  DBPR,
+  draftFollowups,
+  geocodeListings,
+  seedDirectory,
+  sendApprovedFollowups,
+  sendMonthlyReports,
+} from '@towncore/directory';
 import type { OpsDeps } from './mail';
 import type { Logger } from 'pino';
 
@@ -40,6 +48,36 @@ export async function geocodeDirectory(db: Db, fetcher: Fetcher, logger: Logger)
  */
 export async function sendProofReports(db: Db, mail: OpsDeps['alertMail'], logger: Logger) {
   if (!mail) return;
-  const { sent } = await sendMonthlyReports({ db, ...mail });
+  const { sent } = await sendMonthlyReports({ db, ...mail, ...ownerMailEnv() });
   if (sent) logger.info({ sent }, 'proof reports sent');
+}
+
+/** Unsubscribe links and the postal footer for mail to owners. */
+const ownerMailEnv = () => ({
+  tokenSecret: loadEnv().MAIL_TOKEN_SECRET,
+  postalAddress: loadEnv().MAIL_POSTAL_ADDRESS ?? null,
+});
+
+/**
+ * Owner follow-ups (owner, 2026-10-17): drafts for every town that isn't paused, then the
+ * automatic sender, which mails only in towns with the standing approval on (Rule 10).
+ */
+export async function runFollowups(
+  db: Db,
+  mail: OpsDeps['alertMail'],
+  logger: Logger,
+  now = new Date(),
+) {
+  const active = await db.select({ id: towns.id }).from(towns).where(ne(towns.status, 'paused'));
+  for (const town of active) {
+    try {
+      const { created } = await draftFollowups(db, town.id, now);
+      if (created) logger.info({ townId: town.id, created }, 'owner follow-ups drafted');
+    } catch (error) {
+      logger.error({ townId: town.id, err: error }, 'owner follow-ups failed');
+    }
+  }
+  if (!mail) return;
+  const result = await sendApprovedFollowups({ db, ...mail, ...ownerMailEnv() }, now);
+  if (result.sent || result.skipped) logger.info(result, 'owner follow-ups sent');
 }

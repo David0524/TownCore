@@ -21,6 +21,8 @@ export type MimeInput = {
   replyTo?: string;
   /** Automatic account mail (sign-in links, verifications): marked so auto-responders stay quiet. */
   autoSubmitted?: boolean;
+  /** Extra headers (List-Unsubscribe on owner follow-ups). */
+  headers?: Record<string, string>;
 };
 
 export function newMessageId(domain: string): string {
@@ -46,9 +48,12 @@ export async function buildMime(input: MimeInput): Promise<Buffer> {
       content: a.content,
     })),
     replyTo: input.replyTo,
-    headers: input.autoSubmitted
-      ? { 'Auto-Submitted': 'auto-generated', 'X-Auto-Response-Suppress': 'All' }
-      : { 'X-Auto-Response-Suppress': 'OOF, AutoReply' },
+    headers: {
+      ...(input.autoSubmitted
+        ? { 'Auto-Submitted': 'auto-generated', 'X-Auto-Response-Suppress': 'All' }
+        : { 'X-Auto-Response-Suppress': 'OOF, AutoReply' }),
+      ...input.headers,
+    },
   });
   return new Promise((resolve, reject) =>
     composer.compile().build((error, message) => (error ? reject(error) : resolve(message))),

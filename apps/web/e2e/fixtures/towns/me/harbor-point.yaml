@@ -11,4 +11,5 @@ domain: harborpoint.test
 tier: small
 newsletter_send_time: '07:00'
 agencies: [Town of Harbor Point]
-pricing: { featured_usd: [19, 12, 7], enhanced_usd: 19 }
+pricing:
+  { featured_usd: [19, 12, 7], enhanced_usd: 19, newsletter_week_usd: 59, category_month_usd: 89 }

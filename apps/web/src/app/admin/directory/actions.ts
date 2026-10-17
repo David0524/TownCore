@@ -8,9 +8,13 @@ import {
   decideNameChange,
   decideSponsorCard,
   dismissOutreach,
+  FollowupError,
   OutreachError,
   RequestNotPending,
+  sendFollowup,
   sendOutreach,
+  setFollowupApproval,
+  skipFollowup,
 } from '@towncore/directory';
 import { SendError, SuppressedRecipientsError } from '@towncore/mail';
 import { revalidatePath } from 'next/cache';
@@ -143,4 +147,42 @@ export async function decideRequestAction(form: FormData): Promise<void> {
   }
   revalidatePath('/admin/directory');
   done({ done: decision === 'add' ? 'Business added to Places' : 'Request rejected' });
+}
+
+/**
+ * The per-town standing approval for automatic owner follow-ups (Rule 10): admins only, and
+ * audited. Off by default; while off, follow-ups wait below for someone to press Send.
+ */
+export async function followupApprovalAction(form: FormData): Promise<void> {
+  const me = await requireStaff();
+  if (me.role !== 'admin') done({ error: 'Only an admin can change the standing approval.' });
+  const on = str(form, 'on') === 'yes';
+  await setFollowupApproval(db(), { townId: str(form, 'townId'), staffId: me.id, on });
+  revalidatePath('/admin/directory');
+  done({
+    done: on ? 'Follow-ups now send automatically in this town' : 'Automatic follow-ups are off',
+  });
+}
+
+/** Staff send or skip one owner follow-up. Pressing Send is the approval for that message. */
+export async function followupAction(form: FormData): Promise<void> {
+  const me = await requireStaff();
+  const followupId = str(form, 'followupId');
+  let message = 'Follow-up skipped';
+  try {
+    if (form.get('decision') === 'send') {
+      const deps = directoryMailDeps();
+      if (!deps) done({ error: 'Mail sending isn’t set up.' });
+      const result = await sendFollowup(deps!, { followupId, staffId: me.id });
+      message =
+        result === 'sent' ? 'Follow-up sent' : 'Not sent: the owner unsubscribed or is suppressed';
+    } else {
+      await skipFollowup(db(), { followupId, staffId: me.id });
+    }
+  } catch (error) {
+    if (error instanceof FollowupError) done({ error: error.message });
+    throw error;
+  }
+  revalidatePath('/admin/directory');
+  done({ done: message });
 }

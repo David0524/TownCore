@@ -185,6 +185,10 @@ export const townConfigSchema = z.strictObject({
       z.number().int().positive(),
     ]),
     enhanced_usd: z.number().int().positive(),
+    // Self-serve bookings, built but off (D-M6-6): one week of the newsletter's top sponsor
+    // slot, and one month of a directory category's sponsorship. No price, no product.
+    newsletter_week_usd: z.number().int().positive().optional(),
+    category_month_usd: z.number().int().positive().optional(),
     free_trial_days: z.number().int().min(0).max(90).default(30),
   }),
 });

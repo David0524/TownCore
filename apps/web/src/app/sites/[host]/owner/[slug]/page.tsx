@@ -30,7 +30,7 @@ const PAYMENT_MESSAGES: Record<string, string> = {
   card_sent: 'Thanks. Your card is waiting for review; we’ll put it up once it’s checked.',
   card_headline: `Write a headline of up to ${CARD_LIMITS.headline} characters.`,
   card_body: `Keep the text under ${CARD_LIMITS.body} characters.`,
-  card_no_placement: 'Your featured spot isn’t active yet.',
+  card_no_placement: 'That placement isn’t active yet.',
   photo_sent: 'Thanks. Your photo shows on your listing once our staff check it.',
   photo_closed: 'Photo uploads aren’t open yet. Please try again soon.',
   photo_error: 'Something went wrong with that photo. Please try again later.',
@@ -40,6 +40,10 @@ const PAYMENT_MESSAGES: Record<string, string> = {
 const OFFER_NOTES: Record<string, string> = {
   enhanced: 'Your hours, website and description on your listing card in the category list.',
   sponsored_slot: 'A labeled card above every other listing in your category, linking to yours.',
+  newsletter:
+    'Your card at the top of every morning email for one week (Monday to Sunday), labeled Sponsored.',
+  exclusive:
+    'Your card in the header of your category page for one calendar month, labeled Sponsored.',
 };
 
 const SPOT_NOTES: Record<number, string> = {
@@ -67,6 +71,15 @@ export default async function EditListing({ params, searchParams }: Props) {
   const cards = sponsored?.status === 'active' ? await sponsorCards(db(), sponsored.id) : null;
   const liveCard = cards?.find((c) => c.status === 'live');
   const latest = cards?.[0];
+  // Cards for booked weeks and months, one per booking.
+  const bookingCards = new Map(
+    await Promise.all(
+      offers
+        .flatMap((o) => o.bookings)
+        .filter((b) => b.status === 'active')
+        .map(async (b) => [b.id, await sponsorCards(db(), b.id)] as const),
+    ),
+  );
   const errors = (Array.isArray(e) ? e : e ? [e] : []).slice(0, 5);
   const photos = await ownerPhotos(db(), listing.id);
   const kept = photos.filter((p) => p.status !== 'rejected');
@@ -198,41 +211,118 @@ export default async function EditListing({ params, searchParams }: Props) {
           <h2 id="promote-h">Promote this listing</h2>
           <p className={styles.note}>
             Paid placements are always labeled &quot;Sponsored&quot; and never change the order of
-            the regular listings. Billed monthly through Stripe; cancel any time.
+            the regular listings. Monthly placements are billed through Stripe and can be canceled
+            any time; a booked week or month is paid once.
           </p>
           <ul className={styles.offers}>
-            {offers.map((offer) => (
-              <li key={`${offer.product}-${offer.rank ?? 0}`}>
-                <strong>{offer.name}</strong> · ${offer.monthlyUsd}/month
-                <span className="meta">
-                  {offer.rank ? SPOT_NOTES[offer.rank] : (OFFER_NOTES[offer.product] ?? '')}
-                  {!offer.rank && offer.left !== null
-                    ? ` ${offer.left} of 3 left in this category.`
-                    : ''}
-                  {offer.trialDays > 0 && !offer.placement
-                    ? ` First ${offer.trialDays} days free.`
-                    : ''}
-                </span>
-                {offer.placement ? (
-                  <span className="meta" data-testid={`placement-${offer.product}`}>
-                    {offer.placement.status === 'held'
-                      ? 'Paid, but someone took this spot first. We’ll refund you or offer the next opening.'
-                      : `Active${offer.placement.endsAt ? ` until ${offer.placement.endsAt.toISOString().slice(0, 10)}` : ''}.`}
+            {offers.map((offer) =>
+              offer.period ? (
+                <li key={offer.product} data-testid={`booking-${offer.product}`}>
+                  <strong>{offer.name}</strong> · ${offer.monthlyUsd} a {offer.period}
+                  <span className="meta">{OFFER_NOTES[offer.product] ?? ''}</span>
+                  {offer.bookings.map((b) => {
+                    const versions = bookingCards.get(b.id) ?? [];
+                    const live = versions.find((c) => c.status === 'live');
+                    const last = versions[0];
+                    return (
+                      <div key={b.id} data-testid="booking">
+                        <span className="meta">
+                          {b.window.label}:{' '}
+                          {b.status === 'held'
+                            ? 'Paid, but someone booked it first. We’ll refund you or offer another date.'
+                            : live
+                              ? `Booked. Card approved: ${live.headline}`
+                              : last?.status === 'waiting'
+                                ? `Booked. Card waiting for review: ${last.headline}`
+                                : 'Booked. Write your card below; it shows once an editor checks it.'}
+                        </span>
+                        {b.status === 'active' ? (
+                          <form
+                            method="post"
+                            action={`/owner/${listing.slug}/card`}
+                            className={styles.claim}
+                          >
+                            <input type="hidden" name="placementId" value={b.id} />
+                            <label>
+                              Headline
+                              <input
+                                name="headline"
+                                required
+                                maxLength={CARD_LIMITS.headline}
+                                defaultValue={last?.headline ?? ''}
+                              />
+                            </label>
+                            <label>
+                              Short text (optional)
+                              <textarea
+                                name="body"
+                                rows={2}
+                                maxLength={CARD_LIMITS.body}
+                                defaultValue={last?.body ?? ''}
+                              />
+                            </label>
+                            <button type="submit" className="button">
+                              Send card for review
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                  {offer.open.length > 0 ? (
+                    <form method="post" action={`/owner/${listing.slug}/checkout`}>
+                      <input type="hidden" name="product" value={offer.product} />
+                      <label>
+                        {offer.period === 'week' ? 'Week' : 'Month'}
+                        <select name="period" defaultValue={offer.open[0]!.start}>
+                          {offer.open.map((w) => (
+                            <option key={w.start} value={w.start}>
+                              {w.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button type="submit" className="button">
+                        Book a {offer.period} for ${offer.monthlyUsd}
+                      </button>
+                    </form>
+                  ) : (
+                    <span className="meta">Every upcoming {offer.period} is booked.</span>
+                  )}
+                </li>
+              ) : (
+                <li key={`${offer.product}-${offer.rank ?? 0}`}>
+                  <strong>{offer.name}</strong> · ${offer.monthlyUsd}/month
+                  <span className="meta">
+                    {offer.rank ? SPOT_NOTES[offer.rank] : (OFFER_NOTES[offer.product] ?? '')}
+                    {!offer.rank && offer.left !== null
+                      ? ` ${offer.left} of 3 left in this category.`
+                      : ''}
+                    {offer.trialDays > 0 && !offer.placement
+                      ? ` First ${offer.trialDays} days free.`
+                      : ''}
                   </span>
-                ) : offer.left === 0 ? (
-                  <span className="meta">Taken.</span>
-                ) : (
-                  <form method="post" action={`/owner/${listing.slug}/checkout`}>
-                    <input type="hidden" name="product" value={offer.product} />
-                    {offer.rank ? <input type="hidden" name="rank" value={offer.rank} /> : null}
-                    <button type="submit" className="button">
-                      {offer.rank ? `Get spot #${offer.rank}` : `Buy ${offer.name.toLowerCase()}`}
-                      {offer.trialDays > 0 && offer.rank ? ` free for ${offer.trialDays} days` : ''}
-                    </button>
-                  </form>
-                )}
-              </li>
-            ))}
+                  {offer.placement ? (
+                    <span className="meta" data-testid={`placement-${offer.product}`}>
+                      {offer.placement.status === 'held'
+                        ? 'Paid, but someone took this spot first. We’ll refund you or offer the next opening.'
+                        : `Active${offer.placement.endsAt ? ` until ${offer.placement.endsAt.toISOString().slice(0, 10)}` : ''}.`}
+                    </span>
+                  ) : offer.left === 0 ? (
+                    <span className="meta">Taken.</span>
+                  ) : (
+                    <form method="post" action={`/owner/${listing.slug}/checkout`}>
+                      <input type="hidden" name="product" value={offer.product} />
+                      {offer.rank ? <input type="hidden" name="rank" value={offer.rank} /> : null}
+                      <button type="submit" className="button">
+                        {offer.rank ? `Get spot #${offer.rank}` : `Buy ${offer.name.toLowerCase()}`}
+                        {offer.trialDays > 0 ? ` free for ${offer.trialDays} days` : ''}
+                      </button>
+                    </form>
+                  )}
+                </li>
+              ),
+            )}
           </ul>
           {cards ? (
             <section id="card" aria-labelledby="card-h" data-testid="sponsor-card">
