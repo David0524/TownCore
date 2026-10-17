@@ -1,10 +1,22 @@
-import type { WeatherSnapshot } from '@towncore/config';
+import {
+  advanceSnapshot,
+  snapshotCovers,
+  type WeatherAlert,
+  type WeatherSnapshot,
+} from '@towncore/config';
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import type { Db } from './client';
 import { townWeather } from './schema';
 
-/** A snapshot older than this isn't shown: the tile falls back to "forecast unavailable". */
-export const WEATHER_MAX_AGE_MS = 3 * 3_600_000;
+/**
+ * A snapshot older than this isn't shown, and neither is one whose hourly periods no longer reach
+ * the present: the tile falls back to the zone forecast. Forecasts are refreshed in turn under a
+ * per-run budget (pipeline/weather-refresh.ts), so with thousands of towns one can be a few
+ * hours old; the current hour is picked from its stored periods when it's read.
+ */
+export const WEATHER_MAX_AGE_MS = 6 * 3_600_000;
+/** Snapshots stored before hourly periods were kept show their fixed "now": 3 hours at most. */
+const LEGACY_MAX_AGE_MS = 3 * 3_600_000;
 
 export async function saveTownWeather(
   db: Db,
@@ -22,8 +34,11 @@ export async function saveTownWeather(
     .onConflictDoUpdate({ target: townWeather.townId, set: values });
 }
 
-/** The town's latest snapshot if it is fresh enough to show, else null. A failed refresh keeps
- * the last good snapshot until it ages out. */
+/**
+ * The town's latest snapshot as of `now` (current hour, hourly row, high and low, live alerts),
+ * if it is fresh enough to show, else null. A failed refresh keeps the last good snapshot until
+ * it ages out.
+ */
 export async function getTownWeather(
   db: Db,
   townId: string,
@@ -31,8 +46,12 @@ export async function getTownWeather(
 ): Promise<{ snapshot: WeatherSnapshot; fetchedAt: Date } | null> {
   const [row] = await db.select().from(townWeather).where(eq(townWeather.townId, townId));
   if (!row?.snapshot || !row.fetchedAt) return null;
-  if (now.getTime() - row.fetchedAt.getTime() > WEATHER_MAX_AGE_MS) return null;
-  return { snapshot: row.snapshot, fetchedAt: row.fetchedAt };
+  const age = now.getTime() - row.fetchedAt.getTime();
+  if (!row.snapshot.upcoming) {
+    return age > LEGACY_MAX_AGE_MS ? null : { snapshot: row.snapshot, fetchedAt: row.fetchedAt };
+  }
+  if (age > WEATHER_MAX_AGE_MS || !snapshotCovers(row.snapshot, now)) return null;
+  return { snapshot: advanceSnapshot(row.snapshot, now), fetchedAt: row.fetchedAt };
 }
 
 /**
@@ -62,4 +81,21 @@ export async function claimWeatherRefresh(
     })
     .returning({ townId: townWeather.townId });
   return claimed.length > 0;
+}
+
+/**
+ * Replaces the alerts in a town's stored snapshot without touching its forecast or fetch time
+ * (alerts are refreshed for every town each run; forecasts take turns).
+ */
+export async function saveTownWeatherAlerts(
+  db: Db,
+  townId: string,
+  alerts: WeatherAlert[],
+): Promise<void> {
+  const [row] = await db.select().from(townWeather).where(eq(townWeather.townId, townId));
+  if (!row?.snapshot) return;
+  await db
+    .update(townWeather)
+    .set({ snapshot: { ...row.snapshot, alerts } })
+    .where(eq(townWeather.townId, townId));
 }

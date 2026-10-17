@@ -77,6 +77,7 @@ export {
 export {
   claimWeatherRefresh,
   getTownWeather,
+  saveTownWeatherAlerts,
   saveTownWeather,
   WEATHER_MAX_AGE_MS,
 } from './weather';

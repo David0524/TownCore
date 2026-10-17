@@ -39,7 +39,13 @@ export { feedAdapter, feedLinks, htmlToText, pageText, parseFeed } from './feed'
 export { parseIcal, zonedTimeToUtc } from './lib/ical';
 export { flDbprAdapter } from './fl-dbpr';
 export { flSunbizAdapter } from './fl-sunbiz';
-export { fetchWeather, parsePoint } from './nws/weather';
+export {
+  alertsForTown,
+  fetchWeather,
+  fetchZoneAlerts,
+  parsePoint,
+  type ZoneAlert,
+} from './nws/weather';
 export { beachConfig, fetchBeach, parseSurfSegment, type BeachConfig } from './nws/beach';
 export {
   censusPlaceAt,

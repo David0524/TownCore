@@ -21,11 +21,12 @@ long-range plan (`docs/finance/`), the launch limits (`docs/finance/launch-capac
 
 ## Phase 1: scale readiness (by Feb. 2027, before cohorts pass ~200 towns)
 
-1. **Shared weather.**
-   - Cache `/points` per town; it rarely changes.
-   - Fetch forecasts once per NWS grid point, and alerts once per zone batch.
-   - Refresh every 30 minutes.
-   - Today: 4 calls per town every 15 minutes, which saturates api.weather.gov at ~225 towns.
+1. **Shared weather. Built.**
+   - Snapshots keep the next 36 hours, and the site picks the current hour at view time.
+   - Alerts are fetched for every zone each run, 50 zones per request.
+   - Forecasts are fetched oldest-first, at most 500 per 15-minute run, reusing the cached grid point. That's one request per town.
+   - Total: about 50,000 requests a day at 3,000 towns (each forecast refreshed about every 1.5 hours) and about 53,000 at 8,433 (about every 4.2 hours), within api.weather.gov's 86,400 at 1 per second. Before, it would have been about 1.15 million a day at 3,000 towns.
+   - Refresh-on-view stays off wherever the worker runs.
 2. **State files once per state. Built.**
    - The Fetcher keeps one copy of each statewide file (`packages/adapters/src/http/shared-files.ts`), re-checked with a conditional GET after its window: 6 hours for DBPR, a week for a Sunbiz day file.
    - Each town's source reads its own city's rows, with its own run record and health.

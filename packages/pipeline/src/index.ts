@@ -124,8 +124,11 @@ export {
   type TownHealth,
 } from './ops';
 export {
+  forecastsDue,
   refreshTownWeather,
   refreshWeather,
+  WEATHER_FORECAST_EVERY_MS,
+  WEATHER_FORECASTS_PER_RUN,
   weatherTargets,
   type WeatherTarget,
 } from './weather-refresh';

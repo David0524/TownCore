@@ -80,7 +80,17 @@ export {
   type Theme,
   type TypePairing,
 } from './theme';
-export type { BeachConditions, WeatherAlert, WeatherHour, WeatherSnapshot } from './weather';
+export {
+  advanceSnapshot,
+  HOURLY_EVERY,
+  HOURLY_STEPS,
+  snapshotCovers,
+  type BeachConditions,
+  type WeatherAlert,
+  type WeatherHour,
+  type WeatherPeriod,
+  type WeatherSnapshot,
+} from './weather';
 export {
   beatCategory,
   categoryColors,
