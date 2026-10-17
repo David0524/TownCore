@@ -39,6 +39,8 @@ export {
   type StepState,
 } from './onboarding';
 export { dryRunStore, pgOnboardingStore } from './pg-store';
+export { onboardLaunchDomain } from './launch-onboard';
+export { offlineProviders, realProviders, type Providers } from './cli/onboard';
 export { RetryableError, withRetry, type RetryOptions } from './retry';
 export { routeRecipient, type Route, type RoutingInput } from './routing';
 export {

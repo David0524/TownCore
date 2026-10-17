@@ -28,6 +28,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               Inbox{unread ? ` (${unread})` : ''}
             </Link>
             <Link href="/admin/health">Health</Link>
+            <Link href="/admin/digest">Digest</Link>
+            <Link href="/admin/proposals">Proposals</Link>
+            <Link href="/admin/fixes">Fixes</Link>
             <Link href="/admin/review">Review queue</Link>
             <Link href="/admin/skipped">Skip log</Link>
             <Link href="/admin/pins">Pins</Link>

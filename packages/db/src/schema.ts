@@ -2388,3 +2388,262 @@ export const pollVotes = pgTable(
     check('poll_votes_option', sql`${t.option} between 0 and 3`),
   ],
 );
+
+// ---------------------------------------------------------------------------------------------
+// Agentic operations (owner, 2026-10-17, "Connected systems and agentic workflows";
+// docs/plans/agentic-ops.md). Agents do the work and prepare each decision; people approve with
+// one click. Every table here records state, so a crashed run resumes where it stopped.
+
+// A launch cohort: approved towns launched together (docs/plans/rollout.md). The domains are
+// bought in ONE admin approval of the cohort's stated total (Rule 10); the cohort goes live in
+// one more. Dry run unless the admin created it to spend.
+export const launchCohorts = pgTable(
+  'launch_cohorts',
+  {
+    id: id(),
+    name: text('name').notNull().unique(),
+    status: text('status')
+      .$type<
+        'preparing' | 'awaiting_purchase' | 'running' | 'awaiting_go_live' | 'live' | 'cancelled'
+      >()
+      .notNull()
+      .default('preparing'),
+    dryRun: boolean('dry_run').notNull().default(true),
+    /**
+     * The admin's batch approval: who, when, the total typed back, and each town's domain at its
+     * stated price. Purchases and the mail onboarding that follows run only under it.
+     */
+    purchaseApproval: jsonb('purchase_approval'),
+    goLiveApproval: jsonb('go_live_approval'),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => staff.id),
+    /** One orchestrator run at a time per cohort. */
+    leaseUntil: timestamp('lease_until', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check(
+      'launch_cohorts_status',
+      sql`${t.status} in ('preparing', 'awaiting_purchase', 'running', 'awaiting_go_live', 'live', 'cancelled')`,
+    ),
+  ],
+);
+
+// One town in a cohort and where it is in the chain: names → purchase → mail → dns → provision →
+// review → live. `todos` are the manual steps, batched across the cohort for one pass.
+export const launchCohortTowns = pgTable(
+  'launch_cohort_towns',
+  {
+    id: id(),
+    cohortId: uuid('cohort_id')
+      .notNull()
+      .references(() => launchCohorts.id, { onDelete: 'cascade' }),
+    candidateId: uuid('candidate_id')
+      .notNull()
+      .references(() => townCandidates.id),
+    launchId: uuid('launch_id').references(() => launches.id),
+    stage: text('stage')
+      .$type<'names' | 'purchase' | 'mail' | 'dns' | 'provision' | 'review' | 'live'>()
+      .notNull()
+      .default('names'),
+    state: text('state')
+      .$type<'pending' | 'running' | 'waiting' | 'done' | 'failed'>()
+      .notNull()
+      .default('pending'),
+    /** The clear name proposal (1–3) the admin picked; the first by default. */
+    pick: smallint('pick').notNull().default(1),
+    detail: jsonb('detail').$type<Record<string, unknown>>().notNull().default({}),
+    todos: jsonb('todos')
+      .$type<Array<{ key: string; text: string; done: boolean }>>()
+      .notNull()
+      .default([]),
+    error: text('error'),
+    attempts: integer('attempts').notNull().default(0),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('launch_cohort_towns_uq').on(t.cohortId, t.candidateId),
+    check(
+      'launch_cohort_towns_stage',
+      sql`${t.stage} in ('names', 'purchase', 'mail', 'dns', 'provision', 'review', 'live')`,
+    ),
+    check(
+      'launch_cohort_towns_state',
+      sql`${t.state} in ('pending', 'running', 'waiting', 'done', 'failed')`,
+    ),
+    check('launch_cohort_towns_pick', sql`${t.pick} between 1 and 3`),
+  ],
+);
+
+// The standing source-discovery agent's findings (weekly, towns furthest below the Rule 7 target
+// first). Every URL was verified in code; a proposal becomes a source only when staff approve it,
+// and `pnpm sources:export` then writes approved ones into the town YAML for a pull request.
+export const sourceProposals = pgTable(
+  'source_proposals',
+  {
+    id: id(),
+    townId: uuid('town_id')
+      .notNull()
+      .references(() => towns.id),
+    /** `source`: a known platform, ready to add. `adapter`: an unknown platform to build. */
+    type: text('type').$type<'source' | 'adapter'>().notNull(),
+    /** The town YAML's source key for `source`; `adapter:<kind>:<url>` otherwise. */
+    key: text('key').notNull(),
+    kind: sourceKind('kind').notNull(),
+    url: text('url').notNull(),
+    platform: text('platform'),
+    /** The source config to add (TownSourceConfig), for `source` proposals. */
+    config: jsonb('config'),
+    label: text('label').notNull(),
+    /** Who suggested it, and what code found when it fetched the URL. */
+    origin: text('origin').notNull(),
+    detail: text('detail').notNull(),
+    /** Estimated real items a day it would add, and how that was estimated. */
+    estimatePerDay: real('estimate_per_day'),
+    estimateBasis: text('estimate_basis').notNull(),
+    status: text('status')
+      .$type<'proposed' | 'approved' | 'rejected'>()
+      .notNull()
+      .default('proposed'),
+    sourceId: uuid('source_id').references(() => sources.id),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    /** When `pnpm sources:export` wrote it into the town YAML. */
+    exportedAt: timestamp('exported_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('source_proposals_town_key_uq').on(t.townId, t.key),
+    index('source_proposals_status_idx').on(t.status, t.createdAt),
+    check('source_proposals_type', sql`${t.type} in ('source', 'adapter')`),
+    check('source_proposals_status', sql`${t.status} in ('proposed', 'approved', 'rejected')`),
+  ],
+);
+
+export const fixFailures = [
+  'robots',
+  'blocked',
+  'http_auth',
+  'http_gone',
+  'http_server',
+  'rate_limited',
+  'timeout',
+  'network',
+  'parse',
+  'empty',
+  'unknown',
+] as const;
+export type FixFailure = (typeof fixFailures)[number];
+
+// Self-healing adapters: a broken source gets a fresh fixture of its failing fetch, a diagnosis
+// in code and a fix request. Fixes are written in a Claude Code session
+// (docs/ops/adapter-fix-routine.md), never by the pipeline. The same failure on one platform in
+// several towns becomes one platform request (`scope: platform`) the town requests point to.
+export const adapterFixRequests = pgTable(
+  'adapter_fix_requests',
+  {
+    id: id(),
+    scope: text('scope').$type<'source' | 'platform'>().notNull(),
+    sourceId: uuid('source_id').references(() => sources.id),
+    townId: uuid('town_id').references(() => towns.id),
+    platform: text('platform').notNull(),
+    failure: text('failure').$type<FixFailure>().notNull(),
+    httpStatus: integer('http_status'),
+    error: text('error').notNull(),
+    diagnosis: text('diagnosis').notNull(),
+    /** The recorded exchanges of the failing fetch (packages/adapters/src/http/fixtures.ts). */
+    fixture: jsonb('fixture'),
+    platformRequestId: uuid('platform_request_id'),
+    status: text('status')
+      .$type<'open' | 'in_progress' | 'fixed' | 'dismissed'>()
+      .notNull()
+      .default('open'),
+    prUrl: text('pr_url'),
+    note: text('note'),
+    resolvedBy: uuid('resolved_by').references(() => staff.id),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('adapter_fix_requests_open_source_uq')
+      .on(t.sourceId)
+      .where(sql`${t.scope} = 'source' and ${t.status} in ('open', 'in_progress')`),
+    uniqueIndex('adapter_fix_requests_open_platform_uq')
+      .on(t.platform, t.failure)
+      .where(sql`${t.scope} = 'platform' and ${t.status} in ('open', 'in_progress')`),
+    check('adapter_fix_requests_scope', sql`${t.scope} in ('source', 'platform')`),
+    check(
+      'adapter_fix_requests_status',
+      sql`${t.status} in ('open', 'in_progress', 'fixed', 'dismissed')`,
+    ),
+    check(
+      'adapter_fix_requests_source',
+      sql`(${t.scope} = 'source') = (${t.sourceId} is not null)`,
+    ),
+  ],
+);
+
+// The ops agent's daily digest, built in code (no model): one row per UTC date.
+export const opsDigests = pgTable('ops_digests', {
+  id: id(),
+  date: date('date').notNull().unique(),
+  /** Sections of items, each with a suggested action and an admin link. */
+  items: jsonb('items').notNull(),
+  text: text('text').notNull(),
+  emailedAt: timestamp('emailed_at', { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+// One inbox of decisions the learning loops prepare (Admin → Proposals): experiment winners,
+// model-routing changes from evals, cohort gates, and later pricing. Approve or reject in one
+// click, audited; approval runs the proposal's action, or records the decision when the change
+// is code (a routing change ships as a pull request).
+export const proposals = pgTable(
+  'proposals',
+  {
+    id: id(),
+    kind: text('kind').$type<'experiment' | 'routing' | 'cohort_gate' | 'pricing'>().notNull(),
+    /** Dedupe key: one open proposal per subject. */
+    key: text('key').notNull(),
+    title: text('title').notNull(),
+    summary: text('summary').notNull(),
+    detail: jsonb('detail').$type<Record<string, unknown>>().notNull().default({}),
+    status: text('status')
+      .$type<'open' | 'approved' | 'rejected' | 'superseded'>()
+      .notNull()
+      .default('open'),
+    decidedBy: uuid('decided_by').references(() => staff.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    note: text('note'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('proposals_open_key_uq')
+      .on(t.key)
+      .where(sql`${t.status} = 'open'`),
+    index('proposals_status_idx').on(t.status, t.createdAt),
+    check('proposals_kind', sql`${t.kind} in ('experiment', 'routing', 'cohort_gate', 'pricing')`),
+    check('proposals_status', sql`${t.status} in ('open', 'approved', 'rejected', 'superseded')`),
+  ],
+);
+
+// Each agent run, for Admin and the digest: what ran, for which town, and what it found.
+export const agentRuns = pgTable(
+  'agent_runs',
+  {
+    id: id(),
+    agent: text('agent')
+      .$type<'source-discovery' | 'adapter-fixes' | 'digest' | 'learning' | 'cohorts'>()
+      .notNull(),
+    townId: uuid('town_id').references(() => towns.id),
+    status: text('status').$type<'ok' | 'failed' | 'skipped'>().notNull(),
+    summary: jsonb('summary').$type<Record<string, unknown>>().notNull().default({}),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [index('agent_runs_agent_idx').on(t.agent, t.townId, t.startedAt)],
+);
