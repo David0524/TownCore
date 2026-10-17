@@ -4,7 +4,7 @@ import { directoryCategory } from '@towncore/config';
 import { searchListings } from '@towncore/directory';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { db } from '@/lib/db';
-import { directoryPath, listingDetail } from '@/lib/directory';
+import { directoryPath, listingDetail, townDay } from '@/lib/directory';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 import styles from '../directory.module.css';
@@ -26,7 +26,7 @@ export default async function ClaimIndexPage({
 }) {
   const town = await requireTown(params);
   const q = ((await searchParams).q ?? '').trim().slice(0, 80);
-  const found = q ? await searchListings(db(), town.id, q, 20) : [];
+  const found = q ? await searchListings(db(), town.id, q, 20, null, { day: townDay(town) }) : [];
   return (
     <StandardPage town={town}>
       <p className="meta">

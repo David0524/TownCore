@@ -3,7 +3,8 @@ import { loadEnv } from '@towncore/config';
 import { campaigns, createDb, eq, towns } from '@towncore/db';
 
 // The directory (M6 PR B, docs/plans/M6.md §2) on the fictional fixture towns: 5 plumbers
-// (one claimed), 2 roofers and 1 restaurant, seeded by scripts/test-directory.ts.
+// (one claimed), 2 roofers, 1 restaurant, 3 beauty salons and 1 pet groomer, seeded by
+// scripts/test-directory.ts. Layout and ranking on every family: directory-layout.spec.ts.
 const harbor = 'http://harborpoint.test';
 const feed = 'http://feedtown.test';
 const plumbers = `${harbor}/directory/plumbers`;
@@ -24,15 +25,15 @@ test('the directory home shows every kind and opens on one, listed', async ({ pa
   await page.goto(`${harbor}/directory`);
   const main = page.getByRole('main');
   await expect(main.getByRole('heading', { name: 'Places', level: 1 })).toBeVisible();
-  // It opens on restaurants, marked in the bar, with the restaurants listed below.
+  // It opens on the top-ranked kind (plumbers here), marked in the bar, listed below.
   const bar = page.getByTestId('category-bar');
-  await expect(bar.locator('[aria-current="page"]')).toContainText('Restaurants');
+  await expect(bar.locator('[aria-current="page"]')).toContainText('Plumbers');
   await expect(page.getByTestId('directory-opening').getByTestId('place-card')).not.toHaveCount(0);
   // Picking another kind keeps the bar, now marking that kind.
-  await bar.getByRole('link', { name: /Plumbers/ }).click();
-  await expect(page).toHaveURL(/\/directory\/plumbers$/);
+  await bar.getByRole('link', { name: /Restaurants/ }).click();
+  await expect(page).toHaveURL(/\/directory\/restaurants$/);
   await expect(page.getByTestId('category-bar').locator('[aria-current="page"]')).toContainText(
-    'Plumbers',
+    'Restaurants',
   );
   await page.goto(`${harbor}/directory`);
   await expect(main.getByRole('link', { name: /Plumbers\s*5 places/ })).toHaveAttribute(
@@ -65,9 +66,7 @@ test('the advertising page sells featured spots at the town’s prices', async (
     'href',
     '/advertise?category=plumbers',
   );
-  await expect(page.locator('[data-slot="directory.topspot"]')).toContainText(
-    '$19 a month, first 30 days free',
-  );
+  await expect(page.locator('[data-slot="directory.topspot"]')).toContainText('#1 $19/mo');
 });
 
 test('search finds a business by name and is not indexed', async ({ page }) => {
@@ -88,6 +87,8 @@ test('a category page has its slots, then organic listings with the claimed one 
   await page.goto(plumbers);
   const main = page.getByRole('main');
   await expect(main.getByRole('heading', { name: 'Plumbers in Harbor Point' })).toBeVisible();
+  // Every directory slot is on the page (§11b): unsold, the featured spots are one strip that
+  // carries both of theirs, and the category's header slot waits in the rail.
   for (const name of [
     'directory.category.exclusive',
     'directory.topspot',
@@ -96,11 +97,18 @@ test('a category page has its slots, then organic listings with the claimed one 
   ]) {
     const slot = page.locator(`[data-slot="${name}"]`);
     await expect(slot, name).toHaveAttribute('data-fill', 'house');
-    await expect(slot.getByTestId('slot-label'), name).toHaveText('From The Harbor Point Ledger');
+    // The #2 and #3 spots are part of the strip's line, under its label.
+    const labeled = name === 'directory.category.top' ? page.getByTestId('featured-strip') : slot;
+    await expect(labeled.getByTestId('slot-label').first(), name).toHaveText(
+      'From The Harbor Point Ledger',
+    );
   }
-  await expect(page.locator('[data-slot="directory.topspot"]')).toContainText('#1 spot open');
+  await expect(
+    page.getByTestId('featured-strip').locator('[data-slot="directory.category.top"]'),
+  ).toHaveCount(1);
+  await expect(page.locator('[data-slot="directory.topspot"]')).toContainText('#1 $19/mo');
   await expect(page.locator('[data-slot="directory.category.exclusive"]')).toContainText(
-    'morning email',
+    'Claim it free',
   );
   // The owner panel invites claims and new businesses instead.
   const owner = page.getByTestId('owner-bar');
@@ -209,7 +217,9 @@ test('directory slots keep their reserved heights and never overflow (ad standar
           const box = el.getBoundingClientRect();
           const name = el.getAttribute('data-slot');
           const out: string[] = [];
-          if (box.height < 90) out.push(`${name} is ${box.height}px`);
+          // The unsold featured spots' strip is one compact line by design (owner, 2026-10-17).
+          const min = el.getAttribute('data-format') === 'strip' ? 70 : 90;
+          if (box.height < min) out.push(`${name} is ${box.height}px`);
           if (!el.querySelector('[data-testid="slot-label"]')?.textContent)
             out.push(`${name} unlabeled`);
           if (
@@ -268,10 +278,12 @@ test('directory pages do not shift, and keep ads at or below 30% of a phone page
     if (isMobile) expect(density, url).toBeLessThanOrEqual(0.3);
   }
   await page.goto(plumbers);
-  for (const name of ['rail.box', 'directory.quote-request', 'directory.category.top'])
+  for (const name of ['rail.box', 'directory.quote-request', 'directory.category.exclusive'])
     await (isMobile
       ? expect(page.locator(`[data-slot="${name}"]`), name).toBeHidden()
       : expect(page.locator(`[data-slot="${name}"]`), name).toBeVisible());
+  // The compact strip of open featured spots shows everywhere: it's the way to buy one.
+  await expect(page.getByTestId('featured-strip')).toBeVisible();
 });
 
 test.describe.serial('a category campaign fills that category only', () => {
@@ -329,8 +341,9 @@ test.describe('directory on the homepage and articles', () => {
       'href',
       '/directory/plumbers/anchor-plumbing-co-test0001',
     );
+    // At least the 12 fixture listings; other specs add their own while this one runs.
     await expect(
-      featured.getByRole('link', { name: 'Browse 8 licensed businesses' }),
+      featured.getByRole('link', { name: /^Browse (1[2-9]|[2-9]\d) licensed businesses$/ }),
     ).toBeVisible();
 
     const pro = page.locator('[data-module="find-a-pro"]');

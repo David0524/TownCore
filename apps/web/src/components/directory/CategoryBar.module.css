@@ -32,12 +32,6 @@
   scroll-snap-align: start;
 }
 
-.groupStart {
-  margin-left: 0.75rem;
-  padding-left: 0.75rem;
-  border-left: var(--hairline);
-}
-
 .item {
   display: grid;
   justify-items: center;

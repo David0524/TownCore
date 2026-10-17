@@ -3,7 +3,7 @@ import type { Article, Town } from '@towncore/db';
 import { relatedListings } from '@towncore/directory';
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { db } from '@/lib/db';
-import { directoryPath, listingDetail, listingPath } from '@/lib/directory';
+import { directoryPath, listingDetail, listingPath, townDay } from '@/lib/directory';
 import { Slot } from '@/slots/Slot';
 import styles from '@/modules/front.module.css';
 
@@ -22,6 +22,7 @@ export async function RelatedBusinesses({
   const related = await relatedListings(db(), town.id, {
     text: `${article.headline}\n${article.bodyMd}`,
     beat: article.beat,
+    day: townDay(town),
   });
   const listings = [...related.named, ...related.listings];
   return (

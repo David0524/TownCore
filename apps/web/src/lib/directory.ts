@@ -1,22 +1,21 @@
+import { cache } from 'react';
 import { directoryCategories, type DirectoryCategory, type FoodColor } from '@towncore/config';
 import type { Town } from '@towncore/db';
-import { contactShown, listingPlace, type Listing } from '@towncore/directory';
+import {
+  categoryCounts,
+  contactShown,
+  listingPlace,
+  localDay,
+  rankCategories,
+  type Listing,
+} from '@towncore/directory';
+import { db } from './db';
 import { siteUrl } from './discovery';
 
 // Town-site helpers for the directory (M6 PR B, docs/plans/M6.md §2).
 
 export const directoryPath = (category?: string, slug?: string) =>
   ['/directory', category, slug].filter(Boolean).join('/');
-
-/** The directory's groups, in the order pages show them. */
-export const DIRECTORY_GROUPS = [
-  { key: 'food', title: 'Food and drink' },
-  { key: 'shops', title: 'Shopping' },
-  { key: 'home', title: 'Home services' },
-  { key: 'health', title: 'Health, beauty and fitness' },
-  { key: 'services', title: 'Services' },
-  { key: 'fun', title: 'Hotels and things to do' },
-] as const;
 
 const FLAVORS: FoodColor[] = ['ocean', 'saffron', 'basil', 'tomato', 'berry', 'cocoa'];
 
@@ -29,15 +28,38 @@ export function categoryFlavor(slug: string): FoodColor {
   return FLAVORS[(i < 0 ? 0 : i) % FLAVORS.length]!;
 }
 
-/** The category the directory opens on: restaurants when there are any, else the biggest. */
-export function defaultCategory<T extends { category: DirectoryCategory; count: number }>(
-  counts: readonly T[],
-): T | null {
-  return (
-    counts.find((c) => c.category.slug === 'restaurants') ??
-    [...counts].sort((a, b) => b.count - a.count)[0] ??
-    null
+/** The town's local date: listing rotations and the category ranking change once a day. */
+export const townDay = (town: Pick<Town, 'timezone'>) => localDay(town.timezone);
+
+/**
+ * The town's kinds of business with listings, ranked (packages/directory rank-categories.ts:
+ * reader demand, size here, real reader interest; never A–Z, never payment). Once per request.
+ */
+export const townCategories = cache((town: Town) =>
+  categoryCounts(db(), town.id, { day: townDay(town) }),
+);
+
+/**
+ * Every kind of business, ranked the same way, those with listings here first: for choosers
+ * that offer every kind (the add-your-business form, the advertise page's category picker).
+ */
+export async function townKindsRanked(town: Town): Promise<DirectoryCategory[]> {
+  const listed = await townCategories(town);
+  const seen = new Set(listed.map((c) => c.category.slug));
+  const rest = rankCategories(
+    directoryCategories
+      .filter((c) => !seen.has(c.slug))
+      .map((category) => ({ category, count: 0 })),
+    { day: townDay(town) },
   );
+  return [...listed, ...rest].map((c) => c.category);
+}
+
+/** The category the directory opens on: the town's top-ranked kind. */
+export function defaultCategory<T extends { category: DirectoryCategory; count: number }>(
+  ranked: readonly T[],
+): T | null {
+  return ranked[0] ?? null;
 }
 
 export const listingPath = (listing: Pick<Listing, 'category' | 'slug'>) =>

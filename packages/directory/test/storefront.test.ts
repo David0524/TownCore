@@ -103,20 +103,21 @@ describe('the advertise storefront', () => {
         prices: c.prices,
         from: c.fromCents,
       })),
+      // In the directory's ranked order (rank-categories.ts): plumbers lead roofers here.
     ).toEqual([
+      {
+        slug: 'plumbers',
+        count: 3,
+        open: [1, 3],
+        prices: { 1: 2300, 2: 1200, 3: 700 },
+        from: 700,
+      },
       {
         slug: 'roofers',
         count: 1,
         open: [],
         prices: { 1: 1900, 2: 1200, 3: 700 },
         // All taken: the cheapest spot, for the waitlist.
-        from: 700,
-      },
-      {
-        slug: 'plumbers',
-        count: 3,
-        open: [1, 3],
-        prices: { 1: 2300, 2: 1200, 3: 700 },
         from: 700,
       },
     ]);

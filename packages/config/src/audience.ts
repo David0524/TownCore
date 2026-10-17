@@ -3,7 +3,13 @@
 // in aggregate: no cookies, no reader identifiers (D-M4-3).
 
 /** Where a newsletter sign-up form sits. Stored on the subscriber as `signup_form:<placement>`. */
-export const SIGNUP_PLACEMENTS = ['home', 'article', 'second-article', 'newsletter-page'] as const;
+export const SIGNUP_PLACEMENTS = [
+  'home',
+  'article',
+  'second-article',
+  'newsletter-page',
+  'directory',
+] as const;
 export type SignupPlacement = (typeof SIGNUP_PLACEMENTS)[number];
 
 export function isSignupPlacement(value: unknown): value is SignupPlacement {
