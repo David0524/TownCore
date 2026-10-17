@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./identity": "./src/identity-index.ts",
     "./queries": "./src/queries.ts"
   },
   "scripts": {

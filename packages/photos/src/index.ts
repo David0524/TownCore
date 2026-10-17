@@ -46,28 +46,3 @@ export {
   takeReaderPhoto,
   type PhotoSubmission,
 } from './queries';
-export {
-  LOGO_PROMPTS,
-  LOGO_RULES,
-  logoArtPrompt,
-  logoInputProblems,
-  placeholderLogoArt,
-  type LogoArtInput,
-} from './identity';
-export {
-  cutOut,
-  deriveIdentityAssets,
-  HERO_SIZE,
-  IDENTITY_FILES,
-  writeIdentityAssets,
-  type DerivedAsset,
-  type IdentityFile,
-  type Region,
-} from './identity-assets';
-export {
-  CHATGPT_LICENSE,
-  CHATGPT_SOURCE,
-  IdentityImportError,
-  importIdentityArt,
-  writeArtConfig,
-} from './identity-import';

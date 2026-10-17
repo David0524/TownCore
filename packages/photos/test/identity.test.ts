@@ -16,7 +16,7 @@ import {
   logoInputProblems,
   placeholderLogoArt,
   type LogoArtInput,
-} from '../src';
+} from '../src/identity-index';
 
 // Logo art for every town (owner, 2026-10-17): the ChatGPT prompts in Boca's style with the
 // owner's limits, every asset cut from the art (Boca's logo file reproduces Boca's hand-made

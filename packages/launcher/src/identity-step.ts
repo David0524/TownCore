@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Theme, TownConfig } from '@towncore/config';
-import { LOGO_PROMPTS, logoArtPrompt } from '@towncore/photos';
+import { LOGO_PROMPTS, logoArtPrompt } from '@towncore/photos/identity';
 
 // Launch step 6b, logo art (owner, 2026-10-17: "We will do ChatGPT image prompts for now. So
 // when I start a new town you will provide the prompt."). After the theme, three ready-to-paste

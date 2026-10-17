@@ -12,7 +12,12 @@ import { fileURLToPath } from 'node:url';
 import { requireEnv, type Theme } from '@towncore/config';
 import { loadDotEnv } from '@towncore/config/dotenv';
 import { createDb, getTownBySlug } from '@towncore/db';
-import { importIdentityArt, IdentityImportError, LOGO_PROMPTS, logoArtPrompt } from '../src';
+import {
+  importIdentityArt,
+  IdentityImportError,
+  LOGO_PROMPTS,
+  logoArtPrompt,
+} from '../src/identity-index';
 
 loadDotEnv();
 const root = fileURLToPath(new URL('../../../', import.meta.url));
