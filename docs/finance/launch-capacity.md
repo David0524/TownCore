@@ -29,7 +29,7 @@ By our tiers:
 
 | Item | Today | What it takes |
 | --- | --- | --- |
-| **Readiness (Rule 7)** | The bar is 3 real items a day, or 10 for a large town. Boca makes ~0.8 a day (in 30 days: 5 city releases plus ~19 weekly roundups); Delray makes 0.53. Almost no town passes. | Many more sources per town (permits, police and fire feeds, property sales, schools, sports, more meeting platforms), a lower bar, or both. The bar is a Section 2 rule, so it's the owner's call. Small towns (84% of the list) are where this bites. |
+| **Readiness (Rule 7)** | The target is 3 real items a day, or 10 for a large town. Boca makes ~0.8 a day (in 30 days: 5 city releases plus ~19 weekly roundups); Delray makes 0.53. | More sources per town: permits, police and fire feeds, property sales, schools, sports, more meeting platforms. Small towns, 84% of the list, need the most. |
 | **Shared data hosts** (1 request a second each) | The weather tile calls api.weather.gov 4 times every 15 minutes per town, which saturates it at ~225 towns. DBPR and Sunbiz state files are downloaded once per town. | Share weather by NWS grid point and zone, cache `/points` and refresh every 30 minutes. Ingest each state file once per state and fan it out to towns. Engineering, days. |
 | **Hosting** | The demo is on Vercel Hobby: 50 domains a project, 100 deployments a day. | Vercel Pro: 100,000 domains a project (soft limit). |
 | **Domains** | No registrant contact or Vercel token set yet. | Owner inputs. About $100–170k for 8,433 domains. |
@@ -43,17 +43,22 @@ By our tiers:
 
 ## The plan
 
-- **Pace:** ~250 launches a month (3,000 a year) until every town that passes readiness is live.
-- **Town economics:** a mature average town makes ~$18k a year and contributes ~$11k after its own costs, with payback in year 4. That's thinner than before, because most towns are small.
+- **Pace:** about 250 launches a month (3,000 a year) until every town is live, in FY2029.
+- **Readiness:** the owner's view is that every town in America can make 3 real items a day and that Rule 7 is a target, not a gate, so the base case counts every town. The launcher code still stops a launch below the bar; turning that into a target is a Section 2 change waiting on the owner's explicit go-ahead.
+- **Sales:** advertisers sign up and pay on the site, with no commission. A small partnerships team (1 person per 1,000 towns) handles regional and multi-town advertisers.
+- **Review:** article review becomes an AI agent (about $0.03 a story, inside the $0.15 AI cost per story). A small editorial standards team (1 per 1,000 towns) audits the agent and handles corrections. Until the agent ships, Tier 3 stories still need a person (Rule 5).
+- **Town economics:** a mature average town makes about $18k a year and contributes about $16k after its own costs, paying back in year 2.
 
-| Towns passing readiness | Towns | Launch years | FY2031 revenue | FY2031 EBITDA | Run-rate EBITDA | Equity needed |
-| --- | --- | --- | --- | --- | --- | --- |
-| 25% | 2,108 | FY2027 | $37.8M | $15.4M | $17.2M | $20.5M |
-| 50% | 4,217 | FY2027–28 | $72.0M | $33.1M | $40.1M | $33.4M |
-| 75% | 6,325 | FY2027–29 | $102.3M | $47.0M | $63.1M | $42.6M |
-| **100% (base: every town)** | **8,433** | **FY2027–29** | **$125.6M** | **$54.0M** | **$86.3M** | **$52.8M** |
+| Towns reaching the target | Towns | FY2031 revenue | FY2031 EBITDA | Run-rate EBITDA | Equity needed |
+| --- | --- | --- | --- | --- | --- |
+| 25% | 2,108 | $37.8M | $28.0M | $28.4M | $5.9M |
+| 50% | 4,217 | $72.0M | $58.0M | $62.6M | $7.7M |
+| 75% | 6,325 | $102.3M | $84.1M | $97.0M | $7.7M |
+| **100% (base: every town)** | **8,433** | **$125.6M** | **$103.1M** | **$131.7M** | **$7.7M** |
 
 **Base case:**
-- EBITDA turns positive in FY2030.
-- Raises of $25M (FY2027) and $35M (FY2028) keep cash positive throughout.
-- At 554 people in FY2031, most of the cost is editors, salespeople and support hired per town at ratios set for bigger towns. Sizing those by tier (fewer people for the small towns) is the biggest lever on the funding needed.
+- EBITDA is positive from FY2028.
+- A $10M raise in FY2027 covers the $7.7M low point with a buffer.
+- People: about 107 at the peak, mostly support (1 per 120 towns), with 8 on launch operations.
+
+**What the model is light on:** advertiser acquisition. Self-serve sales rely on the house ads and the $50k–700k a year of corporate marketing. If businesses don't sign up on their own, the fill rates in Assumptions (featured spots, Enhanced, newsletter and banner sell-through) are the numbers that drop.

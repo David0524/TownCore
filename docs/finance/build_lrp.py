@@ -168,9 +168,9 @@ single('addressable', 'US towns with more than 2,000 people', 8433, NUM,
        '(sub-est2025.csv): 7,683 incorporated places (SUMLEV 162; Florida 295) plus 750 New '
        'England towns (active county subdivisions with no place of their own).', unit='towns')
 single('ready_share', 'Share that pass readiness (Rule 7)', 1.0, PCT,
-       'Owner plan: every town. Rule 7 still stops a town below 3 real items a day (10 for large), '
-       'and today almost none pass: Boca makes about 0.8 a day, Delray 0.53. Reaching 100% needs '
-       'many more sources per town or a lower bar. Set lower to see the plan without that work.',
+       'Owner, 2026-10-17: every town in America can make 3 real items a day; Rule 7 is the target '
+       'we build sources toward. Today Boca makes about 0.8 a day and Delray 0.53, so the source work '
+       'continues. Set lower to see the plan if some towns stay short.',
        key=True)
 single('name_share', 'Share allowed by the naming rule', 1.0, PCT,
        'Owner, 2026-10-17: naming never stops a launch. 22 patterns; a neighbor\'s pattern is '
@@ -299,8 +299,9 @@ blank()
 # Direct costs
 section(A, row, 'Direct costs per town')
 row += 1
-single('ai_story', 'AI cost per published story', 0.12, USD2,
-       'Estimate for writer + separate fact-check calls; verify against current Anthropic pricing '
+single('ai_story', 'AI cost per published story', 0.15, USD2,
+       'Writer, separate fact-check and an AI review pass (owner: article review becomes an AI agent). '
+       'Measured ~$0.10 for writer + fact-check on repo pricing; verify against current Anthropic pricing '
        '(CLAUDE.md §8). Scaled by unit cost multiplier.', key=True, unit='$/story')
 single('ai_overhead', 'AI overhead per town per day', 0.50, USD2,
        'Classification, revisions, guides, entity extraction. Estimate.', unit='$/day')
@@ -330,20 +331,23 @@ section(A, row, 'People (fully loaded = salary x (1 + benefits load))')
 row += 1
 single('benefits', 'Benefits and payroll tax load', 0.25, PCT, 'Estimate.')
 single('raise', 'Annual salary increase', 0.03, PCT, 'Estimate.')
-single('commission', 'Sales commission on direct-sold revenue', 0.10, PCT,
-       'Paid on banners, newsletter and category sponsorships. Estimate.')
-single('per_reviewer', 'Towns per editorial reviewer', 40, NUM,
-       'Reviewers approve Tier 3 items and samples (§7). Estimate.', key=True, unit='towns')
-single('per_ae', 'Towns per local account executive', 30, NUM,
-       'Clustered towns share sales effort (§10a). Estimate.', key=True, unit='towns')
+single('commission', 'Sales commission on direct-sold revenue', 0.0, PCT,
+       'Owner: advertisers sign up and pay on the site; no commissioned sales force.')
+single('per_reviewer', 'Towns per editorial standards editor', 1000, NUM,
+       'Owner, 2026-10-17: article review becomes an AI agent once we trust it. A small team audits '
+       'the agent, handles corrections and reader reports. Until the agent ships, Tier 3 still needs '
+       'a person (Rule 5).', key=True, unit='towns')
+single('per_ae', 'Towns per advertiser partnerships manager', 1000, NUM,
+       'Owner, 2026-10-17: sales are self-serve on the site. A small team handles regional and '
+       'multi-town advertisers.', key=True, unit='towns')
 single('per_support', 'Towns per support and success rep', 120, NUM, 'Estimate.', unit='towns')
 blank()
 section(A, row, 'Base salaries (2027 $)')
 row += 1
 single('sal_lead', 'Leadership', 160000, USD, 'Estimate.', unit='$/year')
 single('sal_eng', 'Engineering', 170000, USD, 'Estimate.', unit='$/year')
-single('sal_rev', 'Editorial reviewer', 70000, USD, 'Estimate.', unit='$/year')
-single('sal_ae', 'Account executive (base)', 65000, USD, 'Estimate.', unit='$/year')
+single('sal_rev', 'Editorial standards and launch operations', 70000, USD, 'Estimate.', unit='$/year')
+single('sal_ae', 'Advertiser partnerships', 65000, USD, 'Estimate.', unit='$/year')
 single('sal_sup', 'Support and success', 55000, USD, 'Estimate.', unit='$/year')
 single('sal_ga', 'Finance, legal and operations', 110000, USD, 'Estimate.', unit='$/year')
 blank()
@@ -378,8 +382,8 @@ single('open_cash', 'Opening cash, start of FY2027', 250000, USD, 'Input: replac
 row += 1
 header(A, row, 'Fiscal year', YEARS)
 row += 1
-series('equity', 'Equity raised', [25000000, 35000000, 0, 0, 0], USD,
-       'Plan: $25M in FY2027 and $35M in FY2028, sized to the every-town launch pace with a buffer. Adjust to keep cash above zero.', key=True, unit='$')
+series('equity', 'Equity raised', [10000000, 0, 0, 0, 0], USD,
+       'Plan: $10M in FY2027, the ~$7.7M the every-town plan needs plus a buffer. Adjust to keep cash above zero.', key=True, unit='$')
 LAST_A = row
 
 # ----------------------------------------------------------------------------------------------
@@ -532,9 +536,9 @@ urow_add('gp', 'Gross profit per launched town', lambda c, i: f'={c}{UREF["rev"]
          bold=True)
 urow_add('gm', 'Gross margin', lambda c, i: f'=IF({c}{UREF["rev"]}=0,0,{c}{UREF["gp"]}/{c}{UREF["rev"]})', PCT)
 usec('Town-level people and acquisition costs ($)')
-urow_add('c_rev', 'Editorial review (share of a reviewer)',
+urow_add('c_rev', 'Editorial standards (share)',
          lambda c, i: f'={REF["sal_rev"]}*(1+{REF["benefits"]})/{REF["per_reviewer"]}*{c}{UREF["town_years"]}', USD)
-urow_add('c_ae', 'Local sales (share of an AE) + commission',
+urow_add('c_ae', 'Advertiser partnerships (share) + commission',
          lambda c, i: f'={REF["sal_ae"]}*(1+{REF["benefits"]})/{REF["per_ae"]}*{c}{UREF["town_years"]}+{c}{UREF["rev_direct"]}*{REF["commission"]}',
          USD)
 urow_add('c_sup', 'Support and success (share)',
@@ -615,8 +619,8 @@ roles = [
     ('lead', 'Leadership', 'fixed', 'hc_lead', 'sal_lead'),
     ('eng', 'Engineering and product', 'fixed', 'hc_eng', 'sal_eng'),
     ('ga', 'Finance, legal and operations', 'fixed', 'hc_ga', 'sal_ga'),
-    ('rev', 'Editorial reviewers', 'ratio', 'per_reviewer', 'sal_rev'),
-    ('ae', 'Account executives', 'ratio', 'per_ae', 'sal_ae'),
+    ('rev', 'Editorial standards', 'ratio', 'per_reviewer', 'sal_rev'),
+    ('ae', 'Advertiser partnerships', 'ratio', 'per_ae', 'sal_ae'),
     ('sup', 'Support and success', 'ratio', 'per_support', 'sal_sup'),
     ('ops', 'Launch operations', 'launch', 'per_launcher', 'sal_rev'),
 ]
@@ -717,8 +721,8 @@ crow_add('cogs', 'Total cost of revenue', lambda c, j: f'=SUM({c}{CREF["ai"]}:{c
 crow += 1
 section(C, crow, 'Operating expenses')
 crow += 1
-crow_add('p_editorial', 'Editorial review (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_rev"]}', font=F_LINK)
-crow_add('p_sales', 'Sales (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_ae"]}', font=F_LINK)
+crow_add('p_editorial', 'Editorial standards (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_rev"]}', font=F_LINK)
+crow_add('p_sales', 'Advertiser partnerships (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_ae"]}', font=F_LINK)
 crow_add('commission', 'Sales commission',
          lambda c, j: '=(' + cohort(UREF['rev_direct'], j)[1:] + f')*{REF["commission"]}')
 crow_add('p_support', 'Support and success (people)', lambda c, j: f'=Headcount!{c}{HREF["cost_sup"]}', font=F_LINK)
