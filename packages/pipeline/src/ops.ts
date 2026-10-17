@@ -17,6 +17,7 @@ import {
   workerHeartbeats,
   type Db,
 } from '@towncore/db';
+import { downSites } from './uptime';
 import { networkSpendSince, todaysUsage } from './llm';
 
 // Operations (CLAUDE.md §8, §12; docs/plans/M8.md). What the worker alerts staff about, beside
@@ -255,6 +256,14 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
       key: 'network_cap',
       severity: 'critical',
       message: `The network-wide AI cap is reached for today (${usd(spent)} of ${usd(networkAiCapUsd())}): no model calls until midnight UTC.`,
+    });
+
+  // A live site that fails its health check twice in a row (Admin → Analytics).
+  for (const site of await downSites(db, now))
+    out.push({
+      key: `site_down:${site.id}`,
+      severity: 'critical',
+      message: `${site.siteName} (${site.domain}) is down: ${site.why}`,
     });
 
   const [beat] = await db

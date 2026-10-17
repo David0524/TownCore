@@ -127,6 +127,7 @@ export {
   iosFonts,
   iosRadii,
   phoneSecondaryLabel,
+  statusColors,
   systemColors,
   type Category,
 } from './design';
@@ -254,8 +255,12 @@ export {
   EXPERIMENTS,
   FUNNEL_ADVICE,
   FUNNEL_FLOORS,
+  isPageKind,
   isReferralSource,
   isSignupPlacement,
+  MAX_ENGAGED_SECONDS,
+  PAGE_KINDS,
+  pageKindOf,
   placementOf,
   REFERRAL_SOURCES,
   resolveVariant,
@@ -264,6 +269,7 @@ export {
   type ExperimentKey,
   type ExperimentState,
   type ExperimentVariant,
+  type PageKind,
   type ReferralSource,
   type SignupPlacement,
 } from './audience';

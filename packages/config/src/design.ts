@@ -46,6 +46,17 @@ export const systemColors = {
   calendarText: '#FFFFFF',
 } as const;
 
+/**
+ * Staff pages only (Admin → Analytics): the site status light. Graphic marks beside a text label,
+ * never text and never color alone; each is at least 3:1 on white.
+ */
+export const statusColors = {
+  up: '#1E7F3A',
+  slow: '#A85F00',
+  down: '#C5221F',
+  unknown: '#6B7480',
+} as const;
+
 /** Dark-mode roles (built now, shipped later): near-black page, lifted tiles. */
 /**
  * Food tiles (owner, 2026-10-16: "add some color"): a soft tint and a deep ink per flavor of

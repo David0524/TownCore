@@ -3,8 +3,11 @@ import { Fetcher } from '@towncore/adapters';
 import { createDb, type Db } from '@towncore/db';
 import { runNewsletterTick } from '@towncore/email';
 import type { IdentityProvider } from '@towncore/mail';
+import { loadEnv } from '@towncore/config';
 import {
   autopostFacebook,
+  checkSites,
+  parseCheckUrls,
   providerFromEnv,
   queueFacebookPosts,
   resolveProviderName,
@@ -216,6 +219,14 @@ export async function startWorker({
   });
   await boss.work(queues.digest, async () => {
     await runDigest(db, opsDeps.alertMail, logger);
+  });
+
+  // Uptime (Admin → Analytics): every live site's /api/health; a site down twice in a row alerts.
+  const previews = parseCheckUrls(loadEnv().SITE_CHECK_URLS);
+  await boss.work(queues.siteChecks, async () => {
+    const results = await checkSites(db, { previews });
+    const down = results.filter((r) => !r.ok);
+    if (down.length) logger.warn({ down: down.map((r) => `${r.slug}: ${r.error}`) }, 'site checks');
   });
 
   for (const { queue, cron } of schedules) {

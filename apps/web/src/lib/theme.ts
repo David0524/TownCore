@@ -12,6 +12,7 @@ import {
   iosFonts,
   iosRadii,
   phoneSecondaryLabel,
+  statusColors,
   systemColors,
   defaultTheme,
   themeSchema,
@@ -181,6 +182,7 @@ export function networkCssVariables(): string {
     '--headline-weight': '700',
     '--radius': '4px',
     '--radius-tile': '4px',
+    ...Object.fromEntries(Object.entries(statusColors).map(([k, v]) => [`--status-${k}`, v])),
   };
   return css(':root', vars);
 }
