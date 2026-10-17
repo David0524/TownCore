@@ -26,7 +26,11 @@ long-range plan (`docs/finance/`), the launch limits (`docs/finance/launch-capac
    - Fetch forecasts once per NWS grid point, and alerts once per zone batch.
    - Refresh every 30 minutes.
    - Today: 4 calls per town every 15 minutes, which saturates api.weather.gov at ~225 towns.
-2. **State files once per state.** Download DBPR, Sunbiz and DOR files once per run and fan the rows out to every town in the state. Today each town downloads the same statewide file.
+2. **State files once per state. Built.**
+   - The Fetcher keeps one copy of each statewide file (`packages/adapters/src/http/shared-files.ts`), re-checked with a conditional GET after its window: 6 hours for DBPR, a week for a Sunbiz day file.
+   - Each town's source reads its own city's rows, with its own run record and health.
+   - 295 Florida towns: each file goes from 295 downloads a run to about 4 checks a day.
+   - The worker needs a few hundred MB of disk for the copies.
 3. **Batch launch.**
    - `pnpm launch --batch towns.csv` runs the steps for a list of approved towns.
    - The owner picks names from one combined report.

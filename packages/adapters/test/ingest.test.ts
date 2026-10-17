@@ -3,7 +3,9 @@ import { loadTowns } from '@towncore/config';
 import { eq, getTownBySlug, records, sourceRuns, sources, syncTowns, type Db } from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { Fetcher, FetchPolicyError } from '../src/http/fetcher';
+import { flDbprAdapter } from '../src/fl-dbpr';
+import { Fetcher, FetchPolicyError, type FetchFn } from '../src/http/fetcher';
+import { replayFetch } from '../src/http/fixtures';
 import { contentHash, ingestSource, listIngestableSources } from '../src/ingest';
 import { defaultSchedule, intervalMs, isDue } from '../src/schedule';
 import type { RawRecord, SourceAdapter } from '../src/types';
@@ -198,5 +200,51 @@ describe('NotModified', () => {
       items: 0,
     });
     expect(await reload(source.id)).toMatchObject({ health: 'ok', lastError: null });
+  });
+});
+
+describe('statewide files shared across towns (rollout Phase 1)', () => {
+  it('downloads once, and each source gets its own run, records and health', async () => {
+    const fixture = fileURLToPath(new URL('../fixtures/fl-dbpr/boca.json', import.meta.url));
+    const requests: string[] = [];
+    const replay = replayFetch(fixture);
+    const fetchImpl: FetchFn = async (url, init) => {
+      if (!url.endsWith('robots.txt')) requests.push(url);
+      return replay(url, init);
+    };
+    const shared = new Fetcher({ fetchImpl, sleep: async () => {}, minIntervalMs: 0 });
+    const make = async (city: string) => {
+      const [row] = await db
+        .insert(sources)
+        .values({
+          townId,
+          kind: 'business_filings',
+          platform: 'fl-dbpr',
+          adapter: 'fl-dbpr',
+          key: `business_filings:fl-dbpr:${city}`,
+          config: { city },
+        })
+        .returning();
+      return row!;
+    };
+    const boca = await make('BOCA RATON');
+    const jax = await make('JACKSONVILLE');
+    const now = new Date('2026-10-16T12:00:00Z');
+    const a = await ingestSource(db, boca, flDbprAdapter, shared, now);
+    const b = await ingestSource(db, jax, flDbprAdapter, shared, now);
+    expect(a.status).toBe('ok');
+    expect(b.status).toBe('ok');
+    // Two files, each downloaded once for both sources.
+    expect(requests).toHaveLength(2);
+    for (const s of [boca, jax]) {
+      const [row] = await db.select().from(sources).where(eq(sources.id, s.id));
+      expect(row!.health).toBe('ok');
+      expect(await db.select().from(sourceRuns).where(eq(sourceRuns.sourceId, s.id))).toHaveLength(
+        1,
+      );
+    }
+    const jaxRecords = await db.select().from(records).where(eq(records.sourceId, jax.id));
+    expect(jaxRecords.length).toBe(b.newItems);
+    expect(jaxRecords.every((r) => /JACKSONVILLE/.test(r.text ?? ''))).toBe(true);
   });
 });

@@ -45,18 +45,69 @@ describe('fl-dbpr adapter', () => {
     expect(electrician?.text).toMatch(/Electrical|Alarm|Specialty/);
   });
 
-  it('sends If-Modified-Since and reports an unchanged week as NotModified', async () => {
+  it('skips a file it already read as NotModified, and reads one that may be newer', async () => {
+    const fetchImpl: FetchFn = async (url) => {
+      if (url.endsWith('robots.txt')) return new Response('', { status: 404 });
+      return new Response('', { headers: { 'last-modified': 'Thu, 01 Oct 2026 00:00:00 GMT' } });
+    };
+    const shared = ctx(fetchImpl);
+    // Last run Oct. 10: the Oct. 1 files were read then.
+    await expect(
+      flDbprAdapter.fetch(source, new Date('2026-10-10T10:00:00Z'), shared),
+    ).rejects.toBeInstanceOf(NotModified);
+    // Last run within the 6-hour sharing window of that version: read again (dedupe keeps it).
+    expect(await flDbprAdapter.fetch(source, new Date('2026-10-01T03:00:00Z'), shared)).toEqual([]);
+  });
+
+  it('downloads each statewide file once for every town and gives each town its own rows', async () => {
+    const requests: string[] = [];
+    const replay = replayFetch(fixture);
+    const fetchImpl: FetchFn = async (url, init) => {
+      if (!url.endsWith('robots.txt')) requests.push(url);
+      return replay(url, init);
+    };
+    const shared = ctx(fetchImpl);
+    const boca = await flDbprAdapter.fetch(source, null, shared);
+    const jax = await flDbprAdapter.fetch(
+      { ...source, id: 'dbpr-jax', townId: 'jax', config: { city: 'Jacksonville' } },
+      null,
+      shared,
+    );
+    expect(requests.sort()).toEqual(
+      DEFAULT_FILES.map(
+        (f) => `https://www2.myfloridalicense.com/sto/file_download/extracts/${f}`,
+      ).sort(),
+    );
+    expect(boca.length).toBeGreaterThan(0);
+    expect(jax.length).toBeGreaterThan(0);
+    expect(boca.every((r) => /BOCA RATON/.test(r.text ?? ''))).toBe(true);
+    expect(jax.every((r) => /JACKSONVILLE/.test(r.text ?? ''))).toBe(true);
+  });
+
+  it('asks the server again once the sharing window ends, with If-Modified-Since', async () => {
+    let clock = 0;
     const seen: Array<string | null> = [];
     const fetchImpl: FetchFn = async (url, init) => {
       if (url.endsWith('robots.txt')) return new Response('', { status: 404 });
-      seen.push(new Headers(init?.headers).get('if-modified-since'));
-      return new Response(null, { status: 304 });
+      const since = new Headers(init?.headers).get('if-modified-since');
+      seen.push(since);
+      return since
+        ? new Response(null, { status: 304 })
+        : new Response('', { headers: { 'last-modified': 'Thu, 15 Oct 2026 10:48:12 GMT' } });
     };
-    const since = new Date('2026-10-10T10:00:00Z');
-    await expect(flDbprAdapter.fetch(source, since, ctx(fetchImpl))).rejects.toBeInstanceOf(
-      NotModified,
-    );
-    expect(seen).toEqual(DEFAULT_FILES.map(() => since.toUTCString()));
+    const fetcher = new Fetcher({
+      fetchImpl,
+      sleep: async () => {},
+      now: () => clock,
+      minIntervalMs: 0,
+    });
+    const shared = { fetcher, now: new Date() };
+    const one = { ...source, config: { city: 'Boca Raton', files: ['lic08el.csv'] } };
+    await flDbprAdapter.fetch(one, null, shared);
+    await flDbprAdapter.fetch(one, null, shared); // within the window: no request
+    clock = 7 * 3_600_000;
+    await flDbprAdapter.fetch(one, null, shared); // window over: a conditional GET, 304
+    expect(seen).toEqual([null, 'Thu, 15 Oct 2026 10:48:12 GMT']);
   });
 
   it('requires a city', async () => {
