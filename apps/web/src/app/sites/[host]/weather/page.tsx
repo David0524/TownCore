@@ -3,7 +3,8 @@ import { apDate } from '@towncore/pipeline';
 import { StandardPage } from '@/lib/pages';
 import { requireTown } from '@/lib/town';
 import { BeachSources, BeachTiles } from '@/components/weather/BeachTiles';
-import { townForecast, townWeather } from '@/modules/data';
+import { TropicsPanel } from '@/components/weather/TropicsPanel';
+import { townForecast, townTropics, townWeather } from '@/modules/data';
 import styles from './weather.module.css';
 import { THIN_PAGE } from '@/lib/indexing';
 
@@ -16,11 +17,16 @@ export const metadata: Metadata = {
 /**
  * The 7-day forecast (the quick-links bar's Weather), as the National Weather Service wrote it
  * for the town's forecast zone, with its source and time. Nothing invented: no forecast in the
- * last two days, no periods.
+ * last two days, no periods. Towns a hurricane basin can reach also get the National Hurricane
+ * Center's storms and outlook.
  */
 export default async function WeatherPage({ params }: { params: Promise<{ host: string }> }) {
   const town = await requireTown(params);
-  const [forecast, weather] = await Promise.all([townForecast(town.id), townWeather(town.id)]);
+  const [forecast, weather, tropics] = await Promise.all([
+    townForecast(town.id),
+    townWeather(town.id),
+    townTropics(town.state),
+  ]);
   const beach = weather?.kind === 'snapshot' ? weather.snapshot.beach : undefined;
   return (
     <StandardPage town={town}>
@@ -56,6 +62,7 @@ export default async function WeatherPage({ params }: { params: Promise<{ host: 
           <BeachSources beach={beach} />
         </section>
       ) : null}
+      {tropics ? <TropicsPanel town={town} tropics={tropics} /> : null}
     </StandardPage>
   );
 }

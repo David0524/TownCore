@@ -3,6 +3,8 @@ import {
   defaultTheme,
   themeSchema,
   townContactEmail,
+  tropicsBasin,
+  tropicsLine,
   type Palette,
   type TownConfig,
 } from '@towncore/config';
@@ -16,6 +18,7 @@ import {
   engagementByArticle,
   eq,
   getActiveCampaign,
+  getTropics,
   gt,
   gte,
   isNotNull,
@@ -29,6 +32,14 @@ import {
 import { rankArticles } from '@towncore/pipeline';
 import { selectIssueItems } from './select';
 import { issueWeather, type IssueWeather } from './weather';
+
+/** The Hurricane Center's line for the town's basin, when a storm is active or likely. */
+async function issueTropics(db: Db, town: Town, now: Date) {
+  const basin = tropicsBasin(town.state);
+  const snapshot = basin ? (await getTropics(db, basin, now))?.snapshot : null;
+  const line = snapshot ? tropicsLine(snapshot) : null;
+  return line ? { line, url: `https://${town.domain}/weather#tropics` } : null;
+}
 
 // Everything one issue needs, read from the database (docs/plans/M5.md "What an issue
 // contains"). Rendering is separate and pure.
@@ -192,7 +203,7 @@ export async function gatherIssue(db: Db, town: Town, now = new Date()): Promise
       dek: a.dek,
       beat: a.beat,
     })),
-    weather: issueWeather(forecast ?? null, alerts, now),
+    weather: issueWeather(forecast ?? null, alerts, now, await issueTropics(db, town, now)),
     meetings: meetings.flatMap((m) =>
       m.startsAt ? [{ title: m.title ?? 'Public meeting', url: m.url, startsAt: m.startsAt }] : [],
     ),

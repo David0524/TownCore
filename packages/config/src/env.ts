@@ -91,6 +91,7 @@ export const envSchema = z.object({
   /** YouTube Data API v3 key: finds town meeting videos to embed (packages/adapters/src/youtube). */
   YOUTUBE_API_KEY: optional(z.string()),
   SOCRATA_APP_TOKEN: optional(z.string()),
+  CENSUS_API_KEY: optional(z.string()),
   // Facebook page access tokens as JSON, {"<page id>": "<token>"} (owner, 2026-10-17). Only
   // used when staff press Post in Admin → Facebook; never committed.
   META_PAGE_TOKENS: optional(

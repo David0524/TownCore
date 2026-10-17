@@ -40,6 +40,7 @@ export { parseIcal, zonedTimeToUtc } from './lib/ical';
 export { flDbprAdapter } from './fl-dbpr';
 export { foodViolations } from './fl-dbpr/violations';
 export { usaspendingAdapter } from './usaspending';
+export { fetchTropics, outlookAreas, outlookParagraphs, parseTropics } from './nhc';
 export { flSunbizAdapter } from './fl-sunbiz';
 export {
   alertsForTown,

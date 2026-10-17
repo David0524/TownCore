@@ -1,12 +1,14 @@
 import {
   advanceSnapshot,
   snapshotCovers,
+  type TropicsBasin,
+  type TropicsSnapshot,
   type WeatherAlert,
   type WeatherSnapshot,
 } from '@towncore/config';
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import type { Db } from './client';
-import { townWeather } from './schema';
+import { tropics, townWeather } from './schema';
 
 /**
  * A snapshot older than this isn't shown, and neither is one whose hourly periods no longer reach
@@ -98,4 +100,35 @@ export async function saveTownWeatherAlerts(
     .update(townWeather)
     .set({ snapshot: { ...row.snapshot, alerts } })
     .where(eq(townWeather.townId, townId));
+}
+
+/** NHC's outlook comes out every 6 hours; a basin snapshot older than this isn't shown. */
+export const TROPICS_MAX_AGE_MS = 12 * 3_600_000;
+
+export async function saveTropics(
+  db: Db,
+  basin: TropicsBasin,
+  result: { snapshot: TropicsSnapshot } | { error: string },
+  now = new Date(),
+): Promise<void> {
+  const values =
+    'snapshot' in result
+      ? { snapshot: result.snapshot, fetchedAt: now, lastError: null, lastAttemptAt: now }
+      : { lastError: result.error.slice(0, 500), lastAttemptAt: now };
+  await db
+    .insert(tropics)
+    .values({ basin, ...values })
+    .onConflictDoUpdate({ target: tropics.basin, set: values });
+}
+
+/** A basin's latest snapshot if it is fresh enough to show, else null. */
+export async function getTropics(
+  db: Db,
+  basin: TropicsBasin,
+  now = new Date(),
+): Promise<{ snapshot: TropicsSnapshot; fetchedAt: Date } | null> {
+  const [row] = await db.select().from(tropics).where(eq(tropics.basin, basin));
+  if (!row?.snapshot || !row.fetchedAt) return null;
+  if (now.getTime() - row.fetchedAt.getTime() > TROPICS_MAX_AGE_MS) return null;
+  return { snapshot: row.snapshot, fetchedAt: row.fetchedAt };
 }

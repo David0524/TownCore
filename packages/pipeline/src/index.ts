@@ -156,6 +156,7 @@ export {
   refreshWeather,
   WEATHER_FORECAST_EVERY_MS,
   WEATHER_FORECASTS_PER_RUN,
+  refreshTropics,
   weatherTargets,
   type WeatherTarget,
 } from './weather-refresh';

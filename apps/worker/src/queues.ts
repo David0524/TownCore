@@ -11,6 +11,7 @@ export const queues = {
   mailTick: 'mail.tick',
   bulkHealth: 'mail.bulk-health',
   weather: 'weather.refresh',
+  tropics: 'weather.tropics',
   directorySeed: 'directory.seed',
   directoryGeocode: 'directory.geocode',
   proofReports: 'directory.proof-reports',
@@ -43,6 +44,9 @@ export const schedules = [
   { queue: queues.bulkHealth, cron: '*/15 * * * *' },
   // Every 15 minutes, refresh each town's Today weather tile from NWS (docs/plans/M4b.md).
   { queue: queues.weather, cron: '*/15 * * * *' },
+  // Hourly, the National Hurricane Center's storms and outlooks for every basin (two requests for
+  // the whole network; NHC asks feed readers to check "once an hour or so").
+  { queue: queues.tropics, cron: '11 * * * *' },
   // Every 5 minutes, build and send each town's daily issue once its local send time passes (M5).
   { queue: queues.newsletter, cron: '*/5 * * * *' },
   // Daily, rebuild each town's directory from its state license records (M6).
