@@ -34,6 +34,7 @@ import { llmTown } from './finder';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { uniqueSlug } from './publish';
 import {
+  federalAwardsRoundup,
   inspectionsRoundup,
   meetingsRoundup,
   newBusinessesRoundup,
@@ -290,6 +291,7 @@ const ROUNDUPS: Record<RoundupKind, typeof meetingsRoundup> = {
   sales: propertySalesRoundup,
   'new-places': newPlacesRoundup,
   roads: roadWorkRoundup,
+  federal: federalAwardsRoundup,
 };
 
 /** Builds a templated item; a roundup also gets the town's own past weeks to compare with. */

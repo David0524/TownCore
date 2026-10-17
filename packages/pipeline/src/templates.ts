@@ -44,7 +44,8 @@ export type RoundupKind =
   | 'permits'
   | 'sales'
   | 'inspections'
-  | 'roads';
+  | 'roads'
+  | 'federal';
 
 type TownInfo = { name: string; timezone: string; agency: string };
 
@@ -1343,5 +1344,121 @@ export function weatherAlert(town: TownInfo, record: TemplateRecord): TemplatedD
       .join('\n\n'),
     beat: 'community',
     sourceRecordIds: [record.id],
+  };
+}
+
+// --- Federal awards --------------------------------------------------------------------------
+
+/** Names that are clearly an organization; anything else may be a person and is never named. */
+const ORGANIZATION =
+  /\b(LLC|L\.L\.C|INC|INCORPORATED|CORP|CORPORATION|CO|COMPANY|LP|LLP|LTD|PLLC|PA|PC|GROUP|HOLDINGS|ENTERPRISES|PARTNERS|UNIVERSITY|COLLEGE|SCHOOL|ACADEMY|CITY|COUNTY|TOWN|VILLAGE|STATE|DISTRICT|AUTHORITY|BOARD|DEPARTMENT|FOUNDATION|ASSOCIATION|SOCIETY|INSTITUTE|HOSPITAL|CENTER|CENTRE|CLINIC|CHURCH|TRUST|FUND|COUNCIL|COALITION|NETWORK|SYSTEMS|SERVICES|SOLUTIONS|TECHNOLOGIES|TECHNOLOGY|LABS?|LABORATORIES|PHARMACEUTICALS|INTERNATIONAL|INDUSTRIES|MATERIALS)\b/i;
+
+const AWARD_KIND: Record<string, [string, string]> = {
+  contract: ['contract', 'contracts'],
+  grant: ['grant', 'grants'],
+};
+
+/** "DETENTION SERVICES IN …" → "Detention services in …", cut at a word near 90 characters. */
+const sentence = (s: string, max = 90) => {
+  const t = s.trim().toLowerCase();
+  const cut = t.length <= max ? t : `${t.slice(0, max).replace(/\s+\S*$/, '')}…`;
+  return cap(cut);
+};
+
+export function federalAwardRows(awards: TemplateRecord[]) {
+  return awards
+    .map((a) => ({
+      a,
+      recipient: labeled(a.text, /^recipient$/i) ?? a.title ?? '',
+      kind: labeled(a.text, /^award type$/i) ?? 'contract',
+      amount: Number(labeled(a.text, /^amount$/i) ?? NaN),
+      agency: labeled(a.text, /^agency$/i),
+      office: labeled(a.text, /^office$/i),
+      what: labeled(a.text, /^description$/i),
+      where: labeled(a.text, /^place of performance$/i),
+    }))
+    .filter((r) => Number.isFinite(r.amount) && r.amount > 0)
+    .map((r) => ({ ...r, named: ORGANIZATION.test(r.recipient) }));
+}
+
+/**
+ * New federal contracts and grants to recipients with a town address, last week (USASpending,
+ * every town). Built in code, Tier 1: companies, universities and governments by name, the
+ * agency and what the money is for. A recipient that may be a person is counted, never named.
+ */
+export function federalAwardsRoundup(
+  town: TownInfo,
+  weekStart: Date,
+  awards: TemplateRecord[],
+  past?: number[],
+): TemplatedDraft {
+  const range = weekRange(town, weekStart);
+  const rows = federalAwardRows(awards).sort(
+    (a, b) => b.amount - a.amount || a.recipient.localeCompare(b.recipient),
+  );
+  const named = rows.filter((r) => r.named);
+  const n = rows.length;
+  const thin = n <= THIN_WEEK;
+  const total = rows.reduce((sum, r) => sum + r.amount, 0);
+  const top = named[0];
+  const byAgency = ranked(tally(rows, (r) => r.agency));
+  const kinds = ranked(tally(rows, (r) => r.kind)).map(([k, c]) =>
+    count(c, ...(AWARD_KIND[k] ?? [k, `${k}s`])),
+  );
+  const recipients = ranked(tally(named, (r) => titleCase(r.recipient)));
+  const repeat = recipients[0] && recipients[0][1] > 1 ? recipients[0] : null;
+  const elsewhere = named.filter((r) => r.where && r.where !== 'FL');
+  const describe = (r: (typeof rows)[number]) =>
+    [
+      usd(r.amount),
+      r.office && r.office !== r.agency
+        ? `from ${md(r.office)}`
+        : r.agency
+          ? `from the ${md(r.agency)}`
+          : null,
+      r.what ? `for ${md(sentence(r.what).replace(/^./, (c) => c.toLowerCase()))}` : null,
+      r.where && r.where !== 'FL' ? `(work in ${r.where})` : null,
+    ]
+      .filter(Boolean)
+      .join(' ');
+  const where = `with a ${town.name} address`;
+  return {
+    headline: top
+      ? `${titleCase(top.recipient)} gets ${usd(top.amount)} federal ${AWARD_KIND[top.kind]?.[0] ?? 'award'}, the largest of ${count(n, 'award', 'awards')} to recipients ${where}`
+      : `${count(n, 'federal award', 'federal awards')} to recipients ${where}, ${range}`,
+    dek: `${count(n, 'new federal award', 'new federal awards')} worth ${usd(total)}, ${range}.`,
+    bodyMd: roundupBody({
+      thin,
+      lede: [
+        `Federal agencies made ${list(kinds)} worth ${usd(total)} in all to recipients ${where}.`,
+        trendSentence(n, past),
+        byAgency.length > 1
+          ? `The ${md(byAgency[0]![0])} made the most, ${byAgency[0]![1]}.`
+          : null,
+        repeat ? `${md(repeat[0])} received ${numWord(repeat[1])} of them.` : null,
+      ],
+      highlights: [
+        ...named
+          .slice(0, 4)
+          .map((r) => `**${linked(md(titleCase(r.recipient)), r.a.url)}**: ${describe(r)}.`),
+        elsewhere.length
+          ? `${cap(count(elsewhere.length, 'award is', 'awards are'))} for work outside Florida.`
+          : null,
+      ].filter((h): h is string => h !== null),
+      dataTitle: `All ${count(n, 'award', 'awards')}, largest first`,
+      data: dataTable({
+        head: ['Recipient', 'Agency', 'Amount', 'Type', 'For'],
+        rows: rows.map((r) => [
+          r.named ? linked(md(titleCase(r.recipient)), r.a.url) : 'Not named (may be a person)',
+          md(r.office ?? r.agency ?? ''),
+          usd(r.amount),
+          r.kind,
+          r.what ? md(sentence(r.what, 70)) : '',
+        ]),
+        noun: ['award', 'awards'],
+      }),
+    }),
+    beat: 'business',
+    sourceRecordIds: rows.map((r) => r.a.id),
   };
 }

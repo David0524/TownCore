@@ -1,0 +1,73 @@
+{
+  "_note": "Research sample, 2026-10-17. City of Boca Raton self-hosted ArcGIS Server (robots.txt 404, no rules), Development/InfrastructureAlerts MapServer. Layers: 0 Proposed (30 rows), 1 Approved_Not_Built (62), 2 Under Construction (39), 3 Completed (12). Request: GET https://bocagis.ci.boca-raton.fl.us/gisweb/rest/services/Development/InfrastructureAlerts/MapServer/0/query?where=1=1&outFields=OBJECTID,PROJECT,FULLADDR,LOCATION,DESCRIPTION,PROP_USE,ZONING,CASE_FILE_NUM,TYPE,UNITS,BUILD_HEIGHT,COST,STATUS,LASTUPDATE,CRA&orderByFields=LASTUPDATE DESC&returnGeometry=false&resultRecordCount=4&f=json. LASTUPDATE is empty, so change detection needs a content hash.",
+  "features": [
+    {
+      "OBJECTID": 3272,
+      "PROJECT": "Redlhammer Subdiv Lot 21A & Lot 22A",
+      "FULLADDR": "2600 North Ocean Boulevard",
+      "LOCATION": null,
+      "DESCRIPTION": "Amendment to Coastal Construction Control Line variance application to modify prior submittal and authorize the construction of a 4-story, 9,724 square foot single\u0002family home on a 0.42-acre parcel.",
+      "PROP_USE": "0000 - VACANT ",
+      "ZONING": "R-3-F",
+      "CASE_FILE_NUM": "SC-16-08 / 16-30000009",
+      "TYPE": "Residential",
+      "UNITS": "1 Units",
+      "BUILD_HEIGHT": null,
+      "COST": null,
+      "STATUS": "Closed",
+      "LASTUPDATE": null,
+      "CRA": "NO"
+    },
+    {
+      "OBJECTID": 6567,
+      "PROJECT": "Concierge Living Facility",
+      "FULLADDR": "22 Southeast 6th Street",
+      "LOCATION": null,
+      "DESCRIPTION": "Request for an (IDA) amending CRP-17-01R1 to i) changed from a 88 unit adult congregate living facility to a 42-unit multifamily residential building totaling 124,288 square feet.",
+      "PROP_USE": null,
+      "ZONING": "DDRI",
+      "CASE_FILE_NUM": "CRP-17-01R2/2023-00010",
+      "TYPE": "Residential",
+      "UNITS": "42 Units",
+      "BUILD_HEIGHT": "112 Feet",
+      "COST": null,
+      "STATUS": "In Process",
+      "LASTUPDATE": null,
+      "CRA": "YES"
+    },
+    {
+      "OBJECTID": 13471,
+      "PROJECT": "Briskel Pointe",
+      "FULLADDR": "6800 North Federal Highway",
+      "LOCATION": null,
+      "DESCRIPTION": "Request to construct a 20-dwelling unit residential project of 16, 2-story duplex units and 4 2-story quadplex units, with a FLUM amendment from C to RM, and rezoning from the R-B-1 to R-3.",
+      "PROP_USE": "1000 - VACANT COMMERCIAL",
+      "ZONING": "R-B-1",
+      "CASE_FILE_NUM": "UC-23-02 SC/ZC/PD/SPA/AB\r\nPZCPM-2023-00006",
+      "TYPE": "Vacant",
+      "UNITS": "20",
+      "BUILD_HEIGHT": null,
+      "COST": null,
+      "STATUS": "In Process",
+      "LASTUPDATE": null,
+      "CRA": "NO"
+    },
+    {
+      "OBJECTID": 13473,
+      "PROJECT": "Mizner Plaza",
+      "FULLADDR": "132/170/190 NE 2nd Street",
+      "LOCATION": null,
+      "DESCRIPTION": "Consideration of an IDA to redevelop the 1.67 acres property and construct a 12-story, 242-room hotel and 34,300 sf Retail (High) (consisting of restaurant and retail use) in 2 towers.",
+      "PROP_USE": "N/A",
+      "ZONING": "DDRI",
+      "CASE_FILE_NUM": "IDA",
+      "TYPE": "Plaza",
+      "UNITS": "242 Rooms",
+      "BUILD_HEIGHT": "160'",
+      "COST": null,
+      "STATUS": "In Process",
+      "LASTUPDATE": null,
+      "CRA": "YES"
+    }
+  ]
+}

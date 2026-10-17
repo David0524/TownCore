@@ -13,6 +13,7 @@ import { pdfListAdapter } from './pdf-list';
 import { readerAdapter } from './reader';
 import { registerAdapter, getAdapter } from './registry';
 import { socrataAdapter } from './socrata';
+import { usaspendingAdapter } from './usaspending';
 import { youtubeAdapter } from './youtube';
 
 for (const adapter of [
@@ -29,6 +30,7 @@ for (const adapter of [
   arcgisAdapter,
   readerAdapter,
   pdfListAdapter,
+  usaspendingAdapter,
   // Last: the generic fallback for any RSS, Atom or iCalendar feed.
   feedAdapter,
 ]) {

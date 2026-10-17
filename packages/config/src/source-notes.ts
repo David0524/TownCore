@@ -63,6 +63,12 @@ const DESCRIPTIONS: Record<string, SourceDescription> = {
     dataset: 'building permits',
     about: "Permits from the local government's open data. Costs are the applicants' estimates.",
   },
+  'usaspending:federal-award': {
+    publisher: 'USASpending.gov (U.S. Treasury)',
+    dataset: 'federal awards',
+    about:
+      "New federal contracts and grants. The recipient's address is its mailing address, and the work can be done anywhere; amounts are what the government obligated, which can grow later. Defense contracts appear 90 days late.",
+  },
   'road-work': {
     dataset: 'road and bridge construction list',
     about: "The county's list of planned work. Dates and lane closures can change.",

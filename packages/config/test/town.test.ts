@@ -42,6 +42,10 @@ describe('town config', () => {
       // The city's event calendars (community events, the Explorium, Gumbo Limbo, …).
       ...Array<string>(10).fill('events/civicplus'),
       'city_news/civicplus',
+      // Police and fire releases from their News Flash list pages.
+      'police/civicplus',
+      'fire/civicplus',
+      'federal_awards/usaspending',
       'business_filings/fl-dbpr',
       'business_filings/fl-dbpr',
       'business_filings/fl-dbpr',

@@ -1,0 +1,23 @@
+{
+  "_note": "Research sample, 2026-10-17. Hand-copied from https://www.eia.gov/dnav/pet/pet_pri_gnd_dcus_sfl_w.htm (no key). Dollars per gallon including taxes. API v2 equivalent: series EMM_EPMR_PTE_SFL_DPG (Florida regular), EMM_EPMR_PTE_YMIA_DPG (Miami regular), EMM_EPMR_PTE_R1Z_DPG (Lower Atlantic PADD 1C regular).",
+  "area": "Florida",
+  "weeks": ["2026-09-07", "2026-09-14", "2026-09-21", "2026-09-28", "2026-10-05", "2026-10-12"],
+  "series": {
+    "EMM_EPM0_PTE_SFL_DPG": {
+      "name": "Gasoline, all grades",
+      "values": [3.962, 4.2, 4.317, 4.383, 4.075, 4.084]
+    },
+    "EMM_EPMR_PTE_SFL_DPG": {
+      "name": "Regular",
+      "values": [3.86, 4.102, 4.217, 4.282, 3.97, 3.982]
+    },
+    "EMM_EPMM_PTE_SFL_DPG": {
+      "name": "Midgrade",
+      "values": [4.336, 4.557, 4.683, 4.75, 4.449, 4.442]
+    },
+    "EMM_EPMP_PTE_SFL_DPG": {
+      "name": "Premium",
+      "values": [4.649, 4.864, 4.983, 5.066, 4.784, 4.778]
+    }
+  }
+}
