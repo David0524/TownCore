@@ -52,7 +52,7 @@ const byTime = (a: TemplateRecord, b: TemplateRecord) =>
   (a.occurredAt?.getTime() ?? 0) - (b.occurredAt?.getTime() ?? 0);
 
 // Markdown-escape text that came from a record (names can contain * _ [ ] |).
-const md = (s: string) => s.replace(/([\\*_[\]`<>|])/g, '\\$1');
+export const md = (s: string) => s.replace(/([\\*_[\]`<>|])/g, '\\$1');
 
 /** "Oct. 5–11", or "Sept. 28–Oct. 4" across a month end. */
 export function dayRange(from: Date, to: Date, timeZone: string): string {
@@ -66,22 +66,22 @@ export function dayRange(from: Date, to: Date, timeZone: string): string {
 const weekRange = (town: TownInfo, weekStart: Date) =>
   dayRange(weekStart, new Date(weekStart.getTime() + 6 * 86_400_000), town.timezone);
 
-const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+export const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
 
 /** "a, b and c". */
-const list = (items: string[]) =>
+export const list = (items: string[]) =>
   items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
 
 /** "3 limited liability companies": a count with its noun, singular or plural. */
-const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+export const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
 /** AP style: one to nine in words, 10 and up in figures. */
-const numWord = (n: number) => (n >= 0 && n < 10 ? WORDS[n]! : String(n));
+export const numWord = (n: number) => (n >= 0 && n < 10 ? WORDS[n]! : String(n));
 /** "a brewery", "two dental practices", "12 shops". */
 const counted = (n: number, [one, many]: readonly [string, string]) =>
   n === 1 ? `${/^[aeiou]/i.test(one) ? 'an' : 'a'} ${one}` : `${numWord(n)} ${many}`;
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** "2 other businesses", "one other business". */
 const others = (n: number, one: string, many: string) =>
   `${numWord(n)} other ${n === 1 ? one : many}`;
@@ -664,13 +664,19 @@ type NewFood = {
 };
 type NewLiquor = { business?: string; sells?: string; street?: string; activityDate?: string };
 
-type Place = { name: string; street: string; notes: string[]; kinds: string[]; ids: string[] };
+export type Place = {
+  name: string;
+  street: string;
+  notes: string[];
+  kinds: string[];
+  ids: string[];
+};
 
 /**
  * New places from new food service and liquor licenses, one per place (a place's food and liquor
  * licenses merge). Named by trade name, or the license holder only when that is a company.
  */
-function newPlaces(items: TemplateRecord[]): Place[] {
+export function newPlaces(items: TemplateRecord[]): Place[] {
   const places = new Map<string, Place>();
   const add = (name: string, street: string, note: string, kind: string, id: string) => {
     const key = `${name.toUpperCase().replace(/[^A-Z0-9]/g, '')}|${street.toUpperCase().slice(0, 12)}`;
@@ -797,7 +803,7 @@ export function newPlacesRoundup(
 
 // --- Restaurant inspections ------------------------------------------------------------------
 
-type Inspection = {
+export type Inspection = {
   licenseNumber?: string;
   business?: string;
   address?: string;
@@ -809,7 +815,7 @@ type Inspection = {
   severity?: 'closure' | 'complaint' | 'warning' | 'ok';
 };
 
-const SEVERITY_RANK = { ok: 0, warning: 1, complaint: 2, closure: 3 } as const;
+export const SEVERITY_RANK = { ok: 0, warning: 1, complaint: 2, closure: 3 } as const;
 const RESULT_WORDS = {
   closure: 'Ordered closed',
   complaint: 'Complaint recommended',
@@ -825,20 +831,24 @@ export function hasInspectionFailures(raws: unknown[]): boolean {
   });
 }
 
-const INSPECTIONS_PAGE = 'https://www2.myfloridalicense.com/hotels-restaurants/public-records/';
+export const INSPECTIONS_PAGE =
+  'https://www2.myfloridalicense.com/hotels-restaurants/public-records/';
 
 /** MM/DD/YYYY sort key. */
-const mdy = (d: string | undefined) => (d ?? '').replace(/^(\d{2})\/(\d{2})\/(\d{4})$/, '$3$1$2');
+export const mdy = (d: string | undefined) =>
+  (d ?? '').replace(/^(\d{2})\/(\d{2})\/(\d{4})$/, '$3$1$2');
 
 /** Inspection visits grouped by establishment, each judged by its most serious visit. */
-function inspectedPlaces(inspections: TemplateRecord[]) {
+export function inspectedPlaces(inspections: TemplateRecord[]) {
   const groups = new Map<string, Inspection[]>();
+  const ids = new Map<string, string[]>();
   for (const r of inspections) {
     const raw = (r.raw ?? {}) as Inspection;
     const key = raw.licenseNumber || raw.business || r.id;
     groups.set(key, [...(groups.get(key) ?? []), raw]);
+    ids.set(key, [...(ids.get(key) ?? []), r.id]);
   }
-  return [...groups.values()].map((visits) => {
+  return [...groups].map(([key, visits]) => {
     const sorted = [...visits].sort((a, b) => mdy(a.date).localeCompare(mdy(b.date)));
     const worst = sorted.reduce((w, v) =>
       SEVERITY_RANK[v.severity ?? 'ok'] > SEVERITY_RANK[w.severity ?? 'ok'] ? v : w,
@@ -851,7 +861,14 @@ function inspectedPlaces(inspections: TemplateRecord[]) {
       mdy(latest.date) > mdy(worst.date)
         ? latest.date
         : null;
-    return { name: titleCase(worst.business ?? ''), worst, fixedLater };
+    return {
+      key,
+      name: titleCase(worst.business ?? ''),
+      worst,
+      latest,
+      fixedLater,
+      ids: ids.get(key)!,
+    };
   });
 }
 
@@ -962,18 +979,32 @@ export function inspectionsRoundup(
 // --- Permits ---------------------------------------------------------------------------------
 
 /** A "Label: value" line from an open-data record's text (lib/rows in the adapters). */
-const labeled = (text: string | null, label: RegExp) =>
+export const labeled = (text: string | null, label: RegExp) =>
   (text ?? '')
     .split('\n')
     .map((l) => /^([^:]+): (.*)$/.exec(l))
     .find((m) => m && label.test(m[1]!))?.[2] ?? null;
 
-const money = (value: string | null) => {
+export const money = (value: string | null) => {
   const n = value ? Number(value.replace(/[$,]/g, '')) : NaN;
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
-const linked = (text: string, url: string | null) => (url ? `[${text}](${url})` : text);
+export const linked = (text: string, url: string | null) => (url ? `[${text}](${url})` : text);
+
+/** Permits with the fields the roundup and spotlights read. */
+export function permitRows(permits: TemplateRecord[]) {
+  return permits.map((p) => ({
+    p,
+    title: titleCase(p.title ?? 'Permit'),
+    type: labeled(p.text, /^(type|permit type|application type)$/i),
+    cost: money(labeled(p.text, /cost|valuation|value/i)),
+    contractor: labeled(p.text, /^contractor/i),
+    work: labeled(p.text, /^(work|description)$/i),
+    address: labeled(p.text, /^address$/i),
+    status: labeled(p.text, /^status$/i),
+  }));
+}
 
 /**
  * Last week's permits from a city or county open-data source (Socrata or ArcGIS), any town:
@@ -987,13 +1018,7 @@ export function permitsRoundup(
   past?: number[],
 ): TemplatedDraft {
   const range = weekRange(town, weekStart);
-  const rows = permits.map((p) => ({
-    p,
-    title: titleCase(p.title ?? 'Permit'),
-    type: labeled(p.text, /^(type|permit type|application type)$/i),
-    cost: money(labeled(p.text, /cost|valuation|value/i)),
-    contractor: labeled(p.text, /^contractor/i),
-  }));
+  const rows = permitRows(permits);
   const byCost = [...rows].sort(
     (a, b) => (b.cost ?? 0) - (a.cost ?? 0) || a.title.localeCompare(b.title),
   );
@@ -1057,19 +1082,19 @@ const USE_WORDS: Record<string, [string, string]> = {
   VACANT: ['vacant lot', 'vacant lots'],
   'MOBILE HOME/MANUFACTURED HOME': ['mobile home', 'mobile homes'],
 };
-const useWords = (use: string | null): [string, string] =>
+export const useWords = (use: string | null): [string, string] =>
   USE_WORDS[(use ?? '').toUpperCase()] ?? [
     (use ? titleCase(use) : 'other property').toLowerCase(),
     `${(use ? titleCase(use) : 'other property').toLowerCase()} sales`,
   ];
 
-const medianOf = (values: number[]) => {
+export const medianOf = (values: number[]) => {
   const v = [...values].sort((a, b) => a - b);
   if (!v.length) return 0;
   return v.length % 2 ? v[(v.length - 1) / 2]! : (v[v.length / 2 - 1]! + v[v.length / 2]!) / 2;
 };
 
-function saleRows(sales: TemplateRecord[], timeZone: string) {
+export function saleRows(sales: TemplateRecord[], timeZone: string) {
   return sales
     .map((s) => ({
       s,
@@ -1077,6 +1102,7 @@ function saleRows(sales: TemplateRecord[], timeZone: string) {
       price: money(labeled(s.text, /^price$/i)),
       use: labeled(s.text, /^use$/i),
       day: saleDay(labeled(s.text, /^sale date$/i), timeZone),
+      subdivision: labeled(s.text, /^subdivision$/i),
     }))
     .filter((r) => r.price !== null && r.address);
 }

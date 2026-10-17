@@ -31,6 +31,7 @@ import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
 import { MIN_SOURCE_CHARS, scoreCandidate, titleSimilarity } from './scoring';
 import { createGuideCandidates } from './guides';
 import { roundupWeekRecords, townRecords } from './roundup-weeks';
+import { inspectionSpotlights, permitSpotlights, type Spotlight } from './spotlights';
 import { hasInspectionFailures, isNewsworthyAlert } from './templates';
 import { cannotBeArticle, decideTier } from './tiers';
 import { isoLocalDate, localDate, localWeekStart, startOfLocalDay } from './time';
@@ -61,6 +62,8 @@ type SkipReason = (typeof skippedCandidates.$inferInsert)['reason'];
 
 export type FinderReport = {
   roundups: string[];
+  /** Single-place stories from standout records (spotlights.ts). */
+  spotlights: string[];
   templates: number;
   /** Follow-up notes queued for published stories. */
   updates: number;
@@ -86,6 +89,7 @@ export async function runStoryFinder(
   const config = town.config as TownConfig;
   const report: FinderReport = {
     roundups: [],
+    spotlights: [],
     templates: 0,
     updates: 0,
     candidates: 0,
@@ -235,6 +239,7 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
       recordIds: permits.map((r) => r.id),
       now,
     });
+    await spotlights(db, town, report, week, permitSpotlights(permits), now);
     // Road work (owner, 2026-10-17): a county's weekly list, issued for the coming days, so this
     // rounds up the list issued this week as soon as it's ingested.
     const roadsWeek = localWeekStart(now, tz);
@@ -270,6 +275,7 @@ async function createRoundups(db: Db, town: TownRow, now: Date, report: FinderRe
         ? { tier: 3, tierReason: 'names businesses with failed inspections (§7 Tier 3)' }
         : {}),
     });
+    await spotlights(db, town, report, week, inspectionSpotlights(inspections), now);
   }
 }
 
@@ -306,6 +312,39 @@ async function roundup(
     acceptedAt: item.now,
   });
   if (id) report.roundups.push(item.key);
+}
+
+/**
+ * Single-place stories from the week's standout records (spotlights.ts), each its own templated
+ * item keyed `spotlight:<kind>:<week>:<id>`, so a re-run never doubles one.
+ */
+async function spotlights(
+  db: Db,
+  town: TownRow,
+  report: FinderReport,
+  week: string,
+  items: Spotlight[],
+  now: Date,
+) {
+  for (const item of items) {
+    const key = `spotlight:${item.kind}:${week}:${item.id}`;
+    const id = await insertCandidate(db, {
+      townId: town.id,
+      kind: 'template',
+      key,
+      title: item.title,
+      beat: item.kind === 'permit' ? 'development' : 'business',
+      recordIds: item.recordIds,
+      proposedTier: item.tier,
+      tierReasons: [
+        'spotlight built in code from public records',
+        ...(item.tier === 3 ? ['names a business with inspection problems (§7 Tier 3)'] : []),
+      ],
+      status: 'accepted',
+      acceptedAt: now,
+    });
+    if (id) report.spotlights.push(key);
+  }
 }
 
 async function createAlertItems(db: Db, town: TownRow, now: Date, report: FinderReport) {

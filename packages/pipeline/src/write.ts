@@ -1,12 +1,17 @@
 import { tier2ReviewSample, type SourceKind, type TownConfig } from '@towncore/config';
 import {
+  and,
   articles,
   articleUpdates,
+  desc,
   eq,
+  gte,
+  lt,
   pins,
   inArray,
   records,
   sources,
+  sql,
   storyCandidates,
   towns,
   type Db,
@@ -41,7 +46,13 @@ import {
   type RoundupKind,
   type TemplatedDraft,
 } from './templates';
-import { pastWeekCounts } from './roundup-weeks';
+import { pastWeekCounts, roundupWeekRecords } from './roundup-weeks';
+import {
+  inspectionSpotlight,
+  permitSpotlight,
+  SPOTLIGHT_ROUNDUP,
+  type SpotlightKind,
+} from './spotlights';
 import { decideTier, type Tier } from './tiers';
 import { localWeekStart } from './time';
 
@@ -110,11 +121,12 @@ export async function writeCandidate(
       baseTier: candidate.proposedTier as Tier,
     });
     const isAlert = candidate.key.startsWith('alert:');
+    const isSpotlight = candidate.key.startsWith('spotlight:');
     return saveArticle(db, {
       candidateId,
       town: town!,
       draft,
-      kind: isAlert ? 'alert' : 'roundup',
+      kind: isAlert ? 'alert' : isSpotlight ? 'story' : 'roundup',
       pin: isAlert ? severeWeatherPin(rows[0]?.record.raw, now) : null,
       tier: tier.tier,
       tierReasons: [...(candidate.tierReasons ?? []), ...tier.reasons],
@@ -298,7 +310,35 @@ export async function buildTemplate(
     return ROUNDUPS[k](info, weekStart, recs, past);
   }
   if (prefix === 'alert' && recs[0]) return weatherAlert(info, recs[0]);
+  if (prefix === 'spotlight' && kind && week && kind in SPOTLIGHT_ROUNDUP && recs[0]) {
+    const k = kind as SpotlightKind;
+    const weekStart = localWeekStart(new Date(`${week}T12:00:00Z`), town.timezone);
+    const weekRecs = await roundupWeekRecords(db, town, SPOTLIGHT_ROUNDUP[k], weekStart);
+    if (k === 'inspection') {
+      const license = key.split(':').slice(3).join(':');
+      const history = await inspectionHistory(db, town.id, license, weekStart);
+      return inspectionSpotlight(info, recs, history);
+    }
+    return permitSpotlight(info, recs[0], weekRecs);
+  }
   return null;
+}
+
+/** An establishment's inspections in the year before the spotlight's week, newest first. */
+async function inspectionHistory(db: Db, townId: string, license: string, before: Date) {
+  return db
+    .select()
+    .from(records)
+    .where(
+      and(
+        eq(records.townId, townId),
+        eq(records.type, 'inspection'),
+        sql`${records.raw}->>'licenseNumber' = ${license}`,
+        gte(records.occurredAt, new Date(before.getTime() - 365 * 86_400_000)),
+        lt(records.occurredAt, before),
+      ),
+    )
+    .orderBy(desc(records.occurredAt));
 }
 
 async function saveArticle(
