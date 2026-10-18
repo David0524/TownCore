@@ -97,8 +97,10 @@
   margin: 0 0 1.5rem;
 }
 
+/* A chart scales with its width, so one alone in a row stays the size of a pair's. */
 .chart {
   margin: 0;
+  max-width: 40rem;
 }
 
 .chart svg {
