@@ -123,6 +123,7 @@ export {
   cspFor,
   hasRemoteImages,
   messageDocument,
+  messageFrameHeight,
   rewriteCidImages,
   type RenderOptions,
 } from './inbox/render';

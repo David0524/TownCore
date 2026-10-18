@@ -38,6 +38,24 @@
   padding: 1.5rem var(--gutter) 3rem;
 }
 
+/* The admin uses the full page width for its tables and dashboards; the town sites' reading
+   measure on <main> (globals.css) is for articles, not admin screens. Running text and form
+   fields keep a readable width. */
+.page :global(main) {
+  max-width: none;
+}
+
+.page :global(main) > p,
+.page
+  :global(main)
+  :is(
+    textarea,
+    select,
+    input:not([type='checkbox'], [type='radio'], [type='submit'], [type='hidden'])
+  ) {
+  max-width: var(--measure);
+}
+
 .muted {
   color: var(--muted);
   font-size: 0.9375rem;
@@ -247,6 +265,7 @@
 }
 
 .message {
+  max-width: 48rem;
   border: 1px solid var(--surface);
   border-radius: var(--radius);
   margin: 1rem 0;

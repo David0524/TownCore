@@ -22,7 +22,13 @@ import {
   setThreadStatus,
 } from '../src/inbox/actions';
 import { getThread, listThreads, markRead, unreadCount } from '../src/inbox/queries';
-import { cspFor, hasRemoteImages, messageDocument, rewriteCidImages } from '../src/inbox/render';
+import {
+  cspFor,
+  hasRemoteImages,
+  messageDocument,
+  messageFrameHeight,
+  rewriteCidImages,
+} from '../src/inbox/render';
 import { signAttachment, verifyAttachment } from '../src/inbox/tokens';
 
 let db: Db;
@@ -304,6 +310,19 @@ describe('message rendering', () => {
     expect(doc).toContain('<meta name="referrer" content="no-referrer">');
     expect(doc).toContain('<base target="_blank">');
     expect(doc).toContain('<body><p>Hi</p></body>');
+  });
+
+  it('sizes the frame to the message: short notes stay short, long or table mail gets the most', () => {
+    const short = messageFrameHeight('<p>Great, I just sent the claim request. Thanks!</p>');
+    expect(short).toBeLessThan(120);
+    const reply = messageFrameHeight(
+      `<p>${'word '.repeat(60)}</p><p>David<br>Boca Town Square</p>`,
+    );
+    expect(reply).toBeGreaterThan(short);
+    expect(reply).toBeLessThan(250);
+    expect(messageFrameHeight(`<p>${'long line of text '.repeat(400)}</p>`)).toBe(720);
+    expect(messageFrameHeight('<table><tr><td>Newsletter</td></tr></table>')).toBe(720);
+    expect(messageFrameHeight('<p>Photo</p><img src="cid:a">')).toBeGreaterThan(240);
   });
 
   it('detects remote images', () => {

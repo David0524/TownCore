@@ -5,6 +5,7 @@ import {
   inboxFacets,
   markRead,
   messageDocument,
+  messageFrameHeight,
   parseAddress,
   pickSignature,
   renderSignature,
@@ -248,6 +249,7 @@ export default async function Conversation({ params, searchParams }: Props) {
                 ) : null}
                 <iframe
                   className={styles.messageFrame}
+                  style={{ height: messageFrameHeight(m.htmlBodySanitized) }}
                   title={`Message from ${m.fromAddress}`}
                   sandbox="allow-popups allow-popups-to-escape-sandbox"
                   referrerPolicy="no-referrer"
