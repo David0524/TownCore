@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../../admin.module.css';
+import { Pill } from '../../Pill';
 import { unsubscribeAction } from '../bulk-actions';
 
 export const metadata = { title: 'Subscribers' };
@@ -43,7 +44,20 @@ export default async function Subscribers({ searchParams }: Props) {
   const count = Object.fromEntries(counts.map((c) => [c.status, c.n]));
   return (
     <main>
-      <h1>Subscribers</h1>
+      <header className={styles.pageHead}>
+        <div>
+          <h1>Subscribers</h1>
+          <p className={styles.muted}>Newsletter readers by town, with their consent record.</p>
+        </div>
+        {town ? (
+          <Link
+            href={`/admin/mail/subscribers/export?town=${encodeURIComponent(town.slug)}`}
+            className={`${styles.button} ${styles.secondary}`}
+          >
+            Export CSV
+          </Link>
+        ) : null}
+      </header>
       {params.done ? (
         <p className={styles.notice} role="status">
           {params.done}
@@ -51,7 +65,7 @@ export default async function Subscribers({ searchParams }: Props) {
       ) : null}
       <form className={styles.filters} method="get">
         <label>
-          Town{' '}
+          <span className={styles.visuallyHidden}>Town</span>
           <select name="town" defaultValue={town?.slug}>
             {allTowns.map((t) => (
               <option key={t.id} value={t.slug}>
@@ -61,9 +75,9 @@ export default async function Subscribers({ searchParams }: Props) {
           </select>
         </label>
         <label>
-          Status{' '}
+          <span className={styles.visuallyHidden}>Status</span>
           <select name="status" defaultValue={status ?? ''}>
-            <option value="">Any</option>
+            <option value="">Any status</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -71,20 +85,28 @@ export default async function Subscribers({ searchParams }: Props) {
             ))}
           </select>
         </label>
-        <label>
-          Search <input name="q" type="search" defaultValue={q} placeholder="email" />
+        <label className={styles.search}>
+          <span className={styles.visuallyHidden}>Search</span>
+          <input name="q" type="search" defaultValue={q} placeholder="Search by email" />
         </label>
-        <button className={styles.button} type="submit">
+        <button className={`${styles.button} ${styles.secondary}`} type="submit">
           Show
         </button>
       </form>
       {town ? (
-        <p data-testid="subscriber-counts">
-          {STATUSES.map((s) => `${count[s] ?? 0} ${s}`).join(' · ')} ·{' '}
-          <Link href={`/admin/mail/subscribers/export?town=${encodeURIComponent(town.slug)}`}>
-            Export CSV
-          </Link>
-        </p>
+        <div className={styles.stats} data-testid="subscriber-counts">
+          {STATUSES.map((st) => (
+            <div key={st} className={styles.stat}>
+              <div className={styles.statLabel}>
+                <span className={styles.visuallyHidden}>{`${count[st] ?? 0} `}</span>
+                {st}
+              </div>
+              <div className={styles.statValue} aria-hidden="true">
+                {(count[st] ?? 0).toLocaleString('en-US')}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : null}
       <div className={styles.scroll}>
         <table className={styles.table} data-testid="subscribers">
@@ -101,8 +123,10 @@ export default async function Subscribers({ searchParams }: Props) {
             {rows.map((s) => (
               <tr key={s.id}>
                 <td>{s.email}</td>
-                <td>{s.status}</td>
                 <td>
+                  <Pill status={s.status} />
+                </td>
+                <td className={styles.muted}>
                   {s.consentSource ?? s.source ?? '–'}
                   {s.consentAt
                     ? ` · ${s.consentAt.toISOString().slice(0, 16).replace('T', ' ')}`
@@ -122,7 +146,7 @@ export default async function Subscribers({ searchParams }: Props) {
                           q,
                         }).toString()}
                       />
-                      <button className={styles.secondary} type="submit">
+                      <button className={`${styles.button} ${styles.secondary}`} type="submit">
                         Unsubscribe
                       </button>
                     </form>

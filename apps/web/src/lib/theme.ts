@@ -1,4 +1,6 @@
 import {
+  adminColors,
+  adminPills,
   beatCategory,
   brandColors,
   categoryColors,
@@ -167,12 +169,13 @@ export function networkCssVariables(): string {
     '--accent-text': brandColors.white,
     '--secondary': brandColors.navy,
     '--secondary-text': brandColors.white,
-    '--tint': brandColors.paper,
-    '--surface': brandColors.paper,
-    '--background': brandColors.white,
-    '--muted': brandColors.slate,
-    '--rule': brandColors.paper,
-    '--sand': brandColors.paper,
+    // Staff admin (owner, 2026-10-18: Resend-like): neutral surfaces and hairlines.
+    '--tint': adminPills.blue.bg,
+    '--surface': adminColors.sidebar,
+    '--background': adminColors.canvas,
+    '--muted': adminColors.muted,
+    '--rule': adminColors.line,
+    '--sand': systemColors.sand,
     '--alert': systemColors.alert,
     '--alert-text': systemColors.alertText,
     '--font-headline': sansFallback,
@@ -180,9 +183,18 @@ export function networkCssVariables(): string {
     '--font-meta': sansFallback,
     '--meta-style': 'normal',
     '--headline-weight': '700',
-    '--radius': '4px',
-    '--radius-tile': '4px',
+    '--radius': '6px',
+    '--radius-tile': '10px',
+    '--radius-pill': '999px',
     ...Object.fromEntries(Object.entries(statusColors).map(([k, v]) => [`--status-${k}`, v])),
+    ...Object.fromEntries(Object.entries(adminColors).map(([k, v]) => [`--admin-${k}`, v])),
+    ...Object.fromEntries(
+      Object.entries(adminPills).flatMap(([k, v]) => [
+        [`--pill-${k}`, v.bg],
+        [`--pill-${k}-ink`, v.ink],
+      ]),
+    ),
+    '--font-mono': monoFallback,
   };
   return css(':root', vars);
 }

@@ -129,6 +129,9 @@ export {
   phoneSecondaryLabel,
   statusColors,
   systemColors,
+  adminColors,
+  adminPills,
+  type AdminPillTone,
   type Category,
 } from './design';
 export { creativeSchema, type Creative } from './creative';

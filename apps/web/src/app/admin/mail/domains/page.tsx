@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../../admin.module.css';
+import { Pill } from '../../Pill';
 
 export const metadata = { title: 'Mail domains' };
 
@@ -17,55 +18,65 @@ export default async function MailDomains() {
     .orderBy(asc(mailDomains.name));
   return (
     <main>
-      <h1>Mail domains</h1>
-      <p className={styles.muted}>
-        Domains are added with <code>pnpm mail:onboard</code> (see docs/mail/RUNBOOK.md). Domains
-        waiting on SES are checked every 5 minutes.
-      </p>
+      <header className={styles.pageHead}>
+        <div>
+          <h1>Mail domains</h1>
+          <p className={styles.muted}>
+            Domains are added with <code>pnpm mail:onboard</code> (see docs/mail/RUNBOOK.md).
+            Domains waiting on SES are checked every 5 minutes.
+          </p>
+        </div>
+      </header>
       {rows.length === 0 ? (
         <p>No mail domains yet.</p>
       ) : (
-        <table className={styles.table} data-testid="mail-domains">
-          <thead>
-            <tr>
-              <th>Domain</th>
-              <th>Town</th>
-              <th>Status</th>
-              <th>Inbound</th>
-              <th>Bulk</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ domain, town }) => (
-              <tr key={domain.id}>
-                <td>
-                  <Link href={`/admin/mail/domains/${encodeURIComponent(domain.name)}`}>
-                    {domain.name}
-                  </Link>
-                  {domain.isTest ? <span className={styles.muted}> (test)</span> : null}
-                </td>
-                <td>{town ?? '–'}</td>
-                <td>
-                  {domain.status}
-                  {domain.failureReason ? (
-                    <>
-                      <br />
-                      <span className={styles.muted}>{domain.failureReason}</span>
-                    </>
-                  ) : null}
-                </td>
-                <td>{domain.inboundEnabled ? 'on' : 'off'}</td>
-                <td>
-                  {domain.bulkStatus.replace('_', ' ')}
-                  {domain.bulkStatus === 'warming'
-                    ? ` (day ${domain.warmupDay}, ${domain.bulkDailyCap}/day)`
-                    : ''}
-                  {domain.pausedReason ? ` – ${domain.pausedReason}` : ''}
-                </td>
+        <div className={styles.scroll}>
+          <table className={styles.table} data-testid="mail-domains">
+            <thead>
+              <tr>
+                <th>Domain</th>
+                <th>Town</th>
+                <th>Status</th>
+                <th>Inbound</th>
+                <th>Bulk</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map(({ domain, town }) => (
+                <tr key={domain.id}>
+                  <td>
+                    <Link href={`/admin/mail/domains/${encodeURIComponent(domain.name)}`}>
+                      <strong>{domain.name}</strong>
+                    </Link>
+                    {domain.isTest ? <span className={styles.muted}> (test)</span> : null}
+                  </td>
+                  <td>{town ?? '–'}</td>
+                  <td>
+                    <Pill status={domain.status} />
+                    {domain.failureReason ? (
+                      <>
+                        <br />
+                        <span className={styles.muted}>{domain.failureReason}</span>
+                      </>
+                    ) : null}
+                  </td>
+                  <td>
+                    <Pill status={domain.inboundEnabled ? 'on' : 'off'} />
+                  </td>
+                  <td>
+                    <Pill status={domain.bulkStatus} />
+                    <div className={`${styles.muted} ${styles.small}`}>
+                      {domain.bulkStatus === 'warming'
+                        ? `Day ${domain.warmupDay}, ${domain.bulkDailyCap.toLocaleString('en-US')} a day`
+                        : ''}
+                      {domain.pausedReason ?? ''}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );
