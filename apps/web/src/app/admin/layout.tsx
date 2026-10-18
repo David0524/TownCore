@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 import { networkCssVariables } from '@/lib/theme';
 import styles from './admin.module.css';
 import { signOut } from './actions';
+import { AdminNav } from './AdminNav';
 
 // Staff-only admin (CLAUDE.md §3). Network brand, never indexed, never on a town domain.
 export const metadata: Metadata = {
@@ -18,41 +19,32 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const staff = await currentStaff();
   const unread = staff ? await unreadCount(db(), staff.id) : 0;
   return (
-    <div className={styles.shell}>
+    <div className={staff ? styles.shell : `${styles.shell} ${styles.signedOut}`}>
       <style dangerouslySetInnerHTML={{ __html: networkCssVariables() }} />
-      <nav className={styles.bar} aria-label="Admin">
-        <span className={styles.brand}>TownCore admin</span>
+      <aside className={styles.sidebar}>
+        <Link href="/admin" className={styles.brand}>
+          <span className={styles.brandMark} aria-hidden="true">
+            T
+          </span>
+          TownCore admin
+        </Link>
         {staff ? (
           <>
-            <Link href="/admin/mail/inbox" data-testid="nav-inbox">
-              Inbox{unread ? ` (${unread})` : ''}
-            </Link>
-            <Link href="/admin/analytics">Analytics</Link>
-            <Link href="/admin/health">Health</Link>
-            <Link href="/admin/digest">Digest</Link>
-            <Link href="/admin/proposals">Proposals</Link>
-            <Link href="/admin/fixes">Fixes</Link>
-            <Link href="/admin/review">Review queue</Link>
-            <Link href="/admin/skipped">Skip log</Link>
-            <Link href="/admin/pins">Pins</Link>
-            <Link href="/admin/photos">Photos</Link>
-            <Link href="/admin/scores">Scores</Link>
-            <Link href="/admin/facebook">Facebook</Link>
-            <Link href="/admin/polls">Polls</Link>
-            <Link href="/admin/newsletter">Newsletter</Link>
-            <Link href="/admin/directory">Directory</Link>
-            <Link href="/admin/launches">Launches</Link>
-            <Link href="/admin/mail/subscribers">Subscribers</Link>
-            <Link href="/admin/mail/campaigns">Campaigns</Link>
-            <Link href="/admin/mail/domains">Mail domains</Link>
-            <Link href="/admin/mail/health">Mail health</Link>
-            <Link href="/admin/account">{staff.name}</Link>
-            <form action={signOut}>
-              <button type="submit">Sign out</button>
-            </form>
+            <AdminNav unread={unread} />
+            <div className={styles.account}>
+              <Link href="/admin/account" className={styles.accountName}>
+                <span className={styles.avatar} aria-hidden="true">
+                  {staff.name.slice(0, 1).toUpperCase()}
+                </span>
+                {staff.name}
+              </Link>
+              <form action={signOut}>
+                <button type="submit">Sign out</button>
+              </form>
+            </div>
           </>
         ) : null}
-      </nav>
+      </aside>
       <div className={styles.page}>{children}</div>
     </div>
   );

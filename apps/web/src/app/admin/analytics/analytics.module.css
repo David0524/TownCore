@@ -12,17 +12,17 @@
 }
 
 .ranges a {
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--muted);
+  padding: 0.3125rem 0.75rem;
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
-  color: var(--ink);
+  color: var(--admin-text);
+  font-size: 0.875rem;
   text-decoration: none;
 }
 
 .ranges a[aria-current='page'] {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--accent-text);
+  background: var(--admin-hover);
+  font-weight: 600;
 }
 
 .tiles {
@@ -33,9 +33,10 @@
 }
 
 .tile {
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius);
-  background: var(--surface);
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-tile);
+  background: var(--background);
 }
 
 .tileLabel {

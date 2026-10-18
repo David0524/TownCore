@@ -1,48 +1,237 @@
+/* Staff admin (owner, 2026-10-18: "something like Resend's email software"): a sidebar app with
+   quiet neutral surfaces, hairlines instead of fills, small status pills and one navy action
+   color. Tokens come from networkCssVariables() (lib/theme.ts); nothing here is a literal color. */
+
 .shell {
   min-height: 100vh;
   background: var(--background);
+  color: var(--admin-text);
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
-.bar {
+@media (min-width: 60rem) {
+  .shell {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
+}
+
+/* ---------- Sidebar ---------- */
+
+.sidebar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem 1.5rem;
-  padding: 0.75rem var(--gutter);
-  background: var(--ink);
-  color: var(--accent-text);
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0.75rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
 }
 
-.bar a,
-.bar button {
-  color: var(--accent-text);
-  font: inherit;
+@media (min-width: 60rem) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    border-bottom: 0;
+    border-right: 1px solid var(--rule);
+  }
+}
+
+.signedOut .sidebar {
+  height: auto;
 }
 
 .brand {
-  font-weight: 700;
-  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.25rem 0.5rem;
+  font-weight: 650;
+  color: var(--admin-text);
+  text-decoration: none;
 }
 
-.bar button {
+.brandMark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--accent-text);
+  font-size: 0.875rem;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+}
+
+@media (min-width: 60rem) {
+  .nav {
+    display: grid;
+    gap: 1.25rem;
+  }
+}
+
+.navGroup ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+}
+
+@media (min-width: 60rem) {
+  .navGroup ul {
+    display: grid;
+  }
+}
+
+.navTitle {
+  margin: 0 0 0.25rem;
+  padding: 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.navGroup a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3125rem 0.5rem;
+  border-radius: var(--radius);
+  color: var(--admin-text);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+
+.navGroup a:hover {
+  background: var(--admin-hover);
+}
+
+.navGroup a[aria-current='page'] {
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  font-weight: 600;
+}
+
+.navCount {
+  margin-left: auto;
+  min-width: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--accent-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.account {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 0.5rem 0;
+  border-top: 1px solid var(--rule);
+}
+
+.accountName {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--admin-text);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.account button {
   background: none;
   border: 0;
   padding: 0;
-  text-decoration: underline;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.875rem;
   cursor: pointer;
 }
 
-.page {
-  max-width: var(--wide);
-  margin: 0 auto;
-  padding: 1.5rem var(--gutter) 3rem;
+.account button:hover {
+  color: var(--admin-text);
+  text-decoration: underline;
 }
 
-/* The admin uses the full page width for its tables and dashboards; the town sites' reading
-   measure on <main> (globals.css) is for articles, not admin screens. Running text and form
-   fields keep a readable width. */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-pill);
+  background: var(--pill-gray);
+  color: var(--pill-gray-ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.avatar[data-tone='green'] {
+  background: var(--pill-green);
+  color: var(--pill-green-ink);
+}
+
+.avatar[data-tone='blue'] {
+  background: var(--pill-blue);
+  color: var(--pill-blue-ink);
+}
+
+.avatar[data-tone='amber'] {
+  background: var(--pill-amber);
+  color: var(--pill-amber-ink);
+}
+
+.avatar[data-tone='red'] {
+  background: var(--pill-red);
+  color: var(--pill-red-ink);
+}
+
+.account .avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+/* ---------- Page ---------- */
+
+.page {
+  width: 100%;
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 1.75rem var(--gutter) 3rem;
+}
+
+@media (min-width: 60rem) {
+  .page {
+    padding: 2rem 2.5rem 4rem;
+  }
+}
+
+/* The admin uses the page width for tables and dashboards; the town sites' reading measure on
+   <main> (globals.css) is for articles. Running text and form fields keep a readable width. */
 .page :global(main) {
   max-width: none;
+}
+
+/* Town pages clip sideways overflow; on narrow screens a wide admin table scrolls inside the
+   page instead of being cut off. */
+@media (max-width: 59.99rem) {
+  .page :global(main) {
+    overflow-x: auto;
+  }
 }
 
 .page :global(main) > p,
@@ -56,9 +245,111 @@
   max-width: var(--measure);
 }
 
+.page :global(h1) {
+  margin: 0 0 0.375rem;
+  font-size: 1.625rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.page :global(h2) {
+  margin: 2rem 0 0.75rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.page :global(h3) {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.page :global(a) {
+  color: var(--admin-text);
+  text-underline-offset: 2px;
+  text-decoration-color: var(--rule);
+}
+
+.page :global(a:hover) {
+  text-decoration-color: currentColor;
+}
+
+.page :global(code),
+.page :global(kbd),
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+.page :global(kbd) {
+  padding: 0 0.3125rem;
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  border-radius: var(--radius);
+  background: var(--background);
+}
+
+.page :global(input:not([type='checkbox'], [type='radio'], [type='file'])),
+.page :global(select),
+.page :global(textarea) {
+  font: inherit;
+  font-size: 0.9375rem;
+  padding: 0.4375rem 0.625rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--admin-text);
+  box-shadow: 0 1px 0 var(--surface);
+}
+
+.page :global(:is(input, select, textarea, button, a):focus-visible) {
+  outline: 2px solid var(--admin-focus);
+  outline-offset: 1px;
+}
+
+.page :global(label) {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A title row with the page's main action on the right. */
+.pageHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+}
+
+.pageHead p {
+  margin: 0;
+}
+
+.back {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  color: var(--muted) !important;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
 .muted {
   color: var(--muted);
   font-size: 0.9375rem;
+}
+
+.small {
+  font-size: 0.8125rem;
 }
 
 /* Wide tables scroll sideways on a phone instead of overlapping. */
@@ -69,20 +360,57 @@
 
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-tile);
   font-size: 0.9375rem;
+}
+
+/* Round the corner cells rather than clipping the table, so nothing in a cell is ever hidden. */
+.table > :first-child > tr:first-child > :first-child {
+  border-top-left-radius: var(--radius-tile);
+}
+
+.table > :first-child > tr:first-child > :last-child {
+  border-top-right-radius: var(--radius-tile);
+}
+
+.table > :last-child > tr:last-child > :first-child {
+  border-bottom-left-radius: var(--radius-tile);
+}
+
+.table > :last-child > tr:last-child > :last-child {
+  border-bottom-right-radius: var(--radius-tile);
 }
 
 .table th,
 .table td {
   text-align: left;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--surface);
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--rule);
   vertical-align: top;
 }
 
 .table th {
   background: var(--surface);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover > td {
+  background: var(--surface);
+}
+
+.num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
 }
 
 .split {
@@ -96,10 +424,22 @@
   }
 }
 
-.panel {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 1rem;
+.panel,
+.card {
+  background: var(--background);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-tile);
+  padding: 1rem 1.25rem;
+}
+
+.card + .card {
+  margin-top: 1rem;
+}
+
+.cardTitle {
+  margin: 0 0 0.75rem !important;
+  font-size: 0.9375rem !important;
+  font-weight: 600;
 }
 
 .record {
@@ -118,7 +458,7 @@
 
 .claims li {
   padding: 0.5rem 0;
-  border-bottom: 1px solid var(--background);
+  border-bottom: 1px solid var(--rule);
 }
 
 .bad {
@@ -127,100 +467,202 @@
 
 .form {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.375rem;
   margin: 0 0 1.5rem;
 }
 
-.form input,
+.form input:not([type='checkbox'], [type='radio']),
 .form select,
 .form textarea {
-  font: inherit;
-  padding: 0.5rem;
-  border: 1px solid var(--muted);
-  border-radius: var(--radius);
   width: 100%;
+}
+
+.form label:not(:first-of-type) {
+  margin-top: 0.5rem;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: flex-start;
+  gap: 0.5rem;
+  align-items: center;
   margin: 1rem 0;
 }
 
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
   font: inherit;
-  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  padding: 0.4375rem 0.875rem;
   border-radius: var(--radius);
   border: 1px solid var(--ink);
   background: var(--ink);
-  color: var(--accent-text);
+  color: var(--accent-text) !important;
+  text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
+}
+
+.button:hover {
+  opacity: 0.9;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .secondary {
   background: var(--background);
-  color: var(--ink);
+  border-color: var(--rule);
+  color: var(--admin-text) !important;
+  box-shadow: 0 1px 0 var(--surface);
+}
+
+.secondary:hover {
+  background: var(--admin-hover);
+  opacity: 1;
 }
 
 .notice {
-  background: var(--tint);
-  border-left: 4px solid var(--ink);
-  padding: 0.75rem 1rem;
+  display: block;
+  background: var(--pill-blue);
+  color: var(--pill-blue-ink);
+  border: 1px solid var(--pill-blue);
+  border-radius: var(--radius-tile);
+  padding: 0.625rem 0.875rem;
   margin: 1rem 0;
+  font-size: 0.9375rem;
+}
+
+.notice[role='alert'] {
+  background: var(--pill-red);
+  border-color: var(--pill-red);
+  color: var(--pill-red-ink);
 }
 
 .source {
   margin-bottom: 1rem;
 }
 
-/* Inbox (Mail-3) */
+/* ---------- Status pills ---------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--pill-gray);
+  color: var(--pill-gray-ink);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.375rem;
+  white-space: nowrap;
+}
+
+.pill > span {
+  display: inline-block;
+}
+
+.pill > span::first-letter {
+  text-transform: uppercase;
+}
+
+.pill::before {
+  content: '';
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+
+.pill[data-tone='green'] {
+  background: var(--pill-green);
+  color: var(--pill-green-ink);
+}
+
+.pill[data-tone='blue'] {
+  background: var(--pill-blue);
+  color: var(--pill-blue-ink);
+}
+
+.pill[data-tone='amber'] {
+  background: var(--pill-amber);
+  color: var(--pill-amber-ink);
+}
+
+.pill[data-tone='red'] {
+  background: var(--pill-red);
+  color: var(--pill-red-ink);
+}
+
+/* Older plain badges read as gray pills. */
+.badge {
+  display: inline-block;
+  padding: 0.0625rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--pill-gray);
+  color: var(--pill-gray-ink);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+/* ---------- Inbox (Mail-3) ---------- */
+
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: flex-end;
-  margin: 0 0 1rem;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0 0 0.75rem;
 }
 
 .filters label {
-  display: grid;
-  gap: 0.25rem;
-  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
 }
 
-.filters input,
-.filters select,
-.inline select {
-  font: inherit;
-  padding: 0.375rem 0.5rem;
-  border: 1px solid var(--muted);
-  border-radius: var(--radius);
+.filters .search {
+  flex: 1 1 16rem;
+}
+
+.filters .search input {
+  width: 100%;
+  max-width: none !important;
 }
 
 .check {
   display: flex !important;
   align-items: center;
   gap: 0.375rem;
+  font-weight: 400 !important;
 }
 
 .threadList {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-tile);
+  overflow: hidden;
 }
 
-.threadList li {
-  border-bottom: 1px solid var(--surface);
+.threadList li + li {
+  border-top: 1px solid var(--rule);
 }
 
 .threadLink {
   display: grid;
-  gap: 0.125rem;
-  padding: 0.625rem 0.5rem;
-  color: inherit;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.125rem 0.875rem;
+  padding: 0.875rem 1rem;
+  color: inherit !important;
   text-decoration: none;
 }
 
@@ -229,15 +671,54 @@
   background: var(--surface);
 }
 
+.threadLink .avatar {
+  grid-row: span 4;
+}
+
 .threadTop {
+  display: contents;
+}
+
+.threadWho {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.threadWho small {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  margin-left: 0.375rem;
+}
+
+.threadTime {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.threadSubject,
+.threadMeta,
+.snippet {
+  grid-column: 2 / 4;
+}
+
+.threadSubject {
+  font-size: 0.9375rem;
+}
+
+.threadMeta {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
 }
 
 .unread .threadSubject,
-.unread .threadTop > span:first-child {
-  font-weight: 700;
+.unread .threadWho {
+  font-weight: 650;
 }
 
 .dot {
@@ -245,8 +726,8 @@
   width: 0.5rem;
   height: 0.5rem;
   margin-right: 0.375rem;
-  border-radius: var(--radius);
-  background: var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--admin-focus);
   vertical-align: middle;
 }
 
@@ -258,23 +739,127 @@
   white-space: nowrap;
 }
 
-.inline {
+.pager {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+
+/* ---------- Conversation ---------- */
+
+.threadLayout {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 72rem) {
+  .threadLayout {
+    grid-template-columns: minmax(0, 50rem) 18rem;
+  }
+
+  .threadAside {
+    position: sticky;
+    top: 1.5rem;
+  }
+}
+
+.threadMain {
+  min-width: 0;
+  max-width: 50rem;
+}
+
+.inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.375rem 0.5rem;
+  align-items: end;
+}
+
+.inline label {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.inline label select {
+  width: 100%;
+}
+
+.inline > label:has(select) {
+  grid-column: 1;
+}
+
+.asideStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.asideStack form > .button {
+  width: 100%;
+  white-space: normal;
+}
+
+.facts {
+  display: grid;
+  gap: 0.625rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.facts dt {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.facts dd {
+  margin: 0.125rem 0 0;
+  overflow-wrap: anywhere;
 }
 
 .message {
-  max-width: 48rem;
-  border: 1px solid var(--surface);
-  border-radius: var(--radius);
-  margin: 1rem 0;
+  margin: 0 0 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-tile);
+  background: var(--background);
+  overflow: hidden;
 }
 
 .messageHead {
   display: grid;
-  gap: 0.125rem;
-  padding: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0 0.75rem;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.messageHead .avatar {
+  grid-row: span 2;
+}
+
+.messageFrom {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messageFrom small {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  margin-left: 0.375rem;
+}
+
+.messageTo {
+  grid-column: 2 / 4;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.ours {
   background: var(--surface);
 }
 
@@ -282,14 +867,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
+  grid-column: 2 / 4;
+  margin-top: 0.375rem;
 }
 
-.badge {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.0625rem 0.375rem;
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
+.badges:empty {
+  display: none;
 }
 
 .messageFrame {
@@ -304,26 +887,49 @@
 
 .messageText {
   margin: 0;
-  padding: 0.75rem;
+  padding: 0.75rem 1rem;
   white-space: pre-wrap;
   font: inherit;
 }
 
-.attachments,
-.notes {
+.blocked {
   margin: 0;
-  padding: 0.5rem 0.75rem 0.75rem 2rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--pill-amber);
+  color: var(--pill-amber-ink);
+  font-size: 0.8125rem;
+}
+
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.875rem;
+}
+
+.attachments li {
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
 }
 
 .notes {
   list-style: none;
-  padding-left: 0;
+  margin: 0 0 1rem;
+  padding: 0;
 }
 
 .notes li {
-  border-left: 3px solid var(--tint);
-  padding: 0.25rem 0.75rem;
+  padding: 0.625rem 0.875rem;
   margin: 0.5rem 0;
+  border-radius: var(--radius-tile);
+  background: var(--pill-amber);
+  color: var(--admin-text);
 }
 
 .notes p {
@@ -333,4 +939,135 @@
 
 .signature {
   white-space: pre-wrap;
+}
+
+.replyTabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0 0 0.75rem;
+}
+
+.replyTabs a {
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.replyTabs a[aria-current='true'] {
+  background: var(--admin-hover);
+  color: var(--admin-text);
+  font-weight: 500;
+}
+
+/* ---------- Stat cards (mail health, campaigns) ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+}
+
+.stat {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-tile);
+  padding: 0.875rem 1rem;
+}
+
+.statLabel {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.statValue {
+  margin-top: 0.25rem;
+  font-size: 1.375rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.statNote {
+  margin-top: 0.125rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+/* ---------- Mail health ---------- */
+
+.alerts {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.alerts li {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-tile);
+  background: var(--background);
+}
+
+.alerts strong {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 0 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--pill-amber);
+  color: var(--pill-amber-ink);
+  font-size: 0.75rem;
+  line-height: 1.375rem;
+}
+
+.alerts strong[data-severity='critical'] {
+  background: var(--pill-red);
+  color: var(--pill-red-ink);
+}
+
+.keyValue th {
+  width: 14rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.formGrid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 72rem) {
+  .formGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.formGrid .card + .card {
+  margin-top: 0;
+}
+
+.formGrid .form {
+  margin: 0;
+}
+
+.page :global(fieldset) {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.page :global(legend) {
+  padding: 0 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Forms inside a card fill it. */
+.card .form :is(input:not([type='checkbox'], [type='radio'], [type='file']), select, textarea) {
+  max-width: none;
 }

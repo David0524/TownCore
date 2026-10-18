@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../../admin.module.css';
+import { Pill } from '../../Pill';
 import {
   createCampaignAction,
   createTemplateAction,
@@ -55,7 +56,20 @@ export default async function Campaigns({ searchParams }: Props) {
   ]);
   return (
     <main>
-      <h1>Campaigns</h1>
+      <header className={styles.pageHead}>
+        <div>
+          <h1>Campaigns</h1>
+          <p className={styles.muted}>
+            One-off emails to a town&apos;s subscribers. Each needs an admin&apos;s approval to
+            send.
+          </p>
+        </div>
+        {domains.length ? (
+          <a href="#new-campaign" className={styles.button}>
+            New campaign
+          </a>
+        ) : null}
+      </header>
       {pause ? (
         <div className={styles.notice} role="alert">
           <p>Bulk mail is paused for every town: {pause.reason}</p>
@@ -94,90 +108,113 @@ export default async function Campaigns({ searchParams }: Props) {
             {campaigns.map(({ c, domain }) => (
               <tr key={c.id}>
                 <td>
-                  <Link href={`/admin/mail/campaigns/${c.id}`}>{c.subject}</Link>
+                  <Link href={`/admin/mail/campaigns/${c.id}`}>
+                    <strong>{c.subject}</strong>
+                  </Link>
                 </td>
-                <td>{domain}</td>
-                <td>{c.kind}</td>
-                <td>{c.status}</td>
+                <td className={styles.muted}>{domain}</td>
+                <td className={styles.muted}>{c.kind}</td>
                 <td>
+                  <Pill status={c.status} />
+                </td>
+                <td className={styles.muted}>
                   {c.scheduledAt
                     ? c.scheduledAt.toISOString().slice(0, 16).replace('T', ' ') + ' UTC'
                     : '–'}
                 </td>
               </tr>
             ))}
+            {campaigns.length === 0 ? (
+              <tr>
+                <td colSpan={5} className={styles.muted}>
+                  No campaigns yet.
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
 
-      {domains.length === 0 ? (
-        <p>No town domain is live for mail yet, so there is nowhere to send from.</p>
-      ) : (
-        <>
-          <h2>New campaign</h2>
-          <form action={createCampaignAction} className={styles.form}>
-            <label htmlFor="c-domain">Town</label>
-            <select id="c-domain" name="domainId" required>
-              {domains.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.displayName} ({d.name}, bulk {d.bulkStatus})
-                </option>
-              ))}
-            </select>
-            <label htmlFor="c-subject">Subject</label>
-            <input id="c-subject" name="subject" required maxLength={200} />
-            <label htmlFor="c-body">Message</label>
-            <textarea id="c-body" name="body" rows={10} required aria-describedby="c-help" />
-            <p id="c-help" className={styles.muted}>
-              {BODY_HELP}
-            </p>
-            <button className={styles.button} type="submit">
-              Save draft
-            </button>
-          </form>
+      <div className={styles.formGrid}>
+        {domains.length === 0 ? (
+          <p>No town domain is live for mail yet, so there is nowhere to send from.</p>
+        ) : (
+          <>
+            <section className={styles.card} id="new-campaign">
+              <h2 className={styles.cardTitle}>New campaign</h2>
+              <form action={createCampaignAction} className={styles.form}>
+                <label htmlFor="c-domain">Town</label>
+                <select id="c-domain" name="domainId" required>
+                  {domains.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.displayName} ({d.name}, bulk {d.bulkStatus})
+                    </option>
+                  ))}
+                </select>
+                <label htmlFor="c-subject">Subject</label>
+                <input id="c-subject" name="subject" required maxLength={200} />
+                <label htmlFor="c-body">Message</label>
+                <textarea id="c-body" name="body" rows={10} required aria-describedby="c-help" />
+                <p id="c-help" className={styles.muted}>
+                  {BODY_HELP}
+                </p>
+                <div className={styles.actions}>
+                  <button className={styles.button} type="submit">
+                    Save draft
+                  </button>
+                </div>
+              </form>
+            </section>
 
-          <h2>From a template</h2>
-          {templates.length ? (
-            <form action={fanOutAction} className={styles.form}>
-              <label htmlFor="t-template">Template</label>
-              <select id="t-template" name="templateId" required>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              <fieldset>
-                <legend>Towns (one draft each)</legend>
-                {domains.map((d) => (
-                  <label key={d.id} className={styles.check}>
-                    <input type="checkbox" name="domainId" value={d.id} /> {d.displayName}
-                  </label>
-                ))}
-              </fieldset>
-              <button className={styles.button} type="submit">
-                Create drafts
+            <section className={styles.card}>
+              <h2 className={styles.cardTitle}>From a template</h2>
+              {templates.length ? (
+                <form action={fanOutAction} className={styles.form}>
+                  <label htmlFor="t-template">Template</label>
+                  <select id="t-template" name="templateId" required>
+                    {templates.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                  <fieldset>
+                    <legend>Towns (one draft each)</legend>
+                    {domains.map((d) => (
+                      <label key={d.id} className={styles.check}>
+                        <input type="checkbox" name="domainId" value={d.id} /> {d.displayName}
+                      </label>
+                    ))}
+                  </fieldset>
+                  <button className={styles.button} type="submit">
+                    Create drafts
+                  </button>
+                </form>
+              ) : (
+                <p className={styles.muted}>No templates yet.</p>
+              )}
+            </section>
+          </>
+        )}
+
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>New template</h2>
+          <form action={createTemplateAction} className={styles.form}>
+            <label htmlFor="n-name">Name</label>
+            <input id="n-name" name="name" required maxLength={100} />
+            <label htmlFor="n-subject">Subject</label>
+            <input id="n-subject" name="subject" required maxLength={200} />
+            <label htmlFor="n-body">Message</label>
+            <textarea id="n-body" name="body" rows={8} required />
+            <p className={styles.muted}>{BODY_HELP}</p>
+            <div className={styles.actions}>
+              <button className={`${styles.button} ${styles.secondary}`} type="submit">
+                Save template
               </button>
-            </form>
-          ) : (
-            <p className={styles.muted}>No templates yet.</p>
-          )}
-        </>
-      )}
-
-      <h2>New template</h2>
-      <form action={createTemplateAction} className={styles.form}>
-        <label htmlFor="n-name">Name</label>
-        <input id="n-name" name="name" required maxLength={100} />
-        <label htmlFor="n-subject">Subject</label>
-        <input id="n-subject" name="subject" required maxLength={200} />
-        <label htmlFor="n-body">Message</label>
-        <textarea id="n-body" name="body" rows={8} required />
-        <p className={styles.muted}>{BODY_HELP}</p>
-        <button className={styles.button} type="submit">
-          Save template
-        </button>
-      </form>
+            </div>
+          </form>
+        </section>
+      </div>
     </main>
   );
 }

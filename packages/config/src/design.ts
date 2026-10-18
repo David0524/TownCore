@@ -57,6 +57,31 @@ export const statusColors = {
   unknown: '#6B7480',
 } as const;
 
+/**
+ * Staff admin only (owner, 2026-10-18: "something like Resend's email software"): a quiet
+ * neutral app palette around the network navy. Never on town sites. Text colors are at least
+ * 4.5:1 on their backgrounds; pills pair a pale fill with a deep ink of the same hue.
+ */
+export const adminColors = {
+  canvas: '#FFFFFF',
+  sidebar: '#F9FAFB',
+  hover: '#F2F4F7',
+  line: '#EAECF0',
+  text: '#101828',
+  muted: '#667085',
+  focus: '#2E90FA',
+} as const;
+
+/** Status pills in the admin: a pale fill and its deep ink, the word always shown. */
+export const adminPills = {
+  green: { bg: '#ECFDF3', ink: '#067647' },
+  blue: { bg: '#EFF8FF', ink: '#175CD3' },
+  amber: { bg: '#FFFAEB', ink: '#B54708' },
+  red: { bg: '#FEF3F2', ink: '#B42318' },
+  gray: { bg: '#F2F4F7', ink: '#344054' },
+} as const;
+export type AdminPillTone = keyof typeof adminPills;
+
 /** Dark-mode roles (built now, shipped later): near-black page, lifted tiles. */
 /**
  * Food tiles (owner, 2026-10-16: "add some color"): a soft tint and a deep ink per flavor of

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../../admin.module.css';
+import { Pill } from '../../Pill';
 
 export const metadata = { title: 'Mail health' };
 export const dynamic = 'force-dynamic';
@@ -18,10 +19,10 @@ function StreamCells({ s }: { s: StreamTotals | undefined }) {
   if (!s || !s.sent) return <td colSpan={4}>–</td>;
   return (
     <>
-      <td>{s.sent}</td>
-      <td>{s.delivered}</td>
-      <td>{rate(s.bounced, s.sent)}</td>
-      <td>{rate(s.complained, s.sent)}</td>
+      <td className={styles.num}>{s.sent.toLocaleString('en-US')}</td>
+      <td className={styles.num}>{s.delivered.toLocaleString('en-US')}</td>
+      <td className={styles.num}>{rate(s.bounced, s.sent)}</td>
+      <td className={styles.num}>{rate(s.complained, s.sent)}</td>
     </>
   );
 }
@@ -33,7 +34,44 @@ export default async function MailHealth() {
   const stale = !h.lastHeartbeat || Date.now() - new Date(h.lastHeartbeat).getTime() > 10 * 60_000;
   return (
     <main>
-      <h1>Mail health</h1>
+      <header className={styles.pageHead}>
+        <div>
+          <h1>Mail health</h1>
+          <p className={styles.muted}>
+            Alerts first, then the SES account, each domain and the pipeline.
+          </p>
+        </div>
+        <Pill tone={stale || critical.length ? 'red' : h.alerts.length ? 'amber' : 'green'}>
+          {stale || critical.length
+            ? 'Needs attention'
+            : h.alerts.length
+              ? 'Warnings'
+              : 'All clear'}
+        </Pill>
+      </header>
+
+      <div className={styles.stats}>
+        <div className={styles.stat}>
+          <div className={styles.statLabel}>Sent, 7 days</div>
+          <div className={styles.statValue}>{h.account7d.sent.toLocaleString('en-US')}</div>
+        </div>
+        <div className={styles.stat}>
+          <div className={styles.statLabel}>Bounce rate</div>
+          <div className={styles.statValue}>{rate(h.account7d.bounced, h.account7d.sent)}</div>
+          <div className={styles.statNote}>Bulk pauses at 4%</div>
+        </div>
+        <div className={styles.stat}>
+          <div className={styles.statLabel}>Complaint rate</div>
+          <div className={styles.statValue}>{rate(h.account7d.complained, h.account7d.sent)}</div>
+          <div className={styles.statNote}>Bulk pauses at 0.08%</div>
+        </div>
+        <div className={styles.stat}>
+          <div className={styles.statLabel}>Bulk mail, every town</div>
+          <div className={styles.statValue}>
+            <Pill status={h.network ? 'paused' : 'running'} />
+          </div>
+        </div>
+      </div>
 
       <section aria-labelledby="fire" data-testid="fire">
         <h2 id="fire">Is anything on fire?</h2>
@@ -42,16 +80,16 @@ export default async function MailHealth() {
             All clear. No open alerts.
           </p>
         ) : (
-          <ul className={styles.notes} role="alert">
+          <ul className={styles.alerts} role="alert">
             {stale ? (
               <li>
-                <strong>CRITICAL</strong> The worker hasn’t checked in since {when(h.lastHeartbeat)}
-                : nothing is being sent, received or checked.
+                <strong data-severity="critical">CRITICAL</strong> The worker hasn’t checked in
+                since {when(h.lastHeartbeat)}: nothing is being sent, received or checked.
               </li>
             ) : null}
             {h.alerts.map((a) => (
               <li key={a.id}>
-                <strong>{a.severity.toUpperCase()}</strong> {a.message}{' '}
+                <strong data-severity={a.severity}>{a.severity.toUpperCase()}</strong> {a.message}{' '}
                 <span className={styles.muted}>since {when(a.firstSeenAt)}</span>
               </li>
             ))}
@@ -66,7 +104,7 @@ export default async function MailHealth() {
 
       <h2>SES account</h2>
       <div className={styles.scroll}>
-        <table className={styles.table} data-testid="account">
+        <table className={`${styles.table} ${styles.keyValue}`} data-testid="account">
           <tbody>
             <tr>
               <th>Status</th>
@@ -114,21 +152,35 @@ export default async function MailHealth() {
               <th>Domain</th>
               <th>Status</th>
               <th>Bulk</th>
-              <th colSpan={4}>Replies: sent · delivered · bounces · complaints</th>
-              <th colSpan={4}>Bulk: sent · delivered · bounces · complaints</th>
+              <th className={styles.num}>Replies sent</th>
+              <th className={styles.num}>Delivered</th>
+              <th className={styles.num}>Bounces</th>
+              <th className={styles.num}>Complaints</th>
+              <th className={styles.num}>Bulk sent</th>
+              <th className={styles.num}>Delivered</th>
+              <th className={styles.num}>Bounces</th>
+              <th className={styles.num}>Complaints</th>
             </tr>
           </thead>
           <tbody>
             {h.domains.map(({ domain: d, streams }) => (
               <tr key={d.id}>
                 <td>
-                  <Link href={`/admin/mail/domains/${encodeURIComponent(d.name)}`}>{d.name}</Link>
+                  <Link href={`/admin/mail/domains/${encodeURIComponent(d.name)}`}>
+                    <strong>{d.name}</strong>
+                  </Link>
                 </td>
-                <td>{d.status}</td>
                 <td>
-                  {d.bulkStatus}
-                  {d.bulkStatus === 'warming' ? ` · day ${d.warmupDay}, ${d.bulkDailyCap}/day` : ''}
-                  {d.pausedReason ? ` · ${d.pausedReason}` : ''}
+                  <Pill status={d.status} />
+                </td>
+                <td>
+                  <Pill status={d.bulkStatus} />
+                  <div className={`${styles.muted} ${styles.small}`}>
+                    {d.bulkStatus === 'warming'
+                      ? `Day ${d.warmupDay}, ${d.bulkDailyCap.toLocaleString('en-US')} a day`
+                      : ''}
+                    {d.pausedReason ?? ''}
+                  </div>
                 </td>
                 <StreamCells s={streams.conversational} />
                 <StreamCells s={streams.bulk} />
