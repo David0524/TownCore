@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { unreadCount } from '@towncore/mail';
@@ -8,6 +9,8 @@ import { networkCssVariables } from '@/lib/theme';
 import styles from './admin.module.css';
 import { signOut } from './actions';
 import { AdminNav } from './AdminNav';
+import { ThemeSwitch } from './ThemeSwitch';
+import { ADMIN_THEME_COOKIE, adminThemeOf } from './theme-choice';
 
 // Staff-only admin (CLAUDE.md §3). Network brand, never indexed, never on a town domain.
 export const metadata: Metadata = {
@@ -18,8 +21,12 @@ export const metadata: Metadata = {
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const staff = await currentStaff();
   const unread = staff ? await unreadCount(db(), staff.id) : 0;
+  const theme = adminThemeOf((await cookies()).get(ADMIN_THEME_COOKIE)?.value);
   return (
-    <div className={staff ? styles.shell : `${styles.shell} ${styles.signedOut}`}>
+    <div
+      className={staff ? styles.shell : `${styles.shell} ${styles.signedOut}`}
+      data-admin-theme={theme}
+    >
       <style dangerouslySetInnerHTML={{ __html: networkCssVariables() }} />
       <aside className={styles.sidebar}>
         <Link href="/admin" className={styles.brand}>
@@ -31,6 +38,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         {staff ? (
           <>
             <AdminNav unread={unread} />
+            <ThemeSwitch initial={theme} />
             <div className={styles.account}>
               <Link href="/admin/account" className={styles.accountName}>
                 <span className={styles.avatar} aria-hidden="true">

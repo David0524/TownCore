@@ -130,7 +130,10 @@ export {
   statusColors,
   systemColors,
   adminColors,
+  adminDarkColors,
+  adminDarkPills,
   adminPills,
+  darkStatusColors,
   type AdminPillTone,
   type Category,
 } from './design';

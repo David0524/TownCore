@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { contrastRatio } from '../src/brand';
 import {
+  adminColors,
+  adminDarkColors,
+  adminDarkPills,
+  adminPills,
   categoryColors,
+  darkStatusColors,
   darkColors,
   deriveDeep,
   deriveMuted,
@@ -82,5 +87,21 @@ describe('network design tokens', () => {
     for (const bg of [harbor.background, harbor.tint, iosColors.grouped, systemColors.sand]) {
       expect(contrastRatio(label, bg)).toBeGreaterThanOrEqual(4.5);
     }
+  });
+});
+
+describe('admin colors, light and dark', () => {
+  it('keeps text readable on every admin surface and pill', () => {
+    for (const c of [adminColors, adminDarkColors]) {
+      for (const surface of [c.canvas, c.sidebar, c.hover]) {
+        expect(contrastRatio(c.text, surface)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(c.muted, surface)).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+    for (const pills of [adminPills, adminDarkPills])
+      for (const { bg, ink } of Object.values(pills))
+        expect(contrastRatio(ink, bg)).toBeGreaterThanOrEqual(4.5);
+    for (const v of Object.values(darkStatusColors))
+      expect(contrastRatio(v, adminDarkColors.canvas)).toBeGreaterThanOrEqual(3);
   });
 });
