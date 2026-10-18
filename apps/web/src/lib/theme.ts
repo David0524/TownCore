@@ -1,5 +1,8 @@
 import {
   adminColors,
+  adminDarkColors,
+  adminDarkPills,
+  darkStatusColors,
   adminPills,
   beatCategory,
   brandColors,
@@ -195,6 +198,38 @@ export function networkCssVariables(): string {
       ]),
     ),
     '--font-mono': monoFallback,
+    // Email bodies are written for white paper, so message frames stay white in dark mode.
+    '--admin-paper': brandColors.white,
+    'color-scheme': 'light',
   };
-  return css(':root', vars);
+  // Dark mode (owner, 2026-10-18: "like Resend"): on the admin shell, when chosen or when the
+  // computer is set to dark and the choice is System. The primary button turns white.
+  const dark: Record<string, string> = {
+    '--ink': adminDarkColors.text,
+    '--accent': adminDarkColors.text,
+    '--accent-text': adminDarkColors.canvas,
+    '--secondary': adminDarkColors.text,
+    '--secondary-text': adminDarkColors.canvas,
+    '--tint': adminDarkPills.blue.bg,
+    '--surface': adminDarkColors.sidebar,
+    '--background': adminDarkColors.canvas,
+    '--muted': adminDarkColors.muted,
+    '--rule': adminDarkColors.line,
+    'color-scheme': 'dark',
+    ...Object.fromEntries(Object.entries(darkStatusColors).map(([k, v]) => [`--status-${k}`, v])),
+    ...Object.fromEntries(Object.entries(adminDarkColors).map(([k, v]) => [`--admin-${k}`, v])),
+    ...Object.fromEntries(
+      Object.entries(adminDarkPills).flatMap(([k, v]) => [
+        [`--pill-${k}`, v.bg],
+        [`--pill-${k}-ink`, v.ink],
+      ]),
+    ),
+  };
+  const darkPage = `background:${adminDarkColors.canvas};`;
+  return [
+    css(':root', vars),
+    css("[data-admin-theme='dark']", dark),
+    `html:has([data-admin-theme='dark']) body{${darkPage}}`,
+    `@media (prefers-color-scheme: dark){${css("[data-admin-theme='system']", dark)}html:has([data-admin-theme='system']) body{${darkPage}}}`,
+  ].join('');
 }

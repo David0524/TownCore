@@ -72,6 +72,20 @@ export const adminColors = {
   focus: '#2E90FA',
 } as const;
 
+/**
+ * The admin in dark mode (owner, 2026-10-18: "add a dark mode like Resend"): near-black canvas,
+ * lifted hairlines, light text and a white primary button. Same roles as adminColors.
+ */
+export const adminDarkColors = {
+  canvas: '#0A0A0A',
+  sidebar: '#111111',
+  hover: '#1C1C1C',
+  line: '#262626',
+  text: '#EDEDED',
+  muted: '#A1A1A1',
+  focus: '#3B82F6',
+} as const;
+
 /** Status pills in the admin: a pale fill and its deep ink, the word always shown. */
 export const adminPills = {
   green: { bg: '#ECFDF3', ink: '#067647' },
@@ -81,6 +95,22 @@ export const adminPills = {
   gray: { bg: '#F2F4F7', ink: '#344054' },
 } as const;
 export type AdminPillTone = keyof typeof adminPills;
+/** Pills on the dark canvas: a deep fill and a bright ink, each ink at least 4.5:1 on its fill. */
+export const adminDarkPills: Record<AdminPillTone, { bg: string; ink: string }> = {
+  green: { bg: '#0D2818', ink: '#4ADE80' },
+  blue: { bg: '#0C1E3A', ink: '#60A5FA' },
+  amber: { bg: '#2B1D06', ink: '#FBBF24' },
+  red: { bg: '#3A1010', ink: '#F87171' },
+  gray: { bg: '#1F1F1F', ink: '#D4D4D4' },
+};
+
+/** The site status light on the dark canvas, each at least 3:1 on it. */
+export const darkStatusColors: Record<keyof typeof statusColors, string> = {
+  up: '#4ADE80',
+  slow: '#FBBF24',
+  down: '#F87171',
+  unknown: '#A1A1A1',
+};
 
 /** Dark-mode roles (built now, shipped later): near-black page, lifted tiles. */
 /**

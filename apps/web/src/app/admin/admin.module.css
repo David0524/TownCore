@@ -133,8 +133,11 @@
   text-align: center;
 }
 
-.account {
+.themeSwitch {
   margin-top: auto;
+}
+
+.account {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -882,7 +885,7 @@
   border: 0;
   resize: vertical;
   overflow: auto;
-  background: var(--background);
+  background: var(--admin-paper);
 }
 
 .messageText {
@@ -1070,4 +1073,38 @@
 /* Forms inside a card fill it. */
 .card .form :is(input:not([type='checkbox'], [type='radio'], [type='file']), select, textarea) {
   max-width: none;
+}
+
+/* ---------- Theme switch (System, Light, Dark) ---------- */
+
+.themeSwitch {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--background);
+}
+
+.themeSwitch button {
+  padding: 0.25rem 0.375rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.themeSwitch button[aria-pressed='true'] {
+  background: var(--admin-hover);
+  color: var(--admin-text);
+  font-weight: 500;
+}
+
+.themeSwitch button:focus-visible {
+  outline: 2px solid var(--admin-focus);
+  outline-offset: 1px;
 }
