@@ -1,6 +1,8 @@
 .frame {
   flex: 1;
   width: 100%;
+  /* Full-bleed bands reach the viewport's edges; never a sideways scroll from the scrollbar. */
+  overflow-x: clip;
   max-width: none;
   margin: 0;
   padding: 0;

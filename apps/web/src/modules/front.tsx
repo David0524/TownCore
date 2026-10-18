@@ -38,11 +38,11 @@ export const GoodMorning: HomeModuleComponent = async ({ town, theme }) => {
   return (
     <div className={`${styles.greeting} not-phone`} data-module="good-morning">
       <div className={styles.heroText}>
+        <p className={styles.date}>
+          {weekday}, {apDate(now, town.timezone)}
+        </p>
         <p className={styles.hello}>
           {greeting(now, town.timezone)}, {townShortName(town.config as TownConfig)}
-        </p>
-        <p className="meta">
-          {weekday}, {apDate(now, town.timezone)}
         </p>
       </div>
       {art ? (
