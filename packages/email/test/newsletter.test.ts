@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { contrastRatio, defaultTheme, parseTheme } from '@towncore/config';
+import { contrastRatio, defaultTheme, parseTheme, type ForecastDay } from '@towncore/config';
 import {
   articles,
   campaigns,
@@ -16,6 +16,7 @@ import {
   gatherIssue,
   issueSubject,
   issueWeather,
+  outlookLine,
   renderIssue,
   selectIssueItems,
   shouldSend,
@@ -89,6 +90,38 @@ describe('weather', () => {
       url: '',
       tropics,
     });
+  });
+
+  it('adds the next three days’ highs and lows from the 7-day forecast, after "Tonight"', () => {
+    const row = (name: string, high: number | null, low: number | null): ForecastDay => ({
+      name,
+      isDaytime: high !== null,
+      high,
+      low,
+      shortForecast: 'Sunny',
+      detail: [],
+      precipChance: null,
+      kind: 'clear',
+    });
+    const days = [
+      row('Tonight', null, 75),
+      row('Monday', 84, 73),
+      row('Tuesday', 84, 71),
+      row('Wednesday', 83, 70),
+      row('Thursday', 83, 69),
+    ];
+    expect(outlookLine(days)).toEqual({
+      label: 'Next 3 days',
+      line: 'Monday 84°/73°, Tuesday 84°/71°, Wednesday 83°/70°',
+    });
+    expect(outlookLine([row('Saturday', 80, null)])).toEqual({
+      label: 'Coming days',
+      line: 'Saturday 80°',
+    });
+    expect(outlookLine([row('Tonight', null, 70)])).toBeNull();
+    expect(outlookLine(null)).toBeNull();
+    expect(issueWeather(null, [], at(12), null, days)?.outlook?.label).toBe('Next 3 days');
+    expect(issueWeather(null, [], at(12), null, [])).toBeNull();
   });
 });
 
@@ -187,6 +220,13 @@ describe('rendering', () => {
     const r = renderIssue(content({ weather: { periods: [], alerts: [], url: '', tropics } }));
     expect(r.html).toContain('<strong>Tropics:</strong> <a href="https://x.test/weather#tropics"');
     expect(r.text).toContain('Tropics: Hurricane Ana, 90 mph winds https://x.test/weather#tropics');
+  });
+
+  it('shows the 3-day line under the forecast', () => {
+    const outlook = { label: 'Next 3 days', line: 'Monday 84°/73°, Tuesday 84°/71°' };
+    const r = renderIssue(content({ weather: { periods: [], alerts: [], url: '', outlook } }));
+    expect(r.html).toContain('<strong>Next 3 days:</strong> Monday 84°/73°, Tuesday 84°/71°');
+    expect(r.text).toContain('Next 3 days: Monday 84°/73°, Tuesday 84°/71°');
   });
 
   it('labels paid units "Sponsored" (Rule 6)', () => {

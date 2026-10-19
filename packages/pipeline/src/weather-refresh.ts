@@ -9,7 +9,13 @@ import {
   type Fetcher,
   type ZoneAlert,
 } from '@towncore/adapters';
-import { tropicsBasins, type WeatherSnapshot } from '@towncore/config';
+import {
+  daysDue,
+  tropicsBasins,
+  WEATHER_DAYS_EVERY_MS,
+  WEATHER_DAYS_UNDER_LOAD_MS,
+  type WeatherSnapshot,
+} from '@towncore/config';
 import {
   and,
   eq,
@@ -32,15 +38,18 @@ import {
 // Shared across towns (rollout plan, Phase 1): api.weather.gov is one host at 1 request a second
 // (86,400 a day) for every town. Each run fetches alerts for all forecast zones in a few batched
 // requests, so warnings are never more than a run old anywhere; forecasts take turns, oldest
-// first, at most WEATHER_FORECASTS_PER_RUN a run, and a town's grid point is reused from its last
-// snapshot, so a forecast is one request. The site picks the current hour from the stored hourly
-// periods when it shows the tile.
+// first, at most WEATHER_FORECASTS_PER_RUN requests a run, and a town's grid point is reused from
+// its last snapshot, so a forecast is one request. The 7-day forecast (the Weather page's day
+// list) is one more on the same grid, fetched hourly at most, and only every 6 hours when more
+// towns are due than the run's budget, so the hourly forecasts keep their turns. The site picks
+// the current hour and drops ended days from the stored periods when it shows them.
 
 /** A forecast younger than this isn't fetched again. */
 export const WEATHER_FORECAST_EVERY_MS = 30 * 60_000;
 /**
- * Forecasts fetched per run (the worker runs every 15 minutes): 500 a run is 48,000 a day, about
- * 0.56 requests a second, leaving room on api.weather.gov for alerts, surf forecasts and records.
+ * Forecast requests per run (the worker runs every 15 minutes), hourly and 7-day together: 500 a
+ * run is 48,000 a day, about 0.56 requests a second, leaving room on api.weather.gov for alerts,
+ * surf forecasts and records.
  */
 export const WEATHER_FORECASTS_PER_RUN = 500;
 
@@ -87,7 +96,7 @@ export async function refreshTownWeather(
   fetcher: Fetcher,
   target: WeatherTarget,
   now = new Date(),
-  cached: { previous?: WeatherSnapshot | null; alerts?: ZoneAlert[] } = {},
+  cached: { previous?: WeatherSnapshot | null; alerts?: ZoneAlert[]; daysEveryMs?: number } = {},
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     let previous = cached.previous;
@@ -101,6 +110,7 @@ export async function refreshTownWeather(
     const snapshot = await fetchWeather(fetcher, target, now, {
       previous,
       ...(cached.alerts ? { alerts: cached.alerts } : {}),
+      ...(cached.daysEveryMs ? { daysEveryMs: cached.daysEveryMs } : {}),
     });
     // Beach parts fail on their own; the weather tile never waits on them.
     if (target.beach) snapshot.beach = await fetchBeach(fetcher, target.beach, now);
@@ -113,19 +123,46 @@ export async function refreshTownWeather(
   }
 }
 
-/** Which towns' forecasts this run fetches: due ones, never fetched first, then oldest. */
+/**
+ * Which towns' forecasts this run fetches: due ones, never fetched first, then oldest, while
+ * their requests (`cost`, 1 by default: 2 with the 7-day forecast) fit in `limit`.
+ */
 export function forecastsDue(
-  towns: Array<{ townId: string; fetchedAt: Date | null }>,
+  towns: Array<{ townId: string; fetchedAt: Date | null; cost?: number }>,
   now: Date,
   limit = WEATHER_FORECASTS_PER_RUN,
 ): string[] {
-  return towns
+  const due = towns
     .filter(
       (t) => !t.fetchedAt || now.getTime() - t.fetchedAt.getTime() >= WEATHER_FORECAST_EVERY_MS,
     )
-    .sort((a, b) => (a.fetchedAt?.getTime() ?? 0) - (b.fetchedAt?.getTime() ?? 0))
-    .slice(0, limit)
-    .map((t) => t.townId);
+    .sort((a, b) => (a.fetchedAt?.getTime() ?? 0) - (b.fetchedAt?.getTime() ?? 0));
+  const out: string[] = [];
+  let spent = 0;
+  for (const t of due) {
+    spent += t.cost ?? 1;
+    if (spent > limit) break;
+    out.push(t.townId);
+  }
+  return out;
+}
+
+/**
+ * How often this run fetches 7-day forecasts: hourly, unless the due towns' requests wouldn't fit
+ * in the budget that way; then every WEATHER_DAYS_UNDER_LOAD_MS.
+ */
+export function daysCadence(
+  towns: Array<{ townId: string; fetchedAt: Date | null; snapshot: WeatherSnapshot | null }>,
+  now: Date,
+  limit = WEATHER_FORECASTS_PER_RUN,
+): number {
+  const withDays = towns.map((t) => ({
+    ...t,
+    cost: daysDue(t.snapshot, now, WEATHER_DAYS_EVERY_MS) ? 2 : 1,
+  }));
+  const due = forecastsDue(withDays, now, Infinity);
+  const cost = withDays.filter((t) => due.includes(t.townId)).reduce((sum, t) => sum + t.cost, 0);
+  return cost <= limit ? WEATHER_DAYS_EVERY_MS : WEATHER_DAYS_UNDER_LOAD_MS;
 }
 
 /**
@@ -172,9 +209,15 @@ export async function refreshWeather(
     );
   }
 
-  const ages = targets.map((t) => ({
+  const towns = targets.map((t) => ({
     townId: t.townId,
     fetchedAt: byTown.get(t.townId)?.fetchedAt ?? null,
+    snapshot: byTown.get(t.townId)?.snapshot ?? null,
+  }));
+  const daysEveryMs = daysCadence(towns, now, limit);
+  const ages = towns.map((t) => ({
+    ...t,
+    cost: daysDue(t.snapshot, now, daysEveryMs) ? 2 : 1,
   }));
   const due = new Set(forecastsDue(ages, now, limit));
   // Due but over this run's budget: they're first in line next run.
@@ -189,6 +232,7 @@ export async function refreshWeather(
       const result = await refreshTownWeather(db, fetcher, target, now, {
         previous: row?.snapshot ?? null,
         ...(alerts ? { alerts } : {}),
+        daysEveryMs,
       });
       if (result.ok) ok++;
       else {

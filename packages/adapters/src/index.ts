@@ -54,6 +54,7 @@ export {
   alertsForTown,
   fetchWeather,
   fetchZoneAlerts,
+  parseForecastPeriods,
   parsePoint,
   type ZoneAlert,
 } from './nws/weather';

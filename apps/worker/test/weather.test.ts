@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Fetcher, replayFetch, type FixtureFile } from '@towncore/adapters';
-import { loadTowns } from '@towncore/config';
+import {
+  loadTowns,
+  WEATHER_DAYS_EVERY_MS,
+  WEATHER_DAYS_UNDER_LOAD_MS,
+  type WeatherSnapshot,
+} from '@towncore/config';
 import {
   claimWeatherRefresh,
   eq,
@@ -16,7 +21,12 @@ import {
 import { createTestDb } from '@towncore/db/testing';
 import { pino } from 'pino';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { forecastsDue, refreshTownWeather, WEATHER_FORECAST_EVERY_MS } from '@towncore/pipeline';
+import {
+  daysCadence,
+  forecastsDue,
+  refreshTownWeather,
+  WEATHER_FORECAST_EVERY_MS,
+} from '@towncore/pipeline';
 import { refreshTropics, refreshWeather, weatherTargets } from '../src/weather';
 
 const townsDir = fileURLToPath(new URL('../../../towns', import.meta.url));
@@ -160,6 +170,68 @@ describe('forecast turns', () => {
     ];
     expect(forecastsDue(towns, now, 3)).toEqual(['new', 'older', 'old']);
     expect(forecastsDue(towns, now)).toEqual(['new', 'older', 'old', 'due']);
+  });
+
+  it('counts the 7-day request against the budget', () => {
+    const now = new Date('2026-10-17T12:00:00Z');
+    const towns = [
+      { townId: 'a', fetchedAt: null, cost: 2 },
+      { townId: 'b', fetchedAt: null, cost: 1 },
+      { townId: 'c', fetchedAt: null, cost: 2 },
+    ];
+    expect(forecastsDue(towns, now, 3)).toEqual(['a', 'b']);
+    expect(forecastsDue(towns, now, 4)).toEqual(['a', 'b']);
+    expect(forecastsDue(towns, now, 5)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('fetches 7-day forecasts hourly, or every 6 hours when the run is over budget', () => {
+    const now = new Date('2026-10-17T12:00:00Z');
+    const ago = (min: number) => new Date(now.getTime() - min * 60_000);
+    const withDays = (min: number) =>
+      ({ days: { fetchedAt: ago(min).toISOString() } }) as unknown as WeatherSnapshot;
+    const towns = [
+      { townId: 'a', fetchedAt: ago(40), snapshot: withDays(70) },
+      { townId: 'b', fetchedAt: ago(40), snapshot: withDays(40) },
+      { townId: 'c', fetchedAt: ago(10), snapshot: withDays(70) },
+    ];
+    // Due: a (2 requests, its days are over an hour old) and b (1).
+    expect(daysCadence(towns, now, 3)).toBe(WEATHER_DAYS_EVERY_MS);
+    expect(daysCadence(towns, now, 2)).toBe(WEATHER_DAYS_UNDER_LOAD_MS);
+  });
+
+  it('keeps the 7-day forecast between hourly fetches, and fetches it again an hour on', async () => {
+    const { db: own, drop: dropOwn } = await createTestDb();
+    try {
+      await syncTowns(
+        own,
+        loadTowns(townsDir).filter((t) => t.config.slug === 'boca-raton'),
+      );
+      const id = (await getTownBySlug(own, 'boca-raton'))!.id;
+      const urls: string[] = [];
+      const counting = (file: FixtureFile) =>
+        new Fetcher({
+          fetchImpl: async (url, init) => {
+            urls.push(String(url));
+            return replayFetch(file)(url, init);
+          },
+          sleep: async () => {},
+          now: () => 0,
+          minIntervalMs: 0,
+        });
+      const sevenDay = () => urls.filter((u) => u.endsWith('/forecast')).length;
+      await refreshWeather(own, counting(fixture), logger, NOW);
+      expect(sevenDay()).toBe(1);
+      const shown = await getTownWeather(own, id, NOW);
+      expect(shown?.snapshot.days?.periods.length).toBeGreaterThan(10);
+      // 35 minutes on: the hourly forecast is due, the 7-day one isn't.
+      await refreshWeather(own, counting(fixture), logger, new Date(NOW.getTime() + 35 * 60_000));
+      expect(sevenDay()).toBe(1);
+      // 70 minutes on: both.
+      await refreshWeather(own, counting(fixture), logger, new Date(NOW.getTime() + 70 * 60_000));
+      expect(sevenDay()).toBe(2);
+    } finally {
+      await dropOwn();
+    }
   });
 });
 

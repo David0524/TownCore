@@ -1,5 +1,9 @@
 import {
   advanceSnapshot,
+  daysDue,
+  WEATHER_DAYS_EVERY_MS,
+  type ForecastPeriod,
+  type SevenDayForecast,
   type WeatherAlert,
   type WeatherPeriod,
   type WeatherSnapshot,
@@ -38,7 +42,9 @@ type Period = {
   windSpeed: string;
   windDirection: string;
   shortForecast: string;
+  detailedForecast?: string;
   probabilityOfPrecipitation?: { value: number | null } | null;
+  relativeHumidity?: { value: number | null } | null;
 };
 type Forecast = { properties: { updateTime?: string; updated?: string; periods: Period[] } };
 type ActiveAlerts = {
@@ -79,7 +85,33 @@ const period = (p: Period): WeatherPeriod => ({
   windSpeed: p.windSpeed,
   windDirection: p.windDirection,
   unit: p.temperatureUnit,
+  humidity: p.relativeHumidity?.value ?? null,
+  isDaytime: p.isDaytime,
 });
+
+/**
+ * The 7-day forecast's 12-hour periods (`/gridpoints/.../forecast`), still running at `now`.
+ * Periods without a numeric temperature are dropped. NWS's icon URLs are never kept: the site
+ * draws its own (Rule 9).
+ */
+export function parseForecastPeriods(body: unknown, now: Date): ForecastPeriod[] {
+  const raw = (body as Partial<Forecast> | null)?.properties?.periods;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((p) => Number.isFinite(p.temperature) && new Date(p.endTime) > now)
+    .map((p) => ({
+      name: p.name,
+      startTime: p.startTime,
+      endTime: p.endTime,
+      isDaytime: Boolean(p.isDaytime),
+      temperature: p.temperature,
+      shortForecast: p.shortForecast ?? '',
+      detailedForecast: p.detailedForecast ?? '',
+      precipChance: precip(p),
+      windSpeed: p.windSpeed ?? '',
+      windDirection: p.windDirection ?? '',
+    }));
+}
 
 /** How many hourly periods a snapshot keeps (advanceSnapshot picks "now" from them). */
 export const UPCOMING_HOURS = 36;
@@ -145,13 +177,15 @@ export const alertsForTown = (alerts: ZoneAlert[], sourceUrl: string): WeatherAl
 /**
  * Fetches the tile's data for one point and NWS zone, from api.weather.gov. With the town's
  * previous snapshot its grid point and place are reused, so it's one request (the hourly
- * forecast); alerts can be passed in from fetchZoneAlerts, else they cost one more.
+ * forecast); alerts can be passed in from fetchZoneAlerts, else they cost one more. The 7-day
+ * forecast (one more request on the same grid) is fetched only when the previous one is at least
+ * `daysEveryMs` old, else carried over; when it fails, the previous one is kept.
  */
 export async function fetchWeather(
   fetcher: Fetcher,
   opts: { point: string; zone: string },
   now: Date = new Date(),
-  cached: { previous?: WeatherSnapshot | null; alerts?: ZoneAlert[] } = {},
+  cached: { previous?: WeatherSnapshot | null; alerts?: ZoneAlert[]; daysEveryMs?: number } = {},
 ): Promise<WeatherSnapshot> {
   const [lat, lon] = parsePoint(opts.point);
   let grid = cached.previous?.grid;
@@ -177,6 +211,10 @@ export async function fetchWeather(
     .map(period);
   const current = upcoming[0];
   if (!current) throw new Error('NWS hourly forecast has no current period');
+  let days = cached.previous?.days;
+  if (daysDue(cached.previous, now, cached.daysEveryMs ?? WEATHER_DAYS_EVERY_MS)) {
+    days = (await fetchSevenDay(fetcher, grid, now)) ?? days;
+  }
   return advanceSnapshot(
     {
       place,
@@ -188,9 +226,34 @@ export async function fetchWeather(
       today: { name: '', high: null, low: null, shortForecast: current.shortForecast },
       alerts: alertsForTown(alerts, sourceUrl),
       sourceUrl,
+      ...(days ? { days } : {}),
     },
     now,
   );
+}
+
+/** The 7-day forecast for a grid point, or null when NWS fails or sends no usable periods. */
+async function fetchSevenDay(
+  fetcher: Fetcher,
+  grid: WeatherSnapshot['grid'],
+  now: Date,
+): Promise<SevenDayForecast | null> {
+  try {
+    const body = await fetcher.getJson<Forecast>(
+      `${API}/gridpoints/${grid.office}/${grid.x},${grid.y}/forecast`,
+      GEOJSON,
+    );
+    const periods = parseForecastPeriods(body, now);
+    if (!periods.length) return null;
+    return {
+      updatedAt: body.properties.updateTime ?? body.properties.updated ?? now.toISOString(),
+      fetchedAt: now.toISOString(),
+      periods,
+    };
+  } catch {
+    // The 7-day forecast is often briefly unavailable on NWS; the tile never waits on it.
+    return null;
+  }
 }
 
 /** The human-readable NWS forecast page for a point. */

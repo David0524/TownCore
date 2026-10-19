@@ -521,6 +521,16 @@ export const townForecast = cache(async (townId: string) => {
   return periods.length ? { periods, url: forecast.url, issuedAt: forecast.occurredAt } : null;
 });
 
+/**
+ * True when the Weather page has a forecast to show (the NWS 7-day forecast, or the zone
+ * forecast when that's missing): then it's a real page for search; without one it's noindex.
+ */
+export const weatherPageHasForecast = cache(async (townId: string): Promise<boolean> => {
+  const fresh = await getTownWeather(db(), townId);
+  if (fresh?.snapshot.days) return true;
+  return (await townForecast(townId)) !== null;
+});
+
 export type GameItem = Game & { id: string; when: Date; url: string | null };
 
 /**
