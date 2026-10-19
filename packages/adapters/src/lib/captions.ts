@@ -61,7 +61,7 @@ function cleanCueText(lines: string[]): string {
     .trim();
 }
 
-const normalize = (raw: string) => raw.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+const normalize = (raw: string) => raw.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
 
 /**
  * Adds a cue unless it repeats the last one. Roll-up captions (YouTube, many broadcast

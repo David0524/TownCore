@@ -105,7 +105,7 @@ Only real cue.`;
 
   it('detects VTT, and rejects prose', () => {
     expect(looksLikeVtt('WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHi.')).toBe(true);
-    expect(looksLikeVtt('﻿WEBVTT\n')).toBe(true);
+    expect(looksLikeVtt('\uFEFFWEBVTT\n')).toBe(true);
     expect(looksLikeVtt('00:01:02.000 --> 00:01:03.000\nNo header.')).toBe(true);
     expect(looksLikeVtt('The council met on Tuesday and voted 5-2.')).toBe(false);
   });
