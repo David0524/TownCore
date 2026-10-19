@@ -109,6 +109,11 @@ const DESCRIPTIONS: Record<string, SourceDescription> = {
   },
   forecast: { publisher: 'National Weather Service', dataset: 'forecast' },
   release: { dataset: 'news releases' },
+  'inbox:release': {
+    dataset: 'press release sent to the newsroom',
+    about:
+      'A release the agency or organization emailed to our newsroom; an editor confirmed it came from the organization itself.',
+  },
   'release-link': { dataset: 'news releases' },
   page: { dataset: 'official page' },
   game: { dataset: 'scores' },

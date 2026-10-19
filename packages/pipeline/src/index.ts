@@ -154,6 +154,19 @@ export {
   type TownHealth,
 } from './ops';
 export {
+  MAX_RELEASE_CHARS,
+  MIN_RELEASE_CHARS,
+  NEWSROOM_KINDS,
+  NewsroomError,
+  newsroomKindLabels,
+  newsroomRecords,
+  releaseText,
+  releaseTitle,
+  sendToNewsroom,
+  suggestKind,
+  type NewsroomKind,
+} from './press-releases';
+export {
   bandFor,
   bandRows,
   CALIBRATION_DAYS,
