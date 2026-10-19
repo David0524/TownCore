@@ -37,6 +37,19 @@ export { isoDurationSeconds, titleTime, youtubeAdapter, youtubeChannel } from '.
 export { extractPage, pageAdapter } from './page';
 export { feedAdapter, feedLinks, htmlToText, pageText, parseFeed } from './feed';
 export { parseIcal, zonedTimeToUtc } from './lib/ical';
+export {
+  clock,
+  cueIndex,
+  looksLikeSrt,
+  looksLikeVtt,
+  parseCaptions,
+  secondsAt,
+  timestampToSeconds,
+  type CaptionFormat,
+  type Cue,
+  type CueIndex,
+  type ParsedCaptions,
+} from './lib/captions';
 export { flDbprAdapter } from './fl-dbpr';
 export { foodViolations } from './fl-dbpr/violations';
 export { usaspendingAdapter } from './usaspending';

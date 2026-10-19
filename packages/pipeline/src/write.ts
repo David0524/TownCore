@@ -34,6 +34,7 @@ import { applyUpdate, linkRelatedStories } from './followups';
 import { writeGuide } from './guides';
 import { llmTown } from './finder';
 import { callModel, LlmOutputError, routeFor, SpendCapReached, type Llm, type Prompt } from './llm';
+import { itemFocus, itemSourceText, meetingItemOf } from './meeting-split';
 import { uniqueSlug } from './publish';
 import { lengthBand } from './scoring';
 import {
@@ -166,11 +167,16 @@ export async function writeCandidate(
   }
   const llm = opts.llm;
   const tTown = llmTown(town!, config);
+  // One decision split from a meeting: the writer and fact-check get the minutes around it and
+  // only its stretch of transcript (meeting-split.ts), never the whole meeting's transcript.
+  const meetingItem = meetingItemOf(candidate.classification);
+  const textOf = (record: Row['record']) =>
+    meetingItem ? itemSourceText(record, meetingItem) : (record.text ?? '');
   const sourcesText = rows.map(({ record, sourceKind }) =>
     [
       `--- Record ${record.id} (source: ${sourceKind}${record.occurredAt ? `, dated ${record.occurredAt.toISOString()}` : ''}${record.url ? `, ${record.url}` : ''})`,
       `Title: ${record.title ?? ''}`,
-      record.text ?? '',
+      textOf(record),
     ].join('\n'),
   );
   const townLines = [
@@ -185,7 +191,7 @@ export async function writeCandidate(
   const sourceTexts = rows.map((r) => ({
     id: r.record.id,
     title: r.record.title,
-    text: r.record.text,
+    text: textOf(r.record),
   }));
   // Writer v2 only where the routing table switches it on; its length band is chosen here, in
   // code, from how much the records say. The revise uses the same version.
@@ -196,6 +202,7 @@ export async function writeCandidate(
   const versions = [
     `${writerPrompt.id}@${writerPrompt.version}`,
     `${factcheckV1.id}@${factcheckV1.version}`,
+    ...(meetingItem ? [meetingItem.version] : []),
   ];
   try {
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -230,6 +237,7 @@ export async function writeCandidate(
         input: [
           `Beat: ${candidate.beat}. Kind: story.`,
           ...length,
+          ...(meetingItem ? [itemFocus(meetingItem)] : []),
           ...remove,
           '',
           ...sourcesText,
