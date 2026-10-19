@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { loadTowns, type SourceKind } from '@towncore/config';
 import {
   aiUsage,
+  articleLinks,
   articles,
   eq,
   images,
@@ -15,7 +16,14 @@ import {
   type Db,
 } from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
-import { factcheckV1, writerV1, type FactcheckResult, type WriterDraft } from '@towncore/prompts';
+import {
+  factcheckV1,
+  legalV1,
+  writerV1,
+  writerV2,
+  type FactcheckResult,
+  type WriterDraft,
+} from '@towncore/prompts';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Llm, LlmProvider, LlmResponse } from '../src/llm';
 import { publishArticle, slugify, type Reviewer } from '../src/publish';
@@ -58,27 +66,36 @@ const goodCheck = (recordId: string): FactcheckResult => ({
 });
 
 /** Scripted answers per prompt; records every request's input. */
-function scripted(answers: { writer?: unknown[]; factcheck?: unknown[]; refuse?: 'writer' }) {
-  const inputs: { prompt: string; input: string }[] = [];
-  const queues = { writer: [...(answers.writer ?? [])], factcheck: [...(answers.factcheck ?? [])] };
+function scripted(
+  answers: { writer?: unknown[]; factcheck?: unknown[]; legal?: unknown[]; refuse?: 'writer' },
+  routeOverrides?: Llm['routeOverrides'],
+) {
+  const inputs: { prompt: string; input: string; system: string }[] = [];
+  const queues = {
+    writer: [...(answers.writer ?? [])],
+    factcheck: [...(answers.factcheck ?? [])],
+    legal: [...(answers.legal ?? [])],
+  };
   const provider: LlmProvider = {
     name: 'replay',
     async generate(request): Promise<LlmResponse> {
       const prompt =
-        request.system === writerV1.system
+        request.system === writerV1.system || request.system === writerV2.system
           ? 'writer'
           : request.system === factcheckV1.system
             ? 'factcheck'
-            : 'other';
-      inputs.push({ prompt, input: request.input });
+            : request.system === legalV1.system
+              ? 'legal'
+              : 'other';
+      inputs.push({ prompt, input: request.input, system: request.system });
       const usage = { inputTokens: 10, outputTokens: 10, cacheReadTokens: 0 };
       if (answers.refuse === prompt) return { text: '', stop: 'refusal', model: 'm', usage };
-      const queue = queues[prompt as 'writer' | 'factcheck'];
+      const queue = queues[prompt as 'writer' | 'factcheck' | 'legal'];
       const next = queue.length > 1 ? queue.shift() : queue[0];
       return { text: JSON.stringify(next), stop: 'end', model: 'gemini-flash-latest', usage };
     },
   };
-  const llm: Llm = { db, provider, providerName: 'gemini', now: () => NOW };
+  const llm: Llm = { db, provider, providerName: 'gemini', now: () => NOW, routeOverrides };
   return { llm, inputs };
 }
 
@@ -141,6 +158,7 @@ beforeAll(async () => {
 afterAll(async () => drop());
 beforeEach(async () => {
   await db.update(storyCandidates).set({ articleId: null });
+  await db.delete(articleLinks);
   await db.delete(articles);
   await db.delete(storyCandidates);
   await db.delete(aiUsage);
@@ -320,6 +338,180 @@ describe('writeCandidate: stories', () => {
     expect(writes[1]!.input).toContain(
       'the quotation "This road has needed work for a very long time" (quoted text not found verbatim in any cited record)',
     );
+  });
+
+  describe('writer v2 (off until recorded)', () => {
+    it('uses v1 by default, with no length band', async () => {
+      const { candidate, recordId } = await storyCandidate();
+      const { llm, inputs } = scripted({
+        writer: [draft({ source_record_ids: [recordId] })],
+        factcheck: [goodCheck(recordId)],
+      });
+      const outcome = await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 });
+      const writer = inputs.find((i) => i.prompt === 'writer')!;
+      expect(writer.system).toBe(writerV1.system);
+      expect(writer.input).not.toContain('Length:');
+      expect((await article((outcome as { articleId: string }).articleId)).promptVersions).toEqual([
+        'writer@v1',
+        'factcheck@v1',
+      ]);
+    });
+
+    it('when switched on, sends v2 with a length band computed in code from the records', async () => {
+      const on = { write: { promptVersion: 'v2' as const } };
+      const { candidate, recordId } = await storyCandidate();
+      const { llm, inputs } = scripted(
+        {
+          writer: [draft({ source_record_ids: [recordId] })],
+          factcheck: [goodCheck(recordId)],
+        },
+        on,
+      );
+      const outcome = await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 });
+      expect(outcome.status).toBe('published');
+      const writer = inputs.find((i) => i.prompt === 'writer')!;
+      expect(writer.system).toBe(writerV2.system);
+      // TEXT is one short release: a brief.
+      expect(writer.input).toContain('Length: BRIEF, 100–200 words');
+      expect((await article((outcome as { articleId: string }).articleId)).promptVersions).toEqual([
+        'writer@v2',
+        'factcheck@v1',
+      ]);
+
+      // A long release gets a longer band; the revise keeps v2 and its band.
+      const long = await storyCandidate(
+        `${TEXT} ${'The council discussed the schedule. '.repeat(50)}`,
+      );
+      const second = scripted(
+        {
+          writer: [
+            draft({
+              source_record_ids: [long.recordId],
+              body_md: `${draft().body_md} Stay tuned.`,
+            }),
+            draft({ source_record_ids: [long.recordId] }),
+          ],
+          factcheck: [goodCheck(long.recordId)],
+        },
+        on,
+      );
+      await writeCandidate(db, long.candidate.id, { llm: second.llm, now: NOW, random: () => 0.5 });
+      const writes = second.inputs.filter((i) => i.prompt === 'writer');
+      expect(writes).toHaveLength(2);
+      for (const w of writes) {
+        expect(w.system).toBe(writerV2.system);
+        expect(w.input).toContain('Length: STANDARD, 350–500 words');
+      }
+    });
+  });
+
+  describe('libel review (off until recorded)', () => {
+    const on = { legal: { disabled: false } };
+
+    it('makes no call while switched off', async () => {
+      const { candidate, recordId } = await storyCandidate();
+      const { llm, inputs } = scripted({
+        writer: [draft({ source_record_ids: [recordId] })],
+        factcheck: [goodCheck(recordId)],
+        legal: [{ flags: [], level: 'critical' }],
+      });
+      expect(
+        await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 }),
+      ).toMatchObject({ status: 'published' });
+      expect(inputs.some((i) => i.prompt === 'legal')).toBe(false);
+    });
+
+    it('raises a high-risk Tier 2 draft to Tier 3 review and keeps only verbatim flags', async () => {
+      const { candidate, recordId } = await storyCandidate();
+      const { llm, inputs } = scripted(
+        {
+          writer: [draft({ source_record_ids: [recordId] })],
+          factcheck: [goodCheck(recordId)],
+          legal: [
+            {
+              level: 'high',
+              flags: [
+                {
+                  pattern: 'financial_claim',
+                  excerpt: 'a $2,500,000 contract with Acme Paving',
+                  why: 'A named business.',
+                  fix: 'Attribute it to the council vote.',
+                },
+                {
+                  pattern: 'opinion_as_fact',
+                  excerpt: 'Acme Paving is known for shoddy work',
+                  why: 'Not in the draft.',
+                  fix: 'Cut it.',
+                },
+              ],
+            },
+          ],
+        },
+        on,
+      );
+      const outcome = await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 });
+      expect(outcome).toMatchObject({ status: 'in_review', reason: 'tier3' });
+      const a = await article((outcome as { articleId: string }).articleId);
+      expect(a.tier).toBe(3);
+      expect(a.tierReasons).toContain('libel review: high risk (1 passage flagged)');
+      expect(a.promptVersions).toEqual(['writer@v1', 'factcheck@v1', 'legal@v1']);
+      expect(a.factcheck).toMatchObject({
+        decision: 'pass',
+        legal: {
+          level: 'high',
+          dropped: 1,
+          flags: [
+            { pattern: 'financial_claim', excerpt: 'a $2,500,000 contract with Acme Paving' },
+          ],
+        },
+      });
+      // A separate call that sees the draft and the records, never the writer's prompt.
+      const legal = inputs.find((i) => i.prompt === 'legal')!.input;
+      expect(legal).toContain('=== Draft');
+      expect(legal).not.toContain('Beat: government. Kind: story.');
+    });
+
+    it('a low or medium review never changes the tier; Tier 3 drafts are not reviewed', async () => {
+      const { candidate, recordId } = await storyCandidate();
+      const { llm } = scripted(
+        {
+          writer: [draft({ source_record_ids: [recordId] })],
+          factcheck: [goodCheck(recordId)],
+          legal: [{ level: 'medium', flags: [] }],
+        },
+        on,
+      );
+      const outcome = await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 });
+      expect(outcome).toMatchObject({ status: 'published' });
+      expect((await article((outcome as { articleId: string }).articleId)).tier).toBe(2);
+
+      const tier3 = await storyCandidate(TEXT, { proposedTier: 3 });
+      const third = scripted(
+        {
+          writer: [draft({ source_record_ids: [tier3.recordId] })],
+          factcheck: [goodCheck(tier3.recordId)],
+          legal: [{ level: 'critical', flags: [] }],
+        },
+        on,
+      );
+      await writeCandidate(db, tier3.candidate.id, { llm: third.llm, now: NOW, random: () => 0.5 });
+      expect(third.inputs.some((i) => i.prompt === 'legal')).toBe(false);
+    });
+
+    it('sends the draft to a person when the review is on but fails', async () => {
+      const { candidate, recordId } = await storyCandidate();
+      const { llm } = scripted(
+        {
+          writer: [draft({ source_record_ids: [recordId] })],
+          factcheck: [goodCheck(recordId)],
+          legal: [{ level: 'nonsense' }],
+        },
+        on,
+      );
+      expect(
+        await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 }),
+      ).toMatchObject({ status: 'in_review', reason: 'model_error' });
+    });
   });
 
   it('Tier 3 always goes to review', async () => {

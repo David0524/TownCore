@@ -1,6 +1,6 @@
 import type { Classification } from '@towncore/prompts';
 import { describe, expect, it } from 'vitest';
-import { scoreCandidate, timeliness, titleSimilarity } from '../src/scoring';
+import { lengthBand, scoreCandidate, timeliness, titleSimilarity } from '../src/scoring';
 import { decideTier, mentionsMinor } from '../src/tiers';
 import { apDate, isoLocalDate, localWeekStart, startOfLocalDay } from '../src/time';
 import { classification } from './helpers';
@@ -153,6 +153,17 @@ describe('mentionsMinor', () => {
 
 describe('scoring', () => {
   const now = new Date('2026-10-15T12:00:00Z');
+
+  it('lengthBand: the writer v2 length comes from how much the records say', () => {
+    const rec = (chars: number) => ({ title: 'T', text: 'x'.repeat(chars) });
+    expect(lengthBand([rec(600)])).toBe('brief');
+    expect(lengthBand([rec(700), rec(700)])).toBe('brief');
+    expect(lengthBand([rec(1500)])).toBe('standard');
+    expect(lengthBand([rec(4999)])).toBe('standard');
+    expect(lengthBand([rec(5000)])).toBe('substantial');
+    expect(lengthBand([rec(1000), rec(1000), rec(1000)])).toBe('substantial');
+    expect(lengthBand([rec(900), rec(900), rec(900)])).toBe('standard');
+  });
 
   it('timeliness decays over three days and favors the next two days', () => {
     expect(timeliness(now, now)).toBe(1);

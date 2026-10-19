@@ -63,9 +63,9 @@ function naiveModel(): Llm {
 }
 
 describe('eval harness', () => {
-  it('loads all 25 cases: 20 Boca seeds, Delray, Harbor Point and Pine Hollow', () => {
+  it('loads all 28 cases: Boca seeds and sensitive topics, Delray, Harbor Point and Pine Hollow', () => {
     const cases = loadEvalCases(casesPath, (_f, id) => ({ title: `Release ${id}`, text: 'x' }));
-    expect(cases).toHaveLength(25);
+    expect(cases).toHaveLength(28);
     expect(new Set(cases.map((c) => c.town ?? 'boca-raton'))).toEqual(
       new Set(['boca-raton', 'delray-beach', 'harbor-point', 'pine-hollow']),
     );
@@ -84,6 +84,9 @@ describe('eval harness', () => {
         'synthetic-minor-named-age',
         'synthetic-adult-arrest-official-release',
         'synthetic-road-closure',
+        'synthetic-suicide-prevention-walk',
+        'synthetic-amber-alert',
+        'synthetic-sexual-offender-notice',
       ].includes(c.id),
     );
     const town = (await getTownBySlug(db, 'boca-raton'))!;
@@ -98,6 +101,14 @@ describe('eval harness', () => {
       failures: [],
     });
     expect(byId['synthetic-road-closure']).toMatchObject({ status: 'published', failures: [] });
-    expect(summary).toMatchObject({ cases: 3, passed: 3, safetyFailures: 0, verbatimQuoteRate: 1 });
+    // Sensitive topics from a city source, which the model called Tier 1: code holds them.
+    for (const id of [
+      'synthetic-suicide-prevention-walk',
+      'synthetic-sexual-offender-notice',
+      'synthetic-amber-alert',
+    ]) {
+      expect(byId[id], id).toMatchObject({ tier: 3, status: 'in_review', failures: [] });
+    }
+    expect(summary).toMatchObject({ cases: 6, passed: 6, safetyFailures: 0, verbatimQuoteRate: 1 });
   });
 });

@@ -65,6 +65,14 @@ export {
 } from './tiers';
 export { lintStyle, styleRevisionLines, STYLE_WHY, type StyleHit } from './style-lint';
 export {
+  legalReviewOn,
+  reviewLibel,
+  tierAfterLegal,
+  verifyLegalFlags,
+  type LegalFlag,
+  type LegalReport,
+} from './legal';
+export {
   checkDraft,
   namesIn,
   normalize,
