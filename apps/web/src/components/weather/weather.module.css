@@ -210,7 +210,7 @@ a.lineText:hover {
   .alert {
     margin: 0.5rem var(--gutter) 0;
     border-radius: var(--radius-group);
-    background: var(--ios-grouped);
+    background: var(--surface);
     color: var(--ink);
     font-size: 0.9375rem;
   }
@@ -377,4 +377,293 @@ a.lineText:hover {
 
 .outlook p {
   white-space: pre-line;
+}
+
+/* The Weather page's card for this hour: the Today tile's treatment (it takes .tile), with an
+   icon and a line of facts. */
+.conditions {
+  margin: 1rem 0 0;
+}
+
+.nowRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+
+.nowIcon {
+  flex: none;
+}
+
+.nowText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 14rem;
+  min-width: 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.nowText p {
+  margin: 0;
+}
+
+.nowText .short {
+  font-size: 1.125rem;
+}
+
+/* Every active alert, in alert amber (one color for every severity). */
+.alertSection {
+  margin: 1rem 0 0;
+}
+
+.alertList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.alertList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-tile);
+  background: var(--alert);
+  color: var(--alert-text);
+}
+
+.alertBody {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.6rem;
+  min-width: 0;
+}
+
+.alertEvent {
+  font-weight: 700;
+  color: inherit;
+}
+
+.alertUntil {
+  font-size: 0.9375rem;
+}
+
+.alertHeadline {
+  flex-basis: 100%;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+/* The 7-day list: one hairline row per day, opening to NWS's own words. */
+.days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: var(--hairline);
+}
+
+.days > li {
+  border-bottom: var(--hairline);
+}
+
+.dayRow {
+  display: grid;
+  grid-template-columns: 8.5rem 2rem minmax(0, 1fr) 6rem 0.875rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.25rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.dayRow::-webkit-details-marker {
+  display: none;
+}
+
+.dayName {
+  font-weight: 600;
+}
+
+.dayIcon {
+  color: var(--accent);
+}
+
+.daySummary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.precip,
+.hourlyPrecip,
+.hourlyTime {
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.temps {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.high {
+  font-weight: 600;
+}
+
+.low {
+  min-width: 2.25rem;
+  text-align: right;
+  color: var(--muted);
+}
+
+.dayChevron {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.day[open] .dayChevron {
+  transform: rotate(90deg);
+}
+
+.dayDetail {
+  padding: 0 0.25rem 0.9rem calc(8.5rem + 2rem + 1.75rem);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.dayDetail p {
+  margin: 0 0 0.4rem;
+}
+
+/* The next 12 hours, one row; it scrolls sideways when narrow. */
+.hourly {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(3rem, 1fr);
+  overflow-x: auto;
+  text-align: center;
+  border-top: var(--hairline);
+  border-bottom: var(--hairline);
+}
+
+.hourly li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.6rem 0;
+}
+
+.hourlyIcon {
+  color: var(--accent);
+}
+
+/* Dark mode: the brand color is too dim on the near-black page for line icons. */
+:global(:root[data-color-scheme='dark']) .dayIcon,
+:global(:root[data-color-scheme='dark']) .hourlyIcon {
+  color: var(--ink);
+}
+
+.hourlyTemp {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hourlyPrecip {
+  font-size: 0.75rem;
+  min-height: 1lh;
+}
+/* Phones: inset grouped lists. --surface is the iOS grouped gray on phones and turns dark with
+   the page, so the rows stay readable in dark mode. */
+
+@media (max-width: 599.98px) {
+  .alertList li {
+    align-items: center;
+    padding: 0.65rem 0.75rem;
+    border-radius: var(--radius-group);
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  .alertHeadline {
+    color: var(--muted);
+  }
+
+  .days,
+  .hourly {
+    border: 0;
+    border-radius: var(--radius-group);
+    background: var(--surface);
+  }
+
+  .days {
+    padding: 0 0.9rem;
+  }
+
+  .days > li:last-child {
+    border-bottom: 0;
+  }
+
+  .days > li {
+    border-bottom: 0.5px solid var(--rule);
+  }
+
+  /* Day, icon, temperatures; the short forecast on its own line below. */
+  .dayRow {
+    grid-template-columns: minmax(0, 1fr) 1.75rem 5.5rem 0.75rem;
+    grid-template-areas:
+      'name icon temps chevron'
+      'summary summary summary summary';
+    gap: 0.15rem 0.5rem;
+    min-height: 44px;
+    padding: 0.55rem 0;
+  }
+
+  .dayName {
+    grid-area: name;
+  }
+
+  .dayIcon {
+    grid-area: icon;
+  }
+
+  .temps {
+    grid-area: temps;
+  }
+
+  .dayChevron {
+    grid-area: chevron;
+  }
+
+  .daySummary {
+    grid-area: summary;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0 0.5rem;
+    font-size: 0.9375rem;
+    color: var(--muted);
+  }
+
+  .dayDetail {
+    padding: 0 0 0.75rem;
+  }
+
+  .hourly {
+    grid-auto-columns: 3.4rem;
+    padding: 0 0.4rem;
+  }
 }

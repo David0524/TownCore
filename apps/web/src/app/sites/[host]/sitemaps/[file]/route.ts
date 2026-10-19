@@ -11,7 +11,7 @@ import { listPublishedGuides, listTownCorrections } from '@towncore/db';
 import { db } from '@/lib/db';
 import { MIN_INDEXABLE_STORIES } from '@/lib/indexing';
 import { resolveTown } from '@/lib/town';
-import { indexableTopics, realStoryCounts } from '@/modules/data';
+import { indexableTopics, realStoryCounts, weatherPageHasForecast } from '@/modules/data';
 
 // Built per request from the database (never pre-rendered at build time).
 export const dynamic = 'force-dynamic';
@@ -35,6 +35,8 @@ export async function GET(_req: Request, { params }: Ctx) {
           // Only once it lists a correction; empty, it's the same text everywhere.
           ...((await listTownCorrections(db(), town.id)).length ? ['/corrections'] : []),
           ...((await listPublishedGuides(db(), town.id)).length ? ['/guides'] : []),
+          // The Weather page once it has a forecast to show.
+          ...((await weatherPageHasForecast(town.id)) ? ['/weather'] : []),
           // Sections with 3+ real stories only; thinner ones are noindex.
           ...beats
             .filter((b) => (counts.byBeat.get(b.slug) ?? 0) >= MIN_INDEXABLE_STORIES)

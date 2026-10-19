@@ -1,3 +1,12 @@
+.section {
+  margin-top: 2rem;
+}
+
+.section > h2 {
+  margin: 0 0 0.75rem;
+}
+
+/* The zone forecast, as NWS wrote it, when the 7-day forecast is missing. */
 .periods {
   list-style: none;
   margin: 1rem 0 1.25rem;
@@ -12,13 +21,31 @@
   border-bottom: var(--hairline);
 }
 
+.noAlerts {
+  margin: 1.25rem 0 0;
+}
+
+.credit {
+  margin: 0.5rem 0 0;
+}
+
+.noAlerts + .credit {
+  margin-top: 0.25rem;
+}
+
+.beach {
+  margin-top: 2.5rem;
+}
+
+.emergency {
+  margin: 2.5rem 0 0;
+  padding-top: 0.75rem;
+  border-top: var(--hairline);
+}
+
 @media (max-width: 599.98px) {
   .periods li {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.25rem;
   }
-}
-
-.beach {
-  margin-top: 2.5rem;
 }
