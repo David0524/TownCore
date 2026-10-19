@@ -127,6 +127,13 @@ export function planDns(
       plan.present.push({ want: record, existing: match });
       continue;
     }
+    // Our own DMARC record after an admin stepped its policy up (quarantine, reject): it is
+    // still ours, kept as it is, never a conflict and never put back to p=none.
+    const stepped = atName.find((e) => sameDmarcButPolicy(record, e));
+    if (stepped) {
+      plan.present.push({ want: { ...record, value: stepped.value }, existing: stepped });
+      continue;
+    }
     const clash = atName.find((e) => clashes(record, e));
     if (clash) {
       plan.conflicts.push({ want: record, existing: clash, reason: clashReason(record, clash) });
@@ -135,6 +142,20 @@ export function planDns(
     plan.create.push(record);
   }
   return plan;
+}
+
+const withoutPolicy = (value: string) =>
+  normValue('TXT', value)
+    .toLowerCase()
+    .replace(/(^|;)\s*p=\s*(none|quarantine|reject)\s*(?=;|$)/, '$1 p=*');
+
+function sameDmarcButPolicy(want: DnsRecordSpec, have: ExistingRecord): boolean {
+  return (
+    want.purpose === 'dmarc' &&
+    have.type.toUpperCase() === 'TXT' &&
+    txtKind(have.value) === 'dmarc' &&
+    withoutPolicy(want.value) === withoutPolicy(have.value)
+  );
 }
 
 function txtKind(value: string): 'spf' | 'dmarc' | 'other' {

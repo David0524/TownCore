@@ -206,6 +206,8 @@ test('a ready launch goes live only when every check passes; an admin can pause 
   });
   await page.reload();
   await expect(row.getByTestId('mail-warmup')).toContainText('Warming: day 3, 50 a day');
+  // Inbox placement is measured before go-live, never a blocker.
+  await expect(row.getByTestId('inbox-placement')).toHaveText('Inbox placement: not tested yet');
   await row.getByRole('button', { name: 'Approve launch: take Testcove Square live' }).click();
   await expect(page.getByRole('status')).toHaveText('Testcove Square is live');
   const [live] = await db.select().from(towns).where(eq(towns.slug, 'testcove-zz'));

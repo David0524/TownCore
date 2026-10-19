@@ -393,6 +393,13 @@
       "when": 1792254345980,
       "tag": "0055_analytics",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1792378005950,
+      "tag": "0056_inbox_placement_and_dmarc_policy",
+      "breakpoints": true
     }
   ]
 }
