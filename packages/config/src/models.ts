@@ -143,6 +143,7 @@ export const aiTasks = [
   'identity',
   'theme-review',
   'reviewer',
+  'meeting-split',
 ] as const;
 export type AiTask = (typeof aiTasks)[number];
 
@@ -287,6 +288,19 @@ export const taskRoutes: Record<AiTask, TaskRoute> = {
     maxOutputTokens: 4000,
     dailyCapUsd: 0,
     maxCallUsd: 0.3,
+    disabled: true,
+  },
+  // One meeting's minutes into its decisions, one chunk a call; code checks every excerpt and
+  // tally. Off until recorded with `pnpm evals --live`, then the owner turns it on by deleting
+  // `disabled` (meeting recaps stay one story per meeting until then).
+  'meeting-split': {
+    tier: 'small',
+    thinking: 'off',
+    effort: 'low',
+    maxOutputTokens: 4000,
+    escalate: { to: 'mid' },
+    dailyCapUsd: 3,
+    maxCallUsd: 0.1,
     disabled: true,
   },
 };

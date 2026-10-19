@@ -53,6 +53,13 @@ export {
   type TemplatedDraft,
   type TemplateRecord,
 } from './templates';
+export {
+  chooseSplit,
+  meetingItemOf,
+  meetingSplitEnabled,
+  splitMeeting,
+  type MeetingItem,
+} from './meeting-split';
 export { nearDuplicateShare, normalizeWords } from './near-duplicate';
 export { pastWeekCounts, roundupWeekRecords } from './roundup-weeks';
 export { cannotBeArticle, decideTier, mentionsMinor, type Tier, type TierDecision } from './tiers';

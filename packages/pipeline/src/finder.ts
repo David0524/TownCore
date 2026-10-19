@@ -28,6 +28,15 @@ import {
   recentPublished,
 } from './followups';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
+import {
+  chooseSplit,
+  itemSourceText,
+  MEETING_RESULT_TYPES,
+  MEETING_SPLIT_VERSION,
+  meetingSplitEnabled,
+  splitMeeting,
+  type MeetingItem,
+} from './meeting-split';
 import { MIN_SOURCE_CHARS, scoreCandidate, titleSimilarity } from './scoring';
 import { createGuideCandidates } from './guides';
 import { roundupWeekRecords, townRecords } from './roundup-weeks';
@@ -81,6 +90,8 @@ export type FinderReport = {
   capReached: boolean;
   /** Guide candidates queued: new topics, or topics whose pages changed. */
   guides: number;
+  /** Decision stories split from meetings (meeting-split.ts; off until its route is on). */
+  meetingItems: number;
 };
 
 export async function runStoryFinder(
@@ -104,6 +115,7 @@ export async function runStoryFinder(
     pending: 0,
     capReached: false,
     guides: 0,
+    meetingItems: 0,
   };
 
   await createRoundups(db, town, now, report);
@@ -576,6 +588,31 @@ async function createStoryCandidates(
       classification,
       text,
     });
+
+    // A meeting with several newsworthy decisions becomes one story per decision (switched off
+    // until the splitter is recorded). Asked before anything is saved, so a spend cap leaves
+    // the candidate to classify again next run (the classify answer is reused at no cost).
+    let split: Awaited<ReturnType<typeof trySplit>> = null;
+    if (
+      classification.about_this_town &&
+      tier.tier !== 4 &&
+      !candidate.mustWrite &&
+      meetingSplitEnabled(llm) &&
+      rows.some((r) => MEETING_RESULT_TYPES.includes(r.record.type))
+    ) {
+      try {
+        split = await trySplit(db, llm, town, config, candidate.recordIds, rows);
+      } catch (error) {
+        if (error instanceof SpendCapReached) {
+          report.capReached = true;
+          report.pending += pending.length - i;
+          return;
+        }
+        // Output that fails its schema keeps the meeting as one recap.
+        if (!(error instanceof LlmOutputError)) throw error;
+      }
+    }
+
     await db
       .update(storyCandidates)
       .set({
@@ -593,6 +630,30 @@ async function createStoryCandidates(
     if (tier.tier === 4) {
       // Never written: log and drop (Rule 5). A minor-only flag can be overridden in review.
       await skip(db, report, candidate.id, 'tier4', tier.reasons.join('; '), 'dropped');
+      continue;
+    }
+
+    if (split) {
+      report.meetingItems += await createDecisionCandidates(db, {
+        town,
+        parent: candidate,
+        classification,
+        tier,
+        rows,
+        split,
+        recent,
+        now,
+      });
+      const topics = split.split.map((item) => item.topic).join('; ');
+      const left = split.left.map((item) => item.topic).join('; ');
+      await skip(
+        db,
+        report,
+        candidate.id,
+        'duplicate',
+        `Split into ${split.split.length} decision stories (${MEETING_SPLIT_VERSION}): ${topics}.` +
+          (left ? ` Not written on their own: ${left}.` : ''),
+      );
       continue;
     }
 
@@ -625,6 +686,127 @@ async function createStoryCandidates(
     });
     recent.push({ candidateId: candidate.id, title });
   }
+}
+
+type FinderRow = {
+  record: typeof records.$inferSelect;
+  sourceKind: string;
+  sourceHealth: string;
+};
+
+/**
+ * Splits a meeting's minutes or actions into its decisions (meeting-split.ts), with the
+ * meeting's transcript to locate each one. Null keeps it as one recap.
+ */
+async function trySplit(
+  db: Db,
+  llm: Llm,
+  town: TownRow,
+  config: TownConfig,
+  recordIds: string[],
+  rows: FinderRow[],
+) {
+  const minutes = rows.map((r) => r.record).filter((r) => MEETING_RESULT_TYPES.includes(r.type));
+  const [transcript] = await db
+    .select()
+    .from(records)
+    .where(and(inArray(records.id, recordIds), inArray(records.type, COMPANION_TYPES)))
+    .orderBy(records.createdAt);
+  const result = await splitMeeting(llm, {
+    town: llmTown(town, config),
+    townLines: classifyParts(town, config, []).inputPrefix,
+    minutes,
+    transcript: transcript ?? null,
+  });
+  const chosen = chooseSplit(result.items);
+  return chosen ? { ...chosen, minutes, transcript: transcript ?? null } : null;
+}
+
+/**
+ * One pending story candidate per chosen decision, classified and scored from the meeting's
+ * answer with the decision's own impact, novelty and proximity. The daily budget then decides
+ * which are written, like any story.
+ */
+async function createDecisionCandidates(
+  db: Db,
+  a: {
+    town: TownRow;
+    parent: typeof storyCandidates.$inferSelect;
+    classification: Classification;
+    tier: { tier: number; reasons: string[] };
+    rows: FinderRow[];
+    split: NonNullable<Awaited<ReturnType<typeof trySplit>>>;
+    recent: { candidateId: string | null; title: string }[];
+    now: Date;
+  },
+): Promise<number> {
+  const { split, now } = a;
+  const occurredAt =
+    a.rows
+      .map((r) => r.record.occurredAt)
+      .filter((d): d is Date => d !== null)
+      .sort((x, y) => y.getTime() - x.getTime())[0] ?? null;
+  const degraded = a.rows.some((r) => r.sourceHealth !== 'ok');
+  const siblings: { candidateId: string | null; title: string }[] = [];
+  let made = 0;
+  for (const item of split.split) {
+    const minutes = split.minutes.find((m) => m.id === item.recordId)!;
+    const itemClassification: Classification & { meeting_item: MeetingItem } = {
+      ...a.classification,
+      impact: item.impact,
+      novelty: item.novelty,
+      proximity: item.proximity,
+      meeting_item: item,
+    };
+    const duplicate = a.recent.find(
+      (h) => titleSimilarity(h.title, item.topic) >= DUPLICATE_SIMILARITY,
+    );
+    const { score, components } = scoreCandidate({
+      classification: itemClassification,
+      occurredAt,
+      sourceChars: itemSourceText(minutes, item).length,
+      duplicate: Boolean(duplicate),
+      degradedSource: degraded,
+      now,
+    });
+    const [row] = await db
+      .insert(storyCandidates)
+      .values({
+        townId: a.town.id,
+        kind: 'story',
+        key: `meeting-item:${item.recordId}:${item.index}`,
+        title: item.topic,
+        beat: a.classification.beat,
+        recordIds: [item.recordId, ...(item.transcript ? [item.transcript.recordId] : [])],
+        proposedTier: a.tier.tier,
+        classification: itemClassification,
+        tierReasons: [
+          ...a.tier.reasons,
+          `one of ${split.split.length} decisions from a meeting (${MEETING_SPLIT_VERSION})`,
+        ],
+        newsworthiness: score,
+      })
+      .onConflictDoNothing({ target: [storyCandidates.townId, storyCandidates.key] })
+      .returning({ id: storyCandidates.id });
+    if (!row) continue;
+    made++;
+    await db.insert(articleScores).values({
+      candidateId: row.id,
+      newsworthiness: score,
+      components: {
+        ...components,
+        duplicateOf: duplicate?.title ?? null,
+        splitFrom: a.parent.id,
+        meetingItem: item.index,
+      },
+      computedAt: now,
+    });
+    siblings.push({ candidateId: row.id, title: item.topic });
+  }
+  // Sibling decisions share words ("Council approves…"): they're compared with earlier
+  // coverage only, then join it for whatever this run looks at next.
+  a.recent.push(...siblings);
+  return made;
 }
 
 export function llmTown(town: TownRow, config: TownConfig) {

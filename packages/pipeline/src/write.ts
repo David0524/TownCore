@@ -32,6 +32,7 @@ import { applyUpdate, linkRelatedStories } from './followups';
 import { writeGuide } from './guides';
 import { llmTown } from './finder';
 import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
+import { itemFocus, itemSourceText, meetingItemOf } from './meeting-split';
 import { uniqueSlug } from './publish';
 import {
   developmentRoundup,
@@ -161,11 +162,16 @@ export async function writeCandidate(
   }
   const llm = opts.llm;
   const tTown = llmTown(town!, config);
+  // One decision split from a meeting: the writer and fact-check get the minutes around it and
+  // only its stretch of transcript (meeting-split.ts), never the whole meeting's transcript.
+  const meetingItem = meetingItemOf(candidate.classification);
+  const textOf = (record: Row['record']) =>
+    meetingItem ? itemSourceText(record, meetingItem) : (record.text ?? '');
   const sourcesText = rows.map(({ record, sourceKind }) =>
     [
       `--- Record ${record.id} (source: ${sourceKind}${record.occurredAt ? `, dated ${record.occurredAt.toISOString()}` : ''}${record.url ? `, ${record.url}` : ''})`,
       `Title: ${record.title ?? ''}`,
-      record.text ?? '',
+      textOf(record),
     ].join('\n'),
   );
   const townLines = [
@@ -179,6 +185,7 @@ export async function writeCandidate(
   const versions = [
     `${writerV1.id}@${writerV1.version}`,
     `${factcheckV1.id}@${factcheckV1.version}`,
+    ...(meetingItem ? [meetingItem.version] : []),
   ];
   try {
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -197,7 +204,13 @@ export async function writeCandidate(
         // The second attempt, with the unsupported claims removed, is the one revise (§7).
         task: attempt === 1 ? 'write' : 'revise',
         inputPrefix: townLines.join('\n'),
-        input: [`Beat: ${candidate.beat}. Kind: story.`, ...remove, '', ...sourcesText].join('\n'),
+        input: [
+          `Beat: ${candidate.beat}. Kind: story.`,
+          ...(meetingItem ? [itemFocus(meetingItem)] : []),
+          ...remove,
+          '',
+          ...sourcesText,
+        ].join('\n'),
       }));
       const { value: checked } = await callModel(llm, {
         job: 'fact-check',
@@ -217,7 +230,11 @@ export async function writeCandidate(
       });
       report = checkDraft({
         draft: { headline: draft.headline, dek: draft.dek, bodyMd: draft.body_md },
-        sources: rows.map((r) => ({ id: r.record.id, title: r.record.title, text: r.record.text })),
+        sources: rows.map((r) => ({
+          id: r.record.id,
+          title: r.record.title,
+          text: textOf(r.record),
+        })),
         model: checked as FactcheckResult,
         knownNames,
         otherPlaces: config.same_name_elsewhere,
