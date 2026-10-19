@@ -1,5 +1,6 @@
 import { NETWORK_AI_DAILY_CAP_USD } from '@towncore/config';
 import {
+  adminActions,
   aiUsage,
   articles,
   placements,
@@ -8,6 +9,7 @@ import {
   towns,
   workerHeartbeats,
   businesses,
+  staff,
   type Db,
 } from '@towncore/db';
 import { createTestDb } from '@towncore/db/testing';
@@ -147,9 +149,20 @@ describe('operations alerts', () => {
     expect(byKey.cost_per_story!.message).toBe(
       'livetown Square: AI cost per published story is $0.40 this week, up from $0.20 (more than 50%).',
     );
-    expect(byKey.review_waiting!.message).toBe(
-      '1 story has waited in review for more than 24 hours.',
-    );
+    expect(byKey.review_waiting).toMatchObject({
+      message: '1 story has waited in review for more than 24 hours (+1 on a week ago).',
+      kind: 'backlog',
+      backlog: { depth: 1, ceiling: 10, weekAgo: 0 },
+    });
+    // Kinds decide email (alert-kinds.ts): a broken source on a live town is breakage, on a
+    // draft town a standing fact for the dashboard; every critical alert stays breakage.
+    const broken = conditions.filter((c) => c.key.startsWith('source_broken'));
+    expect(broken.find((c) => c.severity === 'critical')!.kind).toBe('breakage');
+    expect(broken.find((c) => c.severity === 'warning')!.kind).toBe('standing');
+    for (const c of conditions.filter((x) => x.severity === 'critical'))
+      expect(c.kind).toBe('breakage');
+    expect(byKey.town_cap!.kind).toBe('breakage');
+    expect(byKey.cost_per_story!.kind).toBe('breakage');
     expect(byKey.worker_stale).toMatchObject({
       severity: 'critical',
       message: 'No worker has ever reported a heartbeat.',
@@ -162,6 +175,31 @@ describe('operations alerts', () => {
       lastBeatAt: new Date(NOW.getTime() - 60_000),
     });
     expect((await opsConditions(db, NOW)).some((c) => c.key === 'worker_stale')).toBe(false);
+  });
+
+  it('counts the review backlog as it stood a week ago', async () => {
+    const { reviewBacklogWeekAgo } = await import('../src/ops');
+    const [staffRow] = await db
+      .insert(staff)
+      .values({ email: 'rev@towncore.net', name: 'Rev', role: 'reviewer' })
+      .returning();
+    const base = await reviewBacklogWeekAgo(db, NOW);
+    // Waiting since 10 days ago: it was already over a day old a week ago.
+    await db.insert(articles).values(story(draftId, 'old-wait', day(10), 'in_review'));
+    // Written 12 days ago and approved 3 days ago: it was waiting a week ago.
+    const [approved] = await db
+      .insert(articles)
+      .values(story(draftId, 'old-approved', day(12)))
+      .returning();
+    await db.insert(adminActions).values({
+      staffId: staffRow!.id,
+      action: 'approve',
+      articleId: approved!.id,
+      createdAt: day(3),
+    });
+    // Written 7.5 days ago: under a day old a week ago, so not yet in the backlog.
+    await db.insert(articles).values(story(draftId, 'young-wait', hours(180), 'in_review'));
+    expect(await reviewBacklogWeekAgo(db, NOW)).toBe(base + 2);
   });
 
   it('stops every model call at the network-wide cap and says so', async () => {

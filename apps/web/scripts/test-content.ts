@@ -435,6 +435,8 @@ export async function seedTestContent(
         end: new Date(at.getTime() + 90 * 60_000).toISOString(),
         allDay: false,
         location: `Sample Nature Center - 100 Test Road ${town.name.toUpperCase()} ZZ 00000`,
+        // The calendar's own text, as CivicPlus sends it: HTML, then a line with its link.
+        description: `<p>A fictional naturalist leads a [TEST] walk along the sample trail.</p><p>Bring water &amp; a hat.</p>\nMore info: https://example.com/test-event-${n}`,
       },
     });
     await tx

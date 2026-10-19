@@ -7,6 +7,7 @@ import { escribeAdapter } from './escribe';
 import { feedAdapter } from './feed';
 import { flDbprAdapter } from './fl-dbpr';
 import { flSunbizAdapter } from './fl-sunbiz';
+import { inboxAdapter } from './inbox';
 import { legistarAdapter } from './legistar';
 import { nwsAdapter } from './nws';
 import { pageAdapter } from './page';
@@ -30,6 +31,7 @@ for (const adapter of [
   escribeAdapter,
   arcgisAdapter,
   readerAdapter,
+  inboxAdapter,
   pdfListAdapter,
   usaspendingAdapter,
   cmsAdapter,

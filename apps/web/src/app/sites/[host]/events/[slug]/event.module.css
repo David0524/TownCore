@@ -1,0 +1,116 @@
+/* One event from the town's calendars: the list card's date tile beside the title, the facts as
+   a hairline box, then the calendar buttons and the calendar's own words. Tokens only (§11a). */
+.back {
+  margin: 0 0 0.75rem;
+}
+
+.event {
+  max-width: 44rem;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 3.75rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-headline);
+  font-weight: var(--headline-weight);
+  font-size: clamp(1.75rem, 1.3rem + 1.8vw, 2.5rem);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.past {
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+  padding: 0.875rem 1rem;
+  border: var(--hairline);
+  border-radius: var(--radius);
+}
+
+.facts > div {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.facts dt {
+  font-family: var(--font-meta);
+  font-style: var(--meta-style);
+  color: var(--muted);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.venue {
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 0 0 1.5rem;
+}
+
+.secondary {
+  display: inline-block;
+  padding: 0.6rem 1.1rem;
+  border: var(--hairline);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.description {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.description p {
+  margin: 0 0 1em;
+}
+
+.more {
+  margin-top: 2.5rem;
+}
+
+.moreTitle {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+}
+
+/* Phones: full-width buttons with 44pt targets, like the rest of the phone chrome. */
+@media (max-width: 599.98px) {
+  /* The phone header's back button goes to Events already. */
+  .back {
+    display: none;
+  }
+
+  .actions > a {
+    flex: 1 1 100%;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
