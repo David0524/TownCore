@@ -1,4 +1,6 @@
+import { loadEnv } from '@towncore/config';
 import { asc, dnsRecords, domainIdentities, eq, mailDomains, onboardingSteps } from '@towncore/db';
+import { dmarcPolicyAdvice, latestPlacement } from '@towncore/mail';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireStaff } from '@/lib/admin/session';
@@ -6,6 +8,8 @@ import { db } from '@/lib/db';
 import styles from '../../../admin.module.css';
 import { requestRecheck } from '../../actions';
 import { unpauseAction } from '../../bulk-actions';
+import { DmarcPolicyTable } from '../../DmarcPolicy';
+import { PlacementSection } from '../../Placement';
 import { Pill } from '../../../Pill';
 
 export const metadata = { title: 'Mail domain' };
@@ -21,7 +25,7 @@ export default async function MailDomain({ params, searchParams }: Props) {
   const { recheck, error, done } = await searchParams;
   const [domain] = await db().select().from(mailDomains).where(eq(mailDomains.name, name));
   if (!domain) notFound();
-  const [identities, records, steps] = await Promise.all([
+  const [identities, records, steps, placement, policy] = await Promise.all([
     db().select().from(domainIdentities).where(eq(domainIdentities.domainId, domain.id)),
     db()
       .select()
@@ -33,7 +37,10 @@ export default async function MailDomain({ params, searchParams }: Props) {
       .from(onboardingSteps)
       .where(eq(onboardingSteps.domainId, domain.id))
       .orderBy(asc(onboardingSteps.createdAt)),
+    latestPlacement(db(), [domain.id]),
+    dmarcPolicyAdvice(db(), new Date(), domain.id),
   ]);
+  const seeds = loadEnv().PLACEMENT_SEED_ADDRESSES?.length ?? 0;
   return (
     <main>
       <Link href="/admin/mail/domains" className={styles.back}>
@@ -126,6 +133,21 @@ export default async function MailDomain({ params, searchParams }: Props) {
           </button>
         </form>
       ) : null}
+
+      <PlacementSection
+        domain={domain}
+        summary={placement.get(domain.id)}
+        seeds={seeds}
+        canSend={domain.status === 'live' && domain.bulkStatus !== 'not_started'}
+      />
+
+      <h2 id="dmarc-policy">DMARC policy</h2>
+      <DmarcPolicyTable
+        advice={policy}
+        isAdmin={me.role === 'admin'}
+        from="domain"
+        domainName={domain.name}
+      />
 
       <h2>SES identities</h2>
       <div className={styles.scroll}>

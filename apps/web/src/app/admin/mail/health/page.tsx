@@ -1,9 +1,16 @@
-import { mailHealthSnapshot, rate, SES_REVIEW, type StreamTotals } from '@towncore/mail';
+import {
+  dmarcPolicyAdvice,
+  mailHealthSnapshot,
+  rate,
+  SES_REVIEW,
+  type StreamTotals,
+} from '@towncore/mail';
 import Link from 'next/link';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../../admin.module.css';
 import { Pill } from '../../Pill';
+import { DmarcPolicyTable } from '../DmarcPolicy';
 
 export const metadata = { title: 'Mail health' };
 export const dynamic = 'force-dynamic';
@@ -27,9 +34,15 @@ function StreamCells({ s }: { s: StreamTotals | undefined }) {
   );
 }
 
-export default async function MailHealth() {
-  await requireStaff();
-  const h = await mailHealthSnapshot(db());
+export default async function MailHealth({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; done?: string }>;
+}) {
+  const me = await requireStaff();
+  const { error, done } = await searchParams;
+  const [h, policy] = await Promise.all([mailHealthSnapshot(db()), dmarcPolicyAdvice(db())]);
+  const ready = policy.filter((a) => a.ready);
   const critical = h.alerts.filter((a) => a.severity === 'critical');
   const stale = !h.lastHeartbeat || Date.now() - new Date(h.lastHeartbeat).getTime() > 10 * 60_000;
   return (
@@ -49,6 +62,17 @@ export default async function MailHealth() {
               : 'All clear'}
         </Pill>
       </header>
+
+      {error ? (
+        <p className={styles.notice} role="alert">
+          {error}
+        </p>
+      ) : null}
+      {done ? (
+        <p className={styles.notice} role="status">
+          {done}
+        </p>
+      ) : null}
 
       <div className={styles.stats}>
         <div className={styles.stat}>
@@ -232,6 +256,16 @@ export default async function MailHealth() {
           </table>
         </div>
       )}
+
+      <h2 id="dmarc-policy">DMARC policy</h2>
+      {ready.length ? (
+        <p className={styles.notice} role="status" data-testid="dmarc-ready">
+          {ready.length === 1
+            ? `${ready[0]!.governs} is ready for p=${ready[0]!.next}.`
+            : `${ready.length} domains are ready for a stricter DMARC policy.`}
+        </p>
+      ) : null}
+      <DmarcPolicyTable advice={policy} isAdmin={me.role === 'admin'} from="health" />
 
       <h2>Pipeline</h2>
       <p data-testid="pipeline">

@@ -75,7 +75,7 @@ export type BulkMessage = {
   unsubscribeToken: string;
   /** Gmail Feedback-ID parts: campaign id and kind. */
   campaignId: string;
-  kind: 'campaign' | 'newsletter';
+  kind: 'campaign' | 'newsletter' | 'placement';
 };
 
 function compile(composer: MailComposer): Promise<Buffer> {

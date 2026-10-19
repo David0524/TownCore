@@ -1108,3 +1108,49 @@
   outline: 2px solid var(--admin-focus);
   outline-offset: 1px;
 }
+
+/* ---------- Choice buttons (placement results) ---------- */
+
+.choices {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--background);
+}
+
+.choices button {
+  padding: 0.1875rem 0.5rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.choices button:hover {
+  background: var(--admin-hover);
+  color: var(--admin-text);
+}
+
+.choices button[aria-pressed='true'] {
+  background: var(--admin-hover);
+  color: var(--admin-text);
+  font-weight: 500;
+}
+
+.choices button:focus-visible {
+  outline: 2px solid var(--admin-focus);
+  outline-offset: 1px;
+}
+
+.reasons {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}

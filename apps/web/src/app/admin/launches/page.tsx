@@ -1,7 +1,9 @@
 import { candidateStates, listCandidates, type Candidate } from '@towncore/launcher/candidates';
 import { cohortCandidates, listCohorts } from '@towncore/launcher/cohorts';
 import { goLiveBlockers, listLaunches, type LaunchRow } from '@towncore/launcher/golive';
+import { latestPlacement, type PlacementSummary } from '@towncore/mail';
 import { latestGateDecision } from '@towncore/pipeline';
+import Link from 'next/link';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 import styles from '../admin.module.css';
@@ -38,10 +40,14 @@ export default async function Launches({
   const status = STATUSES.find((s) => s === params.status);
   const rows = state ? await listCandidates(db(), { state, status, limit: 50 }) : [];
   const runs = await listLaunches(db());
-  const [cohorts, waiting, gate] = await Promise.all([
+  const [cohorts, waiting, gate, placement] = await Promise.all([
     listCohorts(db()),
     cohortCandidates(db()),
     latestGateDecision(db()),
+    latestPlacement(
+      db(),
+      runs.flatMap((r) => (r.mail ? [r.mail.id] : [])),
+    ),
   ]);
   const blockers = new Map(
     await Promise.all(
@@ -100,6 +106,7 @@ export default async function Launches({
                   r={r}
                   admin={me.role === 'admin'}
                   blockers={blockers.get(r.id) ?? []}
+                  placement={r.mail ? placement.get(r.mail.id) : undefined}
                 />
               ))}
             </tbody>
@@ -239,7 +246,7 @@ function CandidateRow({ c, admin, state }: { c: Candidate; admin: boolean; state
 }
 
 /** Step 2b and the mail domain now: warm-up starts the moment the domain is bought. */
-function MailWarmup({ r }: { r: LaunchRow }) {
+function MailWarmup({ r, placement }: { r: LaunchRow; placement?: PlacementSummary }) {
   if (r.mail) {
     const warming = r.mail.bulkStatus === 'warming';
     return (
@@ -252,6 +259,15 @@ function MailWarmup({ r }: { r: LaunchRow }) {
             ? 'SES verifying DNS'
             : r.mail.status}
         {r.mail.failureReason ? <div className={styles.muted}>{r.mail.failureReason}</div> : null}
+        {r.mail.status === 'live' ? (
+          // Measured before go-live, never a blocker (owner, 2026-10-19).
+          <div className={styles.muted} data-testid="inbox-placement">
+            Inbox placement:{' '}
+            <Link href={`/admin/mail/domains/${encodeURIComponent(r.mail.name)}#placement`}>
+              {placement ? placement.line : 'not tested yet'}
+            </Link>
+          </div>
+        ) : null}
       </>
     );
   }
@@ -273,10 +289,12 @@ function LaunchRunRow({
   r,
   admin,
   blockers,
+  placement,
 }: {
   r: LaunchRow;
   admin: boolean;
   blockers: string[];
+  placement?: PlacementSummary;
 }) {
   const done = r.steps.filter((s) => s.status === 'done').length;
   const failed = r.steps.find((s) => s.status === 'failed');
@@ -317,7 +335,7 @@ function LaunchRunRow({
         )}
       </td>
       <td data-testid="mail-warmup">
-        <MailWarmup r={r} />
+        <MailWarmup r={r} placement={placement} />
       </td>
       <td>
         {r.town ? r.town.status : '–'}

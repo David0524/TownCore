@@ -72,6 +72,19 @@ export const envSchema = z.object({
         .filter(Boolean),
     ),
   ),
+  // Our own seed inboxes for the inbox-placement test (at most 10, comma-separated): accounts the
+  // company holds at Gmail, Outlook, Yahoo and the like. The test sends only to these.
+  PLACEMENT_SEED_ADDRESSES: optional(
+    z
+      .string()
+      .transform((list) =>
+        list
+          .split(',')
+          .map((a) => a.trim().toLowerCase())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.email()).max(10)),
+  ),
   // SNS topics the mail webhook accepts (packages/infra outputs); anything else is refused.
   MAIL_SNS_TOPIC_ARNS: optional(
     z

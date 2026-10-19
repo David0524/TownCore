@@ -33,6 +33,9 @@ Do these once. Values go into the hosting dashboards (Vercel, Railway), never in
       alerts show only on the health page and in the worker log.
 - [ ] **Database backups on Railway** (before real subscribers; see "Restoring from backup").
 - [ ] **Postal address** for newsletter footers (`MAIL_POSTAL_ADDRESS`).
+- [ ] **Seed inboxes for the placement test** (`PLACEMENT_SEED_ADDRESSES`): 4–6 company-held
+      accounts, one each at Gmail, Outlook.com, Yahoo and iCloud (plus a Google Workspace and a
+      Microsoft 365 mailbox if you have them). Open each once and leave its filters at defaults.
 - [ ] **Teams and role mapping.** Defaults: `admin@`, `billing@`, `privacy@` → Admin; `sales@`,
       `advertise@` → Sales; `news@`, `editor@`, `tips@`, `corrections@` → Editorial; anything
       else → Admin.
@@ -265,6 +268,36 @@ paused. The reason is shown on the domain's page.
 If all mail together passes 4% bounces or 0.08% complaints, bulk mail pauses for every town
 (Admin → Campaigns shows the reason). SES reviews accounts at 5% and 0.1%, so treat this as
 urgent: find the cause before an admin presses "Resume bulk mail for every town".
+
+## Inbox-placement test before go-live
+
+On a domain's page (Admin → Mail domains → the domain), **Send placement test** sends one copy
+of the town's real morning email (its latest newsletter or campaign, else a short sample) from
+`newsletter@news.<domain>` to each seed inbox in `PLACEMENT_SEED_ADDRESSES`, and to nobody else.
+It's a measurement, not warm-up: a fixed handful of our own accounts, once a domain a day,
+tagged as its own `placement` stream so it never counts in the domain's bulk rates.
+
+1. Send the test once the domain is live and warming, a few days before go-live.
+2. Open each seed inbox, find the copy (it ends "Placement check" and the test's code) and press
+   Inbox, Promotions, Spam or Missing beside that seed. Promotions counts as delivered.
+3. Admin → Launches shows the latest result beside the warm-up. It informs go-live, it doesn't
+   block it. Anything in spam or missing: check the domain's DKIM and DMARC records and its
+   DMARC reports, look at the content, and test again the next day.
+
+## Stepping up the DMARC policy
+
+Onboarding writes `_dmarc` and `_dmarc.news` at `p=none`, so receivers only report. Admin →
+Mail health (and each domain's page) shows every DMARC record with its policy and whether its
+reports say it can go one step stricter: reports on at least 14 days, at least 200 messages and
+99% passing DMARC in the last 30 days, the newest report within 7 days, and for reject, 30 days
+at quarantine judged on reports from after that change.
+
+When a record is ready an admin presses **Move to quarantine** (later **Move to reject**). The
+admin writes the new TXT record on Vercel, then deletes the old one, so a failure leaves the old
+policy in place; the change is audited. **Back to none** is always one press away if real mail
+starts failing. Only records onboarding created are changed this way; a record that was already
+there is marked "change it at the DNS host". Needs `VERCEL_DNS_TOKEN` and AWS credentials.
+Onboarding re-runs keep a stepped-up policy as it is.
 
 ## Handling an SES account review
 
