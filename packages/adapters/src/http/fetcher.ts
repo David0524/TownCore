@@ -1,5 +1,11 @@
 import robotsParser from 'robots-parser';
-import { documentedApi, isBlockedUrl, MIN_INTERVAL_MS, USER_AGENT } from './policy';
+import {
+  documentedApi,
+  isBlockedUrl,
+  MIN_INTERVAL_MS,
+  USER_AGENT,
+  type PolicyPurpose,
+} from './policy';
 import { SharedFiles, type SharedFile, type SharedFileOptions } from './shared-files';
 
 // The only way adapters may make HTTP requests (a lint rule bans bare fetch in this package).
@@ -144,6 +150,8 @@ export class Fetcher {
 
   /** Statewide files shared by every town's source (see shared-files.ts). */
   private readonly shared: SharedFiles;
+  /** What this Fetcher is for, when a narrow use is allowed (policy.ts `PolicyPurpose`). */
+  private readonly purpose: PolicyPurpose = {};
 
   constructor(options: FetcherOptions = {}) {
     this.fetchImpl = options.fetchImpl ?? defaultFetch;
@@ -162,6 +170,17 @@ export class Fetcher {
    */
   getShared(url: string, options?: SharedFileOptions): Promise<SharedFile> {
     return this.shared.file(url, options);
+  }
+
+  /**
+   * A Fetcher for the launcher's expired-domain check only: it may read web.archive.org's
+   * history of a domain (policy.ts `PolicyPurpose`). Every other check and the host queue are
+   * shared with this one. Never use it to read a source's pages.
+   */
+  forDomainHistory(): Fetcher {
+    const child = Object.assign(Object.create(Fetcher.prototype) as Fetcher, this);
+    (child as unknown as { purpose: PolicyPurpose }).purpose = { domainHistory: true };
+    return child;
   }
 
   /**
@@ -191,7 +210,7 @@ export class Fetcher {
   /** Rule 8 for one URL: the never-scrape list, then robots.txt (documented APIs excepted). */
   private async checkPolicy(target: URL, requested: string): Promise<void> {
     const via = target.toString() === requested ? '' : ` (redirected from ${requested})`;
-    const blocked = isBlockedUrl(target);
+    const blocked = isBlockedUrl(target, this.purpose);
     if (blocked) throw new FetchPolicyError(`Refusing to fetch ${target}${via}: ${blocked}`);
     // Documented APIs that invite automated use skip robots.txt (Rule 8 exception); pages never do.
     if (!documentedApi(target) && !(await this.allowedByRobots(target))) {

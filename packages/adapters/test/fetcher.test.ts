@@ -43,6 +43,23 @@ describe('policy', () => {
     'https://maps.google.com/?q=boca',
     'https://www.google.com/maps/place/x',
     'https://www.maxpreps.com/fl/boca',
+    // Proxies, feed bridges and page caches: reading through them gets around robots.txt.
+    'https://rsshub.app/twitter/user/x',
+    'https://rsshub.example.org/instagram/user/x',
+    'https://rsshub2.example.net/',
+    'https://rss-bridge.example.com/?action=display',
+    'https://politepol.com/fd/abc',
+    'https://fetchrss.com/rss/abc.xml',
+    'https://api.supadata.ai/v1/web/scrape?url=x',
+    'https://supadata.ai/',
+    'https://api.scraperapi.com/?url=x',
+    'https://p.webshare.io/',
+    'https://web.archive.org/web/2024/https://city.example/',
+    'https://archive.org/wayback/available?url=x',
+    'https://archive.ph/abc',
+    'https://archive.today/abc',
+    'https://webcache.googleusercontent.com/search?q=cache:x',
+    'https://city-example-gov.translate.goog/',
   ])('blocks %s', (url) => {
     expect(isBlockedUrl(new URL(url))).not.toBeNull();
   });
@@ -51,8 +68,18 @@ describe('policy', () => {
     'https://www.myboca.us/',
     'https://api.weather.gov/alerts',
     'https://www.google.com/search',
+    'https://www.rsshubcity.gov/',
+    'https://www.myarchive.org/',
   ])('allows %s', (url) => {
     expect(isBlockedUrl(new URL(url))).toBeNull();
+  });
+
+  it('lets only the launcher domain-history check read web.archive.org', () => {
+    const cdx = new URL('https://web.archive.org/cdx/search/cdx?url=x.com');
+    expect(isBlockedUrl(cdx, { domainHistory: true })).toBeNull();
+    expect(isBlockedUrl(new URL('https://archive.ph/x'), { domainHistory: true })).not.toBeNull();
+    expect(isBlockedUrl(new URL('https://archive.org/x'), { domainHistory: true })).not.toBeNull();
+    expect(isBlockedUrl(new URL('https://yelp.com/'), { domainHistory: true })).not.toBeNull();
   });
 
   it('identifies itself with the TownCore bot user agent', () => {
@@ -68,6 +95,21 @@ describe('Fetcher', () => {
       FetchPolicyError,
     );
     expect(calls).toBe(0);
+  });
+
+  it('refuses archive hosts unless asked for domain history', async () => {
+    let calls = 0;
+    const fetcher = new Fetcher({
+      fetchImpl: async () => (calls++, new Response('[]', { status: 200 })),
+      minIntervalMs: 0,
+    });
+    const url = 'https://web.archive.org/cdx/search/cdx?url=x.com&output=json';
+    await expect(fetcher.get(url)).rejects.toBeInstanceOf(FetchPolicyError);
+    expect(calls).toBe(0);
+    expect((await fetcher.forDomainHistory().get(url)).ok).toBe(true);
+    await expect(fetcher.forDomainHistory().get('https://archive.ph/x')).rejects.toBeInstanceOf(
+      FetchPolicyError,
+    );
   });
 
   it('respects robots.txt, including the /RSS.aspx vs /RSSFeed.aspx distinction', async () => {

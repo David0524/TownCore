@@ -143,7 +143,8 @@ export type Snapshot = { timestamp: string; status: string };
 /** One archived capture per year of the domain's home page (Wayback CDX API, no key). */
 export async function archiveYears(fetcher: Fetcher, domain: string): Promise<Snapshot[]> {
   const url = `https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(domain)}&output=json&fl=timestamp,statuscode&filter=statuscode:200&collapse=timestamp:4&limit=40`;
-  const rows = await fetcher.getJson<string[][]>(url);
+  // The one allowed use of an archive host (policy.ts `PolicyPurpose`).
+  const rows = await fetcher.forDomainHistory().getJson<string[][]>(url);
   return (rows ?? [])
     .slice(1)
     .map(([timestamp, status]) => ({ timestamp: timestamp!, status: status! }));
@@ -209,6 +210,7 @@ export async function priorUse(
   const checked: PriorUse['checked'] = [];
   for (const s of picks) {
     const response = await fetcher
+      .forDomainHistory()
       .get(`https://web.archive.org/web/${s.timestamp}id_/http://${domain}/`)
       .catch(() => null);
     if (!response?.ok) return null;

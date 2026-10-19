@@ -23,12 +23,78 @@ const BLOCKED_HOSTS = [
   'on3.com',
 ];
 
-export function isBlockedUrl(url: URL): string | null {
+/**
+ * Proxies, feed bridges, scraping services and page caches: never fetched, for any source.
+ * Each one fetches a site for us from someone else's IP or copy, so reading a page through it
+ * gets around that site's robots.txt or IP block, which still breaks Rule 8: a disallow means we
+ * don't read that host or path at all, however the bytes reach us. A site that blocks us is a
+ * broken source (re-checked weekly), never one to route around. Matches the host and any
+ * subdomain.
+ */
+const PROXY_HOSTS = [
+  // Feed bridges that turn a site (or a social page) into RSS by scraping it for us.
+  'rsshub.app',
+  'politepol.com',
+  'fetchrss.com',
+  'rss.app',
+  'feed43.com',
+  'morss.it',
+  'rss-bridge.org',
+  // Scraping and transcript services that fetch through residential or rotating IPs.
+  'supadata.ai',
+  'scraperapi.com',
+  'scrapingbee.com',
+  'scrapingant.com',
+  'zenrows.com',
+  'crawlbase.com',
+  'brightdata.com',
+  'oxylabs.io',
+  'smartproxy.com',
+  'webshare.io',
+  'zyte.com',
+  'apify.com',
+  'firecrawl.dev',
+  'r.jina.ai',
+  '12ft.io',
+  // Page caches and archives: someone else's copy of a page we may not read.
+  'archive.org',
+  'archive.ph',
+  'archive.today',
+  'archive.is',
+  'archive.li',
+  'archive.md',
+  'archive.vn',
+  'ghostarchive.org',
+  'webcache.googleusercontent.com',
+  'translate.goog',
+];
+
+/** A host label of a self-hosted RSSHub or RSS-Bridge mirror (rsshub.example.org, rsshub2.x). */
+const BRIDGE_LABEL = /^(rsshub|rss-?bridge)(\d*|-.*)$/;
+
+export type PolicyPurpose = {
+  /**
+   * The launcher's expired-domain check (§10b) reads the Internet Archive's history of a domain
+   * we may buy, from web.archive.org only. That's the archive's own record of a domain, not a
+   * copy of a source we write from, so it's the one allowed use of an archive host.
+   */
+  domainHistory?: boolean;
+};
+
+export function isBlockedUrl(url: URL, purpose: PolicyPurpose = {}): string | null {
   const host = url.hostname.toLowerCase();
+  const matches = (listed: string) => host === listed || host.endsWith(`.${listed}`);
   for (const blocked of BLOCKED_HOSTS) {
-    if (host === blocked || host.endsWith(`.${blocked}`))
-      return `${blocked} is on the never-scrape list`;
+    if (matches(blocked)) return `${blocked} is on the never-scrape list`;
   }
+  if (!(purpose.domainHistory && host === 'web.archive.org')) {
+    for (const proxy of PROXY_HOSTS) {
+      if (matches(proxy))
+        return `${proxy} is a proxy, feed bridge or page cache on the never-scrape list (it would get around a site's robots.txt)`;
+    }
+  }
+  if (host.split('.').some((label) => BRIDGE_LABEL.test(label)))
+    return `${host} looks like an RSSHub or RSS-Bridge mirror, a feed bridge on the never-scrape list`;
   const isGoogle = /(^|\.)google\.[a-z.]+$/.test(host);
   if (host.startsWith('maps.google.') || (isGoogle && url.pathname.startsWith('/maps'))) {
     return 'Google Maps is on the never-scrape list';
