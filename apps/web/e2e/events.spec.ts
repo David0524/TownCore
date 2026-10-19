@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { DIRECT } from './ports';
 const boca = 'http://bocatownsquare.com';
 
 // Events from the town's official calendars (owner's request, after bocatownsquare.com): event
@@ -88,7 +89,7 @@ for (const [host, government] of [
     // The calendar file.
     const href = await page.getByTestId('add-to-calendar').getAttribute('href');
     expect(href).toMatch(/\/ics$/);
-    const ics = await request.get(`http://${host}${href}`);
+    const ics = await request.get(`${DIRECT}${href}`, { headers: { host } });
     expect(ics.status()).toBe(200);
     expect(ics.headers()['content-type']).toContain('text/calendar');
     expect(ics.headers()['content-disposition']).toContain(
