@@ -54,6 +54,13 @@ export {
   type TemplateRecord,
 } from './templates';
 export {
+  attachCaptions,
+  CAPTION_MAX_BYTES,
+  captionMeetings,
+  CaptionUploadError,
+  type CaptionMeeting,
+} from './captions';
+export {
   chooseSplit,
   meetingItemOf,
   meetingSplitEnabled,

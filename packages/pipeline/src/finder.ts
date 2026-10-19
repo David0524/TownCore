@@ -181,7 +181,8 @@ async function companionRecords(db: Db, record: typeof records.$inferSelect): Pr
       and(
         eq(records.sourceId, record.sourceId),
         inArray(records.type, COMPANION_TYPES),
-        eq(records.externalId, `transcript:${meeting}`),
+        // The platform's transcript, or captions staff uploaded (captions.ts).
+        inArray(records.externalId, [`transcript:${meeting}`, `transcript-upload:${meeting}`]),
       ),
     );
   return rows.map((r) => r.id);
