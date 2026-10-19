@@ -6,6 +6,7 @@ import {
   articles,
   eq,
   inArray,
+  like,
   records,
   skippedCandidates,
   sources,
@@ -141,36 +142,67 @@ export async function runEvals(
           .from(skippedCandidates)
           .where(eq(skippedCandidates.candidateId, candidate.id))
       : [];
-    let article: typeof articles.$inferSelect | undefined;
-    if (candidate?.status === 'accepted') {
+    // A meeting the splitter turned into one story per decision (meeting-split.ts, off until
+    // recorded) is judged on all of its decision stories; anything else on its one story.
+    const decisions = await db
+      .select()
+      .from(storyCandidates)
+      .where(
+        and(
+          eq(storyCandidates.townId, townId),
+          like(storyCandidates.key, `meeting-item:${record.id}:%`),
+        ),
+      )
+      .orderBy(storyCandidates.key);
+    const toWrite = decisions.length ? decisions : candidate ? [candidate] : [];
+    const written: (typeof articles.$inferSelect)[] = [];
+    let unrecorded = false;
+    for (const next of toWrite.filter((x) => x.status === 'accepted')) {
       let outcome: Awaited<ReturnType<typeof writeCandidate>>;
       try {
-        outcome = await writeCandidate(db, candidate.id, {
+        outcome = await writeCandidate(db, next.id, {
           llm: opts.llm,
           now: opts.now,
           random: () => 0.5,
         });
       } catch (error) {
         if (!(error instanceof NotRecordedError)) throw error;
-        results.push(await notRecorded(db, townId, c.id));
-        continue;
+        unrecorded = true;
+        break;
       }
       if ('articleId' in outcome) {
-        [article] = await db.select().from(articles).where(eq(articles.id, outcome.articleId));
+        const [article] = await db
+          .select()
+          .from(articles)
+          .where(eq(articles.id, outcome.articleId));
+        if (article) written.push(article);
       }
     }
+    if (unrecorded) {
+      results.push(await notRecorded(db, townId, c.id));
+      continue;
+    }
 
-    const factcheck = (article?.factcheck ?? null) as {
-      score?: number;
-      claims?: { supported: boolean; recordId: string | null }[];
-    } | null;
-    const modelClaims = (factcheck?.claims ?? []).filter((cl) => cl.recordId !== null);
+    type Checked = { score?: number; claims?: { supported: boolean; recordId: string | null }[] };
+    const checks = written.map((a) => (a.factcheck ?? null) as Checked | null);
+    const modelClaims = checks.flatMap((f) =>
+      (f?.claims ?? []).filter((cl) => cl.recordId !== null),
+    );
+    const scores = checks.map((f) => f?.score).filter((n): n is number => typeof n === 'number');
     const result: EvalResult = {
       id: c.id,
-      skip: skip?.reason ?? null,
-      tier: article?.tier ?? candidate?.proposedTier ?? null,
-      status: article?.status ?? candidate?.status ?? null,
-      factcheckScore: factcheck?.score ?? null,
+      // A split meeting's recap is set aside as covered by its decisions, not skipped.
+      skip: decisions.length ? null : (skip?.reason ?? null),
+      tier: written.length
+        ? Math.max(...written.map((a) => a.tier))
+        : decisions.length
+          ? Math.max(...decisions.map((d) => d.proposedTier))
+          : (candidate?.proposedTier ?? null),
+      status:
+        written.find((a) => a.status === 'published')?.status ??
+        written[0]?.status ??
+        (decisions.length ? 'skipped' : (candidate?.status ?? null)),
+      factcheckScore: scores.length ? Math.min(...scores) : null,
       claims: modelClaims.length,
       verbatimClaims: modelClaims.filter((cl) => cl.supported).length,
       failures: [],
@@ -260,6 +292,10 @@ export const EVAL_VARIANTS: Record<string, Partial<Record<AiTask, Partial<TaskRo
     write: { thinking: 'adaptive' },
     revise: { thinking: 'adaptive' },
     factcheck: { thinking: 'adaptive' },
+  },
+  // The meeting splitter switched on (it ships off): one story per newsworthy decision.
+  'meeting-split': {
+    'meeting-split': { disabled: false },
   },
 };
 
