@@ -55,12 +55,30 @@ export {
 } from './templates';
 export { nearDuplicateShare, normalizeWords } from './near-duplicate';
 export { pastWeekCounts, roundupWeekRecords } from './roundup-weeks';
-export { cannotBeArticle, decideTier, mentionsMinor, type Tier, type TierDecision } from './tiers';
+export {
+  cannotBeArticle,
+  decideTier,
+  mentionsMinor,
+  sensitiveTopics,
+  type Tier,
+  type TierDecision,
+} from './tiers';
+export { lintStyle, styleRevisionLines, STYLE_WHY, type StyleHit } from './style-lint';
+export {
+  legalReviewOn,
+  reviewLibel,
+  tierAfterLegal,
+  verifyLegalFlags,
+  type LegalFlag,
+  type LegalReport,
+} from './legal';
 export {
   checkDraft,
   namesIn,
   normalize,
   numbersIn,
+  quotedSpans,
+  quoteInRecord,
   type CheckedClaim,
   type FactcheckReport,
   type SourceText,

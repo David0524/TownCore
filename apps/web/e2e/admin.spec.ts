@@ -73,7 +73,7 @@ async function signIn(context: BrowserContext) {
 }
 
 /** A story waiting in review in the fixture town, with its source record. */
-async function storyInReview(tag: string) {
+async function storyInReview(tag: string, factcheck: Record<string, unknown> = {}) {
   const town = (await getTownBySlug(db, 'review-town'))!;
   const [source] = await db
     .insert(sources)
@@ -133,6 +133,7 @@ async function storyInReview(tag: string) {
             supported: true,
           },
         ],
+        ...factcheck,
       },
     })
     .returning();
@@ -203,6 +204,53 @@ test.describe('review queue', () => {
     await page.goto(`${reviewTown}/news/${article.slug}`);
     await expect(page.getByText('Reviewed by an editor')).toBeVisible();
     await expect(page.getByText('It will take 90 days.')).toBeVisible();
+  });
+
+  test('shows the libel review and filler flags; an edit with an invented quote is flagged', async ({
+    page,
+    context,
+  }, info) => {
+    await signIn(context);
+    const { article } = await storyInReview(`legal-${info.project.name}`, {
+      styleLint: [
+        {
+          rule: 'speculation',
+          phrase: 'is expected to',
+          sentence: 'The work is expected to ease traffic.',
+          field: 'body',
+        },
+      ],
+      legal: {
+        level: 'high',
+        dropped: 1,
+        promptVersion: 'legal@v1',
+        flags: [
+          {
+            pattern: 'financial_claim',
+            excerpt: 'a $2,500,000 contract with Acme Paving',
+            why: 'Names a business in a money matter.',
+            fix: 'Attribute the amount to the council vote.',
+          },
+        ],
+      },
+    });
+    await page.goto(`${admin}/admin/review/${article.id}`);
+    const legal = page.getByTestId('legal');
+    await expect(legal.getByRole('heading', { name: 'Libel review' })).toBeVisible();
+    await expect(legal).toContainText('High risk: needs edits or attribution before publishing');
+    await expect(legal).toContainText('1 flag left out (not found in the draft)');
+    await expect(legal).toContainText('financial claim:');
+    await expect(legal).toContainText('Fix: Attribute the amount to the council vote.');
+    await expect(page.getByTestId('style-lint')).toContainText('“is expected to” in the body');
+
+    await page.getByText('Edit the story').click();
+    await page
+      .getByLabel('Body (Markdown)')
+      .fill(`${RECORD_TEXT} "We will finish the whole road before the holidays," the mayor said.`);
+    await page.getByRole('button', { name: 'Save edits and re-check' }).click();
+    await expect(page.getByTestId('recheck')).toContainText(
+      'quoted text not found verbatim in any cited record',
+    );
   });
 
   test('reject needs a reason and takes the story out of the queue', async ({

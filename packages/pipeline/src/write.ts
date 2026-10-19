@@ -20,7 +20,9 @@ import {
   classifyPrompt,
   factcheckV1,
   updateV1,
+  lengthLine,
   writerV1,
+  writerV2,
   type Classification,
   type FactcheckResult,
   type WriterDraft,
@@ -31,8 +33,9 @@ import { checkDraft, type FactcheckReport } from './factcheck';
 import { applyUpdate, linkRelatedStories } from './followups';
 import { writeGuide } from './guides';
 import { llmTown } from './finder';
-import { callModel, LlmOutputError, SpendCapReached, type Llm } from './llm';
+import { callModel, LlmOutputError, routeFor, SpendCapReached, type Llm, type Prompt } from './llm';
 import { uniqueSlug } from './publish';
+import { lengthBand } from './scoring';
 import {
   developmentRoundup,
   federalAwardsRoundup,
@@ -57,6 +60,8 @@ import {
   SPOTLIGHT_ROUNDUP,
   type SpotlightKind,
 } from './spotlights';
+import { legalReviewOn, reviewLibel, tierAfterLegal, type LegalReport } from './legal';
+import { lintStyle, styleRevisionLines, type StyleHit } from './style-lint';
 import { decideTier, type Tier } from './tiers';
 import { localWeekStart } from './time';
 
@@ -176,28 +181,59 @@ export async function writeCandidate(
 
   let draft: WriterDraft | undefined;
   let report: FactcheckReport | undefined;
+  let style: StyleHit[] = [];
+  const sourceTexts = rows.map((r) => ({
+    id: r.record.id,
+    title: r.record.title,
+    text: r.record.text,
+  }));
+  // Writer v2 only where the routing table switches it on; its length band is chosen here, in
+  // code, from how much the records say. The revise uses the same version.
+  const writerPrompt: Prompt<WriterDraft> =
+    routeFor(llm, 'write').promptVersion === 'v2' ? writerV2 : writerV1;
+  const length =
+    writerPrompt.version === 'v2' ? [lengthLine(lengthBand(rows.map((r) => r.record)))] : [];
   const versions = [
-    `${writerV1.id}@${writerV1.version}`,
+    `${writerPrompt.id}@${writerPrompt.version}`,
     `${factcheckV1.id}@${factcheckV1.version}`,
   ];
   try {
     for (let attempt = 1; attempt <= 2; attempt++) {
+      // The one revise (§7) gets the unsupported claims and any filler or speculation the style
+      // lint found, so one retry fixes both.
       const remove =
         attempt === 2 && report
           ? [
-              '',
-              'Remove these claims, which the records do not support:',
-              ...report.unsupportedClaims.map((c) => `- ${c}`),
+              ...(report.unsupportedClaims.length || !style.length
+                ? [
+                    '',
+                    'Remove these claims, which the records do not support:',
+                    ...report.unsupportedClaims.map((c) => `- ${c}`),
+                  ]
+                : []),
+              ...(style.length
+                ? [
+                    '',
+                    'Rewrite or cut these phrases, which are filler, speculation or not news writing:',
+                    ...styleRevisionLines(style),
+                  ]
+                : []),
             ]
           : [];
       ({ value: draft } = await callModel(llm, {
         job: 'writer',
         town: tTown,
-        prompt: writerV1,
+        prompt: writerPrompt,
         // The second attempt, with the unsupported claims removed, is the one revise (§7).
         task: attempt === 1 ? 'write' : 'revise',
         inputPrefix: townLines.join('\n'),
-        input: [`Beat: ${candidate.beat}. Kind: story.`, ...remove, '', ...sourcesText].join('\n'),
+        input: [
+          `Beat: ${candidate.beat}. Kind: story.`,
+          ...length,
+          ...remove,
+          '',
+          ...sourcesText,
+        ].join('\n'),
       }));
       const { value: checked } = await callModel(llm, {
         job: 'fact-check',
@@ -215,14 +251,16 @@ export async function writeCandidate(
           ...sourcesText,
         ].join('\n'),
       });
+      const fields = { headline: draft.headline, dek: draft.dek, bodyMd: draft.body_md };
       report = checkDraft({
-        draft: { headline: draft.headline, dek: draft.dek, bodyMd: draft.body_md },
-        sources: rows.map((r) => ({ id: r.record.id, title: r.record.title, text: r.record.text })),
+        draft: fields,
+        sources: sourceTexts,
         model: checked as FactcheckResult,
         knownNames,
         otherPlaces: config.same_name_elsewhere,
       });
-      if (report.decision !== 'revise') break;
+      style = lintStyle(fields, sourceTexts);
+      if (report.decision === 'review' || (report.decision === 'pass' && !style.length)) break;
     }
   } catch (error) {
     if (error instanceof SpendCapReached) {
@@ -252,6 +290,42 @@ export async function writeCandidate(
       '\n',
     ),
   });
+  let finalTier = Math.max(candidate.proposedTier, tier.tier) as Tier;
+  const tierReasons = [...new Set([...(candidate.tierReasons ?? []), ...tier.reasons])];
+
+  // Libel review (switched on in the routing table): Tier 1–2 drafts that passed fact-check, the
+  // ones that could publish without a person. It only ever raises the tier.
+  let legal: LegalReport | { error: string } | undefined;
+  if (report?.decision === 'pass' && finalTier <= 2 && legalReviewOn(llm)) {
+    const fields = {
+      headline: finalDraft.headline,
+      dek: finalDraft.dek,
+      bodyMd: finalDraft.body_md,
+    };
+    try {
+      legal = await reviewLibel(llm, {
+        town: tTown,
+        inputPrefix: townLines.join('\n'),
+        draft: fields,
+        sourcesText,
+      });
+      const raised = tierAfterLegal(finalTier, legal);
+      if (raised > finalTier) {
+        tierReasons.push(
+          `libel review: ${legal.level} risk (${legal.flags.length} passage${legal.flags.length === 1 ? '' : 's'} flagged)`,
+        );
+        finalTier = raised;
+      }
+    } catch (error) {
+      if (!(error instanceof LlmOutputError || error instanceof SpendCapReached)) {
+        await backTo('accepted');
+        throw error;
+      }
+      // Switched on but couldn't run: a person reads it instead of publishing it unchecked.
+      legal = { error: error.message };
+    }
+  }
+
   return saveArticle(db, {
     candidateId,
     town: town!,
@@ -266,20 +340,26 @@ export async function writeCandidate(
       sourceRecordIds: cited.length > 0 ? cited : [...sourceIds],
     },
     claims: finalDraft.claims,
-    tier: Math.max(candidate.proposedTier, tier.tier) as Tier,
-    tierReasons: [...new Set([...(candidate.tierReasons ?? []), ...tier.reasons])],
+    tier: finalTier,
+    tierReasons,
+    // Stored with the fact-check (no new column): the review page shows the flags.
     factcheck: report
-      ? { method: 'model+code', ...report }
+      ? { method: 'model+code', ...report, styleLint: style, ...(legal ? { legal } : {}) }
       : { method: 'model+code', decision: 'review', error: 'fact-check failed to run' },
-    forceReview: !report
-      ? 'model_error'
-      : report.decision !== 'pass'
-        ? 'factcheck'
-        : // Machine captions can misspell names, so a person checks any story built on one.
-          rows.some((r) => r.record.type === 'transcript')
-          ? 'transcript'
-          : undefined,
-    promptVersions: versions,
+    forceReview:
+      !report || (legal && 'error' in legal)
+        ? 'model_error'
+        : report.decision !== 'pass'
+          ? 'factcheck'
+          : // Machine captions can misspell names, so a person checks any story built on one.
+            rows.some((r) => r.record.type === 'transcript')
+            ? 'transcript'
+            : // Filler or speculation the one revise didn't fix: a person cuts it, never published.
+              style.length
+              ? 'style'
+              : undefined,
+    promptVersions:
+      legal && 'promptVersion' in legal ? [...versions, legal.promptVersion] : versions,
     now,
     random,
   });
@@ -361,7 +441,7 @@ async function saveArticle(
     tier: Tier;
     tierReasons: string[];
     factcheck: Record<string, unknown>;
-    forceReview?: 'factcheck' | 'model_error' | 'transcript';
+    forceReview?: 'factcheck' | 'model_error' | 'transcript' | 'style';
     promptVersions: string[];
     now: Date;
     random: () => number;

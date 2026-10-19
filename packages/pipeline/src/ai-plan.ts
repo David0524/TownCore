@@ -14,6 +14,7 @@ import {
   entitiesV1,
   factcheckV1,
   guideV1,
+  legalV1,
   themeReviewV1,
   themeV1,
   updateV1,
@@ -37,6 +38,7 @@ const TYPICAL_OUTPUT: Record<AiTask, number> = {
   extract: 300,
   write: 1000,
   factcheck: 1500,
+  legal: 400,
   revise: 1000,
   update: 500,
   guide: 1800,
@@ -87,6 +89,7 @@ const SYSTEMS: Record<AiTask, string> = {
   extract: entitiesV1.system,
   write: writerV1.system,
   factcheck: factcheckV1.system,
+  legal: legalV1.system,
   revise: writerV1.system,
   update: updateV1.system,
   guide: guideV1.system,
@@ -203,6 +206,12 @@ export async function planDay(
     line(provider, 'revise', writes * DEFAULT_REVISE_RATE, {
       cached: sys('revise'),
       fresh: recordChars + 300,
+    }),
+    // The libel review, once switched on: one call a written story (an upper bound, since it
+    // reads only Tier 1–2 drafts that passed fact-check).
+    line(provider, 'legal', taskRoutes.legal.disabled ? 0 : writes, {
+      cached: sys('legal'),
+      fresh: recordChars + draftChars,
     }),
     line(provider, 'extract', writes, { cached: sys('extract'), fresh: draftChars }),
     line(provider, 'guide', guidesPerDay, { cached: sys('guide'), fresh: guideChars }),

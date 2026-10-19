@@ -1,6 +1,6 @@
 import type { TownConfig } from '@towncore/config';
 import { articles, eq, getSourceRecords, towns } from '@towncore/db';
-import type { CheckedClaim } from '@towncore/pipeline';
+import { STYLE_WHY, type CheckedClaim, type LegalReport, type StyleHit } from '@towncore/pipeline';
 import { notFound } from 'next/navigation';
 import { minorOverridable, reviewReasonLabel } from '@/lib/admin/review';
 import { requireStaff } from '@/lib/admin/session';
@@ -23,7 +23,23 @@ type Factcheck = {
   claims?: CheckedClaim[];
   wrongTownRisk?: boolean;
   wrongTownReason?: string | null;
-  recheck?: { unsupportedClaims: string[]; wrongTownRisk: boolean; wrongTownReason: string | null };
+  recheck?: {
+    unsupportedClaims: string[];
+    wrongTownRisk: boolean;
+    wrongTownReason: string | null;
+    styleLint?: StyleHit[];
+  };
+  /** Filler and speculation the style lint found in the final draft. */
+  styleLint?: StyleHit[];
+  /** The libel review, when it is switched on (or the error when it couldn't run). */
+  legal?: LegalReport | { error: string };
+};
+
+const legalLevel: Record<string, string> = {
+  low: 'Low risk',
+  medium: 'Medium risk: light edits',
+  high: 'High risk: needs edits or attribution before publishing',
+  critical: 'Critical: hold for legal review',
 };
 
 const errors: Record<string, string> = {
@@ -149,7 +165,7 @@ export default async function ReviewStory({ params, searchParams }: Props) {
               <div data-testid="recheck">
                 <h3>After your edits</h3>
                 {factcheck.recheck.unsupportedClaims.length === 0 ? (
-                  <p>✓ Every name and number is in a cited record.</p>
+                  <p>✓ Every name, number and quotation is in a cited record.</p>
                 ) : (
                   <ul>
                     {factcheck.recheck.unsupportedClaims.map((c) => (
@@ -159,6 +175,29 @@ export default async function ReviewStory({ params, searchParams }: Props) {
                     ))}
                   </ul>
                 )}
+                {(factcheck.recheck.styleLint ?? []).length ? (
+                  <ul>
+                    {factcheck.recheck.styleLint!.map((h, i) => (
+                      <li key={i} className={styles.bad}>
+                        ✗ &ldquo;{h.phrase}&rdquo; ({STYLE_WHY[h.rule]})
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
+            {factcheck.styleLint?.length ? (
+              <div data-testid="style-lint">
+                <h3>Filler and speculation</h3>
+                <ul className={styles.claims}>
+                  {factcheck.styleLint.map((h, i) => (
+                    <li key={i}>
+                      <span className={styles.bad}>✗ &ldquo;{h.phrase}&rdquo;</span> in the{' '}
+                      {h.field}: <q>{h.sentence}</q>
+                      <span className={styles.muted}> ({STYLE_WHY[h.rule]})</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : null}
             <ul className={styles.claims} data-testid="claims">
@@ -174,6 +213,40 @@ export default async function ReviewStory({ params, searchParams }: Props) {
               ))}
             </ul>
           </div>
+          {factcheck.legal ? (
+            <div className={styles.panel} data-testid="legal">
+              <h2>Libel review</h2>
+              {'error' in factcheck.legal ? (
+                <p className={styles.bad}>
+                  The review couldn&rsquo;t run ({factcheck.legal.error}); read the story for
+                  accusations, opinions stated as fact and named private people.
+                </p>
+              ) : (
+                <>
+                  <p>
+                    {legalLevel[factcheck.legal.level] ?? factcheck.legal.level}
+                    {factcheck.legal.dropped
+                      ? ` · ${factcheck.legal.dropped} flag${factcheck.legal.dropped === 1 ? '' : 's'} left out (not found in the draft)`
+                      : ''}
+                  </p>
+                  {factcheck.legal.flags.length === 0 ? (
+                    <p className={styles.muted}>No passages flagged.</p>
+                  ) : (
+                    <ul className={styles.claims}>
+                      {factcheck.legal.flags.map((flag, i) => (
+                        <li key={i}>
+                          <span className={styles.bad}>{flag.pattern.replace(/_/g, ' ')}:</span>{' '}
+                          <q>{flag.excerpt}</q>
+                          <br />
+                          {flag.why} <span className={styles.muted}>Fix: {flag.fix}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          ) : null}
           <h2>Sources</h2>
           {sources.map((s) => (
             <div key={s.id} className={`${styles.panel} ${styles.source}`}>

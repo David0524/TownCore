@@ -261,6 +261,11 @@ export const EVAL_VARIANTS: Record<string, Partial<Record<AiTask, Partial<TaskRo
     revise: { thinking: 'adaptive' },
     factcheck: { thinking: 'adaptive' },
   },
+  // Writer v2: length bands chosen in code, headline rules (off in the routing table until
+  // recorded). Compare it, then set taskRoutes.write.promptVersion and re-record the baseline.
+  'writer-v2': { write: { promptVersion: 'v2' } },
+  // The libel review after fact-check (off in the routing table until recorded).
+  'legal-review': { legal: { disabled: false } },
 };
 
 export type VariantReport = {

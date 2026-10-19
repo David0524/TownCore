@@ -1,6 +1,6 @@
 import type { Classification } from '@towncore/prompts';
 import { describe, expect, it } from 'vitest';
-import { scoreCandidate, timeliness, titleSimilarity } from '../src/scoring';
+import { lengthBand, scoreCandidate, timeliness, titleSimilarity } from '../src/scoring';
 import { decideTier, mentionsMinor } from '../src/tiers';
 import { apDate, isoLocalDate, localWeekStart, startOfLocalDay } from '../src/time';
 import { classification } from './helpers';
@@ -76,6 +76,58 @@ describe('decideTier (deterministic overrides, §7)', () => {
       expect(decideTier({ ...base, classification: c }).tier).toBe(3);
     }
   });
+
+  describe('sensitive topics the model missed (code backstop, only raises)', () => {
+    const tierFor = (text: string, proposed: 1 | 2 | 3 = 1) =>
+      decideTier({ ...base, classification: classification({ proposed_tier: proposed }), text });
+
+    it('suicide is at least Tier 3, with an AP style and 988 note for the reviewer', () => {
+      const d = tierFor('The medical examiner ruled the death a suicide.');
+      expect(d.tier).toBe(3);
+      expect(d.reasons.at(-1)).toMatch(/^mentions suicide \("suicide"\).*988 Suicide & Crisis/);
+      expect(tierFor('He took his own life in 2019, the family said.').tier).toBe(3);
+    });
+
+    it('a sexual offence is at least Tier 3; Tier 4, not overridable, when a victim may be identifiable', () => {
+      const charged = tierFor('Police charged a Boca Raton man with sexual battery on Friday.');
+      expect(charged).toMatchObject({ tier: 3, minorOverridable: false });
+      expect(charged.reasons.at(-1)).toMatch(/^sexual offence \("sexual battery"\)/);
+      for (const text of [
+        'The victim, a 24-year-old woman, reported the assault. He faces a rape charge.',
+        'He is charged with lewd and lascivious molestation of a victim, his stepdaughter.',
+        'Police said the victim, who lives in the 400 block of NE 5th Street, was sexually assaulted.',
+      ]) {
+        const d = tierFor(text);
+        expect(d, text).toMatchObject({ tier: 4, minorOverridable: false });
+        expect(
+          d.reasons.some((r) => r.startsWith('sexual-assault victim may be identifiable')),
+        ).toBe(true);
+      }
+      // Without an offence, a "victim" with an age is ordinary crime news (Tier 3 by other rules).
+      expect(tierFor('The victim, a 30-year-old man, was robbed.').tier).toBe(1);
+      // "Human trafficking" is a sexual-offence topic; drug trafficking is not.
+      expect(tierFor('Deputies arrested two men on human trafficking charges.').tier).toBe(3);
+      expect(tierFor('Deputies arrested two men on drug trafficking charges.').tier).toBe(1);
+    });
+
+    it('a missing child or Amber Alert goes to review, at least Tier 3', () => {
+      const d = tierFor('Police issued an Amber Alert on Tuesday night.', 2);
+      expect(d.tier).toBe(3);
+      expect(d.reasons.at(-1)).toMatch(/^missing child or Amber Alert/);
+      expect(tierFor('Officers are searching for a missing child near Mizner Park.').tier).toBe(3);
+      // A missing child's age is a minor named: Tier 4 until a reviewer overrides it (§7).
+      expect(
+        tierFor('Police said the missing girl is 14 years old and was last seen Monday.'),
+      ).toMatchObject({ tier: 4, minorOverridable: true });
+    });
+
+    it('never lowers a tier and leaves ordinary civic text alone', () => {
+      expect(tierFor('The suicide prevention walk raised $4,000.', 3).tier).toBe(3);
+      expect(tierFor('The council approved a grape festival and a rapid transit study.').tier).toBe(
+        1,
+      );
+    });
+  });
 });
 
 describe('mentionsMinor', () => {
@@ -86,6 +138,10 @@ describe('mentionsMinor', () => {
     ['Pat Lee, 17, was cited', true],
     ['two juveniles were detained', true],
     ['two teens were cited', true],
+    ['a teen suspect was detained', true],
+    ['police said the minor charged in the case', true],
+    ['a youth arrested Friday', true],
+    ['two minor charges were dropped', false],
     ['a 45-year-old man', false],
     ['Agenda item (2) and Route 16', false],
     ['the teen center on Main Street reopened', false],
@@ -97,6 +153,17 @@ describe('mentionsMinor', () => {
 
 describe('scoring', () => {
   const now = new Date('2026-10-15T12:00:00Z');
+
+  it('lengthBand: the writer v2 length comes from how much the records say', () => {
+    const rec = (chars: number) => ({ title: 'T', text: 'x'.repeat(chars) });
+    expect(lengthBand([rec(600)])).toBe('brief');
+    expect(lengthBand([rec(700), rec(700)])).toBe('brief');
+    expect(lengthBand([rec(1500)])).toBe('standard');
+    expect(lengthBand([rec(4999)])).toBe('standard');
+    expect(lengthBand([rec(5000)])).toBe('substantial');
+    expect(lengthBand([rec(1000), rec(1000), rec(1000)])).toBe('substantial');
+    expect(lengthBand([rec(900), rec(900), rec(900)])).toBe('standard');
+  });
 
   it('timeliness decays over three days and favors the next two days', () => {
     expect(timeliness(now, now)).toBe(1);
