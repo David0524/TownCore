@@ -1,6 +1,6 @@
 import type { FactcheckResult } from '@towncore/prompts';
 import { describe, expect, it } from 'vitest';
-import { checkDraft, namesIn, numbersIn } from '../src/factcheck';
+import { checkDraft, namesIn, numbersIn, quotedSpans } from '../src/factcheck';
 
 const record = {
   id: 'r1',
@@ -125,5 +125,101 @@ describe('extractors', () => {
       'State Road A1A',
       'Bark Beach',
     ]);
+  });
+});
+
+// Modeled on Kyle's quote-check tests: false alarms matter as much as catches, since a check
+// that cries wolf gets ignored.
+describe('quotations (checked in code, whatever the model said)', () => {
+  const speech = {
+    id: 'r2',
+    title: 'Mayor on the water main',
+    text: 'Mayor Julia Kim told the council on Tuesday that "the water main replacement will finish before the school year starts." Chief Ana Alvarez said the department "responded to 214 calls last month" and expects that number to climb.',
+  };
+  const withBody = (bodyMd: string, dek = 'Work begins Nov. 2.') =>
+    checkDraft({
+      draft: { headline: draft.headline, dek, bodyMd },
+      sources: [record, speech],
+      model: model([claim()]),
+      knownNames: [...knownNames, 'Mayor Julia Kim', 'Chief Ana Alvarez'],
+      otherPlaces: [],
+    });
+  const quoteProblems = (bodyMd: string, dek?: string) =>
+    withBody(bodyMd, dek).unsupportedClaims.filter((c) => c.includes('quoted text'));
+
+  it('passes a verbatim quote, straight or curly, with a capitalized first letter', () => {
+    expect(
+      withBody('Kim said "the water main replacement will finish before the school year starts."')
+        .decision,
+    ).toBe('pass');
+    expect(
+      quoteProblems(
+        'Kim said “The water main replacement will finish before the school year starts.”',
+      ),
+    ).toEqual([]);
+  });
+
+  it('flags a fabricated or paraphrased quote, which sends the draft to the one revise', () => {
+    const report = withBody('Kim said "we will lower taxes for every resident next year."');
+    expect(report.decision).toBe('revise');
+    expect(report.unsupportedClaims).toEqual([
+      'the quotation "we will lower taxes for every resident next year" (quoted text not found verbatim in any cited record)',
+    ]);
+    // A paraphrase in quotation marks, and a case change past the first letter, aren't verbatim.
+    expect(
+      quoteProblems('"The water main work will finish before school starts," Kim said.'),
+    ).toHaveLength(1);
+    expect(
+      quoteProblems('Kim said "the Water Main replacement will finish before the school year."'),
+    ).toHaveLength(1);
+  });
+
+  it('checks the dek too', () => {
+    expect(
+      quoteProblems(draft.bodyMd, 'Kim: "we will lower taxes for every resident next year"'),
+    ).toHaveLength(1);
+  });
+
+  it('leaves short scare quotes and titles alone', () => {
+    expect(
+      quoteProblems('The so-called "smart growth" plan and the "Boo-ca Boo Days" series.'),
+    ).toEqual([]);
+  });
+
+  it('allows an elision when each fragment appears in order in one record', () => {
+    expect(
+      quoteProblems(
+        'Alvarez said the department "responded to 214 calls ... expects that number to climb."',
+      ),
+    ).toEqual([]);
+    expect(
+      quoteProblems('Alvarez said the department "responded to 214 calls … last month"'),
+    ).toEqual([]);
+    // Out of order, or fragments from two different records, is not a quote.
+    expect(
+      quoteProblems('Alvarez said "expects that number to climb ... responded to 214 calls."'),
+    ).toHaveLength(1);
+    expect(
+      quoteProblems('Officials said "voted 4-1 on Tuesday ... responded to 214 calls last month."'),
+    ).toHaveLength(1);
+  });
+
+  it('checks each half of a split quote on its own, and a repeated quote once', () => {
+    expect(
+      quoteProblems(
+        '"The water main replacement will finish," Kim said, "before the school year starts."',
+      ),
+    ).toEqual([]);
+    expect(
+      quoteProblems(
+        'Kim said "we will lower taxes for every resident next year." Later: "we will lower taxes for every resident next year."',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('never pairs quotation marks across paragraphs', () => {
+    expect(
+      quotedSpans('He said "the first paragraph has a stray mark.\n\nThe second ends" here.'),
+    ).toEqual([]);
   });
 });
