@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { daysFromPeriods } from '@towncore/config';
 import { describe, expect, it } from 'vitest';
 import { Fetcher } from '../src/http/fetcher';
 import { replayFetch, type FixtureFile } from '../src/http/fixtures';
@@ -7,6 +8,7 @@ import {
   fetchWeather,
   fetchZoneAlerts,
   HOURLY_STEPS,
+  parseForecastPeriods,
   parsePoint,
   UPCOMING_HOURS,
 } from '../src/nws/weather';
@@ -152,6 +154,118 @@ describe('NWS weather snapshot', () => {
     expect(byZone.get('FLZ103')).toEqual([]);
     // No link in the alert: the town's forecast page is used later (alertsForTown).
     expect(byZone.get('FLZ101')![0]!.url).toBeNull();
+  });
+
+  it('keeps the 7-day forecast periods, without NWS icons', async () => {
+    const w = await fetchWeather(fetcherFor(fixture), opts, recordedNow);
+    const days = w.days!;
+    expect(days.fetchedAt).toBe(recordedNow.toISOString());
+    expect(days.updatedAt).toBe('2026-10-15T19:46:58+00:00');
+    expect(days.periods).toHaveLength(14);
+    expect(days.periods[0]).toEqual({
+      name: 'This Afternoon',
+      startTime: '2026-10-15T17:00:00-04:00',
+      endTime: '2026-10-15T18:00:00-04:00',
+      isDaytime: true,
+      temperature: 88,
+      shortForecast: 'Chance Showers And Thunderstorms',
+      detailedForecast: expect.stringContaining('high near 88'),
+      precipChance: 31,
+      windSpeed: '10 mph',
+      windDirection: 'E',
+    });
+    expect(JSON.stringify(w)).not.toContain('api.weather.gov/icons');
+    // The hourly periods now carry humidity and day or night, for feels-like and the icon.
+    expect(w.now.humidity).toBe(75);
+    expect(w.now.isDaytime).toBe(true);
+  });
+
+  it('starts at night with "Tonight" (recorded at 11:30 p.m.)', async () => {
+    const night: FixtureFile = JSON.parse(
+      readFileSync(
+        fileURLToPath(new URL('../fixtures/nws/boca-weather-night.json', import.meta.url)),
+        'utf8',
+      ),
+    );
+    const at = new Date(night.recordedAt);
+    const w = await fetchWeather(fetcherFor(night), opts, at);
+    expect(w.days!.periods[0]).toMatchObject({ name: 'Tonight', isDaytime: false });
+    const rows = daysFromPeriods(w.days!.periods);
+    expect(rows).toHaveLength(7);
+    expect(rows[0]).toMatchObject({ name: 'Tonight', high: null, low: 75, kind: 'partly-cloudy' });
+    expect(rows[1]).toMatchObject({ name: 'Monday', high: 84, low: 73, precipChance: 33 });
+    expect(rows[1]!.kind).toBe('thunder');
+    expect(w.alerts.map((a) => a.event)).toEqual(['High Surf Advisory', 'Rip Current Statement']);
+  });
+
+  it('fetches the 7-day forecast only when the stored one is due, and keeps it on failure', async () => {
+    const first = await fetchWeather(fetcherFor(fixture), opts, recordedNow);
+    const later = new Date(recordedNow.getTime() + 45 * 60_000);
+    const urls: string[] = [];
+    const again = await fetchWeather(fetcherFor(fixture, urls), opts, later, {
+      previous: first,
+      alerts: [],
+    });
+    expect(urls.some((u) => u.endsWith('/forecast'))).toBe(false);
+    expect(again.days!.fetchedAt).toBe(first.days!.fetchedAt);
+
+    // Due (an hour old), but NWS fails: the stored one stays.
+    const broken: FixtureFile = {
+      ...fixture,
+      exchanges: fixture.exchanges.map((e) =>
+        e.url.endsWith('/forecast') ? { ...e, status: 500, body: '{}' } : e,
+      ),
+    };
+    const hourLater = new Date(recordedNow.getTime() + 61 * 60_000);
+    const kept = await fetchWeather(fetcherFor(broken), opts, hourLater, {
+      previous: first,
+      alerts: [],
+    });
+    expect(kept.days!.fetchedAt).toBe(first.days!.fetchedAt);
+    // "This Afternoon" ended at 6 p.m.: dropped as the clock moves on.
+    expect(kept.days!.periods[0]!.name).toBe('Tonight');
+
+    // A longer cadence (a busy run) skips it.
+    const skipped: string[] = [];
+    await fetchWeather(fetcherFor(fixture, skipped), opts, hourLater, {
+      previous: first,
+      alerts: [],
+      daysEveryMs: 6 * 3_600_000,
+    });
+    expect(skipped.some((u) => u.endsWith('/forecast'))).toBe(false);
+  });
+
+  it('parses 12-hour periods defensively', () => {
+    const now = new Date('2026-10-15T12:00:00Z');
+    expect(parseForecastPeriods(null, now)).toEqual([]);
+    expect(parseForecastPeriods({ properties: {} }, now)).toEqual([]);
+    const period = {
+      name: 'Friday',
+      startTime: '2026-10-16T06:00:00-04:00',
+      endTime: '2026-10-16T18:00:00-04:00',
+      isDaytime: true,
+      temperature: 89,
+      shortForecast: 'Sunny',
+      probabilityOfPrecipitation: { value: null },
+      windSpeed: '10 mph',
+      windDirection: 'SE',
+      icon: 'https://api.weather.gov/icons/land/day/few?size=medium',
+    };
+    const parsed = parseForecastPeriods(
+      {
+        properties: {
+          periods: [
+            period,
+            { ...period, name: 'No temperature', temperature: null },
+            { ...period, name: 'Over', endTime: '2026-10-15T07:00:00-04:00' },
+          ],
+        },
+      },
+      now,
+    );
+    expect(parsed.map((p) => p.name)).toEqual(['Friday']);
+    expect(parsed[0]).toMatchObject({ precipChance: null, detailedForecast: '' });
+    expect(parsed[0]).not.toHaveProperty('icon');
   });
 
   it('parses and validates the point', () => {

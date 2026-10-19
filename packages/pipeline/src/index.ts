@@ -151,6 +151,7 @@ export {
   type TownHealth,
 } from './ops';
 export {
+  daysCadence,
   forecastsDue,
   refreshTownWeather,
   refreshWeather,
