@@ -73,6 +73,70 @@ export function newsArticleJsonLd(
   };
 }
 
+/**
+ * schema.org Event for an event page: the official calendar's own facts only (no image, price
+ * or performer we don't have). The organizer is the government or calendar it came from.
+ */
+export function eventJsonLd(
+  town: Pick<Town, 'domain' | 'name' | 'state'>,
+  event: {
+    path: string;
+    title: string;
+    when: Date;
+    end: Date | null;
+    allDay: boolean;
+    venue: string | null;
+    street: string | null;
+    description: string | null;
+    officialUrl: string | null;
+    organizer: string | null;
+  },
+  timeZone: string,
+): Json {
+  const day = (d: Date) =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(d);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: event.title,
+    url: siteUrl(town, event.path),
+    // All-day events are dates (schema.org allows a Date); timed ones the exact instant.
+    startDate: event.allDay ? day(event.when) : event.when.toISOString(),
+    endDate: event.end
+      ? event.allDay
+        ? day(new Date(event.end.getTime() - 1))
+        : event.end.toISOString()
+      : undefined,
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    description: event.description ?? undefined,
+    location: {
+      '@type': 'Place',
+      name: event.venue ?? `${town.name}, ${town.state}`,
+      address: {
+        '@type': 'PostalAddress',
+        ...(event.street ? { streetAddress: event.street } : {}),
+        addressLocality: town.name,
+        addressRegion: town.state,
+        addressCountry: 'US',
+      },
+    },
+    organizer: event.organizer
+      ? {
+          '@type': 'Organization',
+          name: event.organizer,
+          ...(event.officialUrl ? { url: event.officialUrl } : {}),
+        }
+      : undefined,
+    sameAs: event.officialUrl ?? undefined,
+  };
+}
+
 /** Renders JSON-LD safely: "<" is escaped so the data can never close the script tag. */
 export function JsonLd({ data }: { data: Json }) {
   return (

@@ -21,5 +21,9 @@ describe('phone back button', () => {
     expect(backTarget('/owner/cove-plumbing-test0003')).toEqual({ href: '/owner', label: 'Back' });
     expect(backTarget('/beat/government')).toEqual({ href: '/sections', label: 'Sections' });
     expect(backTarget('/news/a-story')).toEqual({ href: '/', label: 'Today' });
+    expect(backTarget('/events/nature-walk-2026-10-20-1a2b3c4d')).toEqual({
+      href: '/events',
+      label: 'Events',
+    });
   });
 });

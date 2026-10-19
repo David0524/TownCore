@@ -14,6 +14,7 @@ export function backTarget(path: string): { href: string; label: string } | null
   const place = /^\/directory\/([^/]+)\/[^/]+$/.exec(path);
   if (place) return { href: `/directory/${place[1]}`, label: 'Back' };
   if (path.startsWith('/directory/')) return { href: '/directory', label: 'Places' };
+  if (path.startsWith('/events/')) return { href: '/events', label: 'Events' };
   if (/^\/(beat|about|methods|corrections|privacy)(\/|$)/.test(path))
     return { href: '/sections', label: 'Sections' };
   return { href: '/', label: 'Today' };

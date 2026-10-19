@@ -1,13 +1,14 @@
 import { SectionHeader } from '@/components/news/SectionHeader';
 import { EventCard } from '@/components/events/EventCard';
 import styles from '@/components/events/events.module.css';
+import { eventSlug } from '@/lib/events';
 import { upcomingEvents } from './data';
 import type { HomeModuleComponent } from './types';
 
 /**
  * Upcoming events from the town's official calendars (owner's request, after
- * bocatownsquare.com): the next five, a recurring program once, each a card linking to the city's page for it. Hidden
- * when the town has no events source or nothing is coming up.
+ * bocatownsquare.com): the next five, a recurring program once, each a card linking to its event
+ * page. Hidden when the town has no events source or nothing is coming up.
  */
 export const UpcomingEvents: HomeModuleComponent = async ({ town }) => {
   const events = await upcomingEvents(town.id, town.name, 14, 5, true);
@@ -18,7 +19,10 @@ export const UpcomingEvents: HomeModuleComponent = async ({ town }) => {
       <ul className={styles.list}>
         {events.map((e) => (
           <li key={e.id}>
-            <EventCard event={e} timeZone={town.timezone} />
+            <EventCard
+              event={{ ...e, href: `/events/${eventSlug(e, town.timezone)}` }}
+              timeZone={town.timezone}
+            />
           </li>
         ))}
       </ul>

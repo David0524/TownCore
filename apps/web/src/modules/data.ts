@@ -256,6 +256,77 @@ export const upcomingEvents = cache(
   },
 );
 
+export type EventDetail = UpcomingEvent & {
+  /** The calendar's own description text, as it sent it. */
+  description: string | null;
+  source: { platform: string; url: string | null; kind: string } | null;
+  /**
+   * When two of the town's calendars carry the same event (same title and start), the copy
+   * every page points search engines to: the record first stored. Its id and title.
+   */
+  canonical: { id: string; title: string; when: Date };
+};
+
+/**
+ * One calendar event for its page (/events/<slug>), found by the record-id prefix the slug ends
+ * with. Null when there's no such event in this town.
+ */
+export const eventByIdPrefix = cache(
+  async (townId: string, townName: string, prefix: string): Promise<EventDetail | null> => {
+    if (!/^[0-9a-f]{8}$/.test(prefix)) return null;
+    const rows = await db()
+      .select({ record: records, platform: sources.platform, url: sources.url, kind: sources.kind })
+      .from(records)
+      .leftJoin(sources, eq(sources.id, records.sourceId))
+      .where(
+        and(
+          eq(records.townId, townId),
+          eq(records.type, 'event'),
+          sql`${records.id}::text like ${`${prefix}%`}`,
+        ),
+      )
+      .limit(2);
+    // Eight hex digits of a random id: a clash in one town is vanishingly rare, but never guess.
+    const row = rows.length === 1 ? rows[0] : null;
+    if (!row?.record.occurredAt) return null;
+    const r = row.record;
+    const raw = (r.raw ?? {}) as {
+      end?: string | null;
+      allDay?: boolean;
+      location?: string;
+      description?: string | null;
+    };
+    const title = r.title?.trim() || 'Event';
+    const [first] = await db()
+      .select({ id: records.id, title: records.title, occurredAt: records.occurredAt })
+      .from(records)
+      .where(
+        and(
+          eq(records.townId, townId),
+          eq(records.type, 'event'),
+          eq(records.occurredAt, r.occurredAt!),
+          sql`lower(trim(${records.title})) = ${title.toLowerCase()}`,
+        ),
+      )
+      .orderBy(records.createdAt, records.id)
+      .limit(1);
+    return {
+      id: r.id,
+      title,
+      when: r.occurredAt!,
+      end: raw.end ? new Date(raw.end) : null,
+      allDay: raw.allDay === true,
+      ...splitLocation(raw.location, townName),
+      url: r.url,
+      description: typeof raw.description === 'string' ? raw.description : null,
+      source: row.platform ? { platform: row.platform, url: row.url, kind: row.kind! } : null,
+      canonical: first
+        ? { id: first.id, title: first.title?.trim() || 'Event', when: first.occurredAt! }
+        : { id: r.id, title, when: r.occurredAt! },
+    };
+  },
+);
+
 /**
  * Real published stories (not guides or test fixtures) per beat, all time: list pages with too
  * few stay out of search (owner, 2026-10-17).
