@@ -53,5 +53,25 @@ test('staff see every town with its numbers, and the open alerts', async ({ page
   for (const header of ['A day', 'Target', 'Gap', 'Sources to build next'])
     await expect(coverage.getByRole('columnheader', { name: header })).toBeVisible();
   await expect(coverage.locator('[data-town="Boca Town Square"]')).toContainText('10');
+  // Every open alert says how it reaches admins (breakage, backlog or standing).
+  for (const item of await page.getByTestId('open-alerts').locator('li').all())
+    await expect(item).toContainText(
+      /Emailed daily while open|Emailed weekly when deep and growing|Dashboard only/,
+    );
+  // Score calibration: one row per newsworthiness band, with what became of its candidates.
+  const calibration = page.getByTestId('score-calibration');
+  for (const header of [
+    'Score',
+    'Published',
+    'Approved by a reviewer',
+    'Rejected',
+    'Skipped',
+    'Reviewer approval',
+  ])
+    await expect(calibration.getByRole('columnheader', { name: header })).toBeVisible();
+  await expect(calibration.locator('tbody tr')).toHaveCount(5);
+  for (const band of ['0–39', '40–59', '60–74', '75–89', '90+'])
+    await expect(calibration.getByRole('cell', { name: band, exact: true })).toBeVisible();
+  await expect(page.getByTestId('calibration-summary')).toContainText(/decisions/);
   await expect(page.getByRole('link', { name: 'Health', exact: true })).toBeVisible();
 });

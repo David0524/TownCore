@@ -2,6 +2,7 @@ import { GetAccountCommand, type SESv2Client } from '@aws-sdk/client-sesv2';
 import {
   domainHealthDaily,
   eq,
+  isNull,
   mailAlerts,
   mailDomains,
   mailEvents,
@@ -198,6 +199,65 @@ describe('alerts against Postgres', () => {
     const run = await syncAlerts(db, await currentConditions(db, later(30)), later(30));
     expect(run.opened.map((c) => c.key)).toEqual(['network_paused']);
     expect(await notifyAlerts(db, null, later(30))).toBe(0);
+  });
+
+  it('emails by kind: breakage as before, a backlog weekly when deep and growing, standing never', async () => {
+    const standing = {
+      key: 'source_broken:draft',
+      severity: 'warning' as const,
+      message: 'Draft Town: a source is broken.',
+      kind: 'standing' as const,
+    };
+    const backlog = (depth: number, weekAgo: number) => ({
+      key: 'review_waiting',
+      severity: 'warning' as const,
+      message: `REVIEW BACKLOG ${depth}`,
+      kind: 'backlog' as const,
+      backlog: { depth, ceiling: 10, weekAgo },
+    });
+    // Everything emailed from here on, as text.
+    const mailed = async (from: number) =>
+      (await Promise.all(sent.slice(from).map((s) => simpleParser(s.raw))))
+        .map((m) => m.text ?? '')
+        .join('\n');
+    let mark = sent.length;
+    const at = (h: number) => later(200 + h);
+
+    // A shallow backlog and a standing fact: both open on the dashboard, neither emailed.
+    await runAlerts(db, mail, at(0), [standing, backlog(3, 1)]);
+    const open = await db.select().from(mailAlerts).where(isNull(mailAlerts.resolvedAt));
+    expect(open.map((a) => a.key)).toEqual(
+      expect.arrayContaining(['source_broken:draft', 'review_waiting']),
+    );
+    expect(await mailed(mark)).not.toMatch(/Draft Town|REVIEW BACKLOG/);
+
+    // Deep and growing: emailed.
+    mark = sent.length;
+    await runAlerts(db, mail, at(1), [standing, backlog(12, 5)]);
+    expect(await mailed(mark)).toContain('WARNING: REVIEW BACKLOG 12');
+    // Two days later, still deep and growing: not again within the week.
+    mark = sent.length;
+    await runAlerts(db, mail, at(49), [standing, backlog(14, 5)]);
+    expect(await mailed(mark)).not.toContain('REVIEW BACKLOG');
+    // Eight days later: weekly reminder.
+    mark = sent.length;
+    await runAlerts(db, mail, at(193), [standing, backlog(15, 12)]);
+    expect(await mailed(mark)).toContain('WARNING: REVIEW BACKLOG 15');
+    // Deep but shrinking a week later: no email.
+    mark = sent.length;
+    await runAlerts(db, mail, at(361), [standing, backlog(13, 15)]);
+    expect(await mailed(mark)).not.toContain('REVIEW BACKLOG');
+
+    // The standing fact clears: it was never emailed, so its resolution isn't either.
+    mark = sent.length;
+    await runAlerts(db, mail, at(362), [backlog(13, 15)]);
+    expect(await mailed(mark)).not.toContain('Draft Town');
+    const [gone] = await db
+      .select()
+      .from(mailAlerts)
+      .where(eq(mailAlerts.key, 'source_broken:draft'));
+    expect(gone!.resolvedAt).not.toBeNull();
+    expect(gone!.lastNotifiedAt).toBeNull();
   });
 
   it('the snapshot sums streams and rates', async () => {

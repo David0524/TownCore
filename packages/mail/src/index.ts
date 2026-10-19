@@ -271,6 +271,15 @@ export {
   type AlertRun,
   type Condition,
 } from './ops/alerts';
+export {
+  alertKindLabels,
+  alertKinds,
+  backlogTrend,
+  deepAndGrowing,
+  emailDue,
+  type AlertKind,
+  type Backlog,
+} from './ops/alert-kinds';
 export { mailHealthSnapshot, rate, SES_REVIEW, type StreamTotals } from './ops/health';
 export { ALERT_FROM, NotStaffAddress, sendStaffEmail } from './ops/staff-email';
 export {

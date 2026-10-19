@@ -1,5 +1,6 @@
 import { aiTasks, networkAiCapUsd, taskRoutes, type TownConfig } from '@towncore/config';
 import {
+  adminActions,
   aiUsage,
   and,
   articles,
@@ -23,10 +24,25 @@ import { networkSpendSince, todaysUsage } from './llm';
 // Operations (CLAUDE.md §8, §12; docs/plans/M8.md). What the worker alerts staff about, beside
 // the mail conditions (same alert table and emails), and the numbers Admin → Health shows.
 
-export type OpsCondition = { key: string; severity: 'warning' | 'critical'; message: string };
+/**
+ * How an alert reaches admins (packages/mail/src/ops/alert-kinds.ts): breakage by email daily
+ * while open, a backlog weekly only when deep and growing, a standing fact on the dashboard only.
+ */
+export type OpsAlertKind = 'breakage' | 'backlog' | 'standing';
+
+export type OpsCondition = {
+  key: string;
+  severity: 'warning' | 'critical';
+  message: string;
+  kind: OpsAlertKind;
+  /** Backlogs only: depth now, the depth worth an email, and the depth a week ago. */
+  backlog?: { depth: number; ceiling: number; weekAgo: number };
+};
 
 /** A story waiting longer than this in review opens an alert (D-M8-3). */
 export const REVIEW_WAIT_HOURS = 24;
+/** Stories waiting that long before the review backlog is worth an email (when it's growing). */
+export const REVIEW_BACKLOG_CEILING = 10;
 /** Cost per published story rising this much week over week opens an alert (§8, D-M8-4). */
 export const COST_RISE = 0.5;
 /** Each week needs at least this many published stories for the comparison to mean anything. */
@@ -157,6 +173,30 @@ export async function aiSpend(db: Db, now = new Date(), days = 7): Promise<AiSpe
   };
 }
 
+/**
+ * How many stories had waited in review more than a day, a week ago: stories created over 8 days
+ * ago that are still in review or that a person approved or rejected in the last 7 days. (Stories
+ * enter review when they're written, so a story's creation dates its wait.)
+ */
+export async function reviewBacklogWeekAgo(db: Db, now: Date): Promise<number> {
+  const weekAgo = new Date(now.getTime() - 7 * DAY);
+  const enteredBy = new Date(weekAgo.getTime() - REVIEW_WAIT_HOURS * 3_600_000);
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(articles)
+    .where(
+      and(
+        lt(articles.createdAt, enteredBy),
+        sql`(${articles.status} = 'in_review' or ${articles.id} in (
+          select ${adminActions.articleId} from ${adminActions}
+          where ${adminActions.action} in ('approve', 'reject')
+            and ${adminActions.createdAt} >= ${weekAgo.toISOString()}::timestamptz
+        ))`,
+      ),
+    );
+  return row?.n ?? 0;
+}
+
 /** A cap counts as reached at this share: the next call's worst case may not fit. */
 export const CAP_WARN_SHARE = 0.95;
 
@@ -177,9 +217,12 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
   for (const s of broken) {
     const town = active.find((t) => t.id === s.townId);
     if (!town) continue;
+    // On a live town readers lose stories: breakage. On a town not live yet it's a launch to-do
+    // the dashboard and launch report show; thousands of drafts would bury real breakage.
     out.push({
       key: `source_broken:${s.id}`,
       severity: town.status === 'live' ? 'critical' : 'warning',
+      kind: town.status === 'live' ? 'breakage' : 'standing',
       message: `${town.siteName}: the ${s.kind} source (${s.platform}) is broken: 3 or more runs failed in a row.`,
     });
   }
@@ -195,6 +238,7 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
       out.push({
         key: `task_cap:${task}`,
         severity: 'warning',
+        kind: 'breakage',
         message: `The ${task} task reached its daily AI cap (${usd(spent)} of ${usd(cap)}, every town): it stops until midnight UTC.`,
       });
   }
@@ -210,6 +254,7 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
       out.push({
         key: `town_cap:${town.id}`,
         severity: 'warning',
+        kind: 'breakage',
         message: `${town.siteName} reached its daily AI cap (${usd(today.costUsd)} of ${usd(capUsd)}, ${today.calls} of ${capCalls} calls).`,
       });
     // Cost per published story, this week against last week (§8).
@@ -229,11 +274,13 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
       out.push({
         key: `cost_per_story:${town.id}`,
         severity: 'warning',
+        kind: 'breakage',
         message: `${town.siteName}: AI cost per published story is ${usd(thisWeek.perStory)} this week, up from ${usd(lastWeek.perStory)} (more than ${COST_RISE * 100}%).`,
       });
   }
 
-  // Review queue: a story waiting more than a day.
+  // Review queue: a story waiting more than a day. A backlog: emailed weekly, and only when the
+  // queue is past its ceiling and deeper than a week ago.
   const [waiting] = await db
     .select({ n: sql<number>`count(*)::int`, oldest: sql<Date | null>`min(${articles.updatedAt})` })
     .from(articles)
@@ -243,18 +290,25 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
         lt(articles.updatedAt, new Date(now.getTime() - REVIEW_WAIT_HOURS * 3_600_000)),
       ),
     );
-  if (waiting && waiting.n > 0)
+  if (waiting && waiting.n > 0) {
+    const weekAgo = await reviewBacklogWeekAgo(db, now);
+    const backlog = { depth: waiting.n, ceiling: REVIEW_BACKLOG_CEILING, weekAgo };
+    const net = backlog.depth - weekAgo;
     out.push({
       key: 'review_waiting',
       severity: 'warning',
-      message: `${waiting.n} stor${waiting.n === 1 ? 'y has' : 'ies have'} waited in review for more than ${REVIEW_WAIT_HOURS} hours.`,
+      kind: 'backlog',
+      backlog,
+      message: `${waiting.n} stor${waiting.n === 1 ? 'y has' : 'ies have'} waited in review for more than ${REVIEW_WAIT_HOURS} hours (${net === 0 ? 'flat' : net > 0 ? `+${net}` : `−${-net}`} on a week ago).`,
     });
+  }
 
   const spent = await networkSpendToday(db, now);
   if (spent >= networkAiCapUsd())
     out.push({
       key: 'network_cap',
       severity: 'critical',
+      kind: 'breakage',
       message: `The network-wide AI cap is reached for today (${usd(spent)} of ${usd(networkAiCapUsd())}): no model calls until midnight UTC.`,
     });
 
@@ -263,6 +317,7 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
     out.push({
       key: `site_down:${site.id}`,
       severity: 'critical',
+      kind: 'breakage',
       message: `${site.siteName} (${site.domain}) is down: ${site.why}`,
     });
 
@@ -274,6 +329,7 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
     out.push({
       key: 'worker_stale',
       severity: 'critical',
+      kind: 'breakage',
       message: last
         ? `No worker heartbeat since ${last.toISOString()}: ingest, writing and mail have stopped.`
         : 'No worker has ever reported a heartbeat.',
