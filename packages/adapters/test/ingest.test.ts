@@ -270,6 +270,8 @@ describe('schedules', () => {
     expect(defaultSchedule('weather', 'nws')).toBe('15m');
     expect(defaultSchedule('business_filings', 'fl-dbpr')).toBe('7d');
     expect(defaultSchedule('events', 'civicplus')).toBe('1h');
+    expect(defaultSchedule('agenda', 'civicplus', { module: 'agenda-center' })).toBe('6h');
+    expect(defaultSchedule('agenda', 'civicplus', { module: 'calendar' })).toBe('2h');
   });
 });
 

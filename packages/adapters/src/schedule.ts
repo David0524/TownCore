@@ -28,8 +28,18 @@ const PLATFORM_DEFAULTS: Record<string, string> = {
   cms: '7d',
 };
 
-export function defaultSchedule(kind: SourceKind, platform: string): string {
-  return PLATFORM_DEFAULTS[platform] ?? DEFAULTS[kind] ?? FALLBACK;
+/**
+ * Module overrides (`platform:module` from the source config): CivicPlus Agenda Center re-reads
+ * recent minutes PDFs each run (they carry no posted time), so it runs four times a day.
+ */
+const MODULE_DEFAULTS: Record<string, string> = {
+  'civicplus:agenda-center': '6h',
+};
+
+export function defaultSchedule(kind: SourceKind, platform: string, config?: unknown): string {
+  const module = (config as { module?: unknown } | null | undefined)?.module;
+  const byModule = typeof module === 'string' ? MODULE_DEFAULTS[`${platform}:${module}`] : null;
+  return byModule ?? PLATFORM_DEFAULTS[platform] ?? DEFAULTS[kind] ?? FALLBACK;
 }
 
 export function intervalMs(schedule: string): number {
@@ -63,11 +73,14 @@ export function retryIntervalMs(source: {
   kind: SourceKind;
   platform: string;
   schedule: string | null;
+  config?: unknown;
   health?: string | null;
   consecutiveFailures?: number | null;
   lastError?: string | null;
 }): number {
-  const every = intervalMs(source.schedule ?? defaultSchedule(source.kind, source.platform));
+  const every = intervalMs(
+    source.schedule ?? defaultSchedule(source.kind, source.platform, source.config),
+  );
   if (source.health !== 'broken') return every;
   if (isPolicyRefusal(source.lastError)) return Math.max(every, POLICY_RETRY_MS);
   const extra = Math.max(0, (source.consecutiveFailures ?? 0) - BROKEN_AFTER_FAILURES);
@@ -81,6 +94,7 @@ export function isDue(
     platform: string;
     schedule: string | null;
     lastRunAt: Date | null;
+    config?: unknown;
     health?: string | null;
     consecutiveFailures?: number | null;
     lastError?: string | null;

@@ -21,7 +21,9 @@ try {
       kind: source.kind,
       platform: source.platform,
       health: source.health,
-      every: source.schedule ?? defaultSchedule(source.kind as SourceKind, source.platform),
+      every:
+        source.schedule ??
+        defaultSchedule(source.kind as SourceKind, source.platform, source.config),
       lastOk: source.lastOkAt?.toISOString() ?? '-',
       failures: source.consecutiveFailures,
       lastError: source.lastError?.slice(0, 60) ?? '',
