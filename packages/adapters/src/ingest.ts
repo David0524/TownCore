@@ -2,12 +2,13 @@ import { createHash } from 'node:crypto';
 import type { SourceKind } from '@towncore/config';
 import { and, desc, eq, inArray, records, sourceRuns, sources, sql, type Db } from '@towncore/db';
 import { FetchPolicyError, NotModified, type Fetcher } from './http/fetcher';
+import { BROKEN_AFTER_FAILURES } from './schedule';
 import type { RawRecord, SourceAdapter, SourceConfig } from './types';
 
 // Ingest (CLAUDE.md §6 step 1): fetch new items, upsert records deduped by
 // (source_id, external_id) + content hash, log the run, update source health.
 
-export const BROKEN_AFTER_FAILURES = 3;
+export { BROKEN_AFTER_FAILURES };
 
 type SourceRow = typeof sources.$inferSelect;
 export type IngestResult = {
@@ -84,7 +85,8 @@ export async function ingestSource(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const failures = source.consecutiveFailures + 1;
-    // A robots.txt or never-scrape refusal won't fix itself: mark it broken right away.
+    // A robots.txt or never-scrape refusal won't fix itself: mark it broken right away. Broken
+    // sources back off (schedule.ts `retryIntervalMs`): 6-24 h, or weekly for a refusal.
     const broken = error instanceof FetchPolicyError || failures >= BROKEN_AFTER_FAILURES;
     await db
       .update(sourceRuns)

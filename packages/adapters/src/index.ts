@@ -19,7 +19,7 @@ export {
   type IngestResult,
 } from './ingest';
 export { findAdapter, getAdapter, listAdapters, missingEnv, registerAdapter } from './registry';
-export { defaultSchedule, intervalMs, isDue } from './schedule';
+export { defaultSchedule, intervalMs, isDue, isPolicyRefusal, retryIntervalMs } from './schedule';
 export type {
   AdapterContext,
   RawRecord,

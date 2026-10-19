@@ -7,7 +7,13 @@ import { flDbprAdapter } from '../src/fl-dbpr';
 import { Fetcher, FetchPolicyError, type FetchFn } from '../src/http/fetcher';
 import { replayFetch } from '../src/http/fixtures';
 import { contentHash, ingestSource, listIngestableSources } from '../src/ingest';
-import { defaultSchedule, intervalMs, isDue } from '../src/schedule';
+import {
+  defaultSchedule,
+  intervalMs,
+  isDue,
+  isPolicyRefusal,
+  retryIntervalMs,
+} from '../src/schedule';
 import type { RawRecord, SourceAdapter } from '../src/types';
 
 const townsDir = fileURLToPath(new URL('../../../towns', import.meta.url));
@@ -154,6 +160,15 @@ describe('ingestSource', () => {
       health: 'broken',
       lastError: expect.stringMatching(/robots/),
     });
+    // Retried weekly; one good run puts it back to ok and its normal schedule.
+    expect(retryIntervalMs({ ...(await reload(source.id)), kind: 'events' })).toBe(7 * 86_400_000);
+    fake.returns([item('back')]);
+    await ingestSource(db, await reload(source.id), fake.adapter, fetcher);
+    expect(await reload(source.id)).toMatchObject({
+      health: 'ok',
+      consecutiveFailures: 0,
+      lastError: null,
+    });
   });
 
   it('goes degraded when a source that usually has items returns none', async () => {
@@ -201,6 +216,54 @@ describe('schedules', () => {
     expect(
       isDue({ ...base, schedule: '15m', lastRunAt: new Date('2026-10-15T11:40:00Z') }, now),
     ).toBe(true);
+  });
+
+  it('backs off a broken source: 6 h, 12 h, then daily, never faster than its schedule', () => {
+    const H = 3_600_000;
+    const base = { kind: 'events' as const, platform: 'fake', schedule: '1h', health: 'broken' };
+    expect(retryIntervalMs({ ...base, consecutiveFailures: 3, lastError: 'HTTP 500' })).toBe(6 * H);
+    expect(retryIntervalMs({ ...base, consecutiveFailures: 4, lastError: 'HTTP 500' })).toBe(
+      12 * H,
+    );
+    expect(retryIntervalMs({ ...base, consecutiveFailures: 5, lastError: 'HTTP 500' })).toBe(
+      24 * H,
+    );
+    expect(retryIntervalMs({ ...base, consecutiveFailures: 40, lastError: 'HTTP 500' })).toBe(
+      24 * H,
+    );
+    // A weekly source keeps its weekly schedule when broken.
+    expect(
+      retryIntervalMs({ ...base, schedule: '7d', consecutiveFailures: 3, lastError: 'x' }),
+    ).toBe(7 * 24 * H);
+    // Degraded and healthy sources keep their normal schedule.
+    expect(retryIntervalMs({ ...base, health: 'degraded', consecutiveFailures: 2 })).toBe(H);
+    expect(retryIntervalMs({ ...base, health: 'ok' })).toBe(H);
+
+    const now = new Date('2026-10-15T12:00:00Z');
+    const ago = (h: number) => new Date(now.getTime() - h * H);
+    const broken = { ...base, consecutiveFailures: 3, lastError: 'HTTP 500' };
+    expect(isDue({ ...broken, lastRunAt: ago(2) }, now)).toBe(false);
+    expect(isDue({ ...broken, lastRunAt: ago(6) }, now)).toBe(true);
+  });
+
+  it('retries a robots.txt or never-scrape refusal weekly', () => {
+    const lastError = 'Refusing to fetch https://x.example/: disallowed by robots.txt';
+    expect(isPolicyRefusal(lastError)).toBe(true);
+    expect(isPolicyRefusal('Refusing to POST to https://x/: not a documented API')).toBe(true);
+    expect(isPolicyRefusal('HTTP 403')).toBe(false);
+    expect(isPolicyRefusal(null)).toBe(false);
+    const source = {
+      kind: 'agenda' as const,
+      platform: 'civicplus',
+      schedule: null,
+      health: 'broken',
+      consecutiveFailures: 1,
+      lastError,
+    };
+    expect(retryIntervalMs(source)).toBe(7 * 86_400_000);
+    const now = new Date('2026-10-15T12:00:00Z');
+    expect(isDue({ ...source, lastRunAt: new Date('2026-10-10T12:00:00Z') }, now)).toBe(false);
+    expect(isDue({ ...source, lastRunAt: new Date('2026-10-08T12:00:00Z') }, now)).toBe(true);
   });
 
   it('has platform overrides', () => {

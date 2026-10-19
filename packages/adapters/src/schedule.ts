@@ -39,11 +39,54 @@ export function intervalMs(schedule: string): number {
   return Number(match[1]) * unit;
 }
 
+/** Failed runs in a row that mark a source broken (ingest). */
+export const BROKEN_AFTER_FAILURES = 3;
+
+/** A broken source is retried after 6 hours, then 12, then every 24 while it keeps failing. */
+const BROKEN_RETRY_FIRST_MS = 6 * 3_600_000;
+const BROKEN_RETRY_MAX_MS = 24 * 3_600_000;
+/** A source refused by policy (robots.txt, never-scrape list) re-checks robots.txt weekly. */
+const POLICY_RETRY_MS = 7 * 86_400_000;
+
+/** True when a stored error is a Fetcher policy refusal (FetchPolicyError's messages). */
+export function isPolicyRefusal(lastError: string | null | undefined): boolean {
+  return !!lastError && /^Refusing to (fetch|POST)\b/.test(lastError);
+}
+
+/**
+ * How long to wait after a run before the next one. A broken source backs off instead of
+ * polling a dead URL on its normal schedule: 6 h, 12 h, then daily; one good run makes it `ok`
+ * again (ingest), so it returns to its schedule. A policy refusal won't fix itself in hours, so
+ * it is retried weekly, which re-reads robots.txt. Never more often than the normal schedule.
+ */
+export function retryIntervalMs(source: {
+  kind: SourceKind;
+  platform: string;
+  schedule: string | null;
+  health?: string | null;
+  consecutiveFailures?: number | null;
+  lastError?: string | null;
+}): number {
+  const every = intervalMs(source.schedule ?? defaultSchedule(source.kind, source.platform));
+  if (source.health !== 'broken') return every;
+  if (isPolicyRefusal(source.lastError)) return Math.max(every, POLICY_RETRY_MS);
+  const extra = Math.max(0, (source.consecutiveFailures ?? 0) - BROKEN_AFTER_FAILURES);
+  const backoff = Math.min(BROKEN_RETRY_MAX_MS, BROKEN_RETRY_FIRST_MS * 2 ** Math.min(extra, 8));
+  return Math.max(every, backoff);
+}
+
 export function isDue(
-  source: { kind: SourceKind; platform: string; schedule: string | null; lastRunAt: Date | null },
+  source: {
+    kind: SourceKind;
+    platform: string;
+    schedule: string | null;
+    lastRunAt: Date | null;
+    health?: string | null;
+    consecutiveFailures?: number | null;
+    lastError?: string | null;
+  },
   now: Date,
 ): boolean {
   if (!source.lastRunAt) return true;
-  const every = intervalMs(source.schedule ?? defaultSchedule(source.kind, source.platform));
-  return now.getTime() - source.lastRunAt.getTime() >= every;
+  return now.getTime() - source.lastRunAt.getTime() >= retryIntervalMs(source);
 }

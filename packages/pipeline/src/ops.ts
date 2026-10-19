@@ -1,3 +1,4 @@
+import { isPolicyRefusal } from '@towncore/adapters';
 import { aiTasks, networkAiCapUsd, taskRoutes, type TownConfig } from '@towncore/config';
 import {
   aiUsage,
@@ -164,13 +165,15 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
   const out: OpsCondition[] = [];
   const active = await db.select().from(towns).where(ne(towns.status, 'paused'));
 
-  // Adapter failures: a broken source (3 failed runs in a row).
+  // Adapter failures: a broken source (3 failed runs in a row, or a policy refusal). Ingest
+  // retries it on a back-off and one good run clears it, which resolves this alert.
   const broken = await db
     .select({
       id: sources.id,
       kind: sources.kind,
       platform: sources.platform,
       townId: sources.townId,
+      lastError: sources.lastError,
     })
     .from(sources)
     .where(eq(sources.health, 'broken'));
@@ -180,7 +183,9 @@ export async function opsConditions(db: Db, now = new Date()): Promise<OpsCondit
     out.push({
       key: `source_broken:${s.id}`,
       severity: town.status === 'live' ? 'critical' : 'warning',
-      message: `${town.siteName}: the ${s.kind} source (${s.platform}) is broken: 3 or more runs failed in a row.`,
+      message: isPolicyRefusal(s.lastError)
+        ? `${town.siteName}: the ${s.kind} source (${s.platform}) is broken: robots.txt or the never-scrape list refuses it. It is re-checked weekly.`
+        : `${town.siteName}: the ${s.kind} source (${s.platform}) is broken: 3 or more runs failed in a row. It is retried every 6 to 24 hours.`,
     });
   }
 

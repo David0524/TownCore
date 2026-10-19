@@ -107,6 +107,7 @@ describe('operations alerts', () => {
         platform: 'legistar',
         adapter: 'legistar',
         health: 'broken',
+        lastError: 'Refusing to fetch https://x.legistar.com/: disallowed by robots.txt',
       },
       { townId: liveId, key: 'c', kind: 'weather', platform: 'nws', adapter: 'nws', health: 'ok' },
     ]);
@@ -132,7 +133,13 @@ describe('operations alerts', () => {
       conditions.find((c) => c.severity === 'critical' && c.key.startsWith('source_broken'))!
         .message,
     ).toBe(
-      'livetown Square: the city_news source (civicplus) is broken: 3 or more runs failed in a row.',
+      'livetown Square: the city_news source (civicplus) is broken: 3 or more runs failed in a row. It is retried every 6 to 24 hours.',
+    );
+    expect(
+      conditions.find((c) => c.severity === 'warning' && c.key.startsWith('source_broken'))!
+        .message,
+    ).toBe(
+      'drafttown Square: the agenda source (legistar) is broken: robots.txt or the never-scrape list refuses it. It is re-checked weekly.',
     );
     expect(byKey.town_cap!.message).toBe(
       'drafttown Square reached its daily AI cap ($1.20 of $1.00, 1 of 400 calls).',
