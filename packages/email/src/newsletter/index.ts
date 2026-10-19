@@ -15,7 +15,7 @@ export {
   shouldSend,
   type SendDecision,
 } from './select';
-export { issueWeather, type IssueWeather } from './weather';
+export { issueWeather, outlookLine, type IssueWeather } from './weather';
 export {
   LATE_CUTOFF_MINUTES,
   localMinutes,
