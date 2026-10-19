@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { DIRECT } from './ports';
 
 // Logo art cut in code (owner, 2026-10-17). Pine Hollow has imported art (placeholder art cut by
 // the same code as `pnpm identity import`, in public/brand/pine-hollow): its homepage hero and
@@ -7,7 +8,7 @@ import { expect, test } from '@playwright/test';
 const pine = 'http://pinehollow.test';
 const harbor = 'http://harborpoint.test';
 // Node-side requests can't use the browser's host mapping: go direct with the Host header.
-const direct = 'http://127.0.0.1:3100';
+const direct = DIRECT;
 const get = (host: string, path: string) =>
   [`${direct}${path}`, { headers: { Host: host }, maxRedirects: 0 }] as const;
 

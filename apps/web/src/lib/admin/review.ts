@@ -1,5 +1,5 @@
 import type { TownConfig } from '@towncore/config';
-import { checkDraft, type FactcheckReport } from '@towncore/pipeline';
+import { checkDraft, lintStyle, type FactcheckReport, type StyleHit } from '@towncore/pipeline';
 
 // Shared review helpers for /admin.
 
@@ -20,18 +20,21 @@ export const reviewReasonLabel: Record<string, string> = {
   tier3: 'Tier 3: needs human approval',
   sample: 'Tier 2 random sample',
   factcheck: 'Failed fact-check',
-  model_error: 'Model error during fact-check',
+  model_error: 'Model error during fact-check or the libel review',
   minor_override: 'Minor flag overridden; needs approval',
   transcript: 'Uses a machine transcript: check names against the minutes',
+  style: 'Filler or speculation left after the revise',
 };
 
-/** Code checks (names and numbers) on an edited draft: no model call. */
+/** Code checks (names, numbers, quotations, filler) on an edited draft: no model call. */
 export function recheckEdit(input: {
   draft: { headline: string; dek: string; bodyMd: string };
   sources: { id: string; title: string | null; text: string | null }[];
   town: { name: string; siteName: string; county: string };
   config: TownConfig;
-}): Pick<FactcheckReport, 'unsupportedClaims' | 'wrongTownRisk' | 'wrongTownReason'> {
+}): Pick<FactcheckReport, 'unsupportedClaims' | 'wrongTownRisk' | 'wrongTownReason'> & {
+  styleLint: StyleHit[];
+} {
   const report = checkDraft({
     draft: input.draft,
     sources: input.sources,
@@ -49,5 +52,6 @@ export function recheckEdit(input: {
     unsupportedClaims: report.unsupportedClaims,
     wrongTownRisk: report.wrongTownRisk,
     wrongTownReason: report.wrongTownReason,
+    styleLint: lintStyle(input.draft, input.sources),
   };
 }

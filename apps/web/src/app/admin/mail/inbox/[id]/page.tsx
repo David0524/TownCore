@@ -1,4 +1,10 @@
-import { mailDomains, signatures } from '@towncore/db';
+import { eq, mailDomains, signatures, sources } from '@towncore/db';
+import {
+  NEWSROOM_KINDS,
+  newsroomKindLabels,
+  newsroomRecords,
+  suggestKind,
+} from '@towncore/pipeline';
 import {
   getThread,
   hasRemoteImages,
@@ -26,6 +32,7 @@ import {
   assignAction,
   moveTeamAction,
   noteAction,
+  sendToNewsroomAction,
   statusAction,
   suppressContactAction,
 } from '../actions';
@@ -36,7 +43,13 @@ export const metadata = { title: 'Conversation' };
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ images?: string; error?: string; sent?: string; reply?: string }>;
+  searchParams: Promise<{
+    images?: string;
+    error?: string;
+    sent?: string;
+    reply?: string;
+    newsroom?: string;
+  }>;
 };
 
 const when = (d: Date) =>
@@ -58,7 +71,7 @@ const FAILS = (m: {
 export default async function Conversation({ params, searchParams }: Props) {
   const me = await requireStaff();
   const { id } = await params;
-  const { images, error, sent, reply } = await searchParams;
+  const { images, error, sent, reply, newsroom } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [thread, facets] = await Promise.all([getThread(db(), id), inboxFacets(db())]);
   if (!thread) notFound();
@@ -92,6 +105,25 @@ export default async function Conversation({ params, searchParams }: Props) {
     domain: thread.domainName,
   });
 
+  // Send to newsroom: inbound, unquarantined messages to a town's address (press releases).
+  const [domain] = await db()
+    .select({ townId: mailDomains.townId })
+    .from(mailDomains)
+    .where(eq(mailDomains.id, t.domainId));
+  const releases = thread.messages.filter((m) => m.direction === 'inbound' && !m.quarantined);
+  const [inNewsroom, townSources] = await Promise.all([
+    newsroomRecords(db(), releases),
+    domain?.townId
+      ? db()
+          .select({ kind: sources.kind, url: sources.url })
+          .from(sources)
+          .where(eq(sources.townId, domain.townId))
+      : Promise.resolve([]),
+  ]);
+  const unsent = releases.filter((m) => !inNewsroom.has(m.id));
+  const latest = unsent[unsent.length - 1];
+  const suggested = latest ? suggestKind(latest.fromAddress, townSources) : null;
+
   const who = (m: (typeof thread.messages)[number]) =>
     m.direction === 'outbound' ? thread.displayName : (m.fromName ?? m.fromAddress);
 
@@ -122,6 +154,13 @@ export default async function Conversation({ params, searchParams }: Props) {
       {sent ? (
         <p className={styles.notice} role="status">
           Sent from {t.townAddress}.
+        </p>
+      ) : null}
+      {newsroom ? (
+        <p className={styles.notice} role="status" data-testid="newsroom-notice">
+          {newsroom === 'sent'
+            ? 'Sent to the newsroom. The story finder picks it up on its next run.'
+            : 'Already in the newsroom.'}
         </p>
       ) : null}
 
@@ -381,6 +420,73 @@ export default async function Conversation({ params, searchParams }: Props) {
               </button>
             </form>
           </section>
+          {domain?.townId && releases.length ? (
+            <section
+              className={`${styles.card} ${styles.asideStack}`}
+              aria-labelledby="newsroom-heading"
+              data-testid="newsroom"
+            >
+              <h2 id="newsroom-heading" className={styles.cardTitle}>
+                Send to newsroom
+              </h2>
+              {releases
+                .filter((m) => inNewsroom.has(m.id))
+                .map((m) => (
+                  <p key={m.id} className={styles.small} data-testid="newsroom-sent">
+                    <Pill tone="green">In the newsroom</Pill> {m.subject} (
+                    {newsroomKindLabels[
+                      inNewsroom.get(m.id)!.kind as keyof typeof newsroomKindLabels
+                    ] ?? inNewsroom.get(m.id)!.kind}
+                    )
+                  </p>
+                ))}
+              {latest ? (
+                <form action={sendToNewsroomAction} className={styles.form}>
+                  {hidden}
+                  <p className={`${styles.muted} ${styles.small}`}>
+                    A press release from an agency or organization becomes a source record for this
+                    town&apos;s story finder. Never a news outlet&apos;s story (Rule 3).
+                  </p>
+                  {unsent.length > 1 ? (
+                    <label>
+                      Message
+                      <select name="messageId" defaultValue={latest.id}>
+                        {unsent.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {when(m.sentAt)}: {m.subject}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <input type="hidden" name="messageId" value={latest.id} />
+                  )}
+                  <label>
+                    From
+                    <select name="kind" defaultValue={suggested ?? ''} required>
+                      <option value="" disabled>
+                        Choose who sent it
+                      </option>
+                      {NEWSROOM_KINDS.map((k) => (
+                        <option key={k} value={k}>
+                          {newsroomKindLabels[k]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.check}>
+                    <input type="checkbox" name="fromOrganization" value="yes" required /> This
+                    release comes from the organization itself, not a news outlet
+                  </label>
+                  <div className={styles.actions}>
+                    <button className={`${styles.button} ${styles.secondary}`} type="submit">
+                      Send to newsroom
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+            </section>
+          ) : null}
           <section className={`${styles.card} ${styles.asideStack}`}>
             <form action={statusAction}>
               {hidden}

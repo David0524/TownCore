@@ -36,6 +36,7 @@ const GROUPS: Array<{ title: string; items: Item[] }> = [
     items: [
       { href: '/admin/review', label: 'Review queue' },
       { href: '/admin/skipped', label: 'Skip log' },
+      { href: '/admin/meetings', label: 'Meetings' },
       { href: '/admin/pins', label: 'Pins' },
       { href: '/admin/photos', label: 'Photos' },
       { href: '/admin/scores', label: 'Scores' },

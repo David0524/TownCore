@@ -13,6 +13,7 @@ import {
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { contacts, eq, logAdminAction, threads } from '@towncore/db';
+import { NewsroomError, sendToNewsroom } from '@towncore/pipeline';
 import { requireStaff } from '@/lib/admin/session';
 import { db } from '@/lib/db';
 
@@ -81,4 +82,29 @@ export async function suppressContactAction(form: FormData) {
       detail: { email: row.email },
     });
   });
+}
+
+/**
+ * "Send to newsroom": stores an inbound press release as a primary-source record of the town
+ * (packages/pipeline/src/press-releases.ts), for the story finder. Staff must confirm it comes
+ * from the organization itself, not a news outlet (Rule 3). Audited there.
+ */
+export async function sendToNewsroomAction(form: FormData) {
+  const actor = await requireStaff();
+  const threadId = String(form.get('threadId') ?? '');
+  let query: string;
+  try {
+    const result = await sendToNewsroom(db(), {
+      messageId: String(form.get('messageId') ?? ''),
+      staffId: actor.id,
+      kind: String(form.get('kind') ?? ''),
+      fromOrganization: form.get('fromOrganization') === 'yes',
+    });
+    query = `?newsroom=${result.created ? 'sent' : 'already'}`;
+  } catch (e) {
+    if (!(e instanceof NewsroomError)) throw e;
+    query = `?error=${encodeURIComponent(e.message)}`;
+  }
+  revalidatePath(`/admin/mail/inbox/${threadId}`);
+  redirect(`/admin/mail/inbox/${threadId}${query}`);
 }

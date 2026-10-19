@@ -2,8 +2,15 @@ import { createHash } from 'node:crypto';
 import * as cheerio from 'cheerio';
 import type { SourceKind } from '@towncore/config';
 import type { RawRecord, SourceAdapter, SourceConfig, SourceProposal } from '../types';
-import { extractText, getDocumentProxy } from 'unpdf';
 import { parseIcal } from '../lib/ical';
+import { pdfText } from '../lib/pdf';
+import {
+  activeAgendaCenter,
+  AGENDA_AHEAD_DAYS,
+  AGENDA_PAST_DAYS,
+  agendaSearchUrl,
+  fetchAgendaCenter,
+} from './agenda-center';
 
 // CivicPlus CivicEngage (CLAUDE.md §9: one adapter for every city on the platform).
 // Uses only paths robots.txt allows on CivicPlus sites:
@@ -14,12 +21,13 @@ import { parseIcal } from '../lib/ical';
 // - newsflash-list: one News Flash category's list page (/m/newsflash?cat=…), for categories
 //   whose releases never reach the RSS feeds (Boca Raton's police and fire releases), plus each
 //   new release's page and the PDF it links (/DocumentCenter/View/<id>) for its text.
-// Source config: { module: 'calendar' | 'newsflash' | 'newsflash-list', catId: string,
-//   timezone?: string }.
+// - agenda-center: the Agenda Center's agendas and minutes (agenda-center.ts).
+// Source config: { module: 'calendar' | 'newsflash' | 'newsflash-list' | 'agenda-center',
+//   catId: string (optional for agenda-center: 'all'), timezone?: string, meetings?: 'false' }.
 
-type Module = 'calendar' | 'newsflash' | 'newsflash-list';
-type Options = { module: Module; catId: string; timezone: string };
-const MODULES: readonly Module[] = ['calendar', 'newsflash', 'newsflash-list'];
+type Module = 'calendar' | 'newsflash' | 'newsflash-list' | 'agenda-center';
+type Options = { module: Module; catId: string; timezone: string; meetings: boolean };
+const MODULES: readonly Module[] = ['calendar', 'newsflash', 'newsflash-list', 'agenda-center'];
 
 /** A list page's first run reads releases this recent; later runs read what's new since. */
 const LIST_FIRST_DAYS = 30;
@@ -30,15 +38,26 @@ const LIST_MAX = 10;
 const PAST_EVENT_DAYS = 30;
 
 function options(source: SourceConfig): Options {
-  const { module, catId, timezone } = source.config as Partial<Options>;
+  const { module, catId, timezone, meetings } = source.config as {
+    module?: Module;
+    catId?: string | number;
+    timezone?: string;
+    meetings?: string | boolean;
+  };
   if (!module || !MODULES.includes(module)) {
     throw new Error(
-      `CivicPlus source ${source.id} needs config.module "calendar", "newsflash" or "newsflash-list"`,
+      `CivicPlus source ${source.id} needs config.module "calendar", "newsflash", "newsflash-list" or "agenda-center"`,
     );
   }
-  if (!catId) throw new Error(`CivicPlus source ${source.id} needs config.catId`);
+  if (!catId && module !== 'agenda-center')
+    throw new Error(`CivicPlus source ${source.id} needs config.catId`);
   if (!source.url) throw new Error(`CivicPlus source ${source.id} needs url (the site's base URL)`);
-  return { module, catId: String(catId), timezone: timezone ?? 'America/New_York' };
+  return {
+    module,
+    catId: String(catId ?? 'all'),
+    timezone: timezone ?? 'America/New_York',
+    meetings: meetings !== false && meetings !== 'false',
+  };
 }
 
 const base = (source: SourceConfig) => new URL(source.url!).origin;
@@ -200,20 +219,6 @@ export function newsListItems(html: string, catId: string): ListedRelease[] {
   return out;
 }
 
-/** A PDF's text, or null when it isn't one. */
-async function pdfText(url: string, ctx: Parameters<SourceAdapter['fetch']>[2]) {
-  const response = await ctx.fetcher.get(url);
-  if (!response.ok) return null;
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (String.fromCharCode(...bytes.slice(0, 5)) !== '%PDF-') return null;
-  const { text } = await extractText(await getDocumentProxy(bytes), { mergePages: true });
-  return (
-    String(text)
-      .replace(/[ \t]+\n/g, '\n')
-      .trim() || null
-  );
-}
-
 async function fetchNewsList(
   source: SourceConfig,
   opts: Options,
@@ -285,20 +290,38 @@ async function proposeSources(
     ];
   }
   if (kind !== 'agenda' && kind !== 'events') return [];
+  const out: SourceProposal[] = [];
   const categories = calendarCategories(await ctx.fetcher.getText(`${origin}/Calendar.aspx`));
   for (const pattern of kind === 'agenda' ? MEETING_CALENDARS : EVENT_CALENDARS) {
     const hit = categories.find((c) => pattern.test(c.name));
-    if (hit)
-      return [
-        {
-          kind,
-          url: `${origin}/`,
-          options: { module: 'calendar', catId: hit.id },
-          label: `CivicPlus calendar: ${hit.name}`,
-        },
-      ];
+    if (hit) {
+      out.push({
+        kind,
+        url: `${origin}/`,
+        options: { module: 'calendar', catId: hit.id },
+        label: `CivicPlus calendar: ${hit.name}`,
+      });
+      break;
+    }
   }
-  return [];
+  if (kind !== 'agenda') return out;
+  // The Agenda Center's agendas and minutes, when the city posts there (many CivicEngage sites
+  // have the module but list nothing, or moved to CivicClerk). With a meetings calendar too, the
+  // calendar lists the meetings (it has times and places) and Agenda Center adds the documents.
+  // The time zone only shifts the search window's dates by a day at most.
+  const agendaCenter = await activeAgendaCenter(origin, 'America/New_York', ctx).catch(() => null);
+  if (agendaCenter)
+    out.push({
+      kind,
+      url: `${origin}/`,
+      options: {
+        module: 'agenda-center',
+        catId: 'all',
+        ...(out.length > 0 ? { meetings: 'false' } : {}),
+      },
+      label: `CivicPlus Agenda Center (${agendaCenter.rows} agendas in the last ${AGENDA_PAST_DAYS} and next ${AGENDA_AHEAD_DAYS} days)`,
+    });
+  return out;
 }
 
 export const civicplusAdapter: SourceAdapter = {
@@ -308,7 +331,7 @@ export const civicplusAdapter: SourceAdapter = {
   async detect(url, html) {
     if (/\.civicplus\.com$/i.test(new URL(url).hostname)) return 1;
     if (/CivicEngage|CivicPlus/i.test(html)) return 0.9;
-    if (/CivicAlerts\.aspx|\/m\/newsflash\//i.test(html)) return 0.6;
+    if (/CivicAlerts\.aspx|\/m\/newsflash\/|\/AgendaCenter\/ViewFile\//i.test(html)) return 0.6;
     return 0;
   },
 
@@ -316,6 +339,7 @@ export const civicplusAdapter: SourceAdapter = {
     const opts = options(source);
     if (opts.module === 'calendar') return fetchCalendar(source, opts, ctx);
     if (opts.module === 'newsflash-list') return fetchNewsList(source, opts, since, ctx);
+    if (opts.module === 'agenda-center') return fetchAgendaCenter(source, opts, since, ctx);
     return fetchNewsFlash(source, opts, since, ctx);
   },
 
@@ -327,11 +351,13 @@ export const civicplusAdapter: SourceAdapter = {
     try {
       const opts = options(source);
       const url =
-        opts.module === 'calendar'
-          ? calendarUrl(source, opts.catId)
-          : opts.module === 'newsflash-list'
-            ? newsListUrl(source, opts.catId)
-            : newsFeedUrl(source, opts.catId);
+        opts.module === 'agenda-center'
+          ? agendaSearchUrl(base(source), opts, ctx.now)
+          : opts.module === 'calendar'
+            ? calendarUrl(source, opts.catId)
+            : opts.module === 'newsflash-list'
+              ? newsListUrl(source, opts.catId)
+              : newsFeedUrl(source, opts.catId);
       await ctx.fetcher.getText(url);
       return { ok: true };
     } catch (error) {

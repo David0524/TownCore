@@ -53,14 +53,46 @@ export {
   type TemplatedDraft,
   type TemplateRecord,
 } from './templates';
+export {
+  attachCaptions,
+  CAPTION_MAX_BYTES,
+  captionMeetings,
+  CaptionUploadError,
+  type CaptionMeeting,
+} from './captions';
+export {
+  chooseSplit,
+  meetingItemOf,
+  meetingSplitEnabled,
+  splitMeeting,
+  type MeetingItem,
+} from './meeting-split';
 export { nearDuplicateShare, normalizeWords } from './near-duplicate';
 export { pastWeekCounts, roundupWeekRecords } from './roundup-weeks';
-export { cannotBeArticle, decideTier, mentionsMinor, type Tier, type TierDecision } from './tiers';
+export {
+  cannotBeArticle,
+  decideTier,
+  mentionsMinor,
+  sensitiveTopics,
+  type Tier,
+  type TierDecision,
+} from './tiers';
+export { lintStyle, styleRevisionLines, STYLE_WHY, type StyleHit } from './style-lint';
+export {
+  legalReviewOn,
+  reviewLibel,
+  tierAfterLegal,
+  verifyLegalFlags,
+  type LegalFlag,
+  type LegalReport,
+} from './legal';
 export {
   checkDraft,
   namesIn,
   normalize,
   numbersIn,
+  quotedSpans,
+  quoteInRecord,
   type CheckedClaim,
   type FactcheckReport,
   type SourceText,
@@ -145,12 +177,44 @@ export {
   HEARTBEAT_STALE_MS,
   networkSpendToday,
   opsConditions,
+  REVIEW_BACKLOG_CEILING,
   REVIEW_WAIT_HOURS,
+  reviewBacklogWeekAgo,
   townHealth,
+  type OpsAlertKind,
   type OpsCondition,
   type TownHealth,
 } from './ops';
 export {
+  MAX_RELEASE_CHARS,
+  MIN_RELEASE_CHARS,
+  NEWSROOM_KINDS,
+  NewsroomError,
+  newsroomKindLabels,
+  newsroomRecords,
+  releaseText,
+  releaseTitle,
+  sendToNewsroom,
+  suggestKind,
+  type NewsroomKind,
+} from './press-releases';
+export {
+  bandFor,
+  bandRows,
+  CALIBRATION_DAYS,
+  calibrate,
+  MIN_DECIDED_PER_BAND,
+  MIN_DECIDED_TOTAL,
+  outcomeOf,
+  SCORE_BANDS,
+  scoreCalibration,
+  type BandRow,
+  type Calibration,
+  type CandidateOutcome,
+  type ScoreBand,
+} from './calibration';
+export {
+  daysCadence,
   forecastsDue,
   refreshTownWeather,
   refreshWeather,

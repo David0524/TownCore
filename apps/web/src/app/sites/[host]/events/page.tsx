@@ -4,6 +4,7 @@ import { EventCard, type EventCardData } from '@/components/events/EventCard';
 import styles from '@/components/events/events.module.css';
 import { LargeTitle } from '@/components/phone/LargeTitle';
 import { StandardPage } from '@/lib/pages';
+import { eventSlug } from '@/lib/events';
 import { thinUnless } from '@/lib/indexing';
 import { requireTown, resolveTown } from '@/lib/town';
 import { upcomingEvents, upcomingMeetings } from '@/modules/data';
@@ -31,7 +32,7 @@ const DAYS = 30;
 
 /**
  * The Events tab: the town's official event calendars and its public meetings for the next 30
- * days, as cards grouped by day, each linking to the city's own page.
+ * days, as cards grouped by day. An event links to its page here; a meeting to the city's page.
  */
 export default async function EventsPage({ params }: { params: Promise<{ host: string }> }) {
   const town = await requireTown(params);
@@ -40,7 +41,7 @@ export default async function EventsPage({ params }: { params: Promise<{ host: s
     upcomingMeetings(town.id, DAYS, 60),
   ]);
   const all: EventCardData[] = [
-    ...events,
+    ...events.map((e) => ({ ...e, href: `/events/${eventSlug(e, town.timezone)}` })),
     ...meetings.map((m) => ({
       id: m.id,
       title: m.title,
@@ -64,8 +65,7 @@ export default async function EventsPage({ params }: { params: Promise<{ host: s
     <StandardPage town={town}>
       <LargeTitle title="Events" as="h1" always />
       <p className="muted">
-        Events and public meetings on the {town.name} city calendars for the next {DAYS} days. Each
-        links to the city&apos;s page for details.
+        Events and public meetings on the {town.name} city calendars for the next {DAYS} days.
       </p>
       {days.size === 0 ? (
         <p data-testid="events-empty">Nothing is on the city calendars for the next {DAYS} days.</p>

@@ -13,6 +13,7 @@ import {
   staffSessions,
   towns,
 } from '@towncore/db';
+import { DIRECT } from './ports';
 
 // Photos people send us (M9, CLAUDE.md §11c) on the fictional Pine Hollow: a reader sends one
 // with the license grant, nothing shows until staff approve it with alt text, and the served
@@ -25,7 +26,7 @@ const hash = (t: string) => createHash('sha256').update(t).digest('hex');
 const newToken = () => randomBytes(24).toString('base64url');
 const pine = 'http://pinehollow.test';
 // Node-side requests can't use the browser's host mapping: go direct with the Host header.
-const direct = 'http://127.0.0.1:3100';
+const direct = DIRECT;
 const photoUrl = (host: string, id: string) =>
   [`${direct}/photos/${id}.jpg`, { headers: { Host: host } }] as const;
 const admin = 'http://admin.test';

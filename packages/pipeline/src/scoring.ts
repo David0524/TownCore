@@ -23,6 +23,29 @@ export const MIN_SOURCE_CHARS = 400;
 /** Below this the story is written but scored down. */
 export const SHORT_SOURCE_CHARS = 800;
 
+/**
+ * How long a story may be, from how much its records say (writer v2; Kyle's length tiers):
+ * BRIEF (100–200 words) for short records, SUBSTANTIAL (600–900) for a long record or three or
+ * more that together say a lot, STANDARD (350–500) between. A story roughly needs 5–6 characters of
+ * record per word it prints, so a 1,500-character release can't honestly fill 350 words. No
+ * MICRO band: anything under MIN_SOURCE_CHARS is skipped as thin before it gets here.
+ */
+export const LENGTH_BAND_CHARS = { standard: 1500, substantial: 5000, severalRecords: 3000 };
+
+export function lengthBand(
+  records: { title: string | null; text: string | null }[],
+): 'brief' | 'standard' | 'substantial' {
+  const chars = records.reduce((n, r) => n + (r.text ?? '').trim().length, 0);
+  if (
+    chars >= LENGTH_BAND_CHARS.substantial ||
+    (records.length >= 3 && chars >= LENGTH_BAND_CHARS.severalRecords)
+  ) {
+    return 'substantial';
+  }
+  if (chars >= LENGTH_BAND_CHARS.standard) return 'standard';
+  return 'brief';
+}
+
 export type ScoreComponents = {
   impact: number;
   timeliness: number;

@@ -1,14 +1,13 @@
 import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
 import { E2E_MAIL_TOKEN_SECRET, E2E_STRIPE_WEBHOOK_SECRET } from './e2e/newsletter-secret';
+import { E2E_PORT, FAKE_STRIPE_PORT } from './e2e/ports';
 
 // Specs that seed data (admin) need DATABASE_URL; use the repo .env locally (CI sets it).
 const envFile = new URL('../../.env', import.meta.url);
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 
-const port = 3100;
-/** The fake Stripe API (e2e/fake-stripe.mjs). */
-const FAKE_STRIPE_PORT = 3199;
+const port = E2E_PORT;
 // Chromium resolves our real domains to the local server, so tests use real Host headers.
 const hosts = [
   'bocatownsquare.com',

@@ -134,6 +134,7 @@ export const aiTasks = [
   'extract',
   'write',
   'factcheck',
+  'legal',
   'revise',
   'update',
   'guide',
@@ -143,6 +144,7 @@ export const aiTasks = [
   'identity',
   'theme-review',
   'reviewer',
+  'meeting-split',
 ] as const;
 export type AiTask = (typeof aiTasks)[number];
 
@@ -165,6 +167,11 @@ export type TaskRoute = {
   maxCallUsd: number;
   /** Off until the owner switches it on (the AI article reviewer, Rule 5). */
   disabled?: boolean;
+  /**
+   * The prompt version this task uses where a newer one waits for recorded evals (writer v2).
+   * A new version goes live by changing it here after `pnpm evals --live` records it.
+   */
+  promptVersion?: 'v1' | 'v2';
 };
 
 export const taskRoutes: Record<AiTask, TaskRoute> = {
@@ -188,6 +195,9 @@ export const taskRoutes: Record<AiTask, TaskRoute> = {
     dailyCapUsd: 3,
     maxCallUsd: 0.05,
   },
+  // The writer (its revise uses the same prompt version). v2 (length bands chosen in code, the
+  // headline rules) waits for recorded evals: `pnpm evals --live --variant writer-v2`, then set
+  // 'v2' here and re-record the baseline with `pnpm evals --live`.
   write: {
     tier: 'mid',
     thinking: 'off',
@@ -195,6 +205,7 @@ export const taskRoutes: Record<AiTask, TaskRoute> = {
     maxOutputTokens: 6000,
     dailyCapUsd: 20,
     maxCallUsd: 0.25,
+    promptVersion: 'v1',
   },
   // A separate call, never the writer's context (§6).
   factcheck: {
@@ -204,6 +215,17 @@ export const taskRoutes: Record<AiTask, TaskRoute> = {
     maxOutputTokens: 8000,
     dailyCapUsd: 15,
     maxCallUsd: 0.3,
+  },
+  // Libel review of Tier 1–2 drafts after fact-check (prompts v1/legal.ts): it can only raise a
+  // story to review. Off until its eval responses are recorded and the owner switches it on.
+  legal: {
+    tier: 'mid',
+    thinking: 'off',
+    effort: 'high',
+    maxOutputTokens: 3000,
+    dailyCapUsd: 5,
+    maxCallUsd: 0.15,
+    disabled: true,
   },
   // The writer's one retry after a failed fact-check.
   revise: {
@@ -287,6 +309,19 @@ export const taskRoutes: Record<AiTask, TaskRoute> = {
     maxOutputTokens: 4000,
     dailyCapUsd: 0,
     maxCallUsd: 0.3,
+    disabled: true,
+  },
+  // One meeting's minutes into its decisions, one chunk a call; code checks every excerpt and
+  // tally. Off until recorded with `pnpm evals --live`, then the owner turns it on by deleting
+  // `disabled` (meeting recaps stay one story per meeting until then).
+  'meeting-split': {
+    tier: 'small',
+    thinking: 'off',
+    effort: 'low',
+    maxOutputTokens: 4000,
+    escalate: { to: 'mid' },
+    dailyCapUsd: 3,
+    maxCallUsd: 0.1,
     disabled: true,
   },
 };

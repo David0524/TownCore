@@ -18,10 +18,12 @@ another outlet has a story we don't, we may link to it with a one-line summary i
    guess, speculate or add quotes that aren't in the records.
 3. **Fact-checking.** A separate check lists every name, number, date, vote, address and
    quote in the draft and looks for the exact supporting passage in the records. Names and
-   numbers must match exactly. A draft that fails goes back for revision or to a person.
+   numbers must match exactly, and every quotation must appear word for word in a record.
+   Software also flags guesswork and filler ("is expected to", "it remains to be seen"). A
+   draft that fails goes back for revision or to a person.
 4. **Human review.** Stories about crime and public safety, health, inspection failures,
-   anything accusatory, or any private individual are always approved by a person before they
-   publish. Some routine stories are reviewed at random as a quality check.
+   anything accusatory, suicide, or any private individual are always approved by a person
+   before they publish. Some routine stories are reviewed at random as a quality check.
 5. **What we never publish.** Mugshots, the names of minors, victims of sexual assault,
    rumors, private people's social media posts, and arrests without an official release.
 

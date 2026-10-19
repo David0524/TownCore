@@ -1,4 +1,5 @@
 import { mailAlerts, isNull, desc } from '@towncore/db';
+import { alertKindLabels } from '@towncore/mail';
 import {
   aiSpend,
   byCohort,
@@ -7,6 +8,8 @@ import {
   COVERAGE_DAYS,
   experimentReports,
   groupAudience,
+  opsConditions,
+  scoreCalibration,
   storyCoverage,
   townAudience,
   townHealth,
@@ -35,18 +38,23 @@ export default async function Health({
   const me = await requireStaff();
   const admin = me.role === 'admin';
   const params = await searchParams;
-  const [rows, coverage, alerts, audience, spend, discovery] = await Promise.all([
-    townHealth(db()),
-    storyCoverage(db()),
-    db()
-      .select()
-      .from(mailAlerts)
-      .where(isNull(mailAlerts.resolvedAt))
-      .orderBy(desc(mailAlerts.severity), desc(mailAlerts.firstSeenAt)),
-    townAudience(db()),
-    aiSpend(db()),
-    discoveryProgress(db()),
-  ]);
+  const [rows, coverage, alerts, audience, spend, discovery, conditions, calibration] =
+    await Promise.all([
+      townHealth(db()),
+      storyCoverage(db()),
+      db()
+        .select()
+        .from(mailAlerts)
+        .where(isNull(mailAlerts.resolvedAt))
+        .orderBy(desc(mailAlerts.severity), desc(mailAlerts.firstSeenAt)),
+      townAudience(db()),
+      aiSpend(db()),
+      discoveryProgress(db()),
+      opsConditions(db()),
+      scoreCalibration(db()),
+    ]);
+  // Each alert's kind decides whether it's emailed (mail alert-kinds.ts); mail alerts are breakage.
+  const kindOf = new Map(conditions.map((c) => [c.key, c.kind]));
   const experiments = await experimentReports(db(), audience);
   return (
     <main>
@@ -68,18 +76,21 @@ export default async function Health({
         ) : (
           <ul>
             {alerts.map((a) => (
-              <li key={a.id} data-severity={a.severity}>
+              <li key={a.id} data-severity={a.severity} data-kind={kindOf.get(a.key) ?? 'breakage'}>
                 <strong>{a.severity === 'critical' ? 'Critical' : 'Warning'}:</strong> {a.message}{' '}
                 <span className={styles.muted}>
-                  since {a.firstSeenAt.toISOString().slice(0, 16).replace('T', ' ')} UTC
+                  since {a.firstSeenAt.toISOString().slice(0, 16).replace('T', ' ')} UTC ·{' '}
+                  {alertKindLabels[kindOf.get(a.key) ?? 'breakage']}
                 </span>
               </li>
             ))}
           </ul>
         )}
         <p className={styles.muted}>
-          Alerts open and resolve themselves; admins get them by email. Mail details are in Mail
-          health.
+          Alerts open and resolve themselves. Admins get breakage by email when it opens, daily
+          while open and when it clears; a backlog (the review queue) only weekly, when it is past
+          its ceiling and deeper than a week ago; standing facts (a broken source on a town not live
+          yet) only here. Mail details are in Mail health.
         </p>
       </section>
 
@@ -179,6 +190,49 @@ export default async function Health({
       />
 
       <ExperimentsSection reports={experiments} admin={admin} />
+
+      <h2 id="calibration">Score calibration</h2>
+      <p className={styles.muted} data-testid="calibration-summary">
+        Story candidates the finder scored in the last {calibration.days} days, by newsworthiness
+        band, and what became of them. Rates are shares of the band&rsquo;s candidates; reviewer
+        approval is approved out of approved plus rejected. {calibration.headline}
+      </p>
+      <div className={styles.scroll}>
+        <table className={styles.table} data-testid="score-calibration">
+          <thead>
+            <tr>
+              <th>Score</th>
+              <th>Candidates</th>
+              <th>Published</th>
+              <th>Approved by a reviewer</th>
+              <th>Rejected</th>
+              <th>Skipped</th>
+              <th>Still open</th>
+              <th>Reviewer approval</th>
+            </tr>
+          </thead>
+          <tbody>
+            {calibration.bands.map((b) => (
+              <tr key={b.band} data-band={b.band}>
+                <td>{b.label}</td>
+                <td>{b.candidates}</td>
+                <td>
+                  {b.published} <span className={styles.muted}>{pct(b.publishRate)}</span>
+                </td>
+                <td>{b.approved}</td>
+                <td>
+                  {b.rejected} <span className={styles.muted}>{pct(b.rejectRate)}</span>
+                </td>
+                <td>
+                  {b.skipped} <span className={styles.muted}>{pct(b.skipRate)}</span>
+                </td>
+                <td>{b.open}</td>
+                <td>{pct(b.approvalRate)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <h2>AI spend by task</h2>
       <p className={styles.muted} data-testid="ai-spend-summary">

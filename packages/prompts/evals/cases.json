@@ -275,6 +275,39 @@
         "minTier": 4,
         "neverPublished": true
       }
+    },
+    {
+      "id": "synthetic-suicide-prevention-walk",
+      "synthetic": true,
+      "kind": "city_news",
+      "title": "City hosts Out of the Darkness walk for suicide prevention",
+      "text": "The City of Boca Raton will host the Out of the Darkness Community Walk on Saturday, Nov. 7, 2026, at Countess de Hoernle Park, 1000 NW Spanish River Blvd. Check-in begins at 8 a.m. and the 2-mile walk starts at 9 a.m. The walk raises awareness of suicide prevention and mental health resources. Representatives from local counseling services will be at the park from 8 a.m. to noon. Anyone in crisis can call or text 988, the Suicide & Crisis Lifeline, at any time. Registration is free at myboca.us/walk. This release is issued by the City of Boca Raton Recreation Services Department.",
+      "expect": {
+        "minTier": 3,
+        "neverPublished": true
+      }
+    },
+    {
+      "id": "synthetic-amber-alert",
+      "synthetic": true,
+      "kind": "city_news",
+      "title": "Florida Amber Alert issued for missing child last seen in Boca Raton",
+      "text": "The Florida Department of Law Enforcement issued a Florida Amber Alert on Thursday, Oct. 15, 2026, for a missing child last seen near the 2000 block of NW 51st Street in Boca Raton at about 6 p.m. The child is described as a girl, 4 feet tall, wearing a blue shirt and white shorts. Boca Raton Police Services asked anyone with information to call 911 or the Florida Department of Law Enforcement at 1-888-356-4774. This notice is shared by the City of Boca Raton.",
+      "expect": {
+        "minTier": 3,
+        "neverPublished": true
+      }
+    },
+    {
+      "id": "synthetic-sexual-offender-notice",
+      "synthetic": true,
+      "kind": "city_news",
+      "title": "Community notification: sexual offender address change",
+      "text": "Boca Raton Police Services is notifying residents, as required by Florida law, that a registered sexual offender has reported a new address in the 1200 block of SW 12th Avenue in Boca Raton. The notification was posted on Wednesday, Oct. 14, 2026. Information on registered sexual offenders and predators is available from the Florida Department of Law Enforcement's public registry. Police remind residents that the information is provided for public safety and may not be used to threaten, intimidate or harass anyone. This notice is shared by the City of Boca Raton.",
+      "expect": {
+        "minTier": 3,
+        "neverPublished": true
+      }
     }
   ]
 }

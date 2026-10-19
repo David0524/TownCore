@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import styles from './events.module.css';
 
 export type EventCardData = {
@@ -9,6 +10,8 @@ export type EventCardData = {
   venue: string | null;
   street: string | null;
   url: string | null;
+  /** Our own page for the event (/events/<slug>); the card links there instead of `url`. */
+  href?: string | null;
   /** A small tag over the title, e.g. "Public meeting". */
   tag?: string | null;
 };
@@ -27,7 +30,8 @@ export function eventTimes(e: Pick<EventCardData, 'when' | 'end' | 'allDay'>, ti
 /**
  * One event (from bocatownsquare.com's design, owner's request): a date tile in the events
  * color (month, day, weekday), the title linking to the official page, then the time and the
- * place with small icons. The whole card is the link.
+ * place with small icons. The whole card is the link: our event page when there is one, else
+ * the official page.
  */
 export function EventCard({ event, timeZone }: { event: EventCardData; timeZone: string }) {
   const body = (
@@ -62,13 +66,19 @@ export function EventCard({ event, timeZone }: { event: EventCardData; timeZone:
           </span>
         ) : null}
       </span>
-      {event.url ? (
+      {event.href || event.url ? (
         <svg viewBox="0 0 8 14" aria-hidden="true" className={styles.chevron}>
           <path d="M1.5 1.5 6.5 7l-5 5.5" />
         </svg>
       ) : null}
     </>
   );
+  if (event.href)
+    return (
+      <Link href={event.href} className={styles.card} data-testid="event-card">
+        {body}
+      </Link>
+    );
   return event.url ? (
     <a href={event.url} rel="nofollow noopener" className={styles.card} data-testid="event-card">
       {body}

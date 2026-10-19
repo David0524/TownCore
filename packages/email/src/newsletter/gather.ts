@@ -1,5 +1,6 @@
 import {
   creativeSchema,
+  daysFromPeriods,
   defaultTheme,
   themeSchema,
   townContactEmail,
@@ -18,6 +19,7 @@ import {
   engagementByArticle,
   eq,
   getActiveCampaign,
+  getTownWeather,
   getTropics,
   gt,
   gte,
@@ -39,6 +41,12 @@ async function issueTropics(db: Db, town: Town, now: Date) {
   const snapshot = basin ? (await getTropics(db, basin, now))?.snapshot : null;
   const line = snapshot ? tropicsLine(snapshot) : null;
   return line ? { line, url: `https://${town.domain}/weather#tropics` } : null;
+}
+
+/** The town's 7-day forecast as day rows, when its weather snapshot has one. */
+async function issueDays(db: Db, town: Town, now: Date) {
+  const days = (await getTownWeather(db, town.id, now))?.snapshot.days;
+  return days ? daysFromPeriods(days.periods) : null;
 }
 
 // Everything one issue needs, read from the database (docs/plans/M5.md "What an issue
@@ -203,7 +211,13 @@ export async function gatherIssue(db: Db, town: Town, now = new Date()): Promise
       dek: a.dek,
       beat: a.beat,
     })),
-    weather: issueWeather(forecast ?? null, alerts, now, await issueTropics(db, town, now)),
+    weather: issueWeather(
+      forecast ?? null,
+      alerts,
+      now,
+      await issueTropics(db, town, now),
+      await issueDays(db, town, now),
+    ),
     meetings: meetings.flatMap((m) =>
       m.startsAt ? [{ title: m.title ?? 'Public meeting', url: m.url, startsAt: m.startsAt }] : [],
     ),

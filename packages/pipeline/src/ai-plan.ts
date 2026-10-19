@@ -14,11 +14,14 @@ import {
   entitiesV1,
   factcheckV1,
   guideV1,
+  legalV1,
+  meetingSplitV1,
   themeReviewV1,
   themeV1,
   updateV1,
   writerV1,
 } from '@towncore/prompts';
+import { MEETING_RESULT_TYPES } from './meeting-split';
 import { MIN_SOURCE_CHARS } from './scoring';
 
 // `pnpm ai:plan <town>` (owner, 2026-10-17, model protocol §5): what one day of a town's work
@@ -37,6 +40,7 @@ const TYPICAL_OUTPUT: Record<AiTask, number> = {
   extract: 300,
   write: 1000,
   factcheck: 1500,
+  legal: 400,
   revise: 1000,
   update: 500,
   guide: 1800,
@@ -46,6 +50,7 @@ const TYPICAL_OUTPUT: Record<AiTask, number> = {
   identity: 1500,
   'theme-review': 1200,
   reviewer: 800,
+  'meeting-split': 1500,
 };
 /** Share of written stories that need the one revise, until ai_usage has a week of history. */
 const DEFAULT_REVISE_RATE = 0.3;
@@ -87,6 +92,7 @@ const SYSTEMS: Record<AiTask, string> = {
   extract: entitiesV1.system,
   write: writerV1.system,
   factcheck: factcheckV1.system,
+  legal: legalV1.system,
   revise: writerV1.system,
   update: updateV1.system,
   guide: guideV1.system,
@@ -96,6 +102,7 @@ const SYSTEMS: Record<AiTask, string> = {
   identity: themeV1.system,
   'theme-review': themeReviewV1.system,
   reviewer: factcheckV1.system,
+  'meeting-split': meetingSplitV1.system,
 };
 
 function line(
@@ -190,6 +197,22 @@ export async function planDay(
   const guidesPerDay = guideTopics / GUIDE_REFRESH_DAYS;
   const guideChars = (pages?.chars || 3000) * 2;
 
+  // Meetings the splitter would read, once its route is switched on (meeting-split.ts).
+  const [meetings] = taskRoutes['meeting-split'].disabled
+    ? [{ n: 0 }]
+    : await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(records)
+        .where(
+          and(
+            eq(records.townId, town.id),
+            inArray(records.type, MEETING_RESULT_TYPES),
+            sql`length(coalesce(${records.text}, '')) >= ${MIN_SOURCE_CHARS}`,
+            gte(records.createdAt, since),
+          ),
+        );
+  const meetingsPerDay = (meetings?.n ?? 0) / days;
+
   const prefix = 200; // the town's name, county, timezone and agencies
   const sys = (t: AiTask) => SYSTEMS[t].length + prefix;
   const draftChars = 3000;
@@ -204,6 +227,12 @@ export async function planDay(
       cached: sys('revise'),
       fresh: recordChars + 300,
     }),
+    // The libel review, once switched on: one call a written story (an upper bound, since it
+    // reads only Tier 1–2 drafts that passed fact-check).
+    line(provider, 'legal', taskRoutes.legal.disabled ? 0 : writes, {
+      cached: sys('legal'),
+      fresh: recordChars + draftChars,
+    }),
     line(provider, 'extract', writes, { cached: sys('extract'), fresh: draftChars }),
     line(provider, 'guide', guidesPerDay, { cached: sys('guide'), fresh: guideChars }),
     line(provider, 'guide-factcheck', guidesPerDay * (1 + DEFAULT_REVISE_RATE), {
@@ -213,6 +242,11 @@ export async function planDay(
     line(provider, 'guide-revise', guidesPerDay * DEFAULT_REVISE_RATE, {
       cached: sys('guide-revise'),
       fresh: guideChars + 300,
+    }),
+    // One call a part of minutes, with the transcript's outline (a few thousand characters).
+    line(provider, 'meeting-split', meetingsPerDay, {
+      cached: sys('meeting-split'),
+      fresh: recordChars + 3000,
     }),
   ].filter((l) => l.calls > 0);
   const usd = lines.reduce((n, l) => n + l.usd, 0);

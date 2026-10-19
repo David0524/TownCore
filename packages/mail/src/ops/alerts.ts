@@ -6,7 +6,6 @@ import {
   inArray,
   isNotNull,
   isNull,
-  lt,
   mailAlerts,
   mailDomains,
   mailEvents,
@@ -20,17 +19,27 @@ import { boughtDomains, ONBOARD_GRACE_MS } from '../bought';
 import { healthTotals, networkBulkPause } from '../bulk/health';
 import type { MailTransport } from '../outbound/transport';
 import { storedAccountStatus } from './account';
+import { emailDue, type AlertKind, type Backlog } from './alert-kinds';
 import { sendStaffEmail } from './staff-email';
 
 // Mail health alerts (docs/plans/MAIL.md, Mail-6). Each run works out what is wrong right now,
 // keeps one open alert per condition, resolves the ones that cleared, and emails admins about
-// new and resolved alerts (and repeats a still-open one once a day).
+// new and resolved alerts (and repeats a still-open one once a day). Each condition has a kind
+// (alert-kinds.ts): breakage is emailed as above, a backlog only weekly when deep and growing, and
+// a standing fact never; every open alert still shows on Admin → Health.
 
-export type Condition = { key: string; severity: 'warning' | 'critical'; message: string };
+export type Condition = {
+  key: string;
+  severity: 'warning' | 'critical';
+  message: string;
+  /** Default breakage. Every mail condition is breakage. */
+  kind?: AlertKind;
+  /** Backlogs only: the queue's depth, its ceiling and its depth a week ago. */
+  backlog?: Backlog;
+};
 
 /** 60% of SES's review levels (5% bounces, 0.1% complaints): early warning, not a pause. */
 export const ACCOUNT_WARN = { bounceRate: 0.03, complaintRate: 0.0006, minSample: 500 };
-const REPEAT_MS = 24 * 3_600_000;
 
 const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
 
@@ -177,34 +186,34 @@ export async function alertRecipients(db: Db): Promise<string[]> {
 }
 
 /**
- * Emails admins once about each new alert, again every 24 hours while it stays open, and once
- * when it resolves. Marks what was sent so a retried run doesn't repeat it.
+ * Emails admins about open alerts as their kind allows (alert-kinds.ts: breakage when it opens
+ * and every 24 hours, a backlog weekly when deep and growing, a standing fact never), and once
+ * when an alert that was emailed resolves. Marks what was sent so a retried run doesn't repeat it.
+ * `conditions` are the current run's, which carry each open alert's kind.
  */
 export async function notifyAlerts(
   db: Db,
   mail: { transport: MailTransport; configurationSet: string } | null,
   now = new Date(),
+  conditions: Condition[] = [],
 ): Promise<number> {
-  const due = await db
-    .select()
-    .from(mailAlerts)
-    .where(
-      or(
-        and(
+  const byKey = new Map(conditions.map((c) => [c.key, c]));
+  const due = (
+    await db
+      .select()
+      .from(mailAlerts)
+      .where(
+        or(
           isNull(mailAlerts.resolvedAt),
-          or(
-            isNull(mailAlerts.lastNotifiedAt),
-            lt(mailAlerts.lastNotifiedAt, new Date(now.getTime() - REPEAT_MS)),
+          and(
+            isNotNull(mailAlerts.resolvedAt),
+            isNotNull(mailAlerts.lastNotifiedAt),
+            isNull(mailAlerts.resolvedNotifiedAt),
           ),
         ),
-        and(
-          isNotNull(mailAlerts.resolvedAt),
-          isNotNull(mailAlerts.lastNotifiedAt),
-          isNull(mailAlerts.resolvedNotifiedAt),
-        ),
-      ),
-    )
-    .orderBy(asc(mailAlerts.severity), asc(mailAlerts.firstSeenAt));
+      )
+      .orderBy(asc(mailAlerts.severity), asc(mailAlerts.firstSeenAt))
+  ).filter((a) => a.resolvedAt || emailDue(byKey.get(a.key), a.lastNotifiedAt, now));
   if (!due.length || !mail) return 0;
   const to = await alertRecipients(db);
   if (!to.length) return 0;
@@ -257,7 +266,8 @@ export async function runAlerts(
   /** Conditions from outside mail (M8: sources, spend, review queue, worker), same table. */
   extra: Condition[] = [],
 ): Promise<AlertRun> {
-  const run = await syncAlerts(db, [...(await currentConditions(db, now)), ...extra], now);
-  run.notified = await notifyAlerts(db, mail, now);
+  const conditions = [...(await currentConditions(db, now)), ...extra];
+  const run = await syncAlerts(db, conditions, now);
+  run.notified = await notifyAlerts(db, mail, now, conditions);
   return run;
 }

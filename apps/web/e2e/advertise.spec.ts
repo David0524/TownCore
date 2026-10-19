@@ -12,6 +12,7 @@ import {
   placements,
   towns,
 } from '@towncore/db';
+import { FAKE_STRIPE } from './ports';
 
 // The advertise storefront (owner, 2026-10-17: "a full build out of the advertise page… working
 // in full. Let's install Stripe on the site"), on all three families: the category chooser, a
@@ -22,7 +23,7 @@ import {
 // Never closed: with fullyParallel a worker can run more of this file's tests after its
 // afterAll, so the client stays open; idle connections close by themselves.
 const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
-const fakeStripe = 'http://127.0.0.1:3199';
+const fakeStripe = FAKE_STRIPE;
 const SOURCE = 'test-advertise';
 const hash = (t: string) => createHash('sha256').update(t).digest('hex');
 

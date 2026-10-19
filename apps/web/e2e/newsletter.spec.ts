@@ -14,13 +14,14 @@ import {
 // Only the token module: the package entry pulls in modules the test runner can't load.
 import { confirmToken, unsubscribeToken } from '../../../packages/mail/src/bulk/tokens';
 import { E2E_MAIL_TOKEN_SECRET } from './newsletter-secret';
+import { DIRECT } from './ports';
 
 // Newsletter signup on a town site (Mail-5): double opt-in, confirm by button, unsubscribe from
 // the footer page and by RFC 8058 one-click POST. Sending goes to the server log (Rule 10).
 
 const site = 'http://lettertown.test';
 // API requests don't go through the browser's host mapping: hit the server with the Host header.
-const direct = 'http://127.0.0.1:3100';
+const direct = DIRECT;
 const host = { host: 'lettertown.test' };
 let db: Db;
 let townId: string;

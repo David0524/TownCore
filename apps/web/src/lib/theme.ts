@@ -122,6 +122,8 @@ export function themeCssVariables(theme: Theme): string {
     '--muted': darkColors.muted,
     '--rule': darkColors.rule,
     '--sand': darkColors.sand,
+    // Phone grouped lists and tiles (light: iOS grouped gray) sit on the dark surface.
+    '--ios-grouped': darkColors.surface,
     ...Object.fromEntries(
       Object.entries(darkFoodColors).flatMap(([k, v]) => [
         [`--food-${k}`, v.tint],
