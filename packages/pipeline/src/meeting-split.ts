@@ -196,13 +196,18 @@ export function findVerbatim(
 
 const STOP = new Set(
   (
-    'about above after again against agenda approve approved approving amended amendment ' +
-    'board called carried city clerk commission commissioner council councilor consent ' +
-    'discussion during favor following item items mayor meeting minutes motion moved ' +
-    'other passed please public regular request resolution second seconded their there ' +
-    'these those through under until vice where which while would yes'
+    'about above after again against agenda also approve approved approving amended amendment ' +
+    'been board called carried city clerk commission commissioner council councilor consent ' +
+    'denied discussion during each favor file following from have item items mayor meeting ' +
+    'minutes more motion moved only other over passed please public received regular request ' +
+    'resolution said second seconded such than that their them then there these they this ' +
+    'those through town under until upon very vice were what when where which while will ' +
+    'with would yes your'
   ).split(' '),
 );
+
+/** Lowercase words of four letters or more. */
+const wordsOf = (text: string) => text.toLowerCase().match(/[a-z]{4,}/g) ?? [];
 
 /** The words and numbers an item can be found by in a transcript. */
 export function itemKeys(text: string): { ids: string[]; words: string[] } {
@@ -210,16 +215,32 @@ export function itemKeys(text: string): { ids: string[]; words: string[] } {
   const ids = [
     ...new Set((lower.match(/\d[\d,./-]*\d/g) ?? []).filter((n) => !/^(19|20)\d\d$/.test(n))),
   ];
-  const words = [...new Set((lower.match(/[a-z]{5,}/g) ?? []).filter((w) => !STOP.has(w)))];
+  const words = [...new Set(wordsOf(text).filter((w) => !STOP.has(w)))];
   return { ids, words };
 }
 
+/** Numbers count three, whole words one each. */
 function keyScore(text: string, keys: { ids: string[]; words: string[] }): number {
   const lower = text.toLowerCase();
+  const present = new Set(wordsOf(text));
   let score = 0;
   for (const id of keys.ids) if (lower.includes(id)) score += 3;
-  for (const w of keys.words) if (lower.includes(w)) score += 1;
+  for (const w of keys.words) if (present.has(w)) score += 1;
   return score;
+}
+
+/**
+ * Keys rare in this transcript: "contract" is said all evening, a company's name isn't, so a
+ * common word never places an item in someone else's discussion.
+ */
+function rareKeys(text: string, keys: { ids: string[]; words: string[] }) {
+  const counts = new Map<string, number>();
+  for (const w of wordsOf(text)) counts.set(w, (counts.get(w) ?? 0) + 1);
+  const lower = text.toLowerCase();
+  return {
+    ids: keys.ids.filter((id) => lower.split(id).length - 1 <= SEARCH_RARE_MAX),
+    words: keys.words.filter((w) => (counts.get(w) ?? 0) <= SEARCH_RARE_MAX),
+  };
 }
 
 /** The best-matching stretch of `size` characters in [from, to), by the item's words. */
@@ -304,12 +325,7 @@ export function locateWindow(
 ): Window | null {
   const text = transcript.text ?? '';
   if (!text) return null;
-  // Only numbers and words rare in this transcript count ("contract" is said all evening; a
-  // company's name isn't), so a common word never places an item in someone else's discussion.
-  const all = itemKeys(`${item.topic}\n${item.minutes_excerpt}`);
-  const lower = text.toLowerCase();
-  const rare = (k: string) => lower.split(k).length - 1 <= SEARCH_RARE_MAX;
-  const keys = { ids: all.ids.filter(rare), words: all.words.filter(rare) };
+  const keys = rareKeys(text, itemKeys(`${item.topic}\n${item.minutes_excerpt}`));
   const markers = agendaMarkers(text);
   const make = (start: number, end: number, located: Window['located']): Window => {
     if (end - start > TRANSCRIPT_WINDOW_MAX) {
