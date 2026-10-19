@@ -250,6 +250,78 @@ describe('writeCandidate: stories', () => {
     ).toMatchObject({ status: 'published' });
   });
 
+  it('sends filler and speculation to the one revise, and publishes when it is cut', async () => {
+    const { candidate, recordId } = await storyCandidate();
+    const padded = draft({
+      source_record_ids: [recordId],
+      body_md: `${draft().body_md} The repaving is likely to ease traffic. This story is developing.`,
+    });
+    const { llm, inputs } = scripted({
+      writer: [padded, draft({ source_record_ids: [recordId] })],
+      factcheck: [goodCheck(recordId)],
+    });
+    const outcome = await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 });
+    expect(outcome).toMatchObject({ status: 'published' });
+    const writes = inputs.filter((i) => i.prompt === 'writer');
+    expect(writes).toHaveLength(2);
+    // Fact-check passed, so only the style list goes to the revise.
+    expect(writes[1]!.input).not.toContain('Remove these claims');
+    expect(writes[1]!.input).toContain('Rewrite or cut these phrases');
+    expect(writes[1]!.input).toContain('- "is likely to" in "The repaving is likely to ease');
+    expect(writes[1]!.input).toContain('- "This story is developing" in');
+    const a = await article((outcome as { articleId: string }).articleId);
+    expect(a.factcheck).toMatchObject({ decision: 'pass', styleLint: [] });
+  });
+
+  it('keeps a draft whose filler survives the revise out of print, for a person to cut', async () => {
+    const { candidate, recordId } = await storyCandidate();
+    const padded = draft({
+      source_record_ids: [recordId],
+      body_md: `${draft().body_md} It remains to be seen whether drivers will notice.`,
+    });
+    const { llm, inputs } = scripted({ writer: [padded], factcheck: [goodCheck(recordId)] });
+    const outcome = await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 });
+    expect(outcome).toMatchObject({ status: 'in_review', reason: 'style' });
+    expect(inputs.filter((i) => i.prompt === 'writer')).toHaveLength(2);
+    const a = await article((outcome as { articleId: string }).articleId);
+    expect(a.factcheck).toMatchObject({
+      decision: 'pass',
+      styleLint: [{ rule: 'speculation', phrase: 'It remains to be seen', field: 'body' }],
+    });
+  });
+
+  it("doesn't flag the record's own wording or words inside a quotation", async () => {
+    const { candidate, recordId } = await storyCandidate();
+    const { llm, inputs } = scripted({
+      writer: [
+        draft({
+          source_record_ids: [recordId],
+          body_md: `${draft().body_md} Work begins Nov. 2 and is expected to take six weeks, the city said.`,
+        }),
+      ],
+      factcheck: [goodCheck(recordId)],
+    });
+    expect(
+      await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 }),
+    ).toMatchObject({ status: 'published' });
+    expect(inputs.filter((i) => i.prompt === 'writer')).toHaveLength(1);
+  });
+
+  it('a fabricated quotation goes to the one revise like any unsupported claim', async () => {
+    const { candidate, recordId } = await storyCandidate();
+    const quoted = draft({
+      source_record_ids: [recordId],
+      body_md: `${draft().body_md} "This road has needed work for a very long time," the city said.`,
+    });
+    const { llm, inputs } = scripted({ writer: [quoted], factcheck: [goodCheck(recordId)] });
+    const outcome = await writeCandidate(db, candidate.id, { llm, now: NOW, random: () => 0.5 });
+    expect(outcome).toMatchObject({ status: 'in_review', reason: 'factcheck' });
+    const writes = inputs.filter((i) => i.prompt === 'writer');
+    expect(writes[1]!.input).toContain(
+      'the quotation "This road has needed work for a very long time" (quoted text not found verbatim in any cited record)',
+    );
+  });
+
   it('Tier 3 always goes to review', async () => {
     const { candidate, recordId } = await storyCandidate(TEXT, { proposedTier: 3 });
     const { llm } = scripted({

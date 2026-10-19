@@ -57,6 +57,7 @@ import {
   SPOTLIGHT_ROUNDUP,
   type SpotlightKind,
 } from './spotlights';
+import { lintStyle, styleRevisionLines, type StyleHit } from './style-lint';
 import { decideTier, type Tier } from './tiers';
 import { localWeekStart } from './time';
 
@@ -176,18 +177,37 @@ export async function writeCandidate(
 
   let draft: WriterDraft | undefined;
   let report: FactcheckReport | undefined;
+  let style: StyleHit[] = [];
+  const sourceTexts = rows.map((r) => ({
+    id: r.record.id,
+    title: r.record.title,
+    text: r.record.text,
+  }));
   const versions = [
     `${writerV1.id}@${writerV1.version}`,
     `${factcheckV1.id}@${factcheckV1.version}`,
   ];
   try {
     for (let attempt = 1; attempt <= 2; attempt++) {
+      // The one revise (§7) gets the unsupported claims and any filler or speculation the style
+      // lint found, so one retry fixes both.
       const remove =
         attempt === 2 && report
           ? [
-              '',
-              'Remove these claims, which the records do not support:',
-              ...report.unsupportedClaims.map((c) => `- ${c}`),
+              ...(report.unsupportedClaims.length || !style.length
+                ? [
+                    '',
+                    'Remove these claims, which the records do not support:',
+                    ...report.unsupportedClaims.map((c) => `- ${c}`),
+                  ]
+                : []),
+              ...(style.length
+                ? [
+                    '',
+                    'Rewrite or cut these phrases, which are filler, speculation or not news writing:',
+                    ...styleRevisionLines(style),
+                  ]
+                : []),
             ]
           : [];
       ({ value: draft } = await callModel(llm, {
@@ -215,14 +235,16 @@ export async function writeCandidate(
           ...sourcesText,
         ].join('\n'),
       });
+      const fields = { headline: draft.headline, dek: draft.dek, bodyMd: draft.body_md };
       report = checkDraft({
-        draft: { headline: draft.headline, dek: draft.dek, bodyMd: draft.body_md },
-        sources: rows.map((r) => ({ id: r.record.id, title: r.record.title, text: r.record.text })),
+        draft: fields,
+        sources: sourceTexts,
         model: checked as FactcheckResult,
         knownNames,
         otherPlaces: config.same_name_elsewhere,
       });
-      if (report.decision !== 'revise') break;
+      style = lintStyle(fields, sourceTexts);
+      if (report.decision === 'review' || (report.decision === 'pass' && !style.length)) break;
     }
   } catch (error) {
     if (error instanceof SpendCapReached) {
@@ -269,7 +291,7 @@ export async function writeCandidate(
     tier: Math.max(candidate.proposedTier, tier.tier) as Tier,
     tierReasons: [...new Set([...(candidate.tierReasons ?? []), ...tier.reasons])],
     factcheck: report
-      ? { method: 'model+code', ...report }
+      ? { method: 'model+code', ...report, styleLint: style }
       : { method: 'model+code', decision: 'review', error: 'fact-check failed to run' },
     forceReview: !report
       ? 'model_error'
@@ -278,7 +300,10 @@ export async function writeCandidate(
         : // Machine captions can misspell names, so a person checks any story built on one.
           rows.some((r) => r.record.type === 'transcript')
           ? 'transcript'
-          : undefined,
+          : // Filler or speculation the one revise didn't fix: a person cuts it, never published.
+            style.length
+            ? 'style'
+            : undefined,
     promptVersions: versions,
     now,
     random,
@@ -361,7 +386,7 @@ async function saveArticle(
     tier: Tier;
     tierReasons: string[];
     factcheck: Record<string, unknown>;
-    forceReview?: 'factcheck' | 'model_error' | 'transcript';
+    forceReview?: 'factcheck' | 'model_error' | 'transcript' | 'style';
     promptVersions: string[];
     now: Date;
     random: () => number;

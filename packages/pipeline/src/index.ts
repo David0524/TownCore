@@ -56,11 +56,14 @@ export {
 export { nearDuplicateShare, normalizeWords } from './near-duplicate';
 export { pastWeekCounts, roundupWeekRecords } from './roundup-weeks';
 export { cannotBeArticle, decideTier, mentionsMinor, type Tier, type TierDecision } from './tiers';
+export { lintStyle, styleRevisionLines, STYLE_WHY, type StyleHit } from './style-lint';
 export {
   checkDraft,
   namesIn,
   normalize,
   numbersIn,
+  quotedSpans,
+  quoteInRecord,
   type CheckedClaim,
   type FactcheckReport,
   type SourceText,
