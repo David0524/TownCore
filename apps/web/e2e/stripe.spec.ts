@@ -19,6 +19,7 @@ import {
   towns,
 } from '@towncore/db';
 import { E2E_STRIPE_WEBHOOK_SECRET } from './newsletter-secret';
+import { DIRECT } from './ports';
 
 // Stripe (M6 PR D), test mode. No request reaches Stripe here: the webhook is exercised with
 // events signed the way Stripe signs them (t=…,v1=HMAC-SHA256 of "t.payload"), and the owner
@@ -26,7 +27,7 @@ import { E2E_STRIPE_WEBHOOK_SECRET } from './newsletter-secret';
 // Never closed: with fullyParallel a worker can run more of this file's tests after its
 // afterAll, so the client stays open; idle connections close by themselves.
 const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
-const webhook = 'http://127.0.0.1:3100/api/stripe/webhook';
+const webhook = `${DIRECT}/api/stripe/webhook`;
 const sign = (payload: string, secret = E2E_STRIPE_WEBHOOK_SECRET) => {
   const t = Math.floor(Date.now() / 1000);
   const v1 = createHmac('sha256', secret).update(`${t}.${payload}`).digest('hex');

@@ -26,6 +26,7 @@ import {
   towns,
 } from '@towncore/db';
 import { E2E_MAIL_TOKEN_SECRET, E2E_STRIPE_WEBHOOK_SECRET } from './newsletter-secret';
+import { DIRECT, FAKE_STRIPE } from './ports';
 
 // Traffic and self-serve revenue (owner, 2026-10-17), in Stripe test mode against the local fake
 // Stripe (e2e/fake-stripe.mjs): a featured spot with the first month free from a house ad,
@@ -39,8 +40,8 @@ import { E2E_MAIL_TOKEN_SECRET, E2E_STRIPE_WEBHOOK_SECRET } from './newsletter-s
 const db = createDb(loadEnv().DATABASE_URL!, { max: 1, idle_timeout: 5 });
 const harbor = 'http://harborpoint.test';
 const pine = 'http://pinehollow.test';
-const app = 'http://127.0.0.1:3100';
-const fakeStripe = 'http://127.0.0.1:3199';
+const app = DIRECT;
+const fakeStripe = FAKE_STRIPE;
 const SOURCE = 'test-growth';
 const hash = (t: string) => createHash('sha256').update(t).digest('hex');
 const sign = (payload: string) => {

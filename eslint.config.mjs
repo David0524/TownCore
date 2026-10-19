@@ -63,7 +63,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/config/src/env.ts', '**/*.config.{js,mjs,cjs,ts}'],
+    files: ['packages/config/src/env.ts', '**/*.config.{js,mjs,cjs,ts}', 'apps/web/e2e/ports.ts'],
     rules: { 'no-restricted-properties': 'off' },
   },
   prettier,

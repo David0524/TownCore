@@ -18,6 +18,7 @@ import {
   threads,
   type Db,
 } from '@towncore/db';
+import { DIRECT } from './ports';
 
 // Shared inbox (docs/plans/MAIL.md, Mail-3): filters and search, per-person unread, the
 // sandboxed message frame with remote images blocked, audited actions, notes, keyboard.
@@ -251,12 +252,9 @@ test.describe('inbox', () => {
     await signIn(context, `files-${info.project.name}`);
     const response = await page.goto(`${admin}/admin/mail/attachments/${file!.id}`);
     expect(response?.status()).toBe(503);
-    const inline = await request.get(
-      `http://127.0.0.1:3100/admin/mail/attachments/${file!.id}/inline`,
-      {
-        headers: { host: 'admin.test' },
-      },
-    );
+    const inline = await request.get(`${DIRECT}/admin/mail/attachments/${file!.id}/inline`, {
+      headers: { host: 'admin.test' },
+    });
     expect(inline.status()).toBe(403);
   });
 });

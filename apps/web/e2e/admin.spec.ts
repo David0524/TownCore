@@ -23,6 +23,7 @@ import {
   storyCandidates,
   type Db,
 } from '@towncore/db';
+import { DIRECT } from './ports';
 
 // Staff admin (docs/plans/M3.md §8): only on the admin host, email-link sign-in, and the
 // review queue's approve / edit / reject actions, plus the skip log.
@@ -301,7 +302,7 @@ test.describe('mail webhook', () => {
     };
     // API requests don't use the browser's host mapping; send the Host header to the local server.
     const post = (host: string, data: unknown) =>
-      request.post('http://127.0.0.1:3100/api/mail/sns', {
+      request.post(`${DIRECT}/api/mail/sns`, {
         headers: { host: new URL(host).host },
         data,
       });

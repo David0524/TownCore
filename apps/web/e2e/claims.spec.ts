@@ -13,6 +13,7 @@ import {
   staffSessions,
   towns,
 } from '@towncore/db';
+import { DIRECT } from './ports';
 
 // Claiming a listing and the owner portal (M6 PR C) on the fictional Harbor Point: claim →
 // confirm the email → staff approve → owner signs in by link → edits → the listing shows it.
@@ -188,14 +189,11 @@ test('asking for a sign-in link answers the same for any address', async ({ page
 });
 
 test('a claim posted from another site is refused', async ({ request }) => {
-  const response = await request.post(
-    `http://127.0.0.1:3100/directory/claim/cove-plumbing-test0003/submit`,
-    {
-      headers: { host: 'harborpoint.test', origin: 'https://evil.example' },
-      form: { name: 'X', role: 'Owner', email: 'x@example.com', attest: 'yes' },
-      maxRedirects: 0,
-    },
-  );
+  const response = await request.post(`${DIRECT}/directory/claim/cove-plumbing-test0003/submit`, {
+    headers: { host: 'harborpoint.test', origin: 'https://evil.example' },
+    form: { name: 'X', role: 'Owner', email: 'x@example.com', attest: 'yes' },
+    maxRedirects: 0,
+  });
   expect(response.status()).toBe(303);
   expect(response.headers().location).toContain('s=unavailable');
 });
