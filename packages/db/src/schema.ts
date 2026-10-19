@@ -1529,6 +1529,9 @@ export const dnsRecords = pgTable(
     ttl: integer('ttl'),
     vercelRecordId: text('vercel_record_id'),
     status: dnsRecordStatus('status').notNull().default('planned'),
+    // DMARC records only: when an admin last changed the policy (p=); null means it is still the
+    // p=none it was created with.
+    policySetAt: timestamp('policy_set_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -1998,6 +2001,49 @@ export const dmarcReports = pgTable(
   (t) => [
     unique('dmarc_reports_org_report_uq').on(t.orgName, t.reportId),
     index('dmarc_reports_domain_end_idx').on(t.domain, t.endAt),
+  ],
+);
+
+// Inbox-placement tests: before a town goes live, staff send one realistic copy to each of our
+// own seed inboxes (PLACEMENT_SEED_ADDRESSES) and record where it landed. A measurement, never a
+// warm-up network: a handful of company-held inboxes, one test a domain a day.
+export const placementTests = pgTable(
+  'placement_tests',
+  {
+    id: id(),
+    domainId: uuid('domain_id')
+      .notNull()
+      .references(() => mailDomains.id, { onDelete: 'cascade' }),
+    // Short code in the subject, so a seed copy can be found in each inbox.
+    token: text('token').notNull().unique(),
+    createdBy: uuid('created_by').references(() => staff.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index('placement_tests_domain_idx').on(t.domainId, t.createdAt)],
+);
+
+export const placementResults = pgTable(
+  'placement_results',
+  {
+    id: id(),
+    testId: uuid('test_id')
+      .notNull()
+      .references(() => placementTests.id, { onDelete: 'cascade' }),
+    seed: text('seed').notNull(),
+    // gmail, outlook, yahoo, icloud, aol, proton or the address's own domain.
+    provider: text('provider').notNull(),
+    sesMessageId: text('ses_message_id'),
+    sendError: text('send_error'),
+    placement: text('placement').notNull().default('pending'),
+    checkedBy: uuid('checked_by').references(() => staff.id),
+    checkedAt: timestamp('checked_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('placement_results_test_seed_uq').on(t.testId, t.seed),
+    check(
+      'placement_results_placement',
+      sql`${t.placement} in ('pending', 'inbox', 'promotions', 'spam', 'missing', 'not_sent')`,
+    ),
   ],
 );
 

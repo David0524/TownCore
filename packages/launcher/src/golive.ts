@@ -42,6 +42,8 @@ export type LaunchRow = {
   town: { id: string; status: string; domain: string; siteName: string } | null;
   /** The mail domain as it stands now: onboarding, verification and warm-up (step 2b). */
   mail: {
+    id: string;
+    name: string;
     status: string;
     bulkStatus: string;
     warmupDay: number;
@@ -82,6 +84,8 @@ export async function listLaunches(db: Db, limit = 25): Promise<LaunchRow[]> {
     const [mail] = domain
       ? await db
           .select({
+            id: mailDomains.id,
+            name: mailDomains.name,
             status: mailDomains.status,
             bulkStatus: mailDomains.bulkStatus,
             warmupDay: mailDomains.warmupDay,

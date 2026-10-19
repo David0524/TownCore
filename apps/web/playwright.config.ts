@@ -54,6 +54,8 @@ export default defineConfig({
         MAIL_TRANSPORT: 'log',
         MAIL_TOKEN_SECRET: E2E_MAIL_TOKEN_SECRET,
         MAIL_POSTAL_ADDRESS: '1 Test Street, Letter Town, ME 04000',
+        // The inbox-placement test's seeds (reserved domain; the log transport sends nothing).
+        PLACEMENT_SEED_ADDRESSES: 'seed-one@example.com,seed-two@example.com',
         // Stripe test mode with placeholder values: no request ever reaches Stripe in e2e; the
         // webhook tests sign their own events with this secret.
         STRIPE_SECRET_KEY: 'sk_test_e2e_placeholder',

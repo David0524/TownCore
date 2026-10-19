@@ -293,4 +293,30 @@ export {
   type DmarcSource,
   type DmarcSummary,
 } from './ops/dmarc';
+export {
+  DMARC_POLICIES,
+  dmarcPolicyAdvice,
+  DmarcPolicyError,
+  judgeStepUp,
+  policyOf,
+  reportDomain,
+  setDmarcPolicy,
+  STEP_UP,
+  withPolicy,
+  type DmarcPolicy,
+  type PolicyAdvice,
+} from './ops/dmarc-policy';
+export {
+  latestPlacement,
+  MAX_SEEDS,
+  PlacementError,
+  PLACEMENTS,
+  providerOf,
+  RECORDABLE,
+  recordPlacement,
+  sendPlacementTest,
+  summarize as summarizePlacement,
+  type Placement,
+  type PlacementSummary,
+} from './bulk/placement';
 export { applyRemoval, describeRemoval, planRemoval, type RemovalPlan } from './removal';
